@@ -1,0 +1,128 @@
+# 07 — Channels & Mapping
+
+**Status:** `draft`
+
+**Primary personas:** `property_manager`, `portfolio_manager`, `revenue_manager`.
+
+Mapping is where channel managers earn their support tickets. The Channex Channel
+API is descriptor-driven — `GET /channels/adapter?code=…` returns the fields and
+mapping requirements for each of 20+ adapters — so our UI must be **generated from
+the descriptor**, never hard-coded per OTA. Hard-coding is how you end up shipping
+a release every time an OTA adds a field.
+
+## 7.1 Channel catalogue
+
+A browsable grid of available adapters with, per channel: logo, name, region,
+capabilities (rates, availability, restrictions, content, messaging, reviews,
+virtual cards), what credentials are needed, expected setup time, and a link to
+the channel-specific guide. Filter by "already connected", region, or capability.
+
+## 7.2 Connection wizard
+
+Mirrors the documented Channex connection flow, one screen per step, resumable,
+with state persisted so a manager can stop and come back:
+
+```mermaid
+flowchart TD
+  S1[1. Pick channel] --> S2[2. Enter settings<br/>form generated from adapter descriptor]
+  S2 --> S3[3. Test connection<br/>POST /channels/test_connection]
+  S3 -->|fail| S2
+  S3 -->|ok| S4[4. Load both sides<br/>channel rooms/rates + our inventory]
+  S4 --> S5[5. Build mapping]
+  S5 --> S6[6. Create connection<br/>starts inactive]
+  S6 --> S7[7. Check readiness]
+  S7 -->|not ready| S5
+  S7 -->|ready| S8[8. Activate + initial full ARI push]
+  S8 --> S9[Health monitoring]
+```
+
+Requirements:
+
+- **CH-1** Every settings form field, label, type, validation and help text comes
+  from the adapter descriptor. Unknown field types degrade to a text input with a
+  warning rather than blocking the flow.
+- **CH-2** Credentials are encrypted on write and never returned to the client
+  once saved (write-only fields show `••••` with a replace action).
+- **CH-3** `test_connection` runs before creation, with the provider's error shown
+  verbatim *and* translated into a likely cause and remedy.
+- **CH-4** Connections are created inactive and only activated after readiness
+  passes — matching Channex's own sequencing, so we never half-connect a channel.
+- **CH-5** Channels needing OAuth (Airbnb) get a dedicated branch: authorise,
+  return, import listings, then map. Where an adapter is only supported through the
+  **Channex channel iframe**, we embed it, clearly labelled, rather than faking a
+  native flow we cannot support.
+- **CH-6** Activation triggers a full ARI push for the configured horizon, with
+  visible progress and an ETA.
+
+## 7.3 The mapping screen
+
+Two panes: **our inventory** (room types → rate plans, with occupancy) and **the
+channel's** rooms and rates (from `POST /channels/mapping_details`). A mapping row
+links one of ours to one of theirs.
+
+Per row: our rate plan · channel room code · channel rate code · occupancy ·
+rate type · optional `derived_option` (percent/amount, increase/decrease).
+
+- **MAP-1** **Auto-suggest** with confidence scores from name similarity,
+  occupancy match, price proximity and previously accepted mappings. Suggestions
+  are always reviewable; nothing is auto-applied above the user's head.
+- **MAP-2** **Coverage warnings before save**: unmapped room types, unmapped rate
+  plans, a channel room with no mapping, occupancy levels the channel expects but
+  we do not sell, and duplicate targets. Unmapped inventory is the direct cause of
+  unmapped bookings ([05 §5.7](./05-channex-integration.md#57-unmapped-bookings)),
+  so this list is loud.
+- **MAP-3** Validation blocks cross-property references (INV-8) and mapping a
+  derived plan where the channel expects a base rate.
+- **MAP-4** A **diff view** before saving changes to a live connection: what will
+  start selling, what will stop. Changing mappings on a live channel is a
+  high-consequence act and is treated as one.
+- **MAP-5** Bulk mapping for large properties (pattern match, CSV import) plus
+  **copy mapping from another property** for portfolios with identical setups.
+- **MAP-6** Mapping changes are audited with before/after and trigger a targeted
+  re-push of the affected rate plans.
+
+## 7.4 Channel health board
+
+One card per connection, sorted worst-first, because the only thing a manager
+wants on this page is "what is broken":
+
+- state (`active`, `paused`, `error`, `disconnected`) and readiness
+- last successful ARI push, per data type
+- pending / failed cells attributable to this channel
+- recent `sync_error`, `sync_warning`, `rate_error` events, in plain language
+- bookings received (7/30 days), revenue, and share of channel mix
+- unmapped bookings originating here
+- credential expiry and OAuth token status, with days remaining
+
+Alert handling:
+
+| Signal | Severity | Presentation |
+|---|---|---|
+| `disconnect_channel`, `disconnect_listing` | **P1** | Banner + email + push: "You are not selling on X." One-click reconnect. |
+| `channel_removal_warning`, `property_removal_warning` | **P1** | Deadline countdown and the exact required action. |
+| Credentials invalid / expired | **P1** | Reconnect flow, queue paused for that channel. |
+| Repeated `rate_error` | **P2** | Grouped by cause with a suggested fix (e.g. rate below the OTA's minimum). |
+| Readiness regression | **P2** | Mapping gaps listed with jump links. |
+| Elevated drift | **P2** | Force-resync action offered. |
+
+- **CH-7** Every alert names the property, the channel, the business consequence
+  and the next action. "Sync error 4092" alone is a bug in this spec.
+- **CH-8** Pausing a channel is one click, reversible, and clearly explains that
+  inventory stops updating (not that it stops selling).
+
+## 7.5 Multi-property channel operations
+
+For portfolios: connect the same OTA across N properties from one flow (shared
+credentials where the adapter supports account-level auth), a matrix view of
+channel × property state, and bulk pause/resume. This is the difference between
+usable and unusable at 50 properties.
+
+## 7.6 Acceptance criteria
+
+- A manager can connect and map a Booking.com property in under 15 minutes with no
+  reference to external documentation.
+- Adding a new Channex adapter requires **zero** code changes in our repo.
+- No connection can be activated while a mapping gap that would cause unmapped
+  bookings exists, unless explicitly overridden and logged.
+- A disconnected channel is visible within 60 seconds and communicated in language
+  a hotelier understands.
