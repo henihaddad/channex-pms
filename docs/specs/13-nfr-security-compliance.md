@@ -1,6 +1,6 @@
 # 13 — Non-Functional Requirements, Security & Compliance
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: access credentials added to the threat model; owner isolation added.
 
 We hold guest identity data, OTA credentials, and the integrity of what a property
 sells. A breach or a systemic overbooking would end the project's credibility
@@ -13,6 +13,8 @@ permanently, so this spec is a gate, not a wish list.
 | Guest PII (name, contact, ID documents, messages) | Exfiltration, cross-tenant leakage, insider browsing | Per-tenant encryption, RLS, `booking:read_pii` gating, access logging, retention purge |
 | Payment instrument metadata | Card fraud, PCI scope creep | No PAN ever stored, tokenisation, step-up auth, per-view audit, PAN-shaped-data check constraint + scanner |
 | OTA / Channex credentials | Account takeover, malicious inventory changes | Envelope encryption, write-only fields, `channel:read_credentials` gating, rotation |
+| **Guest access credentials** (door codes, lock tokens) | Physical intrusion into homes | Encrypted at rest, never logged, time-boxed validity, auto-revocation on cancellation (INV-14), masked display, per-read audit |
+| Owner data isolation | One owner reading another's revenue or bookings | `⊙` row-filtered permissions in SQL, RBAC-9 test suite, portal scoping |
 | ARI integrity | Malicious or accidental mass rate change; overbooking | Guard rails, blast-radius limits, optional four-eyes, full audit, reversible bulk ops |
 | Availability integrity | Overbooking via race conditions | Per-property serialised pushes, keep-back buffers, holds during checkout, overbooking alerts |
 | Audit log | Tampering to hide an action | Append-only, per-org hash chain, no update/delete grants |

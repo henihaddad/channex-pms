@@ -1,6 +1,6 @@
 # 10 — Direct Booking Engine
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: multi-property portfolio search is the default storefront; in v1 scope (M7).
 
 **Primary personas:** the **guest**, plus `property_manager` and `revenue_manager`
 who configure it.
@@ -19,7 +19,7 @@ through the same pipeline as any OTA, and a direct booking enters through the sa
 Consequences we want:
 
 - one booking-creation code path for OTA, direct, and staff/walk-in
-  ([08 §8.9](./08-reservations-and-frontdesk.md#89-direct-and-walk-in-bookings));
+  ([08 §8.9](./08-operations-and-turnover.md#89-direct-and-walk-in-bookings));
 - availability decrements identically, so direct sales cannot overbook the OTAs;
 - channel-mix reporting includes direct without special-casing;
 - rate parity is visible against real OTA prices in one table.
@@ -68,7 +68,9 @@ Requirements:
   iframe with `postMessage` resizing so it never breaks a hotel's WordPress theme.
 - **Deep links** honouring dates, promo code, room type and language, so campaigns
   can land directly on results.
-- **Multi-property search** for portfolios, with a map and property filters.
+- **Portfolio storefront is the default**: multi-listing search with a map, dates,
+  guests and attribute filters (pets, pool, workspace) — an STR manager sells a
+  portfolio, not a property. Single-property pages exist per listing beneath it.
 - **White-label theming**: logo, colours, fonts, custom CSS, per property.
 - **Localisation**: full i18n, RTL, per-locale currency display with a clear
   statement of the charge currency.
@@ -119,6 +121,8 @@ Magic-link authenticated, scoped to one booking, no account required.
   required, arrival time, preferences — feeding the front desk board and cutting
   arrival queues.
 - Purchase extras and upgrades.
+- **Access code reveal** at the configured time before arrival, plus arrival
+  instructions and house manual — the portal is how guests reach an empty flat.
 - Message the property (creating a `direct` thread in the unified inbox).
 - Self-service cancellation or date change **only where the policy allows it**,
   with the fee shown before confirming.

@@ -1,6 +1,6 @@
 # 07 — Channels & Mapping
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: shared `ChannelAccount` credentials and the Airbnb OAuth path are first-class; bulk connection is an acceptance criterion.
 
 **Primary personas:** `property_manager`, `portfolio_manager`, `revenue_manager`.
 
@@ -47,8 +47,11 @@ Requirements:
   verbatim *and* translated into a likely cause and remedy.
 - **CH-4** Connections are created inactive and only activated after readiness
   passes — matching Channex's own sequencing, so we never half-connect a channel.
-- **CH-5** Channels needing OAuth (Airbnb) get a dedicated branch: authorise,
-  return, import listings, then map. Where an adapter is only supported through the
+- **CH-5** **Airbnb is a primary path, not a branch**: OAuth authorise once at
+  org level (`ChannelAccount`), import listings in bulk, and offer per-listing
+  match-or-create against our properties. Inquiries, reservation requests and
+  alteration requests from Airbnb are actionable tasks with deadlines
+  ([05 §5.5.3](./05-channex-integration.md#553-event-catalogue-and-our-response)). Where an adapter is only supported through the
   **Channex channel iframe**, we embed it, clearly labelled, rather than faking a
   native flow we cannot support.
 - **CH-6** Activation triggers a full ARI push for the configured horizon, with
@@ -112,15 +115,18 @@ Alert handling:
 
 ## 7.5 Multi-property channel operations
 
-For portfolios: connect the same OTA across N properties from one flow (shared
-credentials where the adapter supports account-level auth), a matrix view of
-channel × property state, and bulk pause/resume. This is the difference between
-usable and unusable at 50 properties.
+**Primary, not auxiliary, for the STR segment.** An org-level `ChannelAccount`
+holds shared credentials/OAuth tokens; connecting the same OTA across N listings
+is one flow: pick the account, pick the listings, auto-map `single_unit`
+properties (one room type, one rate plan — mapping is nearly deterministic),
+review the exceptions, activate in bulk with a progress view. Plus a matrix view
+of channel × property state and bulk pause/resume. This is the difference between
+usable and unusable at 50 listings.
 
 ## 7.6 Acceptance criteria
 
-- A manager can connect and map a Booking.com property in under 15 minutes with no
-  reference to external documentation.
+- A manager can connect and map a Booking.com property in under 15 minutes, and
+  connect 20 existing Airbnb listings in under 30, with no external documentation.
 - Adding a new Channex adapter requires **zero** code changes in our repo.
 - No connection can be activated while a mapping gap that would cause unmapped
   bookings exists, unless explicitly overridden and logged.

@@ -1,6 +1,6 @@
 # 12 — Platform Administration & Billing
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: hosted SaaS ships at launch (D4), so billing and quotas are v1 scope (M8). The parity guarantee is unchanged.
 
 This spec covers the operator's side: the console, tenant lifecycle, quotas,
 support tooling, plugins, and — for anyone running the SaaS mode — billing.
@@ -83,12 +83,14 @@ retention window, storage for attachments and exports.
 non-critical work (reports, exports, bulk operations); ARI sync, booking ingest and
 ack are exempt. Losing a booking to a quota would be indefensible.
 
-## 12.5 Billing (SaaS mode only)
+## 12.5 Billing (hosted service; v1 scope)
 
-- **Plan model** — per property per month, with room-count tiers, plus optional
-  add-ons (booking engine, extra properties, priority support). Annual discount.
-- **Metering** — nightly `UsageRecord`s of active properties and rooms; billed on
-  the peak within the period, which matches how properties actually grow.
+- **Plan model** — **per active unit per month** with volume tiers (STR managers
+  count units, not properties), plus optional add-ons (priority support). The
+  booking engine and owner portal are included in every plan — they are product,
+  not upsells. Annual discount.
+- **Metering** — nightly `UsageRecord`s of active units; billed on the peak within
+  the period, which matches how portfolios actually grow.
 - **Provider** — Stripe Billing behind a `BillingProvider` port so another
   processor can be substituted.
 - **Invoicing** — automatic, with VAT/GST handling and reverse charge for EU B2B,

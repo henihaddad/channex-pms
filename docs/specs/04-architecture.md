@@ -1,6 +1,6 @@
 # 04 — Architecture
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21 to match the D3 stack decision (full-stack Next.js + worker; no separate api app in v1) and the owners/operations modules.
 
 ## 4.1 System context
 
@@ -66,14 +66,15 @@ import another module's internals:
 | `channels` | connections, adapter descriptors, mappings, health |
 | `connectivity` | the provider port + Channex adapter + sync engine |
 | `reservations` | bookings, revisions, projections, unmapped queue |
-| `frontdesk` | check-in/out, assignment, housekeeping, blocks |
+| `operations` | turnover tasks, crews, cleaner app, maintenance, blocks, access credentials; front-desk surfaces for hotel-kind |
 | `billing_ops` | folios, charges, payments, invoices *(guest-facing money)* |
+| `owners` | owners, agreements, statements, expenses, payouts, owner portal |
 | `messaging` | threads, messages, templates, automation |
 | `reviews` | reviews, responses |
 | `insight` | reports, KPI aggregates, exports, saved views |
 | `notifications` | preferences, delivery, digests |
 | `audit` | append-only log, hash chain |
-| `platform` | plans, subscriptions, quotas, operator console *(SaaS)* |
+| `platform` | plans, subscriptions, quotas, operator console *(hosted service; v1)* |
 | `plugins` | registry, installation, sandboxed execution |
 
 Cross-module communication is **either** a direct typed call within a request
@@ -286,9 +287,9 @@ Migrations run as an explicit job, never implicitly on boot.
 
 ```
 apps/
-  web/            Next.js staff console + booking engine
-  api/            REST API, webhook receiver, realtime gateway
-  worker/         queue consumers, schedulers
+  web/            Next.js — staff console, booking engine, guest portal,
+                  owner portal, webhook receiver, public REST API v1
+  worker/         queue consumers, schedulers, realtime gateway
 packages/
   core/           domain entities, value objects, money, dates
   authz/          permission catalogue + evaluator (generated from spec 02)

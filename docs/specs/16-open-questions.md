@@ -1,130 +1,124 @@
-# 16 — Open Questions
+# 16 — Open Questions & Decision Log
 
-**Status:** `draft` — this is the working agenda. Each answer becomes an ADR.
+**Status:** `review` — the big four were decided on 2026-08-21; each will get an
+ADR when the repo scaffolding lands. Remaining open items are at the bottom.
 
-Ordered by how much they change the build.
+## Decided
 
-## Q1 — Target segment first? *(blocks the data model)*
+### ✅ D1 — Segment: **vacation rentals / short-term rental managers first**
+*(was Q1, decided 2026-08-21)*
 
-Hotels, vacation rentals, and hostels look similar and are not.
+The model is optimised for STR managers operating 5–300 units for owners. Hotels
+and guesthouses remain fully supported via `property.kind = hotel`; hostels
+(bed-level inventory) are deferred post-v1. Consequences propagated:
+portfolio-first UX, `single_unit` auto-managed inventory (MODEL-1), property
+templates/clone/bulk import, turnover operations replacing the front desk
+([08](./08-operations-and-turnover.md)), owner management as a core module
+([17](./17-owner-management.md)), Airbnb OAuth as a first-class path, access
+credentials in the domain model.
 
-- **Hotels** — room types with many identical units; the model in
-  [03](./03-domain-model.md) fits natively.
-- **Vacation rentals** — each property *is* one unit (`count_of_rooms = 1`); managers
-  hold 50 separate Channex properties. Portfolio-level UX becomes the primary
-  surface, not a nice-to-have, and per-property onboarding cost dominates.
-- **Hostels** — beds sold individually within dorms; needs bed-level inventory,
-  which is a real extension, not a config flag.
+### ✅ D2 — v1 scope: **the full platform, booking engine included**
+*(was Q2, decided 2026-08-21)*
 
-Current assumption: **hotels and small guesthouses first**, portfolio features
-designed in from the start, hostel bed-level inventory deferred. Confirm or redirect.
+Everything through M8 ships before `v1.0`: channel manager, operations, messaging,
+owners, dashboards, booking engine, billing. Mitigation for the long runway
+(9–11 months): every milestone from M2 onward is an independently usable release,
+and design partners ride them while later milestones are built
+([15](./15-roadmap.md)).
 
-## Q2 — Scope of v1: channel manager, or channel manager + PMS? *(≈8 weeks of difference)*
+### ✅ D3 — Stack: **full-stack Next.js + separate Node worker; no NestJS**
+*(was Q3, decided 2026-08-21)*
 
-[15](./15-roadmap.md) sequences the channel manager first (M2) and the front
-desk/folio work second (M3). An alternative is to ship the channel manager alone as
-v1 and treat the PMS as v2 — faster to adoption, but properties then keep paying for
-a second system, which weakens the pitch.
+TypeScript throughout; Next.js App Router for console + booking engine + portals +
+API routes; a plain Node BullMQ worker for the sync engine; `packages/core` holds
+all domain logic, framework-free. The three conditions and the calendar's
+deliberate idiom break are normative in [14](./14-tech-stack.md).
 
-Assumption: keep both, sequenced, with `v0.1` at M2 so real feedback arrives early.
+### ✅ D4 — Business model: **open source + hosted SaaS from launch**
+*(was Q4, decided 2026-08-21)*
 
-## Q3 — Technology stack *(blocks all code)*
+Billing, quotas, dunning and the operator console are in v1 (M8). The parity
+guarantee holds: the self-hosted build is never crippled, feature flags are never
+paywalls, open-core is rejected. This choice tilts Q5 toward a CLA — see below.
 
-[14](./14-tech-stack.md) recommends TypeScript + NestJS + Next.js + Postgres +
-Redis. Elixir/Phoenix is a strong second and is what Channex itself uses. **Which
-are you personally fastest and happiest in?** For a project whose first year depends
-on one or two people, that outweighs every abstract argument in spec 14.
+## Open
 
-## Q4 — SaaS, or pure open source?
+### Q5 — Contributor licensing: DCO or CLA?
 
-Affects whether the billing and quota work in [12](./12-platform-admin-and-billing.md)
-is in v1 or dropped entirely. Options: pure OSS (no billing module), OSS + a hosted
-offering (billing needed, parity guarantee applies), or open-core (**not
-recommended** — it corrodes contributor trust and contradicts
-[01 §1.9](./01-vision-and-scope.md#19-licence-and-governance)).
+Now sharper because of D4: we *are* running a commercial hosted service on this
+code. A CLA preserves the option to offer commercial licences or relicense; DCO
+maximises contributor trust and minimises friction. Middle path worth considering:
+**DCO + a Contributor Agreement only for maintainers**, or the Fiduciary Licence
+Agreement (FLA) which vests rights in a steward while guaranteeing the code stays
+open. Needs a decision before the first external PR is accepted.
 
-Assumption: OSS-first, with the billing module optional and clearly separable.
+### Q6 — Commercial relationship with Channex
 
-## Q5 — Licence and contribution model
+To settle with Channex early, because D4 makes us a reseller-shaped partner:
 
-Proposed AGPL-3.0 (server) + Apache-2.0 (SDK, plugin interfaces, booking widget).
-Open: DCO or CLA? A CLA preserves relicensing and dual-licensing options; it also
-deters casual contributors. Recommendation: **DCO**, unless a hosted commercial
-offering is definitely planned.
+1. Pricing for an OSS integrator and for our hosted tenants — per property, per
+   account, revenue share?
+2. Can the hosted service hold one Channex master account with per-tenant
+   sub-accounts (groups), or must each tenant bring their own Channex account?
+   **This decides the SaaS onboarding flow and the margin structure**, and it is
+   the most urgent open item on this list.
+3. White-label / reseller terms for self-hosters, so they get connectivity without
+   a separate negotiation.
+4. Long-lived staging access for CI; certification process and timeline.
+5. Publishable rate limits, so the adaptive limiter can be tuned rather than
+   guessing.
+6. Roadmap alignment: HMAC webhook signing, more messaging channels, bulk ARI read.
+7. Public support: an open-source PMS is a distribution channel for them — a
+   plausible ask, not a favour.
 
-## Q6 — Commercial relationship with Channex
+### Q7 — Adopt-existing-Channex-property import
 
-Practical questions to settle with them early, because they affect the product's
-economics and legal footing:
+**Recommended yes, scheduled in M2** ([15](./15-roadmap.md)): most prospects
+already run Channex, and adopting their properties, mappings and webhook endpoints
+without dropping a booking during cutover is the strongest adoption lever we have.
+Confirm it stays in M2 if the milestone gets tight.
 
-1. Pricing model for an OSS integrator — per property, per account, revenue share?
-2. Is a reseller / white-label arrangement available, so a self-hoster gets
-   connectivity without a separate negotiation?
-3. Long-lived staging access for CI, and the certification process and timeline.
-4. Are undocumented rate limits publishable, so our limiter can be tuned rather
-   than adaptive-guessing?
-5. Roadmap alignment: HMAC webhook signing, more messaging channels, a bulk ARI
-   read endpoint for cheaper drift detection.
-6. Would they support the project publicly? An open-source PMS is a distribution
-   channel for them, which makes this a plausible ask rather than a favour.
+### Q8 — Tenancy isolation
 
-## Q7 — Existing Channex users: import or greenfield?
+Assumed **shared tables + Postgres RLS** (fine to hundreds of tenants, simplest
+operations). Schema-per-tenant and database-per-tenant rejected for migration cost.
+Confirm.
 
-Many prospects already run Channex with properties, mappings and history in place.
-Do we build an **import mode** that adopts existing Channex properties, room types,
-rate plans and channels into our model? It is real work (reconciling by natural key,
-back-filling ARI, taking over the webhook endpoint without dropping bookings during
-cutover) and it is probably the single strongest adoption lever we have.
+### Q9 — Name and brand
 
-Recommendation: yes, in M2, as an explicit "adopt existing property" path.
+`channex-pms` couples the project to one provider and borrows a trademark. Needed
+before the public launch: a name, domain, GitHub org, one-line pitch. Blocking
+nothing technical, but blocking the public repo.
 
-## Q8 — Tenancy isolation model
+### Q10 — Launch locales
 
-Shared tables + RLS (assumed: simplest operationally, fine to hundreds of tenants)
-vs schema-per-tenant (stronger isolation, painful migrations) vs
-database-per-tenant (enterprise-grade, operationally heavy). Confirm shared+RLS.
+Suggested: English, French, Arabic (early RTL test), Spanish, Portuguese. Confirm,
+and flag any launch market whose guest-registration or e-invoicing obligations
+([13 §13.9](./13-nfr-security-compliance.md#139-sector-specific-compliance)) must be
+v1 rather than a plugin. Tunisia/France specifics worth an early check given likely
+first markets.
 
-## Q9 — Name and brand
+### Q11 — Design partners
 
-`channex-pms` is a fine working title but couples us to one provider — awkward
-given the deliberate provider abstraction in
-[01 §1.5](./01-vision-and-scope.md#15-provider-abstraction-non-negotiable), and it
-borrows someone else's trademark. Worth choosing something ownable before the first
-public release. Also needed: a domain, a GitHub org, and a one-line pitch.
+Who is portfolio #1? Ideally one STR manager (20–60 units) and one small hotel.
+A real portfolio on `v0.1` at M2 matters more than anything else on this page.
 
-## Q10 — Launch locales
+### Q12 — AI features
 
-Which languages for v1? Suggested: English, French, Arabic (an early RTL test is
-worth far more than a late one), Spanish, Portuguese. Confirm, and say whether any
-launch market imposes guest-registration or e-invoicing obligations
-([13 §13.9](./13-nfr-security-compliance.md#139-sector-specific-compliance)) that
-must be in v1 rather than a plugin.
+Spec stance: opt-in reply drafting behind an `LlmProvider` port, human always
+sends, off by default, self-hostable models supported. Confirm or extend
+(review responses? pricing suggestions?).
 
-## Q11 — Design partners
+### Q13 — Mobile
 
-Who is property #1? A real property using this weekly is worth more than any amount
-of speculative design. Ideally two: one hotel, one small portfolio. Do you have
-access to either?
+PWA-only for v1 (assumed), including the cleaner app. Native shells post-v1 if
+offline/push limits bite. Confirm.
 
-## Q12 — AI features: how far?
+### Q14 — Small technical items
 
-The spec keeps AI strictly optional and human-in-the-loop
-([09 §9.3](./09-messaging-and-inbox.md#93-composing)). Options range from none, to
-reply drafting only, to reply drafting + review responses + pricing suggestions.
-Anything more raises privacy obligations and self-hoster friction. Assumption:
-opt-in reply drafting behind a port, off by default.
-
-## Q13 — Mobile
-
-PWA only (assumed for v1), or native shells for the front desk and housekeeping?
-Native buys reliable offline behaviour and push notifications, at the cost of an
-app-store release process.
-
-## Q14 — Deferred technical decisions
-
-- Whether to snapshot on-the-books data from M0 rather than M5 — it cannot be
-  backfilled, and the cost is one nightly job. **Leaning yes.**
-- Whether the direct booking engine registers as a Channex channel via the Open
-  Channel API or stays purely local ([10 §10.1](./10-booking-engine.md#101-architectural-stance)).
-- Whether availability keep-back defaults on or off for new properties.
-- Reporting horizon: how many years of history to keep queryable before archiving.
+- ✅ On-the-books snapshots start at **M0** (decided with D2 — cannot be backfilled).
+- Direct booking engine: purely local (assumed) vs also registered as a Channex
+  Open Channel. Revisit at M7.
+- Availability keep-back default for new properties: **off** for `single_unit`
+  (you cannot hold back your only unit), suggested `1` for hotel kinds. Confirm.
+- Reporting horizon before archival: suggested 3 years hot, then parquet export.

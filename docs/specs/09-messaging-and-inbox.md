@@ -1,6 +1,6 @@
 # 09 — Messaging & the Unified Inbox
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: templates and automation are org-scoped; access-code delivery is a core automation.
 
 **Primary personas:** `guest_relations`, `reservations_agent`, `property_manager`.
 
@@ -77,8 +77,9 @@ internal note to a guest.** Therefore:
 
 ## 9.3 Composing
 
-- **Templates** with variable interpolation (`{{guest.first_name}}`,
-  `{{booking.arrival}}`, `{{property.wifi_code}}`, `{{room.number}}`), organised by
+- **Templates** (org-scoped — 200 listings share one library) with variable
+  interpolation (`{{guest.first_name}}`, `{{booking.arrival}}`,
+  `{{unit.wifi_name}}`, `{{unit.access_instructions}}`, `{{property.address}}`), organised by
   category, filtered to the current channel, and previewed with real values before
   sending.
 - **Multi-language templates** — a locale variant is auto-selected from the guest's
@@ -116,7 +117,8 @@ Rules over triggers, with conditions and quiet hours:
 | Booking confirmed | Thank-you + directions + check-in instructions |
 | T-3 days before arrival | Pre-arrival details, upsell, early check-in offer |
 | T-1 day | Arrival-day logistics, door code where applicable |
-| Check-in completed | Wi-Fi, amenities, contact details |
+| Access window opens (configurable, e.g. T-1 day 17:00) | **Door code / lockbox delivery** — the STR-critical automation; pulls from `AccessCredential`, never sends before the window, resends on rotation |
+| Check-in completed | Wi-Fi, amenities, house manual, contact details |
 | Mid-stay (stay ≥ 3 nights) | Satisfaction check |
 | Check-out day | Departure info, late-checkout offer |
 | T+1 after departure | Thank-you + review request |

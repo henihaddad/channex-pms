@@ -1,6 +1,6 @@
 # 05 — Channex Integration & Sync Engine
 
-**Status:** `draft`
+**Status:** `review`
 
 This is the spec that decides whether the platform is trustworthy. Everything
 here exists to satisfy two promises from [01](./01-vision-and-scope.md): *never

@@ -1,81 +1,171 @@
 # 14 — Technology Stack
 
-**Status:** `draft` — §14.1 is the one decision that needs confirming before code
-is written ([16](./16-open-questions.md)).
+**Status:** `accepted` (2026-08-21) — supersedes the earlier NestJS recommendation.
 
-## 14.1 Language and framework
+## 14.1 Decision
 
-**Recommendation: a TypeScript monorepo — Next.js on the front, NestJS on the API,
-BullMQ workers, PostgreSQL, Redis.**
+**Full-stack Next.js (App Router) + a separate plain-Node worker process,
+TypeScript throughout, PostgreSQL + Redis.**
 
-Rationale, in order of weight:
+No NestJS. No separate API application in v1.
 
-1. **Contributor pool.** An open-source hospitality platform lives or dies on
-   drive-by contributors. TypeScript has the largest population of developers who
-   can fix a bug in a calendar grid *and* in a sync worker.
-2. **One type system end to end.** The domain here is full of fiddly shapes — ARI
-   payloads, booking revisions, mapping descriptors. Sharing `packages/core` types
-   between API, workers and UI eliminates an entire class of integration bug for free.
-3. **The hardest UI in the product is the calendar grid.** It is a custom
-   virtualised, keyboard-driven, optimistically-updating spreadsheet. That work is
-   unavoidable and is best served by the richest front-end ecosystem.
-4. **Boring and inspectable**, per [01 §1.7](./01-vision-and-scope.md#17-product-principles).
+```
+apps/
+  web/       Next.js — staff console, booking engine, guest portal,
+             owner portal, webhook receiver, public REST API v1
+  worker/    plain Node + BullMQ — sync engine, ingestion, automation,
+             rollups, night audit
+packages/
+  core/      ALL domain logic, framework-free
+  ...
+```
 
-Alternatives genuinely considered:
+## 14.2 Why Nest is not necessary here
 
-| Option | Case for | Why not chosen |
+NestJS earns its weight when you have a large public REST surface, many
+contributors needing enforced structure, and a team that wants DI. What it
+actually provides that we need:
+
+| Nest feature | Do we need it? | Cheaper substitute |
 |---|---|---|
-| **Elixir / Phoenix** | Channex itself is Elixir; BEAM is superb for realtime fan-out and per-property serialised processes (a `GenServer` per property is a *beautiful* fit for the ARI queue); LiveView would cut front-end work | Much smaller contributor pool. Strong second choice — pick it if the core team is already fluent. |
-| **Go** | Excellent workers, single-binary self-hosting | Weaker for a complex data-grid UI; more boilerplate for CRUD-heavy modules; no shared types with the front end. |
-| **Python / Django** | Fast CRUD, great data tooling, huge pool | Weaker realtime story; async ergonomics are still awkward for a sync-heavy workload. |
-| **Ruby / Rails** | Fastest to a working PMS | Smaller and shrinking contributor pool; performance work on the calendar would arrive early. |
+| Module system for boundaries | Yes | `packages/*` + an ESLint import-boundary rule. Enforced identically, zero runtime cost. |
+| Guards for per-route permissions | **Critically** (RBAC-1) | A single `withPermission()` wrapper — §14.4. Better, actually: it covers Server Actions too, which Nest guards never would. |
+| DI for the provider ports | Not really | A typed container built at boot (~40 lines). We have ~8 ports, not 80. |
+| Decorator-driven OpenAPI | Yes, by v1 | Generate from the Zod schemas we already write for validation. One source of truth instead of two. |
+| Interceptors (logging, tracing) | Yes | Next middleware + one wrapper in the handler chain. |
 
-**Single-binary caveat:** TypeScript loses to Go on self-host simplicity. We
-compensate with a first-class Docker Compose bundle and a genuinely one-command
-install ([04 §4.8](./04-architecture.md#48-deployment-topology)).
+And against it, three things that matter more for *this* product with 1–2 developers:
 
-## 14.2 Component decisions
+1. **The booking engine is SEO- and LCP-critical.** Vacation-rental direct bookings
+   live and die on organic search and page speed. Next.js SSR/RSC is the reason to
+   pick this stack at all — and running Nest alongside means two deploys, two
+   runtimes and a network hop between the console and its own data.
+2. **Server Components delete most of the console's API layer.** A portfolio
+   calendar, a reservation list, an owner statement — these are reads that can go
+   straight to the database in a server component. Building REST endpoints for them
+   is work that buys nothing.
+3. **One repo, one deploy, one type system.** With two people, integration overhead
+   is the tax you can least afford.
+
+**What we give up, honestly:** a slightly less obvious place for a newcomer to
+find "the API layer", and a manual OpenAPI pipeline. Both are acceptable.
+
+## 14.3 The three non-negotiable conditions
+
+Full-stack Next.js goes wrong in one predictable way: business logic accretes
+inside Server Actions and route handlers until it cannot be tested, reused by the
+worker, or reasoned about. Since the worker needs the *same* logic the UI does
+(availability recalculation, booking projection, rate derivation), that failure is
+not hypothetical — it is guaranteed unless prevented structurally.
+
+**C1 — All domain logic lives in `packages/core`, framework-free.**
+No `next/*` import anywhere in `packages/core`. Server Actions and route handlers
+are adapters: parse input, resolve actor, call a core service, map the result.
+Target ≤ 20 lines each; a lint rule flags longer ones. The worker imports exactly
+the same services, which is the real test that this rule is being honoured.
+
+**C2 — One authorization chokepoint.**
+Every Server Action and every route handler is wrapped:
+
+```ts
+export const setRateDays = withPermission(
+  'ari:update_rate',
+  { scope: 'property' },
+  async (ctx, input: SetRateDaysInput) => rates.setRateDays(ctx, input),
+)
+```
+
+`withPermission` resolves the session, loads effective grants, evaluates scope,
+records the audit entry, and opens the tenant-scoped transaction (setting the RLS
+session variable). A build-time check enumerates every exported action and route
+handler and **fails the build** on any that is not wrapped — this is how
+[RBAC-1](./02-personas-and-rbac.md#29-requirements) ("a route with no declaration
+fails closed") is satisfied without a framework.
+
+**C3 — The worker is a separate process from day one.**
+Next.js has no worker model, and this product is queue-shaped: per-property
+serialised ARI pushes, booking ack loops, reconciliation, automation, night audit,
+rollups. `apps/worker` is a plain Node entrypoint with BullMQ consumers importing
+`packages/core`. It is never a Next route, a cron-hitting-an-endpoint, or a
+`setInterval`.
+
+## 14.4 Where we deliberately break Next idiom
+
+**The calendar does not use Server Actions.**
+
+Server Actions serialise through the router, cannot batch, and re-render on
+resolution. The calendar grid does high-frequency optimistic cell writes — drag a
+selection over 200 cells and paste — which is precisely the workload they are
+worst at. So:
+
+| Surface | Mechanism |
+|---|---|
+| Calendar cell and bulk ARI writes | Route handlers (`/api/v1/…`) + TanStack Query mutations with optimistic cache updates; realtime channel confirms per-cell sync state |
+| Inbox send, thread actions | Route handlers + TanStack Query (same reason: optimistic, high frequency) |
+| Everything else in the console (forms, settings, wizards, assignments) | Server Actions — they are genuinely nicer here |
+| Reads for console pages | Server Components querying `packages/core` directly |
+| Booking engine, guest portal, owner portal | Server Components + Server Actions |
+| Third-party / partner access | Public REST API v1, route handlers, OpenAPI generated from Zod |
+| Webhook receiver | Route handler on the Node runtime, `dynamic = 'force-dynamic'`, persist-and-return-200 only |
+
+## 14.5 Escape hatch
+
+If the partner API becomes a product surface — PMS vendors, agencies, a public
+integration ecosystem — extract `apps/api` (Fastify, or Nest then) and point it at
+the same `packages/core`. Because C1 holds, that is a mechanical change: new
+adapters, no domain rewrite. We are deferring the decision, not foreclosing it.
+
+## 14.6 Hosting consequence
+
+The webhook receiver and the worker both need a **long-running Node runtime**.
+Serverless-only hosting cannot run BullMQ consumers, and edge runtimes cannot hold
+a Postgres pool. Therefore:
+
+- **Self-host:** Docker Compose — `web`, `worker`, `postgres`, `redis`, `minio`,
+  `caddy`. One command, as promised in [04 §4.8](./04-architecture.md#48-deployment-topology).
+- **SaaS:** containers on a normal host (Fly.io, Railway, Render, Hetzner + Docker,
+  or ECS). `web` and `worker` scale independently; managed Postgres and Redis.
+- Vercel may host the marketing site if we want its preview workflow, but the
+  product itself runs in containers. We do **not** split the app to fit a serverless
+  platform.
+
+## 14.7 Component decisions
 
 | Concern | Choice | Why, and what was rejected |
 |---|---|---|
-| Monorepo | pnpm workspaces + Turborepo | Fast, standard, cacheable CI. |
-| API framework | **NestJS** | Its module system maps 1:1 onto the modular monolith in [04](./04-architecture.md); DI makes the provider ports natural; guards give declarative per-route permissions (RBAC-1). Rejected: bare Fastify (we would rebuild this structure by hand). |
-| Web | **Next.js (App Router)** | SSR for the booking engine's SEO and LCP, SPA behaviour for the console, one framework for both. |
-| Database | **PostgreSQL 16+** | RLS for tenant isolation, partitioning for ARI, JSONB for raw payloads, window functions for pace maths, `LISTEN/NOTIFY` if needed. Non-negotiable — SQLite cannot serve this model. |
-| Data access | **Drizzle ORM** | SQL-first, transparent queries, no fight with RLS or partitioned tables, excellent types. Rejected: Prisma — its query layer makes RLS and complex ARI upserts harder than writing SQL. |
-| Migrations | Drizzle Kit, forward-only, reviewed by hand | Generated migrations are always read before merge. |
-| Queues | **BullMQ** on Redis | Mature, per-key concurrency (needed for one-job-per-property), delays, repeatable jobs, DLQ. Rejected: pgmq/pg-boss (fewer features), Kafka (vast overkill). |
-| Cache / locks / presence | Redis | Also backs realtime fan-out. |
-| Realtime | WebSocket via Socket.IO-compatible gateway, SSE fallback | Calendar cells, inbox, booking feed. |
-| Object storage | S3-compatible (MinIO self-host) | Photos, attachments, exports, invoices. |
-| Validation | **Zod** | One schema for API validation, config validation and generated OpenAPI. Config failures crash at boot, by design. |
-| Auth | Own implementation on top of a vetted library, plus OIDC/SAML | Sessions, 2FA, step-up and impersonation are domain-specific enough that a hosted identity product would fight us. |
-| UI | React + Tailwind + shadcn/ui + Radix | Accessible primitives, fast iteration, and a design system we control. |
-| Grid | **Custom, built on TanStack Virtual** | No off-the-shelf grid handles 400 editable cells with three data layers, per-cell sync state, range paste and server-backed undo. Attempting to bend one is a known trap. |
-| Tables | TanStack Table | Reservation lists, reports. |
-| Charts | Recharts (escalate to visx for the heatmaps) | |
-| Forms | React Hook Form + Zod | Descriptor-driven channel forms need runtime schemas. |
-| i18n | i18next + ICU | RTL from day one. |
-| Dates | Temporal (polyfilled) or date-fns + tzdb | **Rule: a hotel night is a `LocalDate`, never an instant.** Timezone bugs here cost real money. |
-| Money | Integer minor units in a `Money` value object | Floats are banned by lint rule. |
-| Email | React Email templates + a pluggable transport | |
-| Testing | Vitest, Testcontainers, Playwright, fast-check | Property-based tests for ARI diffing and money maths. |
-| Observability | OpenTelemetry → Prometheus + Grafana + Loki/Tempo, Sentry optional | Self-hostable by default. |
-| Docs site | Docusaurus or Starlight | Specs, runbooks, API reference, plugin guide. |
-| CI | GitHub Actions | Lint, typecheck, unit, integration, E2E, security scan, SBOM, migration check, authz-matrix test, certification suite on release branches. |
+| Monorepo | pnpm workspaces + Turborepo | Shared `packages/core` between `web` and `worker` is the whole architecture. |
+| App framework | **Next.js 15 App Router** | SSR for the booking engine, RSC for console reads, one deploy. |
+| Worker | Plain Node + **BullMQ** | Per-key concurrency (one job per property), delays, repeatable jobs, DLQ. Rejected: pg-boss (fewer features), Kafka (overkill). |
+| Database | **PostgreSQL 16+** | RLS for tenancy, partitioning for ARI, JSONB for raw payloads, window functions for pace. SQLite is not supported. |
+| Data access | **Drizzle ORM** | SQL-first, works cleanly with RLS and partitioned tables, excellent inference. Rejected: Prisma — fights RLS and complex ARI upserts. |
+| Migrations | Drizzle Kit, forward-only, hand-reviewed | Run as an explicit job, never on boot. |
+| Validation | **Zod** | One schema for input validation, config validation, and generated OpenAPI. |
+| Auth | Own session layer (Argon2id, TOTP, refresh rotation) + OIDC/SAML | Step-up auth and audited impersonation are too domain-specific to outsource. |
+| Client state | **TanStack Query** | Optimistic calendar and inbox mutations, cache invalidation, offline queueing for housekeeping. |
+| Realtime | WebSocket gateway in `apps/worker` (or a small `apps/realtime`), Redis pub/sub, SSE fallback | Next route handlers are a poor fit for long-lived sockets. |
+| UI | React + Tailwind + shadcn/ui + Radix | Accessible primitives, design system we own. |
+| Calendar grid | **Custom, on TanStack Virtual** | Nothing off-the-shelf handles 400 editable cells, three data layers, per-cell sync state, range paste and server-backed undo. |
+| Tables | TanStack Table | Reservation lists, statements, reports. |
+| Charts | Recharts, escalating to visx for heatmaps | |
+| Forms | React Hook Form + Zod | Channel settings forms are built from runtime descriptors. |
+| i18n | next-intl + ICU | RTL from day one. |
+| Dates | Temporal (polyfilled) | **A night is a `LocalDate`, never an instant.** |
+| Money | Integer minor units in a `Money` value object | Floats banned by lint rule. |
+| Object storage | S3-compatible (MinIO self-host) | Photos, attachments, statements, exports. |
+| Email | React Email + pluggable transport | |
+| Payments | Stripe behind a `PaymentProvider` port | Also `BillingProvider` for subscriptions, `PayoutProvider` for owner payouts. |
+| Testing | Vitest, Testcontainers, Playwright, fast-check | Property-based tests for ARI diffing, date compression, money, and statement maths. |
+| Observability | OpenTelemetry → Prometheus + Grafana + Loki/Tempo | Self-hostable by default. |
+| CI | GitHub Actions | Lint, typecheck, unit, integration, E2E, authz-matrix test, unwrapped-handler check, migration check, security scan, SBOM. |
 
-## 14.3 Engineering standards
+## 14.8 Engineering standards
 
-- **Strict TypeScript.** `strict: true`, no `any` outside typed-boundary adapters,
-  ESLint + Prettier enforced in CI.
-- **Domain-first module layout.** No layer-first folders like `controllers/`,
-  `services/`, `models/` at the top level — modules own their vertical slice.
-- **No cross-module table access.** Enforced by an ESLint import-boundary rule, not
-  by convention.
-- **Every PR:** tests for new behaviour, migration reviewed if the schema changes,
-  spec updated if behaviour changes, and a CHANGELOG entry.
-- **Conventional Commits** for automated changelogs and SemVer.
-- **Feature flags** for anything shipped incrementally; flags are removed once the
-  feature is on everywhere (a flag older than two minors is a CI warning).
-- **Definition of done:** works, tested, observable (metric or log), documented,
-  accessible, and permission-checked.
+- **Strict TypeScript**; no `any` outside typed boundary adapters.
+- **`packages/core` imports no framework.** Enforced by lint, checked in CI.
+- **No cross-module table access** — modules own their vertical slice.
+- **Every exported action/handler is permission-wrapped** — build-time enforced.
+- **Every PR:** tests for new behaviour, migration reviewed, spec updated if
+  behaviour changed, CHANGELOG entry.
+- Conventional Commits; SemVer for the public API and plugin interfaces.
+- **Definition of done:** works, tested, observable, documented, accessible,
+  permission-checked.

@@ -1,6 +1,6 @@
 # 11 — Dashboards & Analytics
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: owner-facing KPIs and statement reconciliation included.
 
 Two rules keep this module honest:
 
@@ -80,7 +80,9 @@ received OTA payouts** · outstanding balances and aged debt · tax summary by
 jurisdiction · virtual cards expiring soon · invoices issued and credit notes ·
 export centre.
 
-### `viewer` (owner/investor) — "How is my asset doing?"
+### `owner` (external) — served by the owner portal ([17 §17.5](./17-owner-management.md#175-the-owner-portal))
+
+### `viewer` (investor/analyst) — "How is the portfolio doing?"
 Occupancy, ADR, RevPAR vs last year and budget · revenue trend · channel mix ·
 review score · a printable monthly owner statement. No guest PII, no operational
 noise.
@@ -102,9 +104,12 @@ variance · promo code usage.
 productivity · room utilisation & OOO history · overbooking incidents · sync health
 history · unmapped booking history · staff activity & audit extract.
 
-**Financial** — daily revenue (night audit) · tax by jurisdiction · payments by
-method · commission reconciliation · OTA payout reconciliation · aged balances ·
-invoice register · owner statement per property.
+**Financial** — daily revenue (daily close / night audit) · tax by jurisdiction ·
+payments by method · commission reconciliation · OTA payout reconciliation · aged
+balances · invoice register · **owner statement register with statement-to-report
+reconciliation** (the sum of statement lines for a period must equal the revenue
+report for the same basis — asserted by a scheduled job, alerting on mismatch) ·
+owner profitability per agreement.
 
 **Guest** — guest history & repeat rate · nationality/language mix ·
 message response performance · review scores and trends · NPS (if collected).

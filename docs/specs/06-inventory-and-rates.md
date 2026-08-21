@@ -1,6 +1,6 @@
 # 06 — Inventory, Rates & the Calendar
 
-**Status:** `draft`
+**Status:** `review` — revised 2026-08-21: portfolio view is the default; `single_unit` properties render as single rows.
 
 **Primary personas:** `revenue_manager`, `property_manager`, `portfolio_manager`.
 
@@ -14,11 +14,12 @@ lies, nothing else matters.
 children, infants, max, default), bed configuration, size, facilities, photos.
 Content pushes to Channex and onward to channels that accept it.
 
-**Physical rooms** — native to us ([03](./03-domain-model.md#33-inventory-rates-and-content)).
-Numbers, floors, attributes (accessible, connecting, smoking, view). A property
-may skip rooms entirely and run in "bucket mode" (channel-manager-only usage);
-the front desk and housekeeping modules then hide themselves rather than showing
-empty screens.
+**Units** — native to us ([03](./03-domain-model.md#33-inventory-rates-and-content)).
+Names, floors, attributes (accessible, connecting, pets, view), access
+configuration. For `single_unit` properties the unit and its room type are
+system-managed and invisible (MODEL-1); for `multi_unit` and `hotel` they are
+explicit. A property may also run in "bucket mode" (channel-manager-only usage);
+operations modules then hide themselves rather than showing empty screens.
 
 **Rate plans** — title, currency, sell mode (per-room / per-person), meal plan,
 occupancy pricing, tax set, policy, and optionally a **parent** with a derived
@@ -47,15 +48,19 @@ prices. The editor offers three modes:
 
 One screen, three data layers, 400+ visible cells, expected to feel instant.
 
-**Layout**
+**Layout — portfolio-first.** The default view is *all listings*: for
+`single_unit` properties each listing is **one row** (its availability is 0/1 and
+its primary rate inline), expandable to its rate plans; `multi_unit` and `hotel`
+properties expand to room-type rows. A 200-listing portfolio is a 200-row grid,
+grouped by `PropertyGroup`, filterable, and virtualised.
 
-- Rows: room type (availability) → its rate plans (rate + restrictions),
-  collapsible. Pinned first column.
+- Rows: property → room type (availability) → its rate plans (rate +
+  restrictions), collapsible at every level. Pinned first column.
 - Columns: dates. Views: 14 / 30 / 60 / 90 days, plus a **year heatmap** for
   spotting seasonal gaps.
 - Header: weekday, date, season colour band, public holidays (per country),
   local events (optional data source), and an occupancy bar.
-- Property switcher, with a **multi-property compare mode** for portfolio roles.
+- Group/city filter and saved row-sets replace the single-property switcher; a single-property focus mode exists for hotel-kind properties.
 
 **Cell content**
 
@@ -83,8 +88,8 @@ One screen, three data layers, 400+ visible cells, expected to feel instant.
 - **CAL-6** Live presence: avatars show who else is viewing/editing the property
   calendar, and their selection is faintly visible.
 - **CAL-7** Performance targets: first paint < 1 s for 30 days × 40 rows;
-  scroll and edit at 60 fps; virtualised rows and columns; 90-day view of 200 rows
-  must not exceed a 2 s load.
+  scroll and edit at 60 fps; virtualised rows and columns; the 90-day, 200-listing
+  portfolio view must not exceed a 2 s load.
 - **CAL-8** Every cell exposes a history popover: value, actor, surface, timestamp,
   and the sync result — sourced from the audit log.
 - **CAL-9** Mobile: read-optimised with a single-day column view and a quick
