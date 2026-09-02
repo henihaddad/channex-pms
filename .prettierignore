@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+.turbo
+coverage
+pnpm-lock.yaml
+website/package-lock.json
+.claude/skills
+docs/specs
+CHANGELOG.md

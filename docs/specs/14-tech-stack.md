@@ -134,7 +134,7 @@ a Postgres pool. Therefore:
 | Concern | Choice | Why, and what was rejected |
 |---|---|---|
 | Monorepo | pnpm workspaces + Turborepo | Shared `packages/core` between `web` and `worker` is the whole architecture. |
-| App framework | **Next.js 15 App Router** | SSR for the booking engine, RSC for console reads, one deploy. |
+| App framework | **Next.js App Router** (16 at scaffold time, 2026-09) | SSR for the booking engine, RSC for console reads, one deploy. |
 | Worker | Plain Node + **BullMQ** | Per-key concurrency (one job per property), delays, repeatable jobs, DLQ. Rejected: pg-boss (fewer features), Kafka (overkill). |
 | Database | **PostgreSQL 16+** | RLS for tenancy, partitioning for ARI, JSONB for raw payloads, window functions for pace. SQLite is not supported. |
 | Data access | **Drizzle ORM** | SQL-first, works cleanly with RLS and partitioned tables, excellent inference. Rejected: Prisma — fights RLS and complex ARI upserts. |

@@ -1,0 +1,4 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# website/ is a standalone npm project (marketing site), deliberately outside the workspace.

@@ -4,7 +4,7 @@ import { Section } from "./Section";
 const faqs = [
   {
     q: "Is there something I can run today?",
-    a: "Not yet. The project is in its design phase: the specification is complete enough to argue with, the stack is decided, and the first code lands with milestone M0. The best thing you can do now is read the spec and tell us where a real property would break it.",
+    a: "Not as an operator. The specification is complete enough to build against and milestone M0 is under way: the monorepo, the framework-free domain layer with its first value objects and tests, Docker Compose and CI are in place. Contributors can run it today; a property cannot. The best thing you can do now is read the spec and tell us where a real property would break it.",
   },
   {
     q: "Do I need a Channex.io account?",
@@ -37,7 +37,10 @@ export function Faq() {
     <Section id="faq" eyebrow="FAQ" title="Questions people ask first.">
       <div className="grid gap-4 lg:grid-cols-2">
         {faqs.map((f) => (
-          <details key={f.q} className="group rounded-2xl border border-line bg-panel p-6 open:border-mint/40">
+          <details
+            key={f.q}
+            className="group rounded-2xl border border-line bg-panel p-6 open:border-mint/40"
+          >
             <summary className="cursor-pointer list-none text-base font-bold text-white marker:hidden">
               <span className="flex items-center justify-between gap-4">
                 {f.q}

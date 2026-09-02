@@ -13,5 +13,5 @@
 
 - [ ] I read [CONTRIBUTING.md](../CONTRIBUTING.md)
 - [ ] If code disagrees with a spec, the spec is fixed in this PR
-- [ ] `npm run lint` and `npm run build` pass in `website/` if I touched it
+- [ ] `pnpm check` passes (and `npm run build` in `website/` if I touched it)
 - [ ] I have signed the [CLA](../CONTRIBUTOR_LICENSE_AGREEMENT.md) (the bot will ask)

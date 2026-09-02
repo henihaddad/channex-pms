@@ -30,7 +30,9 @@ export function HowItWorks() {
         <ol className="space-y-6">
           {steps.map((s) => (
             <li key={s.n} className="flex gap-5">
-              <span className="mt-1 h-fit rounded-lg bg-panel-2 px-2.5 py-1 font-mono text-sm font-bold text-mint">{s.n}</span>
+              <span className="mt-1 h-fit rounded-lg bg-panel-2 px-2.5 py-1 font-mono text-sm font-bold text-mint">
+                {s.n}
+              </span>
               <div>
                 <h3 className="text-lg font-bold text-white">{s.title}</h3>
                 <p className="mt-2 leading-relaxed text-fg-muted">{s.body}</p>
@@ -38,10 +40,16 @@ export function HowItWorks() {
             </li>
           ))}
         </ol>
-        <figure className="rounded-2xl border border-line bg-panel p-6 font-mono text-sm" aria-label="Architecture diagram">
+        <figure
+          className="rounded-2xl border border-line bg-panel p-6 font-mono text-sm"
+          aria-label="Architecture diagram"
+        >
           <div className="flex flex-wrap justify-center gap-2 text-xs">
             {["Booking.com", "Airbnb", "Vrbo", "Expedia", "Agoda", "40+ more"].map((c) => (
-              <span key={c} className="rounded-full border border-line bg-ink px-3 py-1 text-fg-muted">
+              <span
+                key={c}
+                className="rounded-full border border-line bg-ink px-3 py-1 text-fg-muted"
+              >
                 {c}
               </span>
             ))}
@@ -49,9 +57,13 @@ export function HowItWorks() {
           <div className="my-3 text-center text-fg-muted">│ certified two-way connections</div>
           <div className="rounded-xl border border-sky/40 bg-sky/10 p-4 text-center">
             <p className="font-bold text-white">Channex.io</p>
-            <p className="mt-1 text-xs text-fg-muted">OTA adapters · ARI · bookings · messaging · reviews</p>
+            <p className="mt-1 text-xs text-fg-muted">
+              OTA adapters · ARI · bookings · messaging · reviews
+            </p>
           </div>
-          <div className="my-3 text-center text-fg-muted">│ REST + webhooks, behind a provider port</div>
+          <div className="my-3 text-center text-fg-muted">
+            │ REST + webhooks, behind a provider port
+          </div>
           <div className="rounded-xl border border-mint/50 bg-mint/10 p-4 text-center">
             <p className="font-bold text-white">Channex PMS</p>
             <p className="mt-1 text-xs text-fg-muted">

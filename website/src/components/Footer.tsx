@@ -1,4 +1,14 @@
-import { CONTRIBUTING, DISCUSSIONS, GITHUB, LICENSE, LICENSE_EE, OPEN_QUESTIONS, ROADMAP, SECURITY, SPEC } from "@/lib/site";
+import {
+  CONTRIBUTING,
+  DISCUSSIONS,
+  GITHUB,
+  LICENSE,
+  LICENSE_EE,
+  OPEN_QUESTIONS,
+  ROADMAP,
+  SECURITY,
+  SPEC,
+} from "@/lib/site";
 
 const columns = [
   {
@@ -25,7 +35,10 @@ const columns = [
       { href: LICENSE, label: "Sustainable Use License" },
       { href: LICENSE_EE, label: "Enterprise License" },
       { href: "https://faircode.io", label: "What is fair-code?" },
-      { href: `${GITHUB}/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT.md`, label: "Contributor agreement" },
+      {
+        href: `${GITHUB}/blob/main/CONTRIBUTOR_LICENSE_AGREEMENT.md`,
+        label: "Contributor agreement",
+      },
     ],
   },
 ];
@@ -37,8 +50,8 @@ export function Footer() {
         <div>
           <p className="text-lg font-bold text-white">Channex PMS</p>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-muted">
-            Property management and channel manager for people who manage properties for other people.
-            Fair-code, self-hostable, built on the Channex.io API.
+            Property management and channel manager for people who manage properties for other
+            people. Fair-code, self-hostable, built on the Channex.io API.
           </p>
         </div>
         {columns.map((c) => (

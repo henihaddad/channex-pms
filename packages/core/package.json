@@ -1,0 +1,33 @@
+{
+  "name": "@pms/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-free domain layer: entities, value objects, services, ports. Spec 04 and 14.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "temporal-polyfill": "^1.0.4"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "fast-check": "^4.9.0",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  },
+  "files": [
+    "dist"
+  ]
+}

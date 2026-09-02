@@ -13,7 +13,10 @@ const links = [
 export function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-ink/80 backdrop-blur">
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6" aria-label="Main">
+      <nav
+        className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6"
+        aria-label="Main"
+      >
         <a href="#top" className="flex items-center gap-2.5 font-bold text-white">
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-mint to-sky text-ink">
             <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="currentColor" aria-hidden="true">

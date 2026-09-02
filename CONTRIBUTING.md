@@ -31,22 +31,17 @@ to uphold it.
 
 ## Directory structure
 
-Today:
-
-```
-docs/specs/       the specification, the design source of truth
-website/          the landing page (Next.js + Tailwind)
-.claude/skills/   agent skills used to write and review this repository
-```
-
-Planned, per [spec 04 §4.10](./docs/specs/04-architecture.md#410-repository-layout):
-
 ```
 apps/web          Next.js: staff console, booking engine, portals, webhooks, public API
 apps/worker       BullMQ worker: sync engine, ingestion, automation, rollups
-packages/core     all domain logic, framework-free
-packages/*        authz, db, connectivity, sync, ui, sdk, testkit
+packages/core     all domain logic, framework-free (Money, LocalDate, DateRange, services, ports)
+docs/specs/       the specification, the design source of truth
+website/          the landing page (Next.js + Tailwind), a standalone npm project
+.claude/skills/   agent skills used to write and review this repository
 ```
+
+Still to come, per [spec 04 §4.10](./docs/specs/04-architecture.md#410-repository-layout):
+`packages/authz`, `db`, `connectivity`, `sync`, `ui`, `sdk`, `testkit`.
 
 ## Development setup
 
@@ -64,17 +59,27 @@ npm run build
 
 ### Platform
 
-There is no application code yet. When milestone M0 lands the toolchain will be
-**pnpm workspaces + Turborepo**, with Docker Compose for Postgres, Redis and MinIO
-(see [spec 14](./docs/specs/14-tech-stack.md)). This section will be updated in the same pull
-request that adds the scaffold.
+Requires Node.js 22, pnpm 10 (`corepack enable`) and Docker.
+
+```sh
+pnpm install
+cp .env.example .env
+pnpm infra:up        # Postgres 16, Redis 7, MinIO via docker-compose.yml
+pnpm dev             # apps/web on http://localhost:3000 and apps/worker
+pnpm check           # lint, typecheck, test, build, what CI runs
+pnpm format          # Prettier
+```
+
+`packages/core` is framework-free by lint rule; the worker is a separate process; every Server
+Action and route handler will be permission-wrapped (see [spec 14 §14.3](./docs/specs/14-tech-stack.md)
+and [CLAUDE.md](./CLAUDE.md) for the rules agents and humans both follow).
 
 ## Development cycle
 
 1. Fork the repository and create a branch from `main`.
 2. Keep pull requests focused. One concern per PR.
 3. Write commit messages in the imperative mood ("Add owner statement export").
-4. Run the checks for whatever you touched (`npm run lint` and `npm run build` in `website/`).
+4. Run `pnpm check` at the root (and `npm run lint && npm run build` in `website/` if you touched it).
 5. Open the PR against `main`, fill in the template, and link the spec section or issue.
 6. A maintainer reviews within a week. Spec changes and code changes that disagree with a spec are
    reviewed together.

@@ -38,10 +38,15 @@ export function Deploy() {
     >
       <div className="grid gap-6 md:grid-cols-2">
         {options.map((o) => (
-          <article key={o.name} className="flex flex-col rounded-2xl border border-line bg-panel p-7">
+          <article
+            key={o.name}
+            className="flex flex-col rounded-2xl border border-line bg-panel p-7"
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-white">{o.name}</h3>
-              <span className="rounded-full bg-mint/15 px-3 py-1 text-xs font-semibold text-mint">{o.tag}</span>
+              <span className="rounded-full bg-mint/15 px-3 py-1 text-xs font-semibold text-mint">
+                {o.tag}
+              </span>
             </div>
             <p className="mt-3 leading-relaxed text-fg-muted">{o.body}</p>
             <ul className="mt-5 space-y-2.5 text-sm">

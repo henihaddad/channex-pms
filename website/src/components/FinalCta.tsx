@@ -10,9 +10,9 @@ export function FinalCta() {
           Be the portfolio that shapes <span className="gradient-text">v1.0</span>.
         </h2>
         <p className="mt-5 text-lg leading-relaxed text-fg-muted">
-          We are looking for one short-term rental manager with 20 to 60 units and one small hotel to run the
-          early releases on a real portfolio. A real portfolio on the M2 release matters more than anything
-          else on the roadmap.
+          We are looking for one short-term rental manager with 20 to 60 units and one small hotel
+          to run the early releases on a real portfolio. A real portfolio on the M2 release matters
+          more than anything else on the roadmap.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <a

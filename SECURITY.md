@@ -19,12 +19,12 @@ Include what you can of:
 
 ## What to expect
 
-| Step | Target |
-|---|---|
-| Acknowledgement | within 3 business days |
-| Triage and severity | within 7 days |
-| Fix for critical or high severity | within 30 days, sooner where possible |
-| Public advisory and credit | after the fix ships, with your agreement |
+| Step                              | Target                                   |
+| --------------------------------- | ---------------------------------------- |
+| Acknowledgement                   | within 3 business days                   |
+| Triage and severity               | within 7 days                            |
+| Fix for critical or high severity | within 30 days, sooner where possible    |
+| Public advisory and credit        | after the fix ships, with your agreement |
 
 We will keep you informed while the report is open and credit you in the advisory unless you prefer
 otherwise.

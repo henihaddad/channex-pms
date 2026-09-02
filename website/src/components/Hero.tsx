@@ -11,16 +11,16 @@ export function Hero() {
         <div>
           <p className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 text-xs font-semibold text-fg-muted">
             <span className="h-1.5 w-1.5 rounded-full bg-amber" aria-hidden="true" />
-            Design phase. First code lands with milestone M0.
+            Milestone M0 in progress. Nothing an operator can use yet.
           </p>
           <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-5xl">
             The PMS for people who manage properties{" "}
             <span className="gradient-text">for other people.</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-fg-muted">
-            Channel manager, reservations, turnover operations, unified inbox, owner statements and a
-            direct booking engine in one fair-code platform. Run it on your servers or ours, on top of
-            the Channex.io connectivity API.
+            Channel manager, reservations, turnover operations, unified inbox, owner statements and
+            a direct booking engine in one fair-code platform. Run it on your servers or ours, on
+            top of the Channex.io connectivity API.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a

@@ -45,8 +45,13 @@ export function Capabilities() {
     >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it, i) => (
-          <article key={it.title} className="group rounded-2xl border border-line bg-panel p-6 transition hover:border-mint/50">
-            <span className="font-mono text-xs text-fg-muted">{String(i + 1).padStart(2, "0")}</span>
+          <article
+            key={it.title}
+            className="group rounded-2xl border border-line bg-panel p-6 transition hover:border-mint/50"
+          >
+            <span className="font-mono text-xs text-fg-muted">
+              {String(i + 1).padStart(2, "0")}
+            </span>
             <h3 className="mt-3 text-base font-bold text-white">{it.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-fg-muted">{it.body}</p>
           </article>

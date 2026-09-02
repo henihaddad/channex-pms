@@ -48,8 +48,8 @@ export function FairCode() {
             ))}
           </ul>
           <p className="mt-6 text-sm leading-relaxed text-fg-muted">
-            This is fair-code, not OSI open source, and we say so plainly. It is what lets a small team fund
-            the work while every self-hoster keeps the full product for free. Read the{" "}
+            This is fair-code, not OSI open source, and we say so plainly. It is what lets a small
+            team fund the work while every self-hoster keeps the full product for free. Read the{" "}
             <a href={LICENSE} className="text-mint underline-offset-4 hover:underline">
               Sustainable Use License
             </a>{" "}

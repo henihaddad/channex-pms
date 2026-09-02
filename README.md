@@ -30,10 +30,10 @@
 
 ---
 
-> **Status: design phase.** There is no application code yet. The
-> [specification](./docs/specs/) (17 documents, decided stack, M0 to M8 roadmap) is the current
-> deliverable, and the place to argue about decisions before they get expensive. First code lands
-> with milestone M0.
+> **Status: milestone M0 in progress.** The [specification](./docs/specs/) (17 documents,
+> decided stack, M0 to M8 roadmap) is complete enough to build against, and the monorepo scaffold
+> is in place: `apps/web`, `apps/worker`, `packages/core` with the first domain value objects and
+> property-based tests, Docker Compose and CI. Nothing is usable by an operator yet.
 
 ## Why this exists
 
@@ -79,20 +79,20 @@ API.** So we build the other half, the product, in the open:
 
 ## Quick start
 
-The platform is not runnable yet. What you can do today:
+For contributors (Node 22, pnpm 10, Docker):
 
 ```sh
 git clone https://github.com/henihaddad/channex-pms.git
 cd channex-pms
-
-# read the specification
-open docs/specs/README.md
-
-# run the website locally
-cd website && npm install && npm run dev
+pnpm install
+cp .env.example .env
+pnpm infra:up          # Postgres 16, Redis 7, MinIO
+pnpm dev               # apps/web on :3000, apps/worker
+pnpm check             # lint, typecheck, test, build
 ```
 
-When milestone M2 ships, self-hosting will be one command with Docker Compose:
+There is nothing an operator can use yet. When milestone M2 ships, self-hosting will be one
+command with Docker Compose:
 
 ```sh
 # planned, not yet available
@@ -110,17 +110,17 @@ paywalled in the self-hosted edition, and the only enterprise-licensed files are
 
 ## Roadmap
 
-| Milestone | Delivers | Status |
-|---|---|---|
-| M0 | Monorepo, CI, Compose, domain value objects, permission matrix | next |
-| M1 | Connectivity core: Channex adapter, ARI engine, fake provider | |
-| M2 | Inventory, portfolio calendar, channel connection. First usable release | |
-| M3 | Reservations and turnover operations | |
-| M4 | Unified messaging | |
-| M5 | Owner management | |
-| M6 | Dashboards and reporting | |
-| M7 | Direct booking engine | |
-| M8 | Hosted service, billing, hardening to v1.0 | |
+| Milestone | Delivers                                                                | Status |
+| --------- | ----------------------------------------------------------------------- | ------ |
+| M0        | Monorepo, CI, Compose, domain value objects, permission matrix          | next   |
+| M1        | Connectivity core: Channex adapter, ARI engine, fake provider           |        |
+| M2        | Inventory, portfolio calendar, channel connection. First usable release |        |
+| M3        | Reservations and turnover operations                                    |        |
+| M4        | Unified messaging                                                       |        |
+| M5        | Owner management                                                        |        |
+| M6        | Dashboards and reporting                                                |        |
+| M7        | Direct booking engine                                                   |        |
+| M8        | Hosted service, billing, hardening to v1.0                              |        |
 
 Full detail, including what each milestone deliberately leaves out, in
 [docs/specs/15-roadmap.md](./docs/specs/15-roadmap.md).

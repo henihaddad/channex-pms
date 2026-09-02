@@ -1,0 +1,27 @@
+{
+  "name": "@pms/worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Queue consumers, schedulers and the realtime gateway. Plain Node + BullMQ, never a Next route (spec 14, C3).",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@pms/core": "workspace:*",
+    "bullmq": "^6.3.4",
+    "ioredis": "^6.0.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  }
+}

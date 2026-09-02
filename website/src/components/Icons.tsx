@@ -10,7 +10,14 @@ export function GitHubIcon({ className = "h-5 w-5" }: Props) {
 
 export function ArrowIcon({ className = "h-4 w-4" }: Props) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" className={className}>
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+      className={className}
+    >
       <path d="M4 10h12m-5-5 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -18,7 +25,14 @@ export function ArrowIcon({ className = "h-4 w-4" }: Props) {
 
 export function CheckIcon({ className = "h-4 w-4" }: Props) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" className={className}>
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      aria-hidden="true"
+      className={className}
+    >
       <path d="m4 10.5 4 4 8-9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -26,7 +40,14 @@ export function CheckIcon({ className = "h-4 w-4" }: Props) {
 
 export function CrossIcon({ className = "h-4 w-4" }: Props) {
   return (
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" className={className}>
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      aria-hidden="true"
+      className={className}
+    >
       <path d="m5 5 10 10M15 5 5 15" strokeLinecap="round" />
     </svg>
   );
