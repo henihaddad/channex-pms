@@ -10,8 +10,14 @@ import {
 } from "@pms/db";
 import { withIdMap } from "@pms/connectivity";
 import {
+  closeThreadRemote,
+  deliverOutbound,
   escalateTurnovers,
   markLiveIfSynced,
+  orgsWithAutomation,
+  pollReviews,
+  pollThreads,
+  runAutomation,
   pollChannelHealth,
   propertiesToProvision,
   replanOperations,
@@ -74,6 +80,36 @@ export const POST = publicRoute("test_hook", async (req) => {
       replanned++;
     }
   const escalations = await escalateTurnovers(opsDeps);
+  // spec 09: mirror threads and reviews, run automation, deliver what the console queued
+  const messagingDeps = {
+    db: c.db.db,
+    provider: c.provider,
+    clock: c.clock,
+    crypto: c.crypto,
+    log,
+    mailer: c.mailer,
+  };
+  for (const e of events)
+    if (e.type === "thread.close") {
+      const p = e.payload as { threadId: string; reason: string };
+      await closeThreadRemote(
+        messagingDeps,
+        e.orgId,
+        p.threadId,
+        p.reason === "no_reply_needed" ? "no_reply_needed" : "resolved",
+      );
+    }
+  const messages = await pollThreads(messagingDeps, body.orgId);
+  const reviews = await pollReviews(messagingDeps, body.orgId);
+  const automation = { sent: 0, skipped: 0, failed: 0 };
+  for (const orgId of await orgsWithAutomation(c.db.db)) {
+    if (body.orgId && orgId !== body.orgId) continue;
+    const r = await runAutomation(messagingDeps, orgId);
+    automation.sent += r.sent;
+    automation.skipped += r.skipped;
+    automation.failed += r.failed;
+  }
+  const delivered = body.orgId ? await deliverOutbound(messagingDeps, body.orgId) : null;
   const closes = body.dailyClose
     ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
     : { closed: 0 };
@@ -119,5 +155,9 @@ export const POST = publicRoute("test_hook", async (req) => {
     replanned,
     escalations,
     closes,
+    messages,
+    reviews,
+    automation,
+    delivered,
   });
 });

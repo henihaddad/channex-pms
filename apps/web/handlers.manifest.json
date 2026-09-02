@@ -151,6 +151,175 @@
     "permission": "channel:create"
   },
   {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "addNoteAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "archiveTemplateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "assignThreadAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "interpolatePreview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "killSwitchAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "automation:manage",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "listInbox",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "listReviews",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "review:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "listTemplates",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "loadAutomation",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "loadKpi",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "loadThread",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "previewTemplateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "respondReviewAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "review:respond",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "retryMessageAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "saveRuleAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "automation:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "saveTemplateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "sendReplyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "setThreadStateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:close_thread"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "snoozeThreadAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "tagThreadAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "testSendAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "automation:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "toggleRuleAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "automation:manage",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/operations/operations.actions.ts",
     "export": "addCrewMemberAction",
     "kind": "action",
@@ -824,6 +993,20 @@
     "publicReason": "test_hook"
   },
   {
+    "file": "src/app/api/v1/test/message/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/message/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
     "file": "src/app/api/v1/test/oauth/authorize/route.ts",
     "export": "GET",
     "kind": "route",
@@ -839,6 +1022,13 @@
   },
   {
     "file": "src/app/api/v1/test/property/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/review/route.ts",
     "export": "POST",
     "kind": "route",
     "wrapper": "publicRoute",

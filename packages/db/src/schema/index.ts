@@ -6,3 +6,4 @@ export * from "./inventory-m2.js";
 export * from "./channels.js";
 export { TENANCY, ORG_TABLES, type Tenancy } from "./registry.js";
 export * from "./operations.js";
+export * from "./messaging.js";

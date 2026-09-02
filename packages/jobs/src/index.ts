@@ -37,3 +37,18 @@ export {
   type OpsDeps,
 } from "./operations.js";
 export { recomputeAvailability } from "./availability.js";
+export {
+  syncThreads,
+  pollThreads,
+  syncReviews,
+  pollReviews,
+  deliverOutbound,
+  closeThreadRemote,
+  runAutomation,
+  orgsWithAutomation,
+  messagingProperties,
+  renderTemplate,
+  firstResponseKpi,
+  type MessagingDeps,
+  type FirstResponseKpi,
+} from "./messaging.js";

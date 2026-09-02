@@ -19,3 +19,4 @@ export * from "./reservations/index.js";
 export * from "./properties/index.js";
 export * from "./channels/index.js";
 export * from "./operations/index.js";
+export * from "./messaging/index.js";

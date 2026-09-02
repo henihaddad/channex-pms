@@ -78,6 +78,9 @@ export interface Ledger {
   ari: AriState;
   webhooksDelivered: WebhookPayload[];
   webhooksDropped: number;
+  /** Every guest-facing message the fake accepted (MSG-6 oracle: notes never appear here). */
+  messagesSent: Array<{ threadId: string; id: string; body: string; dedupeKey: string }>;
+  reviewResponses: Array<{ reviewId: string; body: string }>;
   calls: Array<{ op: string; dedupeKey: string; outcome: "ok" | FaultKind }>;
 }
 
@@ -87,6 +90,38 @@ export interface WebhookPayload {
   timestamp: string;
   user_id: null;
   payload: Record<string, unknown>;
+}
+
+export interface FakeMessage {
+  id: string;
+  direction: "inbound" | "outbound";
+  authorType: "guest" | "staff" | "system";
+  body: string;
+  sentAt: string;
+  attachments: Array<{ id: string; filename: string; contentType: string }>;
+}
+export interface FakeThread {
+  id: string;
+  propertyId: string;
+  bookingId: string | undefined;
+  provider: string;
+  guestName: string;
+  guestLanguage: string;
+  kind: "booking" | "inquiry";
+  state: "open" | "closed";
+  updatedAt: string;
+  messages: FakeMessage[];
+}
+export interface FakeReview {
+  id: string;
+  propertyId: string;
+  bookingId: string | undefined;
+  rating: number;
+  text: string;
+  ota: string;
+  guestName: string;
+  insertedAt: string;
+  response: string | undefined;
 }
 
 export interface BookingSpec {
@@ -115,6 +150,8 @@ export class FakeProvider implements ConnectivityProvider {
     ari: emptyState(),
     webhooksDelivered: [],
     webhooksDropped: 0,
+    messagesSent: [],
+    reviewResponses: [],
     calls: [],
   };
   /** Set by the harness: where webhooks go. */
@@ -127,6 +164,11 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly bookings = new Map<string, BookingRevisionPayload>();
   private readonly created = new Map<string, unknown>();
   private readonly pendingWebhooks: WebhookPayload[] = [];
+  private readonly threads = new Map<string, FakeThread>();
+  private readonly reviews = new Map<string, FakeReview>();
+  private readonly attachments = new Map<string, AttachmentUpload>();
+  /** Harness hook: message and review timestamps come from here (defaults to the synthetic clock). */
+  nowSource: (() => string) | null = null;
   private clock = 0;
   private systemSeq = 1000;
 
@@ -547,29 +589,223 @@ export class FakeProvider implements ConnectivityProvider {
     return b;
   }
 
-  // ---- messaging + reviews (minimal until M4) -----------------------------------------
+  // ---- messaging + reviews (spec 05 §5.8, spec 09) -----------------------------------
 
-  async listThreads(_q: ThreadQuery, meta: CallMeta): Promise<ThreadPage> {
+  /**
+   * A guest writes (or an OTA posts a system notice such as an Airbnb inquiry).
+   * Creates the thread when needed and queues a `message` webhook; sync then
+   * pulls the thread (a webhook is a trigger, not truth: CXMSG-2).
+   */
+  emitGuestMessage(input: {
+    propertyId: string;
+    bookingId?: string;
+    threadId?: string;
+    provider?: string;
+    body: string;
+    guestName?: string;
+    guestLanguage?: string;
+    authorType?: "guest" | "system";
+    kind?: "booking" | "inquiry";
+  }): { threadId: string; messageId: string } {
+    const at = this.stamp();
+    let thread = input.threadId ? this.threads.get(input.threadId) : undefined;
+    if (!thread && input.bookingId)
+      thread = [...this.threads.values()].find((t) => t.bookingId === input.bookingId);
+    if (!thread) {
+      thread = {
+        id: Id.next(),
+        propertyId: input.propertyId,
+        bookingId: input.bookingId,
+        provider: input.provider ?? "booking_com",
+        guestName: input.guestName ?? "Ana Guest",
+        guestLanguage: input.guestLanguage ?? "en",
+        kind: input.kind ?? (input.bookingId ? "booking" : "inquiry"),
+        state: "open",
+        updatedAt: at,
+        messages: [],
+      };
+      this.threads.set(thread.id, thread);
+    }
+    const message: FakeMessage = {
+      id: Id.next(),
+      direction: "inbound",
+      authorType: input.authorType ?? "guest",
+      body: input.body,
+      sentAt: at,
+      attachments: [],
+    };
+    thread.messages.push(message);
+    thread.state = "open";
+    thread.updatedAt = at;
+    this.queueWebhook({
+      event: "message",
+      property_id: thread.propertyId,
+      timestamp: at,
+      user_id: null,
+      payload: { thread_id: thread.id, message_id: message.id },
+    });
+    return { threadId: thread.id, messageId: message.id };
+  }
+
+  /** A stay was reviewed on the OTA; queues a `review` webhook. */
+  emitReview(input: {
+    propertyId: string;
+    bookingId?: string;
+    rating: number;
+    text: string;
+    ota?: string;
+    guestName?: string;
+  }): string {
+    const at = this.stamp();
+    const review: FakeReview = {
+      id: Id.next(),
+      propertyId: input.propertyId,
+      bookingId: input.bookingId,
+      rating: input.rating,
+      text: input.text,
+      ota: input.ota ?? "Booking.com",
+      guestName: input.guestName ?? "Ana Guest",
+      insertedAt: at,
+      response: undefined,
+    };
+    this.reviews.set(review.id, review);
+    this.queueWebhook({
+      event: "review",
+      property_id: input.propertyId,
+      timestamp: at,
+      user_id: null,
+      payload: { review_id: review.id },
+    });
+    return review.id;
+  }
+
+  /** Test oracle: the thread as the provider sees it. */
+  thread(id: string): FakeThread | undefined {
+    return this.threads.get(id);
+  }
+
+  async listThreads(q: ThreadQuery, meta: CallMeta): Promise<ThreadPage> {
     this.guard("threads.list", meta);
-    return { threads: [] };
+    const threads = [...this.threads.values()]
+      .filter((t) => t.propertyId === q.propertyId)
+      .filter((t) => !q.updatedSince || t.updatedAt >= q.updatedSince)
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? -1 : 1))
+      .map((t) => ({
+        id: t.id,
+        ...(t.bookingId ? { bookingId: t.bookingId } : {}),
+        provider: t.provider,
+        updatedAt: t.updatedAt,
+        guestName: t.guestName,
+        guestLanguage: t.guestLanguage,
+        kind: t.kind,
+        state: t.state,
+        messages: t.messages.map((m) => ({
+          id: m.id,
+          direction: m.direction,
+          authorType: m.authorType,
+          body: m.body,
+          sentAt: m.sentAt,
+          ...(m.attachments.length ? { attachments: m.attachments } : {}),
+        })),
+      }));
+    return { threads };
   }
-  async sendMessage(_m: OutboundMessage, meta: CallMeta): Promise<ProviderRef> {
+
+  /**
+   * `booking:<id>` addresses a booking that has no thread yet (an automation
+   * writing first); the provider opens the thread. Faults on `messages.send`
+   * are how tests see a failed delivery rendered as failed (spec 09 §9.2).
+   */
+  async sendMessage(m: OutboundMessage, meta: CallMeta): Promise<ProviderRef> {
     this.guard("messages.send", meta);
-    return { id: Id.next() };
+    let thread = this.threads.get(m.threadId);
+    if (!thread && m.threadId.startsWith("booking:")) {
+      const bookingId = m.threadId.slice("booking:".length);
+      thread = [...this.threads.values()].find((t) => t.bookingId === bookingId);
+      if (!thread) {
+        const b = this.bookings.get(bookingId);
+        if (!b) throw new ValidationError("messages.send: unknown booking", { id: bookingId });
+        thread = {
+          id: Id.next(),
+          propertyId: b.propertyId,
+          bookingId,
+          provider: b.otaName,
+          guestName: `${b.customer.name} ${b.customer.surname}`,
+          guestLanguage: "en",
+          kind: "booking",
+          state: "open",
+          updatedAt: this.stamp(),
+          messages: [],
+        };
+        this.threads.set(thread.id, thread);
+      }
+    }
+    if (!thread) throw new ValidationError("messages.send: thread not found", { id: m.threadId });
+    if (m.body.trim() === "") throw new ValidationError("messages.send: empty body");
+    const at = this.stamp();
+    const message: FakeMessage = {
+      id: Id.next(),
+      direction: "outbound",
+      authorType: "staff",
+      body: m.body,
+      sentAt: at,
+      attachments: (m.attachmentIds ?? []).flatMap((id) => {
+        const a = this.attachments.get(id);
+        return a ? [{ id, filename: a.filename, contentType: a.contentType }] : [];
+      }),
+    };
+    thread.messages.push(message);
+    thread.updatedAt = at;
+    this.ledger.messagesSent.push({
+      threadId: thread.id,
+      id: message.id,
+      body: m.body,
+      dedupeKey: meta.dedupeKey,
+    });
+    return { id: message.id };
   }
-  async uploadAttachment(_a: AttachmentUpload, meta: CallMeta): Promise<ProviderRef> {
+  async uploadAttachment(a: AttachmentUpload, meta: CallMeta): Promise<ProviderRef> {
     this.guard("attachments.upload", meta);
-    return { id: Id.next() };
+    const id = Id.next();
+    this.attachments.set(id, a);
+    return { id };
   }
-  async closeThread(_ref: ProviderRef, _reason: CloseReason, meta: CallMeta): Promise<void> {
+  async closeThread(ref: ProviderRef, _reason: CloseReason, meta: CallMeta): Promise<void> {
     this.guard("threads.close", meta);
+    const t = this.threads.get(ref.id);
+    if (!t) throw new ValidationError("threads.close: not found", { id: ref.id });
+    t.state = "closed";
+    t.updatedAt = this.stamp();
   }
-  async listReviews(_q: ReviewQuery, meta: CallMeta): Promise<ReviewPage> {
+  async listReviews(q: ReviewQuery, meta: CallMeta): Promise<ReviewPage> {
     this.guard("reviews.list", meta);
-    return { reviews: [] };
+    return {
+      reviews: [...this.reviews.values()]
+        .filter((r) => r.propertyId === q.propertyId && (!q.since || r.insertedAt >= q.since))
+        .map((r) => ({
+          id: r.id,
+          ...(r.bookingId ? { bookingId: r.bookingId } : {}),
+          rating: r.rating,
+          text: r.text,
+          ota: r.ota,
+          insertedAt: r.insertedAt,
+          guestName: r.guestName,
+          canRespond: true,
+          ...(r.response !== undefined ? { response: r.response } : {}),
+        })),
+    };
   }
-  async respondToReview(_ref: ProviderRef, _body: string, meta: CallMeta): Promise<void> {
+  async respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void> {
     this.guard("reviews.reply", meta);
+    const r = this.reviews.get(ref.id);
+    if (!r) throw new ValidationError("reviews.reply: not found", { id: ref.id });
+    r.response = body;
+    this.ledger.reviewResponses.push({ reviewId: ref.id, body });
+  }
+
+  private stamp(): string {
+    this.clock += 1;
+    return this.nowSource ? this.nowSource() : this.now();
   }
 
   // ---- webhooks ----------------------------------------------------------------------
@@ -614,6 +850,7 @@ export class FakeProvider implements ConnectivityProvider {
   }
 
   private now(): string {
+    if (this.nowSource) return this.nowSource();
     return new Date(Date.UTC(2026, 8, 1) + this.clock * 1000).toISOString();
   }
 }

@@ -24,6 +24,26 @@ All notable changes to this project are documented here. The format follows
   endpoints with an OpenAPI 3.1 document and the Apache-2.0 `@channex-pms/sdk`; `packages/jobs`
   shared by the worker and the test hooks; `compose.selfhost.yml` with a multi-target Dockerfile.
 
+## [0.3.0] — 2026-09-02
+
+### Added
+
+- M4 unified messaging: thread and message sync from the provider (webhook-triggered pull plus a
+  2-minute poll, idempotent by provider message id, CXMSG-2/3), sealed bodies and guest names, a
+  portfolio inbox with the spec's views, SLA chips and counts in the nav badge (MSG-1/2), a
+  conversation view with booking sidebar, Airbnb inquiry cards, per-message delivery states with
+  retry and capability-aware controls (close, Booking.com "no reply needed"); structurally
+  separated guest and note composers, the send button naming guest and channel, re-confirmation
+  on switching (MSG-3..5) and internal notes that cannot reach a provider at the type, runtime and
+  database level (MSG-6); org-scoped templates with locale variants, real-value preview and
+  promotional-pattern warnings (AUTO-7); the automation engine over the spec's triggers with
+  property-local quiet hours, per-guest limits, guest-reply handover, rule-and-version labels,
+  test-send with preview, a per-property kill switch and access-code delivery that waits for the
+  window and resends on rotation (AUTO-1..6); reviews with responses and a response-SLA marker;
+  a first-response KPI per property, channel and agent; worker consumers for `messages.sync` and
+  `automation.run` and schedulers `messages.poll`, `automation.tick`, `reviews.sweep`; FakeProvider
+  messaging and reviews with a ledger of everything it accepted.
+
 ## [0.2.0] — 2026-09-02
 
 ### Added

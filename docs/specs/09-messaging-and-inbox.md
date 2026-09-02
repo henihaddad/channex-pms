@@ -1,6 +1,6 @@
 # 09 — Messaging & the Unified Inbox
 
-**Status:** `review` — revised 2026-08-21: templates and automation are org-scoped; access-code delivery is a core automation.
+**Status:** `accepted` — implemented in M4 (v0.3, 2026-09-02); see §9.10 for what shipped and what is deferred. Revised 2026-08-21: templates and automation are org-scoped; access-code delivery is a core automation.
 
 **Primary personas:** `guest_relations`, `reservations_agent`, `property_manager`.
 
@@ -175,3 +175,52 @@ reputation feed [11](./11-dashboards-and-analytics.md).
 - It is structurally impossible to send an internal note to a guest.
 - Median first response time is visible per property, per channel, per agent.
 - Airbnb inquiries with no booking are fully usable, not a broken edge case.
+
+## 9.10 Implementation notes (M4, v0.3)
+
+What the code does, where it refines the text above:
+
+- **Sync.** A `message` webhook queues `message.sync` for the property; a 2-minute poll
+  (`messages.poll`) asks the provider for every thread changed since our cursor (five minutes of
+  slack) and upserts by provider message id, so duplicates and re-pulls add nothing (CXMSG-2/3).
+  Guest names and bodies are sealed with the org key; the thread row keeps only counts and
+  timestamps in the clear.
+- **Delivery.** The console never calls the provider inside a transaction (ADR-0007). A reply is
+  stored `queued`, an outbox event `message.deliver` wakes the worker, and the worker marks the row
+  `sent` with the provider id or `failed` with the error after five transient attempts. A failed
+  message shows a retry button; nothing undelivered is ever rendered as delivered.
+- **MSG-6 three times over.** The domain type `InternalNote` has no direction and no delivery
+  state, `assertSendable` refuses it at runtime, and migration 0011 adds a CHECK so a `note` row
+  cannot carry a direction, a delivery state or a provider id. The delivery query selects
+  `kind = 'guest_message'` only, and the FakeProvider ledger is the end-to-end oracle.
+- **Threads before the provider opens one.** An automation may write first. The thread is stored as
+  `booking:<channex booking id>`; the Channex adapter posts to the booking's messages endpoint, and
+  the next sync adopts the provider's thread id. This endpoint is not yet exercised by the
+  certification suite.
+- **`direct` threads** (staff bookings, later the booking engine) deliver over the `Mailer` port,
+  not the connectivity provider.
+- **Views** are evaluated in code from the thread's timestamps (`slaState`, `matchesView`) over the
+  org's open threads; full-text search covers guest name, preview, property and tags. Body search
+  across sealed messages is deferred.
+- **SLA** defaults: first response 30 min, resolution 24 h; the deadline stops at the first staff
+  reply or at "no reply needed" and restarts on the next inbound. The KPI page reports the median
+  per property, channel and agent over (inbound, first staff reply) pairs.
+- **Automation anchors.** Event triggers use the provider timestamps of the first (`booking_confirmed`)
+  and latest (`booking_cancelled`) revision and the check-in time; scheduled triggers use
+  property-local times. A trigger fires only if its anchor lies within the last 24 hours, so
+  enabling a rule never blasts history. The `(rule, booking, trigger[, credential])` run record is
+  the idempotency key; a rotated credential is a new key, hence "resends on rotation". Quiet hours
+  delay a send to the next allowed instant; the daily and per-stay limits, the guest-reply handover
+  and the kill switch record a `skipped` run with the reason (AUTO-4). Acknowledgements of an
+  inquiry or of an out-of-hours message are the one case where quiet hours do not apply: the guest
+  just wrote.
+- **Kill switch** lives in `property.settings.automation_kill_switch`.
+- **Capabilities** per channel are a static table in `core/messaging/capabilities.ts`: Booking.com
+  has attachments, close and "no reply needed"; Airbnb attachments only; Expedia close only.
+- **Reviews** sync hourly and on the `review` webhook; a response is queued and delivered by the
+  same worker step, with a 48-hour response-SLA marker.
+
+Deferred beyond v0.3: translation, AI-assisted drafts (`LlmProvider`), presence and unsent-draft
+collision warnings, rule-based assignment, attachment upload from the console and malware
+scanning, retention purge and the per-guest transcript export, and Airbnb quote/accept/decline
+actions (Channex exposes the cards as system messages only).

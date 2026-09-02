@@ -29,5 +29,6 @@ export {
   type WebhookPayload,
   type BookingSpec,
 } from "./fake/fake-provider.js";
+export type { FakeThread, FakeReview, FakeMessage } from "./fake/fake-provider.js";
 export { mulberry32 } from "./fake/rng.js";
 export { withIdMap, type IdMap } from "./id-map.js";

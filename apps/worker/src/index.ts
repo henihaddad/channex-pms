@@ -1,7 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import type { DomainEvent } from "@pms/core";
 import { rawRows, sql } from "@pms/db";
-import { QUEUES } from "@pms/runtime";
+import { consoleMailer, QUEUES } from "@pms/runtime";
 import { MemoryCircuitBreaker, TokenBucket } from "@pms/sync";
 import { buildContainer } from "./container.js";
 import { verifyAllAuditChains } from "./jobs/audit-verify.js";
@@ -28,6 +28,14 @@ import {
   runDailyCloses,
   markLiveIfSynced,
   pollChannelHealth,
+  closeThreadRemote,
+  deliverOutbound,
+  orgsWithAutomation,
+  pollReviews,
+  pollThreads,
+  runAutomation,
+  syncReviews,
+  syncThreads,
   propertiesToProvision,
   publishAri,
   runProvisioning,
@@ -68,6 +76,15 @@ const opsDeps = {
   crypto: c.crypto,
   lock: new FakeLockProvider(),
   log,
+};
+// spec 09: threads and reviews mirrored from the provider; direct threads go out over mail
+const messagingDeps = {
+  db: c.db.db,
+  provider,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  mailer: consoleMailer(log),
 };
 const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
@@ -150,6 +167,50 @@ const workers: Worker[] = [
   ),
 
   new Worker(
+    QUEUES.messagesSync,
+    async (job: Job<DomainEvent>) => {
+      // message.sync / review.sync from webhooks; message.deliver and thread.close from the console
+      const e = job.data;
+      const p = e.payload as { propertyId?: string; threadId?: string; reason?: string };
+      switch (e.type) {
+        case "message.sync":
+          if (p.propertyId)
+            await syncThreads(messagingDeps, { orgId: e.orgId, propertyId: p.propertyId });
+          break;
+        case "review.sync":
+          if (p.propertyId)
+            await syncReviews(messagingDeps, { orgId: e.orgId, propertyId: p.propertyId });
+          break;
+        case "message.deliver":
+          await deliverOutbound(messagingDeps, e.orgId);
+          break;
+        case "thread.close":
+          if (p.threadId)
+            await closeThreadRemote(
+              messagingDeps,
+              e.orgId,
+              p.threadId,
+              p.reason === "no_reply_needed" ? "no_reply_needed" : "resolved",
+            );
+          break;
+        default:
+          log.warn({ type: e.type }, "unrouted messaging event");
+      }
+    },
+    { ...workerOpts, concurrency: 2 },
+  ),
+
+  new Worker(
+    QUEUES.automationRun,
+    async (job: Job) => {
+      const orgId = (job.data as { orgId: string }).orgId;
+      const r = await runAutomation(messagingDeps, orgId);
+      if (r.sent + r.skipped + r.failed > 0) log.info({ orgId, ...r }, "automation.run.done");
+    },
+    { ...workerOpts, concurrency: 1 },
+  ),
+
+  new Worker(
     QUEUES.system,
     async (job: Job) => {
       switch (job.name) {
@@ -225,6 +286,30 @@ const workers: Worker[] = [
           await runDailyCloses({ db: c.db.db, clock: c.clock, log });
           return;
         }
+        case "messages.poll": {
+          const r = await pollThreads(messagingDeps);
+          if (r.newInbound > 0) log.info(r, "messages.poll.run");
+          await deliverOutbox();
+          return;
+        }
+        case "automation.tick": {
+          for (const orgId of await orgsWithAutomation(c.db.db))
+            await c.queues[QUEUES.automationRun].add(
+              "automation.run",
+              { orgId },
+              {
+                jobId: `automation.run:${orgId}:${String(Math.floor(Date.now() / 60_000))}`,
+                removeOnComplete: 200,
+                removeOnFail: 200,
+              },
+            );
+          return;
+        }
+        case "reviews.sweep": {
+          const n = await pollReviews(messagingDeps);
+          log.info({ created: n }, "reviews.sweep.run");
+          return;
+        }
         case "retention.purge": {
           const r = await purgeCardMetadata({ db: c.db.db, clock: c.clock, log });
           log.info(r, "retention.purge.run");
@@ -243,6 +328,15 @@ const workers: Worker[] = [
     { ...workerOpts, concurrency: 2 },
   ),
 ];
+/** Retry queued guest messages that a transient failure left behind (CXMSG-4). */
+async function deliverOutbox(): Promise<void> {
+  const orgs = await rawRows<{ org_id: string }>(
+    c.db.db,
+    sql`select distinct org_id from message where delivery_state = 'queued' union select distinct org_id from review_response where delivery_state = 'queued'`,
+  );
+  for (const o of orgs) await deliverOutbound(messagingDeps, o.org_id);
+}
+
 for (const w of workers)
   w.on("failed", (job, err) =>
     log.error({ queue: w.name, job: job?.name, id: job?.id, err: err.message }, "job.failed"),
@@ -272,6 +366,17 @@ async function main(): Promise<void> {
     { name: "channel.health_poll" },
   );
   await system.upsertJobScheduler("ops.escalate", { every: 60_000 }, { name: "ops.escalate" });
+  await system.upsertJobScheduler("messages.poll", { every: 120_000 }, { name: "messages.poll" });
+  await system.upsertJobScheduler(
+    "automation.tick",
+    { every: 60_000 },
+    { name: "automation.tick" },
+  );
+  await system.upsertJobScheduler(
+    "reviews.sweep",
+    { pattern: "50 * * * *" },
+    { name: "reviews.sweep" },
+  );
   await system.upsertJobScheduler(
     "daily_close",
     { pattern: "20 * * * *" },

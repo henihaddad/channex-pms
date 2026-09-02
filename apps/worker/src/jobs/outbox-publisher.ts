@@ -9,7 +9,7 @@ export function routeEvent(type: string): { queue: QueueName; priority: number }
   if (type.startsWith("booking."))
     return { queue: QUEUES.bookingProcess, priority: PRIORITY.critical };
   if (type.startsWith("webhook.")) return { queue: QUEUES.webhookIngest, priority: PRIORITY.high };
-  if (type.startsWith("message.") || type.startsWith("thread."))
+  if (type.startsWith("message.") || type.startsWith("thread.") || type.startsWith("review."))
     return { queue: QUEUES.messagesSync, priority: PRIORITY.normal };
   if (type.startsWith("notify.")) return { queue: QUEUES.notifyDeliver, priority: PRIORITY.high };
   if (type.startsWith("automation."))

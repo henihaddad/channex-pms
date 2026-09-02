@@ -212,11 +212,21 @@ export interface ThreadPage {
     id: string;
     bookingId?: string;
     provider: string;
+    /** Provider-side last change; drives incremental sync (CXMSG-2). */
+    updatedAt?: string;
+    guestName?: string;
+    guestLanguage?: string;
+    /** Airbnb pre-booking inquiries have no booking (CXMSG-6). */
+    kind?: "booking" | "inquiry";
+    state?: "open" | "closed";
     messages: Array<{
       id: string;
       direction: "inbound" | "outbound";
+      /** `system` carries OTA notices such as Airbnb inquiry cards. */
+      authorType?: "guest" | "staff" | "system";
       body: string;
       sentAt: string;
+      attachments?: Array<{ id: string; filename: string; contentType: string }>;
     }>;
   }>;
   nextCursor?: string;
@@ -245,6 +255,10 @@ export interface ReviewPage {
     text: string;
     ota: string;
     insertedAt: string;
+    guestName?: string;
+    /** Whether the OTA accepts a response, and ours when one was posted. */
+    canRespond?: boolean;
+    response?: string;
   }>;
 }
 

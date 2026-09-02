@@ -47,3 +47,13 @@ export {
   type ReservationRow,
   type ReservationDetail,
 } from "./reservations.js";
+export {
+  DrizzleMessagingRepository,
+  type ThreadRow,
+  type ThreadDetail,
+  type MessageRow,
+  type QueuedOutbound,
+  type RuleRow,
+  type AutomationBooking,
+  type ReviewRow,
+} from "./messaging.js";

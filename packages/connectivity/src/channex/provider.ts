@@ -608,17 +608,39 @@ export class ChannexProvider implements ConnectivityProvider {
     );
     const threads = arr(obj(body).data).map((t) => {
       const a = obj(obj(t).attributes);
+      const guest = obj(a.guest);
       return {
         id: String(obj(t).id),
         ...(a.booking_id ? { bookingId: String(a.booking_id) } : {}),
         provider: String(a.provider ?? a.ota ?? "unknown"),
+        ...(a.updated_at ? { updatedAt: String(a.updated_at) } : {}),
+        ...(guest.name || a.guest_name ? { guestName: String(guest.name ?? a.guest_name) } : {}),
+        ...(guest.language ? { guestLanguage: String(guest.language) } : {}),
+        kind: a.booking_id ? ("booking" as const) : ("inquiry" as const),
+        state: a.is_closed === true ? ("closed" as const) : ("open" as const),
         messages: arr(a.messages).map((m) => {
           const o = obj(m);
+          const sender = String(o.sender ?? "guest");
           return {
             id: String(o.id),
-            direction: o.sender === "guest" ? ("inbound" as const) : ("outbound" as const),
+            direction: sender === "guest" ? ("inbound" as const) : ("outbound" as const),
+            authorType:
+              sender === "guest"
+                ? ("guest" as const)
+                : sender === "system"
+                  ? ("system" as const)
+                  : ("staff" as const),
             body: String(o.message ?? o.body ?? ""),
             sentAt: String(o.inserted_at ?? ""),
+            ...(arr(o.attachments).length
+              ? {
+                  attachments: arr(o.attachments).map((x) => ({
+                    id: String(obj(x).id),
+                    filename: String(obj(x).filename ?? ""),
+                    contentType: String(obj(x).content_type ?? "application/octet-stream"),
+                  })),
+                }
+              : {}),
           };
         }),
       };
@@ -628,11 +650,15 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async sendMessage(m: OutboundMessage, meta: CallMeta): Promise<ProviderRef> {
+    // `booking:<id>` writes to a booking that has no thread yet (an automation writing first)
+    const path = m.threadId.startsWith("booking:")
+      ? `/api/v1/bookings/${m.threadId.slice("booking:".length)}/messages`
+      : `/api/v1/message_threads/${m.threadId}/messages`;
     const body = await this.call(
       "messages.send",
       {
         method: "POST",
-        path: `/api/v1/message_threads/${m.threadId}/messages`,
+        path,
         body: { message: { message: m.body, attachments: m.attachmentIds ?? [] } },
       },
       meta,
@@ -692,6 +718,9 @@ export class ChannexProvider implements ConnectivityProvider {
           text: String(a.content ?? a.text ?? ""),
           ota: String(a.ota ?? ""),
           insertedAt: String(a.inserted_at ?? ""),
+          ...(a.guest_name ? { guestName: String(a.guest_name) } : {}),
+          canRespond: a.is_replied !== true && a.can_reply !== false,
+          ...(a.reply ? { response: String(a.reply) } : {}),
         };
       }),
     };

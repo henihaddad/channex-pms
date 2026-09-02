@@ -21,10 +21,10 @@ export async function processWebhook(
   db: Db,
   event: DomainEvent,
   log: Logger,
-): Promise<"booking" | "ari" | "other"> {
+): Promise<"booking" | "ari" | "message" | "review" | "other"> {
   const p = event.payload as { webhookId: string; propertyId: string; event: string };
   return asSystem(db, event.orgId, async (tx) => {
-    let kind: "booking" | "ari" | "other" = "other";
+    let kind: "booking" | "ari" | "message" | "review" | "other" = "other";
     if (BOOKING_EVENTS.has(p.event)) {
       kind = "booking";
       await enqueueOutbox(tx, {
@@ -44,6 +44,27 @@ export async function processWebhook(
         payload: { orgId: event.orgId, propertyId: p.propertyId, reason: "webhook" },
         occurredAt: event.occurredAt,
         dedupeKey: `ari.reconcile:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 60000))}`,
+      });
+    } else if (p.event === "message") {
+      // CXMSG-2: the webhook triggers a thread pull; the 2-minute poll makes it exact
+      kind = "message";
+      await enqueueOutbox(tx, {
+        type: "message.sync",
+        orgId: event.orgId,
+        aggregate: { kind: "property", id: p.propertyId as DomainEvent["aggregate"]["id"] },
+        payload: { orgId: event.orgId, propertyId: p.propertyId, reason: "webhook" },
+        occurredAt: event.occurredAt,
+        dedupeKey: `message.sync:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 5000))}`,
+      });
+    } else if (p.event === "review") {
+      kind = "review";
+      await enqueueOutbox(tx, {
+        type: "review.sync",
+        orgId: event.orgId,
+        aggregate: { kind: "property", id: p.propertyId as DomainEvent["aggregate"]["id"] },
+        payload: { orgId: event.orgId, propertyId: p.propertyId, reason: "webhook" },
+        occurredAt: event.occurredAt,
+        dedupeKey: `review.sync:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 60000))}`,
       });
     }
     await markWebhook(tx, p.webhookId, "processed");

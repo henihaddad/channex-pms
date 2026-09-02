@@ -89,7 +89,7 @@ changeovers, without a spreadsheet. `v0.2`.
 
 ---
 
-## M4 — Messaging *(~3 weeks)*
+## M4 — Messaging *(~3 weeks)* ✅ shipped 2026-09-02 as v0.3
 
 - Thread/message sync, attachments, capability-driven UI.
 - Unified portfolio inbox: filters, SLA chips, assignment, collision detection.

@@ -2,7 +2,8 @@ import type React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { currentSession } from "@/server/session";
+import { currentOrgId, currentSession } from "@/server/session";
+import { inboxBadge } from "@/server/inbox-badge";
 import { logoutAction } from "../(auth)/auth.actions";
 import { Button } from "@/components/ui";
 
@@ -10,11 +11,19 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const session = await currentSession();
   if (!session) redirect("/login");
   const t = await getTranslations("nav");
+  const orgId = await currentOrgId();
+  const badge = orgId ? await inboxBadge(orgId, session.userId) : { unread: 0, breaching: 0 };
+  const inboxLabel =
+    badge.unread > 0 || badge.breaching > 0
+      ? `${t("inbox")} (${String(badge.unread)}${badge.breaching ? ` · ${String(badge.breaching)} SLA` : ""})`
+      : t("inbox");
   const links = [
     { href: "/", label: t("dashboard") },
     { href: "/properties", label: t("properties") },
     { href: "/calendar", label: t("calendar") },
     { href: "/reservations", label: t("reservations") },
+    { href: "/inbox", label: inboxLabel },
+    { href: "/reviews", label: t("reviews") },
     { href: "/operations", label: t("operations") },
     { href: "/front-desk", label: t("frontDesk") },
     { href: "/channels", label: t("channels") },
@@ -33,6 +42,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
               key={l.href}
               href={l.href}
               className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+              data-testid={l.href === "/inbox" ? "nav-inbox" : undefined}
             >
               {l.label}
             </Link>
