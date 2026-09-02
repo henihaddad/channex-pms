@@ -1,0 +1,133 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:15.168Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/adapter",
+    "query": {
+      "code": "BookingCom"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "code": "BookingCom",
+        "title": "Booking.com",
+        "params": {
+          "email": {
+            "position": 3,
+            "type": "string",
+            "title": "Property Email",
+            "rules": [
+              {
+                "apply": "hidden",
+                "when": false,
+                "influence_field": "send_email_notifications",
+                "with_value": ""
+              }
+            ]
+          },
+          "hotel_id": {
+            "position": 0,
+            "type": "string",
+            "title": "Hotel ID"
+          },
+          "machine_account": {
+            "position": 1,
+            "type": "hidden",
+            "title": "Machine Account"
+          },
+          "send_email_notifications": {
+            "default": false,
+            "position": 2,
+            "type": "boolean",
+            "title": "Send Property Notification"
+          },
+          "allow_payout_method_update": {
+            "default": false,
+            "position": 4,
+            "type": "hidden",
+            "title": "Allow Payout Method Updates"
+          },
+          "allow_payout_update": {
+            "default": false,
+            "position": 5,
+            "type": "hidden",
+            "title": "Allow Payout Updates"
+          },
+          "allow_vcc_balance": {
+            "default": false,
+            "position": 6,
+            "type": "hidden",
+            "title": "Allow VCC Balance"
+          },
+          "allow_vcc_fees_payout": {
+            "default": false,
+            "position": 7,
+            "type": "hidden",
+            "title": "Allow VCC Fees Payout"
+          },
+          "allow_virtual_credit_card_update": {
+            "default": false,
+            "position": 8,
+            "type": "hidden",
+            "title": "Allow VCC Updates"
+          }
+        },
+        "kind": "meta",
+        "actions": ["load_future_reservations"],
+        "mapping_mode": "room_rate_multioccupancy",
+        "message_support": true,
+        "property_mapping": "single",
+        "connection_params": {
+          "mode": "meta",
+          "max_attempts": 0,
+          "health_check_frame": 10000,
+          "read_frame": null,
+          "sync_frame": 10000
+        },
+        "rate_params": {
+          "readonly": {
+            "position": 5,
+            "type": "boolean",
+            "title": "Read Only"
+          },
+          "occupancy": {
+            "position": 2,
+            "type": "integer",
+            "title": "Occupancy"
+          },
+          "rate_plan_code": {
+            "position": 0,
+            "type": "string",
+            "title": "Rate"
+          },
+          "room_type_code": {
+            "position": 1,
+            "type": "string",
+            "title": "Room"
+          },
+          "pricing_type": {
+            "default": "Standart",
+            "position": 3,
+            "type": "select",
+            "options": ["Standard", "OBP"],
+            "title": "Pricing Type"
+          },
+          "primary_occ": {
+            "position": 4,
+            "type": "boolean",
+            "title": "Primary Occupancy"
+          }
+        },
+        "channel_restrictions": {
+          "currency": "EUR",
+          "min_price": 500
+        }
+      }
+    }
+  }
+}

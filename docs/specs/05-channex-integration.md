@@ -1,6 +1,6 @@
 # 05 — Channex Integration & Sync Engine
 
-**Status:** `accepted` (2026-09-02) — sync engine, webhook receiver, ingestion and ack loop implemented in M1 against `FakeProvider` and docs-sourced fixtures; the certification suite (§5.11) runs once a staging key exists. §5.8 IDs renamed `CXMSG-n`.
+**Status:** `accepted` (2026-09-02) — sync engine, webhook receiver, ingestion and ack loop implemented in M1 against `FakeProvider` and docs-sourced fixtures; the certification suite (§5.11) ran against staging.channex.io on 2026-09-02 (provisioning, PROV-3 idempotency, ARI round trip, property import, adapter descriptor) and its recorded fixtures live in `packages/connectivity/fixtures/recorded/`. Staging corrections: property address fields are flat (`address`, `city`, `zip_code`, `country`), a plain `min_stay` is refused by default (sent as `min_stay_arrival` + `min_stay_through`), webhook callback hosts must resolve, and adapter descriptors carry their fields in `data.params`. §5.8 IDs renamed `CXMSG-n`.
 
 This is the spec that decides whether the platform is trustworthy. Everything
 here exists to satisfy two promises from [01](./01-vision-and-scope.md): *never

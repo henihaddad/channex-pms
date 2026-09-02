@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:25:38.510Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/room_types"
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "data": {
+        "attributes": {
+          "id": "61516262-2b76-49a7-936b-c57c27b252ca",
+          "meta": null,
+          "position": 0,
+          "title": "Certification Room",
+          "content": {
+            "description": null,
+            "photos": []
+          },
+          "occ_adults": 2,
+          "occ_children": 1,
+          "occ_infants": 0,
+          "capacity": null,
+          "codes": null,
+          "count_of_rooms": 2,
+          "default_occupancy": 2,
+          "room_kind": "room"
+        },
+        "id": "61516262-2b76-49a7-936b-c57c27b252ca",
+        "type": "room_type",
+        "relationships": {
+          "property": {
+            "data": {
+              "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+              "type": "property"
+            }
+          },
+          "facilities": {
+            "data": []
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:12.353Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/groups",
+    "query": {
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "attributes": {
+            "id": "a5c4e10c-77cb-4ca6-b3a7-6cad4c1e73d4",
+            "title": "User Group"
+          },
+          "id": "a5c4e10c-77cb-4ca6-b3a7-6cad4c1e73d4",
+          "type": "group",
+          "relationships": {
+            "users": {
+              "data": [
+                {
+                  "attributes": {
+                    "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                    "name": "heni haddad",
+                    "email": "hanihaddad111@gmail.com"
+                  },
+                  "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                  "type": "user"
+                }
+              ]
+            },
+            "properties": {
+              "data": []
+            }
+          }
+        },
+        {
+          "attributes": {
+            "id": "d6225b5a-1aaf-40b0-9802-71b541964155",
+            "title": "PMS Certification"
+          },
+          "id": "d6225b5a-1aaf-40b0-9802-71b541964155",
+          "type": "group",
+          "relationships": {
+            "users": {
+              "data": [
+                {
+                  "attributes": {
+                    "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                    "name": "heni haddad",
+                    "email": "hanihaddad111@gmail.com"
+                  },
+                  "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                  "type": "user"
+                }
+              ]
+            },
+            "properties": {
+              "data": [
+                {
+                  "attributes": {
+                    "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+                    "title": "PMS Certification Property"
+                  },
+                  "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+                  "type": "property"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 2,
+        "limit": 100,
+        "order_by": null,
+        "page": 1,
+        "order_direction": null
+      }
+    }
+  }
+}

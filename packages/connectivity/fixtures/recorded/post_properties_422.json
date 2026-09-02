@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:24:10.462Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/properties"
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "errors": {
+        "code": "validation_error",
+        "title": "Validation Error",
+        "details": {
+          "address": ["is invalid"]
+        }
+      }
+    }
+  }
+}

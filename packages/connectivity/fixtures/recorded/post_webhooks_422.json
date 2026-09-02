@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:25:41.045Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/webhooks"
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "errors": {
+        "code": "validation_error",
+        "title": "Validation Error",
+        "details": {
+          "callback_url": ["invalid host"]
+        }
+      }
+    }
+  }
+}

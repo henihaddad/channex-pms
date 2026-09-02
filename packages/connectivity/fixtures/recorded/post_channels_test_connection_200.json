@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:15.396Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels/test_connection"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "success": false,
+        "errors": null
+      }
+    }
+  }
+}

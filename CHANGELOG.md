@@ -28,6 +28,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Channex certification suite run against staging: provisioning with natural-key reconciliation
+  (PROV-3), ARI round trip, property import and adapter descriptors, with recorded fixtures;
+  provider corrections for the flat property address, `min_stay` mode and descriptor shape.
+
 - M1 connectivity core: `ConnectivityProvider` port with the spec 05 error taxonomy; `ChannexProvider`
   over fetch/record/replay transports with docs-sourced fixtures and a contract suite; `FakeProvider`
   with seeded fault injection (429, 5xx, timeouts, partial 422, duplicate/reordered/dropped webhooks,

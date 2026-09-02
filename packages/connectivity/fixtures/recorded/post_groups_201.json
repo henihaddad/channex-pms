@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:24:10.693Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/groups"
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "data": {
+        "attributes": {
+          "id": "a05dbf27-58f1-44ec-ac13-a94f24bccd08",
+          "title": "PMS Certification"
+        },
+        "id": "a05dbf27-58f1-44ec-ac13-a94f24bccd08",
+        "type": "group",
+        "relationships": {
+          "users": {
+            "data": [
+              {
+                "attributes": {
+                  "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                  "name": "heni haddad",
+                  "email": "hanihaddad111@gmail.com"
+                },
+                "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                "type": "user"
+              }
+            ]
+          },
+          "properties": {
+            "data": []
+          }
+        }
+      }
+    }
+  }
+}

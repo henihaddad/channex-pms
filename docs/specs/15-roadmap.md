@@ -34,7 +34,7 @@ audited; cross-tenant and cross-owner tests green.
 
 ---
 
-## M1 — Connectivity core *(~4 weeks)* ← highest risk ✅ exit met 2026-09-02 (chaos 200/200; staging run pending a key)
+## M1 — Connectivity core *(~4 weeks)* ← highest risk ✅ exit met 2026-09-02 (chaos 200/200; certification green on staging.channex.io the same day)
 
 - `ConnectivityProvider` port + **`FakeProvider`** (429s, out-of-order webhooks,
   duplicate revisions, partial 200s, outages).

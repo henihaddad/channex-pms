@@ -74,7 +74,12 @@ describe("ChannexProvider contract (fixtures)", () => {
       { index: 0, reason: "rate: must be greater than or equal to 0", field: "rate" },
     ]);
     const body = http.calls[0]?.body as { values: Array<Record<string, unknown>> };
-    expect(body.values[0]).toMatchObject({ rate: -100, min_stay: 2, days: ["fr", "sa"] });
+    expect(body.values[0]).toMatchObject({
+      rate: -100,
+      min_stay_arrival: 2,
+      min_stay_through: 2,
+      days: ["fr", "sa"],
+    });
     expect(body.values[1]).toMatchObject({ rate: 12000, stop_sell: true });
   });
 
@@ -186,7 +191,7 @@ describe("ChannexProvider contract: provisioning and adoption", () => {
       meta,
     );
     expect(r.id).toBe("8ab9e0a2-3f3c-4c2f-9d1b-6d2f0e7b1a11");
-    expect(http.calls[0]?.body).toMatchObject({
+    expect(http.calls.find((c) => c.method === "POST")?.body).toMatchObject({
       webhook: {
         property_id: PROPERTY,
         callback_url: "https://pms.example/webhooks/channex/tok",

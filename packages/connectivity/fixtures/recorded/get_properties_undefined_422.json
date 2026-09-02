@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:24:11.071Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/properties/undefined"
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "errors": {
+        "code": "bad_request",
+        "title": "Bad Request",
+        "details": {
+          "id": ["is invalid"]
+        }
+      }
+    }
+  }
+}

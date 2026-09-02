@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:14.758Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/rate_plans",
+    "query": {
+      "filter[property_id]": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "attributes": {
+            "id": "ceb6aa12-6c7f-4d5f-889e-d3da904d054f",
+            "meta": null,
+            "options": [
+              {
+                "id": "ceb6aa12-6c7f-4d5f-889e-d3da904d054f",
+                "occupancy": 2,
+                "rate": "100.00",
+                "derived_option": null,
+                "inherit_availability_offset": false,
+                "inherit_closed_to_arrival": false,
+                "inherit_closed_to_departure": false,
+                "inherit_max_availability": false,
+                "inherit_max_stay": false,
+                "inherit_min_stay_arrival": false,
+                "inherit_min_stay_through": false,
+                "inherit_rate": false,
+                "inherit_stop_sell": false,
+                "is_primary": true,
+                "rate_category_id": null
+              }
+            ],
+            "title": "Standard",
+            "currency": "EUR",
+            "auto_rate_settings": null,
+            "closed_to_arrival": [false, false, false, false, false, false, false],
+            "closed_to_departure": [false, false, false, false, false, false, false],
+            "max_stay": [0, 0, 0, 0, 0, 0, 0],
+            "min_stay_arrival": [1, 1, 1, 1, 1, 1, 1],
+            "min_stay_through": [1, 1, 1, 1, 1, 1, 1],
+            "stop_sell": [false, false, false, false, false, false, false],
+            "cancellation_policy_id": null,
+            "children_fee": "0.00",
+            "infant_fee": "0.00",
+            "inherit_availability_offset": false,
+            "inherit_closed_to_arrival": false,
+            "inherit_closed_to_departure": false,
+            "inherit_max_availability": false,
+            "inherit_max_stay": false,
+            "inherit_min_stay_arrival": false,
+            "inherit_min_stay_through": false,
+            "inherit_rate": false,
+            "inherit_stop_sell": false,
+            "meal_type": "none",
+            "rate_mode": "manual",
+            "sell_mode": "per_room",
+            "tax_set_id": null,
+            "ui_read_only": false
+          },
+          "id": "ceb6aa12-6c7f-4d5f-889e-d3da904d054f",
+          "type": "rate_plan",
+          "relationships": {
+            "property": {
+              "data": {
+                "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+                "type": "property"
+              }
+            },
+            "room_type": {
+              "data": {
+                "id": "61516262-2b76-49a7-936b-c57c27b252ca",
+                "type": "room_type"
+              }
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 100,
+        "order_by": "title",
+        "page": 1,
+        "order_direction": "asc"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:13.574Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/availability"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "eedaebe7-f539-43d2-af1e-e3a8fdb76d6c",
+          "type": "task"
+        }
+      ],
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}

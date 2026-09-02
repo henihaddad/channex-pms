@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "recorded-shape",
+    "note": "Empty list shape as returned by staging (see fixtures/recorded/get_webhooks_200.json)."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/webhooks",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[limit]": "100",
+      "pagination[page]": "1"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": { "data": [], "meta": { "total": 0, "limit": 100, "page": 1 } }
+  }
+}

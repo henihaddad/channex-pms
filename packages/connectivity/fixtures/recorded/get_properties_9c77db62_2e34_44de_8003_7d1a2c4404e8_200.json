@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:14.351Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/properties/9c77db62-2e34-44de-8003-7d1a2c4404e8"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "attributes": {
+          "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+          "state": null,
+          "address": null,
+          "title": "PMS Certification Property",
+          "content": {
+            "description": null,
+            "photos": [],
+            "important_information": null
+          },
+          "currency": "EUR",
+          "email": null,
+          "city": "Lisbon",
+          "country": "PT",
+          "settings": {
+            "min_stay_type": "both",
+            "allow_availability_autoupdate": true,
+            "allow_availability_autoupdate_on_cancellation": false,
+            "allow_availability_autoupdate_on_confirmation": true,
+            "allow_availability_autoupdate_on_modification": false,
+            "cut_off_days": null,
+            "cut_off_time": null,
+            "max_day_advance": null,
+            "max_price": null,
+            "min_price": null,
+            "state_length": 500
+          },
+          "phone": null,
+          "is_active": true,
+          "logo_url": null,
+          "max_count_of_occupancies": 10,
+          "max_count_of_rate_plans": 400,
+          "max_count_of_room_types": 50,
+          "min_stay_type": "both",
+          "default_cancellation_policy_id": null,
+          "expected_removal_date": null,
+          "hotel_policy_id": null,
+          "acc_channels_count": 0,
+          "default_tax_set_id": null,
+          "latitude": "38.7222524",
+          "location_precision": null,
+          "longitude": "-9.1393366",
+          "max_count_of_users": 20,
+          "property_type": null,
+          "timezone": "Europe/Lisbon",
+          "website": null,
+          "zip_code": null,
+          "property_category": null
+        },
+        "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+        "type": "property",
+        "relationships": {
+          "users": {
+            "data": [
+              {
+                "attributes": {
+                  "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                  "name": "heni haddad",
+                  "email": "hanihaddad111@gmail.com"
+                },
+                "id": "1eb9b2b0-2799-41db-8a57-90118c3d3462",
+                "type": "user"
+              }
+            ]
+          },
+          "groups": {
+            "data": [
+              {
+                "attributes": {
+                  "id": "d6225b5a-1aaf-40b0-9802-71b541964155",
+                  "title": "PMS Certification"
+                },
+                "id": "d6225b5a-1aaf-40b0-9802-71b541964155",
+                "type": "group"
+              }
+            ]
+          },
+          "facilities": {
+            "data": []
+          },
+          "hotel_policies": {
+            "data": []
+          },
+          "cancellation_policies": {
+            "data": []
+          },
+          "tax_sets": {
+            "data": []
+          }
+        }
+      }
+    }
+  }
+}

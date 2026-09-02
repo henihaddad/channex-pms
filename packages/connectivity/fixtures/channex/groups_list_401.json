@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "An invalid key fails on the first list call (PROV-3 reconciliation runs before create)."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/groups",
+    "query": { "pagination[limit]": "100", "pagination[page]": "1" }
+  },
+  "response": {
+    "status": 401,
+    "body": { "errors": { "code": "unauthorized", "title": "Unauthorized" } }
+  }
+}

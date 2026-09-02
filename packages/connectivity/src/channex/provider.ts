@@ -62,6 +62,14 @@ export class ChannexProvider implements ConnectivityProvider {
   // ---- provisioning ------------------------------------------------------------------
 
   async ensureGroup(g: GroupSpec, meta: CallMeta): Promise<ProviderRef> {
+    const existing = await this.findExisting(
+      "groups.list",
+      "/api/v1/groups",
+      {},
+      (a) => a.title === g.title,
+      meta,
+    );
+    if (existing) return { id: existing };
     const body = await this.call(
       "groups.create",
       { method: "POST", path: "/api/v1/groups", body: { group: { title: g.title } } },
@@ -71,6 +79,14 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async ensureProperty(p: PropertySpec, meta: CallMeta): Promise<ProviderRef> {
+    const existing = await this.findExisting(
+      "properties.list",
+      "/api/v1/properties",
+      {},
+      (a) => a.title === p.title,
+      meta,
+    );
+    if (existing) return { id: existing };
     const body = await this.call(
       "properties.create",
       {
@@ -82,7 +98,12 @@ export class ChannexProvider implements ConnectivityProvider {
             currency: p.currency,
             timezone: p.timezone,
             group_id: p.groupId,
-            address: p.address,
+            // Channex keeps the address flat: `address` is the street line (verified on staging)
+            ...(p.address?.street !== undefined ? { address: p.address.street } : {}),
+            ...(p.address?.city !== undefined ? { city: p.address.city } : {}),
+            ...(p.address?.state !== undefined ? { state: p.address.state } : {}),
+            ...(p.address?.zipCode !== undefined ? { zip_code: p.address.zipCode } : {}),
+            ...(p.address?.country !== undefined ? { country: p.address.country } : {}),
             settings: p.settings,
           },
         },
@@ -93,6 +114,14 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async ensureRoomType(rt: RoomTypeSpec, meta: CallMeta): Promise<ProviderRef> {
+    const existing = await this.findExisting(
+      "room_types.list",
+      "/api/v1/room_types",
+      { "filter[property_id]": rt.propertyId },
+      (a) => a.title === rt.title,
+      meta,
+    );
+    if (existing) return { id: existing };
     const body = await this.call(
       "room_types.create",
       {
@@ -116,6 +145,17 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async ensureRatePlan(rp: RatePlanSpec, meta: CallMeta): Promise<ProviderRef> {
+    const existing = await this.findExisting(
+      "rate_plans.list",
+      "/api/v1/rate_plans",
+      { "filter[property_id]": rp.propertyId },
+      (a, item) =>
+        a.title === rp.title &&
+        String(obj(obj(obj(item.relationships).room_type).data).id ?? a.room_type_id) ===
+          rp.roomTypeId,
+      meta,
+    );
+    if (existing) return { id: existing };
     const body = await this.call(
       "rate_plans.create",
       {
@@ -144,6 +184,14 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async ensureWebhook(w: WebhookSpec, meta: CallMeta): Promise<ProviderRef> {
+    const existing = await this.findExisting(
+      "webhooks.list",
+      "/api/v1/webhooks",
+      { "filter[property_id]": w.propertyId },
+      (a) => a.callback_url === w.callbackUrl,
+      meta,
+    );
+    if (existing) return { id: existing };
     const body = await this.call(
       "webhooks.create",
       {
@@ -215,6 +263,42 @@ export class ChannexProvider implements ConnectivityProvider {
     };
   }
 
+  /**
+   * PROV-3: reconcile by natural key before creating, so a retried provisioning
+   * step never duplicates a Channex-side row. Lists are paginated explicitly.
+   */
+  private async findExisting(
+    op: string,
+    path: string,
+    query: Record<string, string>,
+    match: (attrs: Record<string, unknown>, item: Record<string, unknown>) => boolean,
+    meta: CallMeta,
+  ): Promise<string | null> {
+    for (let page = 1; page < 50; page++) {
+      const body = await this.call(
+        op,
+        {
+          method: "GET",
+          path,
+          query: {
+            ...query,
+            "pagination[page]": String(page),
+            "pagination[limit]": String(PAGE_LIMIT),
+          },
+        },
+        meta,
+      );
+      const data = arr(obj(body).data);
+      for (const item of data) {
+        const o = obj(item);
+        if (match(obj(o.attributes), o)) return String(o.id);
+      }
+      const total = Number(obj(obj(body).meta).total ?? data.length);
+      if (page * PAGE_LIMIT >= total || data.length === 0) break;
+    }
+    return null;
+  }
+
   private async listAll(
     op: string,
     path: string,
@@ -276,9 +360,19 @@ export class ChannexProvider implements ConnectivityProvider {
             rates: Object.entries(e.rates).map(([occ, rate]) => ({ occupancy: Number(occ), rate })),
           }
         : {}),
-      ...(e.minStay !== undefined ? { min_stay: e.minStay } : {}),
-      ...(e.minStayArrival !== undefined ? { min_stay_arrival: e.minStayArrival } : {}),
-      ...(e.minStayThrough !== undefined ? { min_stay_through: e.minStayThrough } : {}),
+      // Channex properties default to min_stay_type "both": a plain `min_stay` is refused
+      // ("please use min_stay_through or min_stay_arrival", verified on staging), so the
+      // canonical minStay is sent as both unless the caller sets them separately.
+      ...(e.minStayArrival !== undefined
+        ? { min_stay_arrival: e.minStayArrival }
+        : e.minStay !== undefined
+          ? { min_stay_arrival: e.minStay }
+          : {}),
+      ...(e.minStayThrough !== undefined
+        ? { min_stay_through: e.minStayThrough }
+        : e.minStay !== undefined
+          ? { min_stay_through: e.minStay }
+          : {}),
       ...(e.maxStay !== undefined ? { max_stay: e.maxStay } : {}),
       ...(e.closedToArrival !== undefined ? { closed_to_arrival: e.closedToArrival } : {}),
       ...(e.closedToDeparture !== undefined ? { closed_to_departure: e.closedToDeparture } : {}),
@@ -327,24 +421,30 @@ export class ChannexProvider implements ConnectivityProvider {
       { method: "GET", path: "/api/v1/channels/adapter", query: { code } },
       meta,
     );
+    // Verified on staging: data.params is an object keyed by field name with position/type/title/default/rules.
     const data = obj(obj(body).data);
-    const attrs = obj(data.attributes);
-    return {
-      code,
-      title: String(attrs.title ?? code),
-      fields: (Array.isArray(attrs.settings) ? attrs.settings : []).map((f) => {
-        const o = obj(f);
-        return {
-          name: String(o.name),
-          type: String(o.type ?? "string"),
-          label: String(o.label ?? o.name),
-          required: Boolean(o.required),
-          ...(o.help ? { help: String(o.help) } : {}),
-          ...(Array.isArray(o.options) ? { options: o.options.map(String) } : {}),
-        };
-      }),
-      capabilities: Array.isArray(attrs.capabilities) ? attrs.capabilities.map(String) : [],
-    };
+    const params = obj(data.params);
+    const fields = Object.entries(params)
+      .map(([name, raw]) => ({ name, def: obj(raw) }))
+      .filter(({ def }) => def.type !== "hidden")
+      .sort((a, b) => Number(a.def.position ?? 0) - Number(b.def.position ?? 0))
+      .map(({ name, def }) => ({
+        name,
+        type: String(def.type ?? "string"),
+        label: String(def.title ?? name),
+        required: def.default === undefined && def.type !== "boolean",
+        ...(typeof def.description === "string" ? { help: def.description } : {}),
+        ...(Array.isArray(def.options) ? { options: def.options.map(String) } : {}),
+      }));
+    const capabilities = [
+      "rates",
+      "availability",
+      "restrictions",
+      ...(data.message_support === true ? ["messaging"] : []),
+      ...(typeof data.mapping_mode === "string" ? [`mapping:${data.mapping_mode}`] : []),
+      ...arr(data.actions).map((a) => `action:${String(a)}`),
+    ];
+    return { code, title: String(data.title ?? code), fields, capabilities };
   }
 
   async testConnection(s: ConnectionSettings, meta: CallMeta): Promise<TestResult> {
@@ -713,7 +813,12 @@ function parseAriSnapshot(avail: unknown, restr: unknown): AriSnapshot {
         ratePlanId,
         date,
         ...(o.rate !== undefined ? { rate: minorFromWire(o.rate) } : {}),
-        ...(o.min_stay !== undefined ? { minStay: Number(o.min_stay) } : {}),
+        // canonical minStay: the explicit field, else arrival and through when they agree
+        ...(o.min_stay !== undefined
+          ? { minStay: Number(o.min_stay) }
+          : o.min_stay_arrival !== undefined && o.min_stay_arrival === o.min_stay_through
+            ? { minStay: Number(o.min_stay_arrival) }
+            : {}),
         ...(o.min_stay_arrival !== undefined ? { minStayArrival: Number(o.min_stay_arrival) } : {}),
         ...(o.min_stay_through !== undefined ? { minStayThrough: Number(o.min_stay_through) } : {}),
         ...(o.max_stay !== undefined ? { maxStay: Number(o.max_stay) } : {}),

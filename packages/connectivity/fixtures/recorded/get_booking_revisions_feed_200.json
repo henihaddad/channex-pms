@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:14.996Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking_revisions/feed",
+    "query": {
+      "filter[property_id]": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+      "pagination[page]": "1",
+      "pagination[limit]": "100",
+      "order[inserted_at]": "asc"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [],
+      "meta": {
+        "total": 0,
+        "limit": 100,
+        "order_by": "inserted_at",
+        "page": 1,
+        "order_direction": "asc"
+      }
+    }
+  }
+}

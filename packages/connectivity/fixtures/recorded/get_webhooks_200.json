@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-02T11:28:13.392Z"
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/webhooks",
+    "query": {
+      "filter[property_id]": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "attributes": {
+            "id": "8416f4b0-656f-4806-a4c2-8d3d49e17afc",
+            "protected": false,
+            "send_data": true,
+            "headers": {
+              "x-channex-webhook-secret": "cert-secret"
+            },
+            "is_active": true,
+            "callback_url": "https://example.com/webhooks/channex/cert",
+            "event_mask": "*",
+            "is_signed": false,
+            "request_params": {},
+            "signing_key_id": null,
+            "is_global": false
+          },
+          "id": "8416f4b0-656f-4806-a4c2-8d3d49e17afc",
+          "type": "webhook",
+          "relationships": {
+            "property": {
+              "data": {
+                "id": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
+                "type": "property"
+              }
+            },
+            "billing_account": {
+              "data": {
+                "id": "0dc5b904-c857-4d1d-99ad-e7144d155f40",
+                "type": "billing_account"
+              }
+            },
+            "organization": {
+              "data": {
+                "id": "0dc5b904-c857-4d1d-99ad-e7144d155f40",
+                "type": "organization"
+              }
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 100,
+        "order_by": "inserted_at",
+        "page": 1,
+        "order_direction": "desc"
+      }
+    }
+  }
+}
