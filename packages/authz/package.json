@@ -1,8 +1,8 @@
 {
-  "name": "@pms/core",
+  "name": "@pms/authz",
   "version": "0.0.0",
   "private": true,
-  "description": "Framework-free domain layer: entities, value objects, services, ports. Spec 04 and 14.",
+  "description": "Permission catalogue and evaluator, generated from spec 02. The single source of authorization truth.",
   "license": "SEE LICENSE IN ../../LICENSE.md",
   "type": "module",
   "exports": {
@@ -11,24 +11,23 @@
       "default": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint src",
+    "lint": "eslint src scripts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "temporal-polyfill": "^1.0.4",
-    "uuid": "^14.0.2"
+    "generate": "tsx scripts/generate.ts",
+    "check:authz": "tsx scripts/generate.ts --check"
   },
   "devDependencies": {
     "eslint": "^9",
     "fast-check": "^4.9.0",
+    "tsx": "^4.23.13",
     "typescript": "^5",
-    "vitest": "^4.1.11"
-  },
-  "files": [
-    "dist"
-  ]
+    "vitest": "^4.1.11",
+    "@types/node": "^22"
+  }
 }

@@ -14,11 +14,13 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "check": "turbo run lint typecheck test build",
+    "check": "turbo run lint typecheck test check:authz check:handlers check:migrations build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "test:integration": "turbo run test:integration",
+    "db:migrate": "turbo run db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^9",
