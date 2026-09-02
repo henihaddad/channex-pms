@@ -27,7 +27,8 @@
     "test:integration": "vitest run --config vitest.int.config.ts",
     "check:migrations": "drizzle-kit check && tsx scripts/check-drift.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "operator:grant": "tsx scripts/grant-operator.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

@@ -15,7 +15,7 @@
 <p align="center">
   <a href="./LICENSE.md"><img alt="License: Sustainable Use" src="https://img.shields.io/badge/license-Sustainable%20Use-34d399"></a>
   <a href="https://faircode.io"><img alt="fair-code" src="https://img.shields.io/badge/fair--code-yes-22d3ee"></a>
-  <a href="./docs/specs/"><img alt="Status: design phase" src="https://img.shields.io/badge/status-design%20phase-f59e0b"></a>
+  <a href="./CHANGELOG.md"><img alt="Status: v1.0" src="https://img.shields.io/badge/status-v1.0-34d399"></a>
   <a href="./docs/specs/15-roadmap.md"><img alt="Roadmap: M0 to M8" src="https://img.shields.io/badge/roadmap-M0%20%E2%86%92%20M8-8b5cf6"></a>
   <a href="https://github.com/henihaddad/channex-pms/actions/workflows/website.yml"><img alt="Website build" src="https://github.com/henihaddad/channex-pms/actions/workflows/website.yml/badge.svg"></a>
 </p>
@@ -30,7 +30,7 @@
 
 ---
 
-> **Status: v0.6 (milestone M7) shipped; M8 in progress.** The [specification](./docs/specs/) (17 documents,
+> **Status: v1.0 shipped (milestone M8).** The [specification](./docs/specs/) (17 documents,
 > decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with
 > row-level security, permission matrix, audit log), M1 (the Channex sync engine, webhook receiver,
 > booking ingestion with the ack loop, drift detection and a 200-scenario chaos suite) and M2
@@ -38,8 +38,8 @@
 > turnover operations, the cleaner app, folios and invoices) and M4 (the unified inbox, templates,
 > automation with door-code delivery, reviews) and M5 (owner agreements, statements, payouts and
 > the owner portal), M6 (KPI rollups, role dashboards, reports, alerts) and M7 (the direct
-> booking engine: storefront, holds, payments, guest portal) are done. Billing, the operator
-> console and hardening to v1.0 arrive with M8. Everything
+> booking engine: storefront, holds, payments, guest portal) and M8 (hosted-mode billing, quotas,
+> the operator console, plugins, runbooks, security and drill workflows) are done. Everything
 > is proven against the built-in fake provider, and the provider adapter is certified against the
 > Channex staging environment.
 
@@ -100,10 +100,10 @@ pnpm check             # lint, typecheck, test, build
 ```
 
 Self-hosting is one command with Docker Compose (`compose.selfhost.yml`: web, worker, one-shot
-migrate, Postgres, Redis, MinIO, Caddy):
+migrate, Postgres, Redis, MinIO, Caddy); [docs/install.md](./docs/install.md) has the full path:
 
 ```sh
-# v0.1: set PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY and PUBLIC_URL in .env first
+# set PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY and PUBLIC_URL in .env first
 docker compose up
 ```
 
@@ -128,13 +128,14 @@ paywalled in the self-hosted edition, and the only enterprise-licensed files are
 | M5        | Owner management                                                        | v0.4   |
 | M6        | Dashboards and reporting                                                | v0.5   |
 | M7        | Direct booking engine                                                   | v0.6   |
-| M8        | Hosted service, billing, hardening to v1.0                              | next   |
+| M8        | Hosted service, billing, hardening to v1.0                              | v1.0   |
 
 Full detail, including what each milestone deliberately leaves out, in
 [docs/specs/15-roadmap.md](./docs/specs/15-roadmap.md).
 
 ## Resources
 
+- 📖 [Install](./docs/install.md) · [Operate](./docs/operate.md) · [Runbooks](./docs/runbooks/) · [Plugins](./docs/plugins.md) · [API](./docs/api.md)
 - 📐 [Specification](./docs/specs/README.md): 17 documents, the design source of truth
 - 🧭 [Vision & Scope](./docs/specs/01-vision-and-scope.md): what this is, and what it deliberately is not
 - 🔌 [Channex Integration](./docs/specs/05-channex-integration.md): the sync engine in detail

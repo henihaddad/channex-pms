@@ -1,6 +1,6 @@
 # 13 — Non-Functional Requirements, Security & Compliance
 
-**Status:** `review` — revised 2026-08-21: access credentials added to the threat model; owner isolation added.
+**Status:** `accepted` — the automated controls of this document are in place as of v1.0 (2026-09-02); the independent penetration test and DAST against a staging deployment remain open items tracked in §13.11.
 
 We hold guest identity data, OTA credentials, and the integrity of what a property
 sells. A breach or a systemic overbooking would end the project's credibility
@@ -179,3 +179,19 @@ Not glamorous, and a genuine reason properties abandon software:
   self-heals on recovery.
 - **NFR-6** A self-hoster can back up, restore, upgrade and roll back using only
   published documentation.
+
+## 13.11 Implementation notes (M8)
+
+Automated: RLS on every tenant table with the INV-10 registry test; cross-tenant and owner
+isolation suites; the PII-in-logs check and the PAN scan (PCI-6) in CI; secret scanning, `pnpm
+audit`, an SBOM artefact and CodeQL on every push; the append-only audit chain verified weekly;
+retention purge of card metadata; backup and restore, upgrade and rollback rehearsed in CI
+(NFR-6); k6 scenarios for the §13.7 budgets with thresholds (the booking-engine LCP budget is
+checked in the M7 e2e). Strict CSP on the console and `frame-ancestors` on the funnel are set;
+SRI on the widget is not applicable (it is served first-party).
+
+Open before the hosted service takes paying tenants: the **independent penetration test** (a
+vendor engagement, not something this repository can run), DAST against a staging deployment,
+breached-password checks (needs an external list), and a KMS-backed master key for the hosted
+mode (the self-hosted master key is in place).
+

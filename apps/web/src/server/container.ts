@@ -16,9 +16,11 @@ import {
   type TokenService,
 } from "@pms/runtime";
 import {
+  FakeBillingProvider,
   FakeLockProvider,
   FakePaymentProvider,
   FakePayoutProvider,
+  type BillingProvider,
   type PaymentProvider,
   type PayoutProvider,
   type ConnectivityProvider,
@@ -29,6 +31,7 @@ import {
   type TotpVerifier,
 } from "@pms/core";
 import {
+  StripeBillingProvider,
   StripeConnectPayoutProvider,
   StripePaymentProvider,
   stripeTransport,
@@ -60,6 +63,10 @@ export interface WebContainer {
   payouts: PayoutProvider;
   /** Guest payments (spec 10 §10.4): Stripe PaymentIntents with STRIPE_SECRET_KEY, the fake otherwise. */
   payments: PaymentProvider;
+  /** Subscriptions (spec 12 §12.5): Stripe Billing with STRIPE_SECRET_KEY, the fake otherwise. */
+  billing: BillingProvider;
+  /** Hosted mode has plans and quotas; self-hosted has neither (parity guarantee). */
+  hosted: boolean;
 }
 
 declare global {
@@ -95,6 +102,10 @@ async function build(): Promise<WebContainer> {
     payments: process.env.STRIPE_SECRET_KEY
       ? new StripePaymentProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
       : new FakePaymentProvider(),
+    billing: process.env.STRIPE_SECRET_KEY
+      ? new StripeBillingProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+      : new FakeBillingProvider(),
+    hosted: process.env.PMS_MODE === "hosted" || testHooksEnabled(),
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,

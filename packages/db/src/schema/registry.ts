@@ -98,6 +98,21 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   session: "global",
   magic_link: "global",
   org_membership: "global",
+  // M8 (spec 12)
+  plan: "global",
+  subscription: "org",
+  usage_record: "org",
+  billing_invoice: "org",
+  platform_operator: "global",
+  operator_audit_log: "global",
+  feature_flag: "global",
+  announcement: "global",
+  impersonation_session: "org",
+  support_access_grant: "org",
+  plugin: "org",
+  plugin_delivery: "org",
+  data_export: "org",
+  platform_job_request: "global",
 };
 
 export const ORG_TABLES = Object.entries(TENANCY)

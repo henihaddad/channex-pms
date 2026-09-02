@@ -1019,6 +1019,54 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "attachCardAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "billing:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "cancelSubscriptionAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "billing:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "choosePlanAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "billing:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "leavePlatformAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:delete",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "loadBilling",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "billing:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/billing/billing.actions.ts",
+    "export": "requestExportAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "export:execute",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/settings/members/members.actions.ts",
     "export": "inviteMember",
     "kind": "action",
@@ -1061,6 +1109,70 @@
   {
     "file": "src/app/(console)/settings/organization/organization.actions.ts",
     "export": "updateOrganization",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:update",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/plugins/plugins.actions.ts",
+    "export": "installPluginAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "plugin:install",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/plugins/plugins.actions.ts",
+    "export": "loadPlugins",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "plugin:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/plugins/plugins.actions.ts",
+    "export": "retryDeliveriesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "plugin:configure",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/plugins/plugins.actions.ts",
+    "export": "setPluginEnabledAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "plugin:configure",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/support/support.actions.ts",
+    "export": "decideImpersonationAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:update",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/support/support.actions.ts",
+    "export": "grantSupportAccessAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:update",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/support/support.actions.ts",
+    "export": "loadSupport",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/support/support.actions.ts",
+    "export": "revokeSupportAccessAction",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "org:update",
@@ -1320,6 +1432,14 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/exports/[id]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "export:execute",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/v1/guest/enter/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1363,6 +1483,14 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "export:execute",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/support/diagnostics/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "org:read",
     "scope": "organization"
   },
   {
@@ -1415,6 +1543,27 @@
     "publicReason": "test_hook"
   },
   {
+    "file": "src/app/api/v1/test/operator/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/plugin-sink/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/plugin-sink/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
     "file": "src/app/api/v1/test/property/route.ts",
     "export": "POST",
     "kind": "route",
@@ -1434,6 +1583,97 @@
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/tenant-state/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "announceAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "authoriseBreakGlassAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "dlqAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "endAnnouncementAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "enterImpersonationAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "forceResyncAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "grantOperatorAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "leaveImpersonationAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "replayWebhookAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "requestImpersonationAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "requestJobAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "retryOperationAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "setFlagAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
+    "export": "tenantEventAction",
+    "kind": "action",
+    "wrapper": "withOperator"
   },
   {
     "file": "src/app/webhooks/channex/[token]/route.ts",

@@ -1,6 +1,6 @@
 # 12 — Platform Administration & Billing
 
-**Status:** `review` — revised 2026-08-21: hosted SaaS ships at launch (D4), so billing and quotas are v1 scope (M8). The parity guarantee is unchanged.
+**Status:** `accepted` — implemented in M8 (v1.0, 2026-09-02); see [§12.10](#1210-implementation-notes-m8). Revised 2026-08-21: hosted SaaS ships at launch (D4), so billing and quotas are v1 scope. The parity guarantee is unchanged.
 
 This spec covers the operator's side: the console, tenant lifecycle, quotas,
 support tooling, plugins, and — for anyone running the SaaS mode — billing.
@@ -150,3 +150,49 @@ The pressure valve that keeps core small ([01 §1.4](./01-vision-and-scope.md#14
 - A suspended tenant still has correct availability on every OTA.
 - A tenant can export everything they own and leave, unaided, in under an hour.
 - Installing a plugin cannot degrade sync latency.
+
+## 12.10 Implementation notes (M8)
+
+- **Operator console** (`/ops`, `withOperator` chokepoint, `platform_operator` table, bootstrap with
+  `pnpm --filter @pms/db operator:grant <email>`): fleet health, tenants, sync inspector, dead
+  letters (requeue / discard with reason), webhook explorer with replay, feature flags (per
+  tenant or percentage), announcements, impersonation, job triggers, operators and the operator
+  audit log. Every tenant-touching action is written to the operator log and to the tenant's own
+  audit chain. OPCON-1 holds by construction: the repository methods behind the console return
+  states, ids, codes and timings; guest names and message bodies have no column in those reads.
+  Provider status is derived from operations and connections; the worker's in-memory breaker
+  state is not yet surfaced (post-v1).
+- **Runbooks**: the fifteen of §12.2 in `docs/runbooks/`.
+- **Tenant lifecycle** (`nextTenantState`, `transitionTenant`): the diagram of §12.3 as code, illegal
+  transitions refused. Suspension and expiry close the console except billing and export
+  (`withPermission` gate); the worker keeps every state but `offboarding` in `syncingOrgIds`. The
+  onboarding checklist sits in the console shell until the first push. Offboarding produces the
+  documented JSON bundle (`channex-pms-export/1`, sealed columns opened) and `tenants.purge`
+  deletes tenant tables children-first from the foreign-key graph after 30 days, leaving the
+  audit chain and a tombstone; the certificate is the operator-log row.
+- **Quotas** (`quotaCheck`, `assertQuota`): warnings from 80 %, throttling of reports, exports and
+  bulk past a limit; `ari.push`, `booking.*`, `webhook.ingest` and `reconcile` are exempt by the
+  type itself (QUOTA-1, property-tested). API request-rate and storage quotas are declared in the
+  plan but not yet metered.
+- **Billing** (`packages/core/src/platform`, `StripeBillingProvider`, `FakeBillingProvider`): the
+  launch plans (starter, growth, scale) with marginal volume tiers, the priority-support add-on
+  and an annual discount; nightly `usage_record` of active units (rooms of live properties),
+  billed on the period peak; invoices built from the stored usage and kept with their draft
+  (BILL-2); EU VAT with reverse charge and OSS; proration helper; dunning on days 3, 5, 7 then
+  a 14-day grace (tests drive it with a fake clock); a billing outage leaves the invoice open and
+  the tenant untouched (BILL-1). Self-service: plan choice, card through the provider's hosted
+  fields, invoices with an explainer, cancel at period end, export, leave. *Deferred:* invoice
+  PDFs of our own (the provider's PDF link is shown), tax-id validation against VIES.
+- **Support tooling** (§12.6): pre-granted time-boxed support access, impersonation approvals,
+  the diagnostics bundle (config as set/absent, health, recent errors, request ids). The
+  cross-cutting audit search stays the tenant audit page.
+- **Plugins** (§12.7, ADR-0004): out-of-process signed webhooks with manifest, permission display,
+  per-plugin cursor over the outbox, timeouts, exponential retries, a circuit breaker and a
+  dedicated job (`plugins.deliver`), so a slow plugin never touches `ari.push`. Reference plugins
+  `plugins/accounting-csv` and `plugins/slack-notify`; verification helpers in `@channex-pms/sdk`.
+- **Operations** (§12.8): backup and restore scripts, the drills workflow (backup → restore,
+  upgrade from the previous tag → rollback, `docker compose up` from the README), the security
+  workflow (gitleaks, PAN scan, `pnpm audit`, SBOM, CodeQL) and k6 scenarios for the §13.7
+  budgets. Version and request id are in the diagnostics bundle; the UI footer shows them from
+  `PMS_VERSION` when set.
+

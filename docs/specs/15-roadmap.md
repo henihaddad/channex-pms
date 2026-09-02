@@ -150,7 +150,7 @@ automatically, and shows up in the owner's statement. `v0.6`.
 
 ---
 
-## M8 — SaaS & hardening to v1 *(~5 weeks)*
+## M8 — SaaS & hardening to v1 *(~5 weeks)* ✅ shipped 2026-09-02 as v1.0 (penetration test and design-partner rollout remain external)
 
 - **Billing**: plans, Stripe Billing integration, metering (peak active
   units/period), dunning, self-service plan management, VAT handling

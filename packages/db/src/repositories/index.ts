@@ -79,3 +79,14 @@ export {
   type HoldRow,
   activeHoldCounts,
 } from "./booking-engine.js";
+export {
+  DrizzlePlatformRepository,
+  DrizzleOperatorRepository,
+  operatorFor,
+  type SubscriptionRow,
+  type InvoiceRow,
+  type PluginRow,
+  type ImpersonationRow,
+  type TenantRow,
+  type FleetHealth,
+} from "./platform.js";

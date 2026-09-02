@@ -1,15 +1,15 @@
 {
   "meta": {
     "source": "recorded",
-    "recordedAt": "2026-09-02T11:28:16.046Z"
+    "recordedAt": "2026-09-02T16:44:11.512Z"
   },
   "request": {
     "method": "GET",
     "path": "/api/v1/restrictions",
     "query": {
       "filter[property_id]": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
-      "filter[date][gte]": "2026-10-01",
-      "filter[date][lte]": "2026-10-02",
+      "filter[date][gte]": "2026-11-01",
+      "filter[date][lte]": "2026-11-03",
       "filter[restrictions]": "rate,min_stay,min_stay_arrival,min_stay_through,max_stay,closed_to_arrival,closed_to_departure,stop_sell"
     }
   },
@@ -18,24 +18,34 @@
     "body": {
       "data": {
         "ceb6aa12-6c7f-4d5f-889e-d3da904d054f": {
-          "2026-10-01": {
+          "2026-11-01": {
             "closed_to_arrival": false,
             "closed_to_departure": false,
             "max_stay": 0,
-            "min_stay_arrival": 1,
-            "min_stay_through": 1,
-            "rate": "100.00",
-            "stop_sell": true,
+            "min_stay_arrival": 2,
+            "min_stay_through": 2,
+            "rate": "123.45",
+            "stop_sell": false,
             "unavailable_reasons": []
           },
-          "2026-10-02": {
+          "2026-11-02": {
             "closed_to_arrival": false,
             "closed_to_departure": false,
             "max_stay": 0,
-            "min_stay_arrival": 1,
-            "min_stay_through": 1,
-            "rate": "100.00",
-            "stop_sell": true,
+            "min_stay_arrival": 2,
+            "min_stay_through": 2,
+            "rate": "123.45",
+            "stop_sell": false,
+            "unavailable_reasons": []
+          },
+          "2026-11-03": {
+            "closed_to_arrival": false,
+            "closed_to_departure": false,
+            "max_stay": 0,
+            "min_stay_arrival": 2,
+            "min_stay_through": 2,
+            "rate": "123.45",
+            "stop_sell": false,
             "unavailable_reasons": []
           }
         }

@@ -24,6 +24,33 @@ import type { Logger } from "@pms/runtime";
 import { container } from "./container";
 import { badRequest, forbidden, HttpProblem, stepUpRequired, unauthorized } from "./errors";
 import { clientIp, currentLocale, currentOrgId, currentSession, requestId } from "./session";
+import { currentImpersonation } from "./operator";
+import { consoleAccess, type TenantState } from "@pms/core";
+import { DrizzleOperatorRepository, withoutTenant } from "@pms/db";
+
+/** Permissions that reveal guest PII or message bodies: never available to an impersonating operator (OPCON-1). */
+const IMPERSONATION_BLOCKED: ReadonlySet<string> = new Set([
+  "booking:read_pii",
+  "booking:read_payment_instrument",
+  "message:read",
+  "message:send",
+  "access_credential:read",
+  "channel:read_credentials",
+  "api_key:create",
+  "impersonation:execute",
+  "org:transfer_ownership",
+  "org:delete",
+]);
+const isReadPermission = (p: string): boolean =>
+  /:(read|read_own|read_financial|read_aggregate)$/.test(p);
+/** What a suspended or expired tenant can still do: reach billing, read the org, sign out (§12.3). */
+const BILLING_ONLY_ALLOWED: ReadonlySet<string> = new Set([
+  "billing:read",
+  "billing:manage",
+  "org:read",
+  "member:read",
+  "export:execute",
+]);
 
 /** What a permission-wrapped handler receives. Everything it needs; nothing it could misuse. */
 export interface ActorCtx {
@@ -94,12 +121,66 @@ export function withPermission<A extends unknown[], O>(
     if (!orgId) throw new HttpProblem(400, "no_organization", "No organization selected");
     const c = await container();
     const [rid, locale, ip] = await Promise.all([requestId(), currentLocale(), clientIp()]);
-    const actor: Actor = { type: "user", id: session.userId };
+    // spec 02 §2.7: an operator inside an approved impersonation session acts as that tenant's
+    // org_owner-level reader; PII and message bodies stay closed; writes only when approved.
+    const imp = await currentImpersonation();
+    if (imp && imp.orgId !== orgId)
+      throw forbidden(permission, "impersonation session is for another organization");
+    const actor: Actor = imp
+      ? { type: "user", id: session.userId, impersonatedBy: session.userId }
+      : { type: "user", id: session.userId };
+    if (imp) {
+      if (IMPERSONATION_BLOCKED.has(permission))
+        throw forbidden(permission, "redacted during impersonation (OPCON-1)");
+      if (!imp.writeApproved && !isReadPermission(permission))
+        throw forbidden(permission, "impersonation session is read-only");
+      await withoutTenant(c.db.db, (tx) =>
+        new DrizzleOperatorRepository(tx).transcribe(
+          imp.id,
+          permission,
+          rid,
+          c.clock.now().toString(),
+        ),
+      );
+    }
 
     try {
       return await withTenant(c.db.db, { orgId, actor, requestId: rid }, async (tx) => {
         const repo = new DrizzleIdentityRepository(tx);
-        const grants = await repo.listGrantsForSubject("user", session.userId);
+        // spec 12 §12.3: a suspended or expired tenant keeps syncing but the console closes, except billing
+        const [orgRow] = await rawRows<{ state: TenantState }>(
+          tx,
+          sql`select state from organization where id = ${orgId}`,
+        );
+        if (
+          orgRow &&
+          consoleAccess(orgRow.state) === "billing_only" &&
+          !BILLING_ONLY_ALLOWED.has(permission)
+        )
+          throw new HttpProblem(
+            403,
+            "tenant_suspended",
+            orgRow.state === "expired"
+              ? "Trial ended: choose a plan to continue"
+              : "Account suspended: update the payment method to continue",
+          );
+        const grants = imp
+          ? [
+              {
+                id: "impersonation" as never,
+                orgId: orgId,
+                subjectType: "user" as const,
+                subjectId: session.userId,
+                roleKey: "org_owner",
+                customRoleId: null,
+                scopeType: "organization" as const,
+                scopeId: orgId,
+                overrides: null,
+                expiresAt: imp.expiresAt,
+                createdBy: null,
+              },
+            ]
+          : await repo.listGrantsForSubject("user", session.userId);
         const target = opts.resolveScope
           ? await opts.resolveScope(...args)
           : { kind: "organization" as const, id: orgId };

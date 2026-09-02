@@ -110,3 +110,21 @@ export {
   type StorefrontResult,
   type PropertySearch,
 } from "./booking-engine.js";
+export {
+  transitionTenant,
+  choosePlan,
+  attachPaymentMethod,
+  meterUsage,
+  quotaFor,
+  closeBillingPeriods,
+  invoicePeriod,
+  runDunning,
+  expireTrials,
+  deliverPluginEvents,
+  installPlugin,
+  runExports,
+  purgeOffboardedTenants,
+  processJobRequests,
+  IMPERSONATION,
+  type PlatformDeps,
+} from "./platform.js";

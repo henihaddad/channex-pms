@@ -1,7 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 
-export const LOCALES = ["en", "fr", "ar"] as const;
+export const LOCALES = ["en", "fr", "ar", "es", "pt"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const RTL_LOCALES: ReadonlySet<string> = new Set(["ar"]);
 
@@ -19,10 +19,22 @@ export async function resolveLocale(): Promise<Locale> {
   return "en";
 }
 
+type Messages = Record<string, unknown>;
+/** A locale file may lag behind English; missing keys fall back to the English string, never to the key. */
+function merge(base: Messages, over: Messages): Messages {
+  const out: Messages = { ...base };
+  for (const [k, v] of Object.entries(over))
+    out[k] =
+      v && typeof v === "object" && base[k] && typeof base[k] === "object"
+        ? merge(base[k] as Messages, v as Messages)
+        : v;
+  return out;
+}
+
 export default getRequestConfig(async () => {
   const locale = await resolveLocale();
-  return {
-    locale,
-    messages: (await import(`../messages/${locale}.json`)).default as Record<string, unknown>,
-  };
+  const en = (await import("../messages/en.json")).default as Messages;
+  const own =
+    locale === "en" ? en : ((await import(`../messages/${locale}.json`)).default as Messages);
+  return { locale, messages: locale === "en" ? en : merge(en, own) };
 });

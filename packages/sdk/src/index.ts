@@ -214,3 +214,11 @@ export function createClient(opts: ClientOptions) {
 }
 
 export type Client = ReturnType<typeof createClient>;
+
+export {
+  signPluginDelivery,
+  verifyPluginDelivery,
+  type PluginEvent,
+  type PluginManifest,
+  type PluginDeliveryHeaders,
+} from "./plugins.js";

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { REPORT_CATALOGUE, runReport, toCsv, toPdf } from "@pms/jobs";
 import { withPermission } from "@/server/with-permission";
+import { assertQuota } from "@/server/quota";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
 
@@ -44,6 +45,7 @@ export const GET = withPermission.route<Input>(
   "export:execute",
   { scope: "organization", input: parse, auditInput: (i) => i },
   async (ctx, input) => {
+    await assertQuota(ctx, "export");
     const def = REPORT_CATALOGUE.find((r) => r.key === input.key);
     if (!def) throw new HttpProblem(404, "not_found", "Unknown report");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.from) || !/^\d{4}-\d{2}-\d{2}$/.test(input.to))

@@ -17,8 +17,13 @@ const project = new Project({
 });
 project.addSourceFilesAtPaths([resolve(webRoot, "src/**/*.ts"), resolve(webRoot, "src/**/*.tsx")]);
 
-const ROUTE_WRAPPERS = new Set(["withPermission.route", "publicRoute"]);
-const ACTION_WRAPPERS = new Set(["withPermission", "publicAction", "withGuestSession"]);
+const ROUTE_WRAPPERS = new Set(["withPermission.route", "publicRoute", "withOperator.route"]);
+const ACTION_WRAPPERS = new Set([
+  "withPermission",
+  "publicAction",
+  "withGuestSession",
+  "withOperator",
+]);
 const ROUTE_CONFIG_EXPORTS = new Set([
   "dynamic",
   "runtime",

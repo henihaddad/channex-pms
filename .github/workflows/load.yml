@@ -1,0 +1,51 @@
+name: Load and soak
+
+# spec 13 §13.7 budgets on the FakeProvider with a seeded portfolio; weekly and on demand.
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: soak duration per scenario
+        default: "10m"
+  schedule:
+    - cron: "0 3 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: pms, POSTGRES_PASSWORD: pms, POSTGRES_DB: pms }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pms" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgres://pms:pms@localhost:5432/pms
+      PMS_ENV: test
+      PMS_TEST_HOOKS: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=@pms/web
+      - run: pnpm --filter @pms/db db:migrate
+      - name: Start the app and seed a 200-property portfolio
+        run: |
+          (cd apps/web && pnpm exec next start -p 3100 > /tmp/web.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:3100/api/health && break; sleep 2; done
+          node load/seed.mjs > /tmp/seed.json
+          cat /tmp/seed.json
+      - uses: grafana/setup-k6-action@v1
+      - name: Reads
+        run: |
+          export $(node -e 'const s=require("/tmp/seed.json");console.log(`EMAIL=${s.email} PASSWORD=${s.password} ORG_ID=${s.orgId} PROPERTY_ID=${s.propertyId} WEBHOOK_TOKEN=${s.token}`)')
+          k6 run -e BASE_URL=http://localhost:3100 -e EMAIL=$EMAIL -e PASSWORD=$PASSWORD -e ORG_ID=$ORG_ID -e DURATION=${{ github.event.inputs.duration || '10m' }} load/k6/reads.js
+          k6 run -e BASE_URL=http://localhost:3100 -e WEBHOOK_TOKEN=$WEBHOOK_TOKEN -e DURATION=2m load/k6/webhooks.js
+          k6 run -e BASE_URL=http://localhost:3100 -e PROPERTY_ID=$PROPERTY_ID -e DURATION=2m load/k6/booking-engine.js

@@ -127,6 +127,20 @@
       "when": 1788361714127,
       "tag": "0017_m7_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788365615472,
+      "tag": "0018_m8_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788365615528,
+      "tag": "0019_m8_rls",
+      "breakpoints": true
     }
   ]
 }

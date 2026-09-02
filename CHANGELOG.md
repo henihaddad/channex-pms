@@ -38,6 +38,36 @@ All notable changes to this project are documented here. The format follows
 - Fair-code licensing (Sustainable Use License, Enterprise License, CLA), README, community
   files and the landing page in `website/`.
 
+## [1.0.0] — 2026-09-02
+
+### Added
+
+- M8 hosted service and hardening: the `platform` module (launch plans with marginal tiers,
+  peak-of-period metering, EU VAT with reverse charge and OSS, proration, the tenant lifecycle
+  state machine, dunning schedule, quotas with the QUOTA-1 exemption, the `BillingProvider`
+  port) with property tests; `StripeBillingProvider` over the transport port and
+  `FakeBillingProvider`; subscription, usage, invoice, operator, flag, announcement,
+  impersonation, support-access, plugin, delivery, export and job-request tables with RLS; jobs
+  for metering, period close, dunning, trial expiry, signed plugin deliveries with breaker and
+  backoff, exports, tenant purge and operator job requests; the worker schedulers; the `/ops`
+  operator console behind the `withOperator` chokepoint with fleet health, tenants, sync
+  inspector, dead letters, webhook explorer, flags, announcements, impersonation (approval or
+  pre-granted access, 60-minute cap, read-only, PII closed, banner, transcript, break-glass with a
+  second operator), jobs, operators and the operator audit; tenant settings for billing (plans,
+  card, usage, invoices with explainer, cancel, export, leave), plugins (install with the
+  permission grant, secret shown once, deliveries) and support (pre-granted access, approvals,
+  diagnostics bundle); the onboarding checklist and state banners in the console shell; the
+  suspended-tenant console gate that keeps sync running; extension-point interfaces and signing
+  helpers in the Apache-2.0 SDK with two reference plugins; fifteen runbooks; install, operate,
+  plugin and API docs; the security workflow (gitleaks, PAN scan, audit, SBOM, CodeQL), the
+  drills workflow (backup → restore, upgrade → rollback, compose smoke) and k6 load scenarios;
+  `es` and `pt` locales for the guest, owner and onboarding surfaces with English fallback.
+
+### Changed
+
+- Reports, exports and bulk operations check the plan quota in hosted mode; the PAN scan skips
+  the negative tests that prove a card number is refused.
+
 ## [0.6.0] — 2026-09-02
 
 ### Added

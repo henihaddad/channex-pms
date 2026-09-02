@@ -19,6 +19,11 @@ import {
   pollPayouts,
   escalateTurnovers,
   expireHolds,
+  closeBillingPeriods,
+  deliverPluginEvents,
+  meterUsage,
+  runDunning,
+  runExports,
   markLiveIfSynced,
   orgsWithAutomation,
   pollReviews,
@@ -51,6 +56,8 @@ export const POST = publicRoute("test_hook", async (req) => {
     rollups?: boolean;
     /** Test-only: expire every live hold now instead of in 15 minutes (BE-5 without waiting). */
     expireHoldsNow?: boolean;
+    /** spec 12: metering, billing close, dunning, plugin deliveries and exports for the org. */
+    platform?: boolean;
   };
   const log = c.log.child({ hook: "drain" });
   let provisioned = 0;
@@ -164,6 +171,25 @@ export const POST = publicRoute("test_hook", async (req) => {
     },
     body.orgId,
   );
+  let platform: Record<string, unknown> | null = null;
+  if (body.platform && body.orgId) {
+    const platformDeps = {
+      db: c.db.db,
+      clock: c.clock,
+      crypto: c.crypto,
+      log,
+      mailer: c.mailer,
+      billing: c.billing,
+      appUrl: c.config.NEXT_PUBLIC_APP_URL,
+    };
+    platform = {
+      metered: await meterUsage(platformDeps, body.orgId),
+      billing: await closeBillingPeriods(platformDeps, body.orgId),
+      dunning: await runDunning(platformDeps, body.orgId),
+      plugins: await deliverPluginEvents(platformDeps, body.orgId),
+      exports: await runExports(platformDeps, body.orgId),
+    };
+  }
   const closes = body.dailyClose
     ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
     : { closed: 0 };
@@ -219,5 +245,6 @@ export const POST = publicRoute("test_hook", async (req) => {
     rollups,
     alerts,
     holds,
+    platform,
   });
 });

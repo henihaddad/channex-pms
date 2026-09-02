@@ -1,6 +1,6 @@
 {
   "name": "@channex-pms/sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "TypeScript client for the Channex PMS public API v1. Apache-2.0: build integrations without touching the core licence.",
   "license": "Apache-2.0",
   "type": "module",

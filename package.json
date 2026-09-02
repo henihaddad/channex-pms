@@ -1,6 +1,6 @@
 {
   "name": "channex-pms",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Fair-code property management system and channel manager built on the Channex.io API.",
   "license": "SEE LICENSE IN LICENSE.md",

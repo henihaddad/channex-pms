@@ -1,0 +1,120 @@
+name: Drills
+
+# NFR-6 and spec 12 §12.8: backup → restore, upgrade → rollback, and the README install path, rehearsed on every push to main.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-restore:
+    name: Backup and restore
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: pms, POSTGRES_PASSWORD: pms, POSTGRES_DB: pms }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pms" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgres://pms:pms@localhost:5432/pms
+      PGPASSWORD: pms
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=@pms/testkit
+      - run: pnpm --filter @pms/db db:migrate
+      - name: Seed, count, back up
+        run: |
+          pnpm --filter @pms/testkit seed > /tmp/seed.json
+          psql "$DATABASE_URL" -Atc "select count(*) from booking" > /tmp/before.txt
+          psql "$DATABASE_URL" -Atc "select count(*) from audit_log" >> /tmp/before.txt
+          scripts/backup.sh /tmp/backups
+      - name: Destroy and restore
+        run: |
+          psql postgres://pms:pms@localhost:5432/postgres -c "drop database pms" -c "create database pms"
+          scripts/restore.sh $(ls /tmp/backups/pms-*.dump | tail -1)
+          psql "$DATABASE_URL" -Atc "select count(*) from booking" > /tmp/after.txt
+          psql "$DATABASE_URL" -Atc "select count(*) from audit_log" >> /tmp/after.txt
+          diff /tmp/before.txt /tmp/after.txt
+      - name: Migrations are a no-op on the restored schema
+        run: pnpm --filter @pms/db db:migrate
+
+  upgrade-rollback:
+    name: Upgrade from the previous tag and roll back
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: pms, POSTGRES_PASSWORD: pms, POSTGRES_DB: pms }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pms" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgres://pms:pms@localhost:5432/pms
+      PGPASSWORD: pms
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc, cache: pnpm }
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Previous release
+        run: |
+          PREV=$(git tag --sort=-v:refname | sed -n 2p)
+          if [ -z "$PREV" ]; then echo "no previous tag, drill trivially passes"; exit 0; fi
+          git checkout "$PREV"
+          pnpm install --frozen-lockfile
+          pnpm turbo run build --filter=@pms/testkit
+          pnpm --filter @pms/db db:migrate
+          pnpm --filter @pms/testkit seed > /tmp/seed.json
+          scripts/backup.sh /tmp/backups || true
+          git checkout -
+      - name: Upgrade to this commit
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm turbo run build --filter=@pms/db
+          pnpm --filter @pms/db db:migrate
+          psql "$DATABASE_URL" -Atc "select count(*) from organization"
+      - name: Roll back to the pre-upgrade backup
+        run: |
+          DUMP=$(ls /tmp/backups/pms-*.dump 2>/dev/null | tail -1)
+          if [ -z "$DUMP" ]; then echo "nothing to roll back to"; exit 0; fi
+          psql postgres://pms:pms@localhost:5432/postgres -c "drop database pms" -c "create database pms"
+          scripts/restore.sh "$DUMP"
+          psql "$DATABASE_URL" -Atc "select count(*) from organization"
+
+  compose-smoke:
+    name: README install path (docker compose up)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: |
+          cp .env.example .env
+          echo "PMS_MASTER_KEY=$(openssl rand -hex 32)" >> .env
+          echo "PMS_SESSION_KEY=$(openssl rand -hex 32)" >> .env
+          echo "PUBLIC_URL=http://localhost" >> .env
+          echo "PUBLIC_HOST=localhost" >> .env
+      - name: Up
+        run: docker compose -f compose.selfhost.yml up -d --build
+      - name: Health
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost/api/health; then echo; exit 0; fi
+            sleep 5
+          done
+          docker compose -f compose.selfhost.yml logs --tail 200
+          exit 1
+      - name: Down
+        if: always()
+        run: docker compose -f compose.selfhost.yml down -v

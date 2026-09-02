@@ -1,15 +1,15 @@
 {
   "meta": {
     "source": "recorded",
-    "recordedAt": "2026-09-02T11:28:15.890Z"
+    "recordedAt": "2026-09-02T16:44:11.320Z"
   },
   "request": {
     "method": "GET",
     "path": "/api/v1/availability",
     "query": {
       "filter[property_id]": "9c77db62-2e34-44de-8003-7d1a2c4404e8",
-      "filter[date][gte]": "2026-10-01",
-      "filter[date][lte]": "2026-10-02"
+      "filter[date][gte]": "2026-11-01",
+      "filter[date][lte]": "2026-11-03"
     }
   },
   "response": {
@@ -17,8 +17,9 @@
     "body": {
       "data": {
         "61516262-2b76-49a7-936b-c57c27b252ca": {
-          "2026-10-01": 0,
-          "2026-10-02": 0
+          "2026-11-01": 1,
+          "2026-11-02": 1,
+          "2026-11-03": 1
         }
       }
     }

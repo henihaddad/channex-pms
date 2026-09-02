@@ -19,15 +19,29 @@ import {
 import { reconcileProperty } from "./processors/reconcile.js";
 import { processWebhook } from "./processors/webhook-ingest.js";
 import { selectProvider } from "./provider.js";
-import { FakeLockProvider, FakePaymentProvider, FakePayoutProvider } from "@pms/core";
 import {
+  FakeBillingProvider,
+  FakeLockProvider,
+  FakePaymentProvider,
+  FakePayoutProvider,
+} from "@pms/core";
+import {
+  StripeBillingProvider,
   StripeConnectPayoutProvider,
   StripePaymentProvider,
   stripeTransport,
 } from "@pms/connectivity";
 import {
+  closeBillingPeriods,
+  deliverPluginEvents,
   escalateTurnovers,
   expireHolds,
+  expireTrials,
+  meterUsage,
+  processJobRequests,
+  purgeOffboardedTenants,
+  runDunning,
+  runExports,
   extendHorizons,
   purgeCardMetadata,
   replanOperations,
@@ -132,6 +146,19 @@ const engineDeps = {
     ? new StripePaymentProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
     : new FakePaymentProvider(),
   lock: opsDeps.lock,
+  appUrl: c.config.NEXT_PUBLIC_APP_URL,
+};
+// spec 12: metering, billing, dunning, plugins, exports, purge and operator-requested jobs. Stripe Billing when configured.
+const platformDeps = {
+  db: c.db.db,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  mailer: consoleMailer(log),
+  billing: process.env.STRIPE_SECRET_KEY
+    ? new StripeBillingProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+    : new FakeBillingProvider(),
+  sellerCountry: process.env.PMS_SELLER_COUNTRY ?? "PT",
   appUrl: c.config.NEXT_PUBLIC_APP_URL,
 };
 const realtime = c.redis;
@@ -417,6 +444,63 @@ const workers: Worker[] = [
           if (sent > 0) log.info({ sent }, "holds.abandoned.run");
           return;
         }
+        case "usage.meter": {
+          log.info({ orgs: await meterUsage(platformDeps) }, "usage.meter.run");
+          return;
+        }
+        case "billing.close": {
+          const r = await closeBillingPeriods(platformDeps);
+          if (r.invoiced + r.failed > 0) log.info(r, "billing.close.run");
+          return;
+        }
+        case "dunning.run": {
+          const r = await runDunning(platformDeps);
+          if (r.retried + r.suspended > 0) log.info(r, "dunning.run");
+          const expired = await expireTrials(platformDeps);
+          if (expired > 0) log.info({ expired }, "trials.expire.run");
+          return;
+        }
+        case "plugins.deliver": {
+          const r = await deliverPluginEvents(platformDeps);
+          if (r.delivered + r.failed > 0) log.info(r, "plugins.deliver.run");
+          return;
+        }
+        case "exports.run": {
+          const n = await runExports(platformDeps);
+          if (n > 0) log.info({ exports: n }, "exports.run");
+          return;
+        }
+        case "tenants.purge": {
+          const n = await purgeOffboardedTenants(platformDeps);
+          if (n > 0) log.info({ purged: n }, "tenants.purge.run");
+          return;
+        }
+        case "ops.jobs": {
+          // operator console requests (spec 12 §12.1 "Jobs"), each a job the worker already knows
+          const n = await processJobRequests(platformDeps, {
+            "reconcile.nightly": async () => {
+              await system.add("reconcile.nightly", { name: "reconcile.nightly" });
+              return { queued: true };
+            },
+            "rollups.nightly": async (orgId) => ({
+              rollups: await nightlyRollups(analyticsDeps, orgId ?? undefined),
+            }),
+            daily_close: async () => ({
+              ...(await runDailyCloses({ db: c.db.db, clock: c.clock, log })),
+            }),
+            "retention.purge": async () => ({
+              ...(await purgeCardMetadata({ db: c.db.db, clock: c.clock, log })),
+            }),
+            "statements.sweep": async (orgId) => ({
+              ...(await generateDueStatements(ownerDeps, orgId ?? undefined)),
+            }),
+            "usage.meter": async (orgId) => ({
+              orgs: await meterUsage(platformDeps, orgId ?? undefined),
+            }),
+          });
+          if (n > 0) log.info({ handled: n }, "ops.jobs.run");
+          return;
+        }
         case "retention.purge": {
           const r = await purgeCardMetadata({ db: c.db.db, clock: c.clock, log });
           log.info(r, "retention.purge.run");
@@ -510,6 +594,33 @@ async function main(): Promise<void> {
     { name: "retention.purge" },
   );
   await system.upsertJobScheduler("holds.expire", { every: 60_000 }, { name: "holds.expire" });
+  await system.upsertJobScheduler(
+    "usage.meter",
+    { pattern: "45 2 * * *" },
+    { name: "usage.meter" },
+  );
+  await system.upsertJobScheduler(
+    "billing.close",
+    { pattern: "0 5 * * *" },
+    { name: "billing.close" },
+  );
+  await system.upsertJobScheduler(
+    "dunning.run",
+    { pattern: "30 5 * * *" },
+    { name: "dunning.run" },
+  );
+  await system.upsertJobScheduler(
+    "plugins.deliver",
+    { every: 30_000 },
+    { name: "plugins.deliver" },
+  );
+  await system.upsertJobScheduler("exports.run", { every: 60_000 }, { name: "exports.run" });
+  await system.upsertJobScheduler(
+    "tenants.purge",
+    { pattern: "15 3 * * *" },
+    { name: "tenants.purge" },
+  );
+  await system.upsertJobScheduler("ops.jobs", { every: 30_000 }, { name: "ops.jobs" });
   await system.upsertJobScheduler(
     "holds.abandoned",
     { pattern: "25 * * * *" },
