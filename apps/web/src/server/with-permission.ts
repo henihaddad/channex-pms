@@ -21,14 +21,7 @@ import {
 import type { Logger } from "@pms/runtime";
 import { container } from "./container";
 import { badRequest, forbidden, HttpProblem, stepUpRequired, unauthorized } from "./errors";
-import {
-  clientIp,
-  currentLocale,
-  currentOrgId,
-  currentSession,
-  loadSessionRow,
-  requestId,
-} from "./session";
+import { clientIp, currentLocale, currentOrgId, currentSession, requestId } from "./session";
 
 /** What a permission-wrapped handler receives. Everything it needs; nothing it could misuse. */
 export interface ActorCtx {
@@ -137,7 +130,8 @@ export function withPermission<A extends unknown[], O>(
       });
       if (!decision.allow) throw forbidden(decision.missing, decision.reason);
       if (decision.stepUp || opts.stepUp) {
-        const row = await loadSessionRow(session.sessionId);
+        // same transaction: a second connection would deadlock a single-connection driver (PGlite)
+        const row = await repo.findSessionById(session.sessionId);
         const fresh =
           row?.stepUpAt && Date.now() - new Date(row.stepUpAt).getTime() < STEP_UP_WINDOW_MS;
         if (!fresh) throw stepUpRequired(permission);
@@ -196,6 +190,16 @@ withPermission.route = function route<I>(
     try {
       return await inner(await opts.input(req, await params), req);
     } catch (e) {
+      // a browser navigation that needs step-up goes to the re-authentication page and comes back (spec 02 §2.6)
+      if (
+        e instanceof HttpProblem &&
+        e.code === "step_up_required" &&
+        req.headers.get("accept")?.includes("text/html")
+      ) {
+        const to = new URL("/step-up", req.nextUrl.origin);
+        to.searchParams.set("next", req.nextUrl.pathname + req.nextUrl.search);
+        return Response.redirect(to.toString(), 302);
+      }
       return problemResponse(e);
     }
   };

@@ -4,7 +4,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Id } from "@pms/core";
 import { publicAction } from "@/server/public";
-import { acceptInviteFlow, loginFlow, logoutFlow, signUpFlow, totpFlow } from "@/server/auth-flows";
+import {
+  acceptInviteFlow,
+  loginFlow,
+  logoutFlow,
+  signUpFlow,
+  stepUpFlow,
+  totpFlow,
+} from "@/server/auth-flows";
 import { HttpProblem } from "@/server/errors";
 
 export interface FormState {
@@ -95,3 +102,14 @@ export const logoutAction = publicAction<[], void>("auth", async () => {
   await logoutFlow();
   redirect("/login");
 });
+
+/** Step-up re-authentication, then back to where the sensitive action lives. */
+export const stepUpAction = publicAction<[FormState, FormData], FormState>(
+  "auth",
+  async (_prev, fd) => {
+    const state = await guarded(() => stepUpFlow(field(fd, "password")));
+    if (state.error) return state;
+    const next = field(fd, "next");
+    redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  },
+);

@@ -22,7 +22,7 @@ beforeAll(async () => {
     await tx.insert(schema.property).values({
       id: PROP,
       orgId: ORG,
-      kind: "single_unit",
+      kind: "multi_unit",
       title: "Alfama 2B",
       currency: "EUR",
       timezone: "Europe/Lisbon",

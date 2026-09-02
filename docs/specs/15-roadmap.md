@@ -51,7 +51,7 @@ bookings with zero loss.
 
 ---
 
-## M2 — Inventory, calendar, channels *(~5 weeks)*
+## M2 — Inventory, calendar, channels *(~5 weeks)* ✅ exit met 2026-09-02 on FakeProvider (20-listing portfolio e2e; 200-listing × 90-day grid in 0.6 s); first design partner still to be found
 
 - Property wizard with **`kind` selection**; `single_unit` auto-managed room
   type/unit (MODEL-1); **property templates, clone, and bulk import** — listing #40

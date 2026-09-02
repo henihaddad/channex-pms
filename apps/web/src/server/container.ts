@@ -15,7 +15,10 @@ import {
   type Logger,
   type TokenService,
 } from "@pms/runtime";
-import type { Crypto, Mailer, PasswordHasher, TotpVerifier } from "@pms/core";
+import type { ConnectivityProvider, Crypto, Mailer, PasswordHasher, TotpVerifier } from "@pms/core";
+import type { FakeProvider } from "@pms/connectivity";
+import { selectProvider } from "@pms/jobs";
+import { Redis } from "ioredis";
 import { recordingMailer, testHooksEnabled } from "./test-hooks";
 
 export interface WebContainer {
@@ -29,6 +32,11 @@ export interface WebContainer {
   mailer: Mailer;
   tokens: TokenService;
   sha256Hex: (s: string) => string;
+  /** Channex or the process-wide FakeProvider (spec 05 §5.2). */
+  provider: ConnectivityProvider;
+  fake?: FakeProvider;
+  /** Realtime fan-in from the worker; null without REDIS_URL (the SSE endpoint then polls only). */
+  redis: Redis | null;
 }
 
 declare global {
@@ -44,11 +52,19 @@ async function build(): Promise<WebContainer> {
     await db.migrate();
     log.warn("using in-process PGlite; set DATABASE_URL for a real Postgres");
   }
+  const selected = selectProvider(config, process.env, log);
+  const redis = process.env.REDIS_URL
+    ? new Redis(process.env.REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 })
+    : null;
+  redis?.on("error", (e: Error) => log.warn({ err: e.message }, "redis.error"));
   return {
     config,
     log,
     clock: new SystemClock(),
     db,
+    provider: selected.provider,
+    ...(selected.fake ? { fake: selected.fake } : {}),
+    redis,
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,

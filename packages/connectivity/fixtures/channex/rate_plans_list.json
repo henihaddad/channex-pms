@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "GET /rate_plans filtered by property; room type via relationships."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/rate_plans",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "e2f6e0a1-2222-4b3c-8d1e-000000000002",
+          "type": "rate_plan",
+          "attributes": {
+            "title": "Best Available Rate",
+            "currency": "GBP",
+            "parent_rate_plan_id": null
+          },
+          "relationships": {
+            "room_type": {
+              "data": { "id": "994d1375-dbbd-4072-8724-b2ab32ce781b", "type": "room_type" }
+            }
+          }
+        },
+        {
+          "id": "e2f6e0a1-2222-4b3c-8d1e-000000000003",
+          "type": "rate_plan",
+          "attributes": {
+            "title": "Non Refundable",
+            "currency": "GBP",
+            "parent_rate_plan_id": "e2f6e0a1-2222-4b3c-8d1e-000000000002"
+          },
+          "relationships": {
+            "room_type": {
+              "data": { "id": "994d1375-dbbd-4072-8724-b2ab32ce781b", "type": "room_type" }
+            }
+          }
+        }
+      ],
+      "meta": { "total": 2, "limit": 100, "page": 1 }
+    }
+  }
+}

@@ -6,6 +6,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pino"],
   experimental: { authInterrupts: true },
+  agentRules: false,
 };
 
 export default withNextIntl(nextConfig);

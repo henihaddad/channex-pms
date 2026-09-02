@@ -15,6 +15,8 @@ Roadmap M0 to M8 in `docs/specs/15-roadmap.md`. Decisions and open questions in
 apps/web         Next.js App Router: console, booking engine, portals, webhooks, public API
 apps/worker      plain Node + BullMQ: sync engine, ingestion, automation, rollups
 packages/core    ALL domain logic, framework-free (Money, LocalDate, DateRange, services, ports)
+packages/jobs    job processors shared by the worker and the test hooks (provisioning, horizon, channels)
+packages/sdk     Apache-2.0 client for /api/v1, no workspace dependencies
 website/         marketing site, standalone npm project, not in the pnpm workspace
 docs/specs/      the specification
 .claude/skills/  agent skills (design, Next.js, React, Tailwind, shadcn, Postgres, Drizzle, README)

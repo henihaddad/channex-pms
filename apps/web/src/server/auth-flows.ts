@@ -244,3 +244,14 @@ async function pickOrg(userId: Id): Promise<Id | null> {
   const list = await memberships(userId);
   return list[0]?.orgId ?? null;
 }
+
+/** Step-up (spec 02 §2.6): re-enter the password; the session carries `step_up_at` for five minutes. */
+export async function stepUpFlow(password: string): Promise<void> {
+  const session = await currentSession();
+  if (!session) fail("unauthenticated", "Sign in required", 401);
+  const c = await container();
+  const r = await withoutTenant(c.db.db, async (tx) =>
+    (await identity(tx)).stepUp(session.sessionId, password),
+  );
+  if (!r.ok) fail(r.error.code, r.error.message, 403);
+}

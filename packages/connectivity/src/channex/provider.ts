@@ -33,6 +33,8 @@ import {
   type TestResult,
   type ThreadPage,
   type ThreadQuery,
+  type WebhookSpec,
+  type ImportedProperty,
 } from "@pms/core";
 import type { HttpRequest, HttpResponse, HttpTransport } from "../transport/http.js";
 
@@ -139,6 +141,107 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     return { id: idOf(body) };
+  }
+
+  async ensureWebhook(w: WebhookSpec, meta: CallMeta): Promise<ProviderRef> {
+    const body = await this.call(
+      "webhooks.create",
+      {
+        method: "POST",
+        path: "/api/v1/webhooks",
+        body: {
+          webhook: {
+            property_id: w.propertyId,
+            callback_url: w.callbackUrl,
+            event_mask: w.eventMask,
+            request_params: {},
+            headers: { "x-channex-webhook-secret": w.secret },
+            is_active: true,
+            send_data: w.sendData,
+          },
+        },
+      },
+      meta,
+    );
+    return { id: idOf(body) };
+  }
+
+  /** Q7: read a property with its room types and rate plans, paginated explicitly. */
+  async importProperty(ref: ProviderRef, meta: CallMeta): Promise<ImportedProperty> {
+    const p = await this.call(
+      "properties.get",
+      { method: "GET", path: `/api/v1/properties/${ref.id}` },
+      meta,
+    );
+    const pa = obj(obj(obj(p).data).attributes);
+    const rels = obj(obj(obj(p).data).relationships);
+    const groupId = obj(obj(obj(rels.groups).data ?? {})).id;
+    const roomTypes = (
+      await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)
+    ).map((r) => {
+      const a = obj(obj(r).attributes);
+      return {
+        id: String(obj(r).id),
+        title: String(a.title),
+        countOfRooms: Number(a.count_of_rooms ?? 1),
+        occAdults: Number(a.occ_adults ?? 2),
+        occChildren: Number(a.occ_children ?? 0),
+        occInfants: Number(a.occ_infants ?? 0),
+      };
+    });
+    const ratePlans = (
+      await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)
+    ).map((r) => {
+      const a = obj(obj(r).attributes);
+      const rl = obj(obj(r).relationships);
+      return {
+        id: String(obj(r).id),
+        roomTypeId: String(obj(obj(rl.room_type).data).id ?? a.room_type_id),
+        title: String(a.title),
+        currency: String(a.currency),
+        parentRatePlanId: a.parent_rate_plan_id ? String(a.parent_rate_plan_id) : null,
+      };
+    });
+    return {
+      property: {
+        id: ref.id,
+        title: String(pa.title),
+        currency: String(pa.currency),
+        timezone: String(pa.timezone),
+        ...(groupId ? { groupId: String(groupId) } : {}),
+      },
+      roomTypes,
+      ratePlans,
+    };
+  }
+
+  private async listAll(
+    op: string,
+    path: string,
+    propertyId: string,
+    meta: CallMeta,
+  ): Promise<unknown[]> {
+    const out: unknown[] = [];
+    for (let page = 1; ; page++) {
+      const body = await this.call(
+        op,
+        {
+          method: "GET",
+          path,
+          query: {
+            "filter[property_id]": propertyId,
+            "pagination[page]": String(page),
+            "pagination[limit]": String(PAGE_LIMIT),
+          },
+        },
+        meta,
+      );
+      const data = arr(obj(body).data);
+      out.push(...data);
+      const total = Number(obj(obj(body).meta).total ?? data.length);
+      if (page * PAGE_LIMIT >= total || data.length === 0) break;
+    }
+    return out;
   }
 
   // ---- ARI ---------------------------------------------------------------------------

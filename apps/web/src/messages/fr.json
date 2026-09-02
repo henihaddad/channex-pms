@@ -8,7 +8,11 @@
     "members": "Membres",
     "organization": "Organisation",
     "audit": "Journal d'audit",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "properties": "Biens",
+    "calendar": "Calendrier",
+    "channels": "Canaux",
+    "syncHealth": "Santé de la synchro"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -27,11 +31,14 @@
     "code": "Code",
     "continue": "Continuer",
     "acceptInvite": "Accepter l'invitation",
-    "setPassword": "Choisissez un mot de passe (nouveaux comptes)"
+    "setPassword": "Choisissez un mot de passe (nouveaux comptes)",
+    "stepUpTitle": "Confirmez votre identité",
+    "stepUpHint": "Cette action est sensible. Saisissez à nouveau votre mot de passe ; il ne vous sera pas redemandé pendant cinq minutes.",
+    "stepUpSubmit": "Confirmer"
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",
-    "milestone": "Jalon M0 : identité, rôles et audit sont en place. L'inventaire et les canaux arrivent avec M2.",
+    "milestone": "Jalon M2 : biens, calendrier de portefeuille et connexions aux canaux sont en service. Les réservations et l'exploitation arrivent avec M3.",
     "organizations": "Vos organisations"
   },
   "members": {
@@ -60,5 +67,49 @@
     "actor": "Acteur",
     "subject": "Objet",
     "when": "Quand"
+  },
+  "properties": {
+    "title": "Biens",
+    "new": "Nouveau bien",
+    "import": "Importer un CSV",
+    "empty": "Aucun bien. Créez-en un ou importez un CSV.",
+    "name": "Nom",
+    "kind": "Type",
+    "state": "État",
+    "provisioning": "Provisionnement",
+    "inventory": "Types de chambre / plans tarifaires / unités",
+    "templates": "Modèles",
+    "noTemplates": "Aucun modèle. Enregistrez-en un depuis l'assistant.",
+    "adopt": "Adopter un bien Channex existant",
+    "adoptHint": "Déjà sur Channex ? Saisissez l'identifiant du bien ; nous importons ses types de chambre et plans tarifaires.",
+    "adoptSubmit": "Adopter",
+    "importHint": "Une ligne par annonce : title, kind, currency, city, country, base_rate, min_stay.",
+    "openCalendar": "Ouvrir le calendrier",
+    "connectChannel": "Connecter un canal",
+    "forceResync": "Forcer la resynchronisation",
+    "roomTypes": "Types de chambre",
+    "systemManaged": "Annonce à unité unique : le type de chambre et l'unité sont gérés pour vous.",
+    "ratePlans": "Plans tarifaires",
+    "channels": "Canaux",
+    "noChannels": "Aucun canal connecté.",
+    "policies": "Politiques",
+    "recentOps": "Opérations récentes"
+  },
+  "calendar": {
+    "title": "Calendrier"
+  },
+  "channels": {
+    "title": "Canaux",
+    "health": "Tableau de santé",
+    "connect": "Connecter un canal",
+    "accounts": "Comptes de canal",
+    "connectAirbnb": "Connecter Airbnb",
+    "empty": "Aucun canal connecté.",
+    "events": "Événements récents",
+    "ack": "Acquitter",
+    "pause": "Suspendre",
+    "resume": "Reprendre",
+    "remove": "Supprimer",
+    "importListings": "Importer les annonces Airbnb"
   }
 }

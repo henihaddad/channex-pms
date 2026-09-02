@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/) for the public API and plugin interfaces.
 
+## [0.1.0] — 2026-09-02
+
+### Added
+
+- M2 inventory, calendar and channels: property wizard with `kind` selection and system-managed
+  room type and unit for `single_unit` listings (MODEL-1), templates, clone, CSV import and adoption
+  of an existing Channex property; resumable idempotent provisioning (PROV-1..5) with webhook
+  registration, provider-id translation and a rolling 730-day horizon job; derived rate plans
+  recomputed with their parent (INV-6), room-type capacity changes flowing into availability,
+  policies; the portfolio calendar (virtualised rows and columns, keyboard editing, range
+  toolbar, `expected_version` conflicts with both values, server-backed undo, per-cell sync
+  state over server-sent events); bulk update with mandatory dry run, guard rails and
+  inverse-operation undo (BULK-1..4); channel accounts with Airbnb OAuth and bulk listing
+  import (CH-5), descriptor-driven connection wizard (CH-1..4, CH-6), mapping with confidence-
+  scored suggestions, coverage warnings, validation, diff-before-save and targeted re-push
+  (MAP-1..4, MAP-6), health board with plain-language alerts and reversible pause (CH-7, CH-8),
+  readiness polling; step-up re-authentication page for `!` permissions; `/api/v1` public
+  endpoints with an OpenAPI 3.1 document and the Apache-2.0 `@channex-pms/sdk`; `packages/jobs`
+  shared by the worker and the test hooks; `compose.selfhost.yml` with a multi-target Dockerfile.
+
 ## [Unreleased]
 
 ### Added

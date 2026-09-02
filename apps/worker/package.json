@@ -23,7 +23,8 @@
     "@pms/runtime": "workspace:*",
     "@pms/authz": "workspace:*",
     "@pms/connectivity": "workspace:*",
-    "@pms/sync": "workspace:*"
+    "@pms/sync": "workspace:*",
+    "@pms/jobs": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22",

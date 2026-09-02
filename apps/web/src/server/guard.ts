@@ -12,6 +12,7 @@ export async function guard<T>(fn: () => Promise<T>): Promise<T> {
   } catch (e) {
     if (e instanceof HttpProblem) {
       if (e.status === 401) redirect("/login");
+      if (e.status === 403 && e.code === "step_up_required") redirect("/step-up");
       if (e.status === 403) forbidden();
       if (e.status === 404) notFound();
     }

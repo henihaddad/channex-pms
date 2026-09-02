@@ -86,6 +86,15 @@ Rules:
   documents property size limits; the wizard warns before creating inventory that
   would exceed them.
 
+Implementation notes (M2): the state machine runs one step per job iteration and
+records provider ids in the same transaction as the step (`property_provisioning`);
+a property is `syncing` from the initial push until the first push leaves nothing
+pending, then `live`. Provider ids are translated at the connectivity boundary
+(`withIdMap`), so the domain only ever sees local ids. Adopting an existing Channex
+property (Q7) imports it through `importProperty` and resumes the machine at the
+webhook step. Policies, taxes and photos are pushed by their own actions rather than
+by the provisioning job.
+
 ## 5.4 The ARI sync engine
 
 The heart of the system. Channex splits the write path exactly as we do:

@@ -171,3 +171,61 @@ describe("ChannexProvider contract (fixtures)", () => {
     expect(maskPan("1234")).toBe("****");
   });
 });
+
+describe("ChannexProvider contract: provisioning and adoption", () => {
+  it("registers exactly one webhook per property with the secret header (PROV-4)", async () => {
+    const { p, http } = provider();
+    const r = await p.ensureWebhook(
+      {
+        propertyId: PROPERTY,
+        callbackUrl: "https://pms.example/webhooks/channex/tok",
+        eventMask: "*",
+        secret: "s",
+        sendData: true,
+      },
+      meta,
+    );
+    expect(r.id).toBe("8ab9e0a2-3f3c-4c2f-9d1b-6d2f0e7b1a11");
+    expect(http.calls[0]?.body).toMatchObject({
+      webhook: {
+        property_id: PROPERTY,
+        callback_url: "https://pms.example/webhooks/channex/tok",
+        event_mask: "*",
+        headers: { "x-channex-webhook-secret": "s" },
+        send_data: true,
+      },
+    });
+  });
+  it("imports a property with its room types and rate plans, paginating explicitly (Q7)", async () => {
+    const { p, http } = provider();
+    const imp = await p.importProperty({ id: PROPERTY }, meta);
+    expect(imp.property).toMatchObject({
+      title: "Demo Hotel",
+      currency: "GBP",
+      timezone: "Europe/London",
+      groupId: "3a1f0c5e-1111-4a3b-9c1d-000000000001",
+    });
+    expect(imp.roomTypes).toEqual([
+      {
+        id: "994d1375-dbbd-4072-8724-b2ab32ce781b",
+        title: "Standard Room",
+        countOfRooms: 20,
+        occAdults: 3,
+        occChildren: 2,
+        occInfants: 1,
+      },
+    ]);
+    expect(imp.ratePlans.map((r) => [r.title, r.parentRatePlanId])).toEqual([
+      ["Best Available Rate", null],
+      ["Non Refundable", "e2f6e0a1-2222-4b3c-8d1e-000000000002"],
+    ]);
+    expect(
+      http.calls.every(
+        (c) =>
+          c.method !== "GET" ||
+          c.path.includes("/properties/") ||
+          c.query?.["pagination[limit]"] === "100",
+      ),
+    ).toBe(true);
+  });
+});

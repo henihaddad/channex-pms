@@ -1,0 +1,37 @@
+{
+  "name": "@pms/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Background job processors shared by the worker and the test hooks: provisioning, horizon, channel health, activation. No queue library here; the worker wires BullMQ.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --passWithNoTests --config vitest.int.config.ts"
+  },
+  "dependencies": {
+    "@pms/connectivity": "workspace:*",
+    "@pms/core": "workspace:*",
+    "@pms/db": "workspace:*",
+    "@pms/runtime": "workspace:*",
+    "@pms/sync": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

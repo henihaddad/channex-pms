@@ -44,15 +44,30 @@ importers:
       '@pms/authz':
         specifier: workspace:*
         version: link:../../packages/authz
+      '@pms/connectivity':
+        specifier: workspace:*
+        version: link:../../packages/connectivity
       '@pms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@pms/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@pms/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@pms/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@pms/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
+      '@tanstack/react-virtual':
+        specifier: ^3.13.12
+        version: 3.14.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      ioredis:
+        specifier: ^6.0.0
+        version: 6.0.0
       next:
         specifier: ^16.3.4
         version: 16.3.4(@babel/core@7.29.7)(@playwright/test@1.56.1)(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -120,6 +135,9 @@ importers:
       '@pms/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@pms/jobs':
+        specifier: workspace:*
+        version: link:../../packages/jobs
       '@pms/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -263,6 +281,37 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
 
+  packages/jobs:
+    dependencies:
+      '@pms/connectivity':
+        specifier: workspace:*
+        version: link:../connectivity
+      '@pms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@pms/db':
+        specifier: workspace:*
+        version: link:../db
+      '@pms/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@pms/sync':
+        specifier: workspace:*
+        version: link:../sync
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
+
   packages/runtime:
     dependencies:
       '@node-rs/argon2':
@@ -293,6 +342,18 @@ importers:
       '@types/node':
         specifier: ^22
         version: 22.20.1
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
+
+  packages/sdk:
+    devDependencies:
       eslint:
         specifier: ^9
         version: 9.39.5(jiti@2.7.0)
@@ -1760,6 +1821,15 @@ packages:
 
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
+
+  '@tanstack/react-virtual@3.14.10':
+    resolution: {integrity: sha512-SRyoUbdFMRHuYXMijV5H4ZarQWpXkj3iANq8OFre+pybeVap8ZJjZ3Nz9bVjx4d8PfobVUQUdKyyyHYk3E+djw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@tanstack/virtual-core@3.17.8':
+    resolution: {integrity: sha512-BfEvehNpOT75r5Ksc5xW6NZuXujTfb7nlSEyVu4XHG3gdxNg1KqXruWbDewXOUaUYIo4oRbSfkjIajz4MAT8tA==}
 
   '@ts-morph/common@0.29.0':
     resolution: {integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==}
@@ -4849,6 +4919,14 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       postcss: 8.5.26
       tailwindcss: 4.3.3
+
+  '@tanstack/react-virtual@3.14.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.8
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+
+  '@tanstack/virtual-core@3.17.8': {}
 
   '@ts-morph/common@0.29.0':
     dependencies:

@@ -29,10 +29,229 @@
   },
   {
     "file": "src/app/(auth)/auth.actions.ts",
+    "export": "stepUpAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
     "export": "totpAction",
     "kind": "action",
     "wrapper": "publicAction",
     "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "acknowledgeEventAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:update_settings",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "activateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:activate",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "createConnectionAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "getDescriptor",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "importListingsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "importListingsPreview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel_account:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "loadBothSides",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:read"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "loadConnection",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "loadHealthBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "pauseAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:deactivate",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "removeAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:delete",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "resumeAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:activate",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "saveMappingsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:update_mapping",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "testConnectionAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "addDerivedPlanAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "rate_plan:create",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "addPolicyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:update",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "forceResyncAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:force_resync",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "loadProperty",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "updateRoomTypeCountAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "room_type:update",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "adoptPropertyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "clonePropertyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:clone",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "createPropertyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "importCsvAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:bulk_import",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "listGroups",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "group:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "listProperties",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "listTemplates",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "saveTemplateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "template:manage",
+    "scope": "organization"
   },
   {
     "file": "src/app/(console)/settings/audit/audit.actions.ts",
@@ -114,6 +333,62 @@
     "publicReason": "health"
   },
   {
+    "file": "src/app/api/v1/ari/bulk/[id]/undo/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:bulk_execute",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/api/v1/ari/bulk/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:bulk_execute",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/api/v1/ari/events/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/ari/grid/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/ari/history/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "audit:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/ari/rates/route.ts",
+    "export": "PATCH",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:update_rate",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/api/v1/ari/restrictions/route.ts",
+    "export": "PATCH",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:update_restriction",
+    "scope": "property"
+  },
+  {
     "file": "src/app/api/v1/auth/login/route.ts",
     "export": "POST",
     "kind": "route",
@@ -156,6 +431,52 @@
     "publicReason": "catalogue"
   },
   {
+    "file": "src/app/api/v1/channels/oauth/airbnb/callback/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel_account:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/channels/oauth/airbnb/start/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel_account:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/openapi.json/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "catalogue"
+  },
+  {
+    "file": "src/app/api/v1/properties/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/properties/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "property:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/test/drain/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
     "file": "src/app/api/v1/test/last-invitation/route.ts",
     "export": "GET",
     "kind": "route",
@@ -163,7 +484,28 @@
     "publicReason": "test_hook"
   },
   {
+    "file": "src/app/api/v1/test/oauth/authorize/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/oauth/token/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
     "file": "src/app/api/v1/test/property/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/seed-portfolio/route.ts",
     "export": "POST",
     "kind": "route",
     "wrapper": "publicRoute",

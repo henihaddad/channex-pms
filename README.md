@@ -30,11 +30,13 @@
 
 ---
 
-> **Status: milestone M2 in progress.** The [specification](./docs/specs/) (17 documents,
-> decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with row-level security, permission
-> matrix, audit log) and M1 (the Channex sync engine, webhook receiver, booking ingestion with the
-> ack loop, drift detection and a 200-scenario chaos suite) are done. Nothing is usable by an
-> operator yet; that arrives with M2.
+> **Status: v0.1 (milestone M2) shipped; M3 in progress.** The [specification](./docs/specs/) (17 documents,
+> decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with
+> row-level security, permission matrix, audit log), M1 (the Channex sync engine, webhook receiver,
+> booking ingestion with the ack loop, drift detection and a 200-scenario chaos suite) and M2
+> (properties, the portfolio calendar, channel connections and mapping) are done. Reservations and
+> operations arrive with M3. Everything so far has been proven against the built-in fake provider;
+> a Channex staging key is the next thing this project needs.
 
 ## Why this exists
 
@@ -92,11 +94,11 @@ pnpm dev               # apps/web on :3000, apps/worker
 pnpm check             # lint, typecheck, test, build
 ```
 
-There is nothing an operator can use yet. When milestone M2 ships, self-hosting will be one
-command with Docker Compose:
+Self-hosting is one command with Docker Compose (`compose.selfhost.yml`: web, worker, one-shot
+migrate, Postgres, Redis, MinIO, Caddy):
 
 ```sh
-# planned, not yet available
+# v0.1: set PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY and PUBLIC_URL in .env first
 docker compose up
 ```
 
@@ -113,10 +115,10 @@ paywalled in the self-hosted edition, and the only enterprise-licensed files are
 
 | Milestone | Delivers                                                                | Status |
 | --------- | ----------------------------------------------------------------------- | ------ |
-| M0        | Monorepo, CI, Compose, domain value objects, permission matrix          | next   |
-| M1        | Connectivity core: Channex adapter, ARI engine, fake provider           |        |
-| M2        | Inventory, portfolio calendar, channel connection. First usable release |        |
-| M3        | Reservations and turnover operations                                    |        |
+| M0        | Monorepo, CI, Compose, domain value objects, permission matrix          | done   |
+| M1        | Connectivity core: Channex adapter, ARI engine, fake provider           | done   |
+| M2        | Inventory, portfolio calendar, channel connection. First usable release | v0.1   |
+| M3        | Reservations and turnover operations                                    | next   |
 | M4        | Unified messaging                                                       |        |
 | M5        | Owner management                                                        |        |
 | M6        | Dashboards and reporting                                                |        |

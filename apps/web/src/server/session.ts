@@ -24,7 +24,8 @@ export interface CurrentSession {
 /** Access token from the cookie, verified. Null when absent or expired; the client refreshes via /api/v1/auth/refresh. */
 export async function currentSession(): Promise<CurrentSession | null> {
   const jar = await cookies();
-  const token = jar.get(COOKIES.access)?.value;
+  const bearer = (await headers()).get("authorization");
+  const token = bearer?.startsWith("Bearer ") ? bearer.slice(7) : jar.get(COOKIES.access)?.value;
   if (!token) return null;
   const c = await container();
   const claims = await c.tokens.verifyAccess(token);
@@ -81,6 +82,8 @@ export async function clearSessionCookies(): Promise<void> {
 }
 
 export async function currentOrgId(): Promise<Id | null> {
+  const fromHeader = (await headers()).get("x-pms-org");
+  if (fromHeader) return fromHeader as Id;
   const jar = await cookies();
   return (jar.get(COOKIES.org)?.value as Id | undefined) ?? null;
 }

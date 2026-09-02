@@ -8,7 +8,11 @@
     "members": "Members",
     "organization": "Organization",
     "audit": "Audit log",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "properties": "Properties",
+    "calendar": "Calendar",
+    "channels": "Channels",
+    "syncHealth": "Sync health"
   },
   "auth": {
     "signIn": "Sign in",
@@ -27,11 +31,14 @@
     "code": "Code",
     "continue": "Continue",
     "acceptInvite": "Accept invitation",
-    "setPassword": "Choose a password (new accounts only)"
+    "setPassword": "Choose a password (new accounts only)",
+    "stepUpTitle": "Confirm it is you",
+    "stepUpHint": "This action is sensitive. Enter your password again to continue; you will not be asked again for five minutes.",
+    "stepUpSubmit": "Confirm"
   },
   "dashboard": {
     "welcome": "Welcome, {name}",
-    "milestone": "Milestone M0: identity, roles and audit are live. Inventory and channels arrive with M2.",
+    "milestone": "Milestone M2: properties, the portfolio calendar and channel connections are live. Reservations and operations arrive with M3.",
     "organizations": "Your organizations"
   },
   "members": {
@@ -60,5 +67,49 @@
     "actor": "Actor",
     "subject": "Subject",
     "when": "When"
+  },
+  "properties": {
+    "title": "Properties",
+    "new": "New property",
+    "import": "Import CSV",
+    "empty": "No properties yet. Create one or import a CSV.",
+    "name": "Name",
+    "kind": "Kind",
+    "state": "State",
+    "provisioning": "Provisioning",
+    "inventory": "Room types / rate plans / units",
+    "templates": "Templates",
+    "noTemplates": "No templates yet. Save one from the wizard.",
+    "adopt": "Adopt an existing Channex property",
+    "adoptHint": "Already on Channex? Enter the property id; we import its room types and rate plans and take over the webhook.",
+    "adoptSubmit": "Adopt",
+    "importHint": "One row per listing: title, kind, currency, city, country, base_rate, min_stay. Listing #40 takes three minutes.",
+    "openCalendar": "Open calendar",
+    "connectChannel": "Connect a channel",
+    "forceResync": "Force resync",
+    "roomTypes": "Room types",
+    "systemManaged": "Single-unit listing: the room type and unit are managed for you.",
+    "ratePlans": "Rate plans",
+    "channels": "Channels",
+    "noChannels": "No channels connected.",
+    "policies": "Policies",
+    "recentOps": "Recent operations"
+  },
+  "calendar": {
+    "title": "Calendar"
+  },
+  "channels": {
+    "title": "Channels",
+    "health": "Health board",
+    "connect": "Connect a channel",
+    "accounts": "Channel accounts",
+    "connectAirbnb": "Connect Airbnb",
+    "empty": "No channels connected yet.",
+    "events": "Recent events",
+    "ack": "Acknowledge",
+    "pause": "Pause",
+    "resume": "Resume",
+    "remove": "Remove",
+    "importListings": "Import Airbnb listings"
   }
 }

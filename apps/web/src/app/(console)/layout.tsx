@@ -12,6 +12,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const t = await getTranslations("nav");
   const links = [
     { href: "/", label: t("dashboard") },
+    { href: "/properties", label: t("properties") },
+    { href: "/calendar", label: t("calendar") },
+    { href: "/channels", label: t("channels") },
+    { href: "/sync-health", label: t("syncHealth") },
     { href: "/settings/members", label: t("members") },
     { href: "/settings/organization", label: t("organization") },
     { href: "/settings/audit", label: t("audit") },

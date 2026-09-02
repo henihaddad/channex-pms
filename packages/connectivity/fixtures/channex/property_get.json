@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "GET /properties/:id per docs; relationships.groups carries the group."
+  },
+  "request": { "method": "GET", "path": "/api/v1/properties/716305c4-561a-4561-a187-7f5b8aeb5920" },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+        "type": "property",
+        "attributes": {
+          "title": "Demo Hotel",
+          "currency": "GBP",
+          "timezone": "Europe/London",
+          "state": "active"
+        },
+        "relationships": {
+          "groups": { "data": { "id": "3a1f0c5e-1111-4a3b-9c1d-000000000001", "type": "group" } }
+        }
+      }
+    }
+  }
+}

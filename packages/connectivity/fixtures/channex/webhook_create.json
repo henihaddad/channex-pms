@@ -1,0 +1,24 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "POST /webhooks per docs.channex.io Webhooks; response wraps the created object."
+  },
+  "request": { "method": "POST", "path": "/api/v1/webhooks" },
+  "response": {
+    "status": 201,
+    "body": {
+      "data": {
+        "id": "8ab9e0a2-3f3c-4c2f-9d1b-6d2f0e7b1a11",
+        "type": "webhook",
+        "attributes": {
+          "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+          "callback_url": "https://pms.example/webhooks/channex/tok",
+          "event_mask": "*",
+          "is_active": true,
+          "send_data": true
+        }
+      },
+      "meta": { "message": "Success" }
+    }
+  }
+}

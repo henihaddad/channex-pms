@@ -33,6 +33,8 @@ import {
   type ThreadQuery,
   type RestrictionEntry,
   type AvailabilityEntry,
+  type WebhookSpec,
+  type ImportedProperty,
 } from "@pms/core";
 import {
   applyAvailabilityEntries,
@@ -180,6 +182,95 @@ export class FakeProvider implements ConnectivityProvider {
   async ensureRatePlan(rp: RatePlanSpec, meta: CallMeta): Promise<ProviderRef> {
     this.guard("ensureRatePlan", meta);
     return this.remember("rate_plan", rp);
+  }
+
+  async ensureWebhook(w: WebhookSpec, meta: CallMeta): Promise<ProviderRef> {
+    this.guard("ensureWebhook", meta);
+    return this.remember("webhook", { propertyId: w.propertyId, callbackUrl: w.callbackUrl });
+  }
+
+  /** Q7: read back what was provisioned (or seeded via `seedRemoteProperty`) so a PMS can adopt it. */
+  async importProperty(ref: ProviderRef, meta: CallMeta): Promise<ImportedProperty> {
+    this.guard("importProperty", meta);
+    const specs = [...this.created.entries()].map(([k, id]) => ({
+      kind: k.slice(0, k.indexOf(":")),
+      spec: JSON.parse(k.slice(k.indexOf(":") + 1)) as Record<string, unknown>,
+      id: String(id),
+    }));
+    const prop = specs.find((s) => s.kind === "property" && s.id === ref.id);
+    if (!prop) throw new ValidationError(`property ${ref.id} not found`);
+    const roomTypes = specs
+      .filter((s) => s.kind === "room_type" && s.spec.propertyId === ref.id)
+      .map((s) => ({
+        id: s.id,
+        title: String(s.spec.title),
+        countOfRooms: Number(s.spec.countOfRooms),
+        occAdults: Number(s.spec.occAdults),
+        occChildren: Number(s.spec.occChildren),
+        occInfants: Number(s.spec.occInfants ?? 0),
+      }));
+    const ratePlans = specs
+      .filter((s) => s.kind === "rate_plan" && s.spec.propertyId === ref.id)
+      .map((s) => ({
+        id: s.id,
+        roomTypeId: String(s.spec.roomTypeId),
+        title: String(s.spec.title),
+        currency: String(s.spec.currency),
+        parentRatePlanId:
+          typeof s.spec.parentRatePlanId === "string" ? s.spec.parentRatePlanId : null,
+      }));
+    return {
+      property: {
+        id: ref.id,
+        title: String(prop.spec.title),
+        currency: String(prop.spec.currency),
+        timezone: String(prop.spec.timezone),
+        ...(typeof prop.spec.groupId === "string" ? { groupId: prop.spec.groupId } : {}),
+      },
+      roomTypes,
+      ratePlans,
+    };
+  }
+
+  /** Test helper: a property that exists on the provider side before we know about it. */
+  async seedRemoteProperty(input: {
+    title: string;
+    currency: string;
+    timezone: string;
+    roomTypes: Array<{ title: string; countOfRooms: number; ratePlans: string[] }>;
+  }): Promise<string> {
+    const meta = { dedupeKey: `seed:${input.title}`, requestId: "seed" };
+    const p = await this.ensureProperty(
+      { title: input.title, currency: input.currency, timezone: input.timezone },
+      meta,
+    );
+    for (const rt of input.roomTypes) {
+      const r = await this.ensureRoomType(
+        {
+          propertyId: p.id,
+          title: rt.title,
+          countOfRooms: rt.countOfRooms,
+          occAdults: 2,
+          occChildren: 0,
+          occInfants: 0,
+          defaultOccupancy: 2,
+        },
+        meta,
+      );
+      for (const title of rt.ratePlans)
+        await this.ensureRatePlan(
+          {
+            propertyId: p.id,
+            roomTypeId: r.id,
+            title,
+            currency: input.currency,
+            sellMode: "per_room",
+            options: [{ occupancy: 2, isPrimary: true, rate: 10000 }],
+          },
+          meta,
+        );
+    }
+    return p.id;
   }
 
   private remember(kind: string, spec: unknown): ProviderRef {

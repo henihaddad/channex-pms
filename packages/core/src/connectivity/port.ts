@@ -43,6 +43,35 @@ export interface RatePlanSpec {
   options: Array<{ occupancy: number; isPrimary: boolean; rate: number }>;
 }
 
+/** Webhook registration (PROV-4): exactly one endpoint per property with the full event mask. */
+export interface WebhookSpec {
+  propertyId: string;
+  callbackUrl: string;
+  eventMask: string;
+  secret: string;
+  sendData: boolean;
+}
+
+/** A provider-side property read back for adoption (Q7: adopt an existing Channex property). */
+export interface ImportedProperty {
+  property: { id: string; title: string; currency: string; timezone: string; groupId?: string };
+  roomTypes: Array<{
+    id: string;
+    title: string;
+    countOfRooms: number;
+    occAdults: number;
+    occChildren: number;
+    occInfants: number;
+  }>;
+  ratePlans: Array<{
+    id: string;
+    roomTypeId: string;
+    title: string;
+    currency: string;
+    parentRatePlanId: string | null;
+  }>;
+}
+
 /** One request: entries in FIFO order, for one property. */
 export interface AvailabilityBatch {
   propertyId: string;
@@ -229,6 +258,8 @@ export interface ConnectivityProvider {
   ensureProperty(p: PropertySpec, meta: CallMeta): Promise<ProviderRef>;
   ensureRoomType(rt: RoomTypeSpec, meta: CallMeta): Promise<ProviderRef>;
   ensureRatePlan(rp: RatePlanSpec, meta: CallMeta): Promise<ProviderRef>;
+  ensureWebhook(w: WebhookSpec, meta: CallMeta): Promise<ProviderRef>;
+  importProperty(ref: ProviderRef, meta: CallMeta): Promise<ImportedProperty>;
   // ARI
   pushAvailability(batch: AvailabilityBatch, meta: CallMeta): Promise<PushResult>;
   pushRatesAndRestrictions(batch: RestrictionBatch, meta: CallMeta): Promise<PushResult>;

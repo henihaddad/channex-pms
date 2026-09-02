@@ -19,6 +19,15 @@ import {
 import { reconcileProperty } from "./processors/reconcile.js";
 import { processWebhook } from "./processors/webhook-ingest.js";
 import { selectProvider } from "./provider.js";
+import {
+  extendHorizons,
+  markLiveIfSynced,
+  pollChannelHealth,
+  propertiesToProvision,
+  publishAri,
+  runProvisioning,
+  type ProvisioningJob,
+} from "@pms/jobs";
 
 const c = await buildContainer();
 const log = c.log;
@@ -38,13 +47,37 @@ const alerts = {
   },
 };
 const bookingDeps = { db: c.db.db, provider, crypto: c.crypto, clock: c.clock, log, alerts };
+const provisioningDeps = {
+  db: c.db.db,
+  provider,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  callbackBase: c.config.NEXT_PUBLIC_APP_URL,
+};
+const channelDeps = { db: c.db.db, provider, clock: c.clock, log };
+const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
 
+const system = c.queues[QUEUES.system];
 const workers: Worker[] = [
   new Worker<AriPushJob>(
     QUEUES.ariPush,
-    (job) =>
-      processAriPush({ db: c.db.db, provider, limiter, breaker, clock: c.clock, log, lease }, job),
+    async (job) => {
+      await processAriPush(
+        { db: c.db.db, provider, limiter, breaker, clock: c.clock, log, lease },
+        job,
+      );
+      const { orgId, propertyId } = job.data;
+      if (await markLiveIfSynced(c.db.db, orgId, propertyId))
+        log.info({ orgId, propertyId }, "property.live");
+      await publishAri(realtime, {
+        type: "ari.synced",
+        orgId,
+        propertyId,
+        at: c.clock.now().toString(),
+      });
+    },
     { ...workerOpts, concurrency: 4 },
   ),
 
@@ -144,6 +177,31 @@ const workers: Worker[] = [
           log.info({ rows: n }, "otb.snapshot.run");
           return;
         }
+        case "provisioning.sweep": {
+          for (const p of await propertiesToProvision(c.db.db)) {
+            await system.add("provisioning.run", p satisfies ProvisioningJob, {
+              jobId: `provisioning.run:${p.propertyId}:${String(Math.floor(Date.now() / 30_000))}`,
+              attempts: 5,
+              backoff: { type: "exponential", delay: 5_000 },
+              removeOnComplete: 200,
+              removeOnFail: 200,
+            });
+          }
+          return;
+        }
+        case "provisioning.run": {
+          const st = await runProvisioning(provisioningDeps, job.data as ProvisioningJob);
+          log.info({ ...(job.data as ProvisioningJob), step: st.step }, "provisioning.run.done");
+          return;
+        }
+        case "horizon.extend": {
+          await extendHorizons({ db: c.db.db, clock: c.clock, log });
+          return;
+        }
+        case "channel.health_poll": {
+          await pollChannelHealth(channelDeps);
+          return;
+        }
         case "audit.verify": {
           for (const r of await verifyAllAuditChains(c.db.db, c.sha256Hex))
             if (!r.ok)
@@ -169,8 +227,22 @@ const stopOutbox = startOutboxPublisher(c.db.db, bullPublisher(c.queues), {
 });
 
 async function main(): Promise<void> {
-  const system = c.queues[QUEUES.system];
   await system.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
+  await system.upsertJobScheduler(
+    "provisioning.sweep",
+    { every: 30_000 },
+    { name: "provisioning.sweep" },
+  );
+  await system.upsertJobScheduler(
+    "horizon.extend",
+    { pattern: "15 2 * * *" },
+    { name: "horizon.extend" },
+  );
+  await system.upsertJobScheduler(
+    "channel.health_poll",
+    { every: 300_000 },
+    { name: "channel.health_poll" },
+  );
   await system.upsertJobScheduler(
     "booking.ack_sweep",
     { every: 60_000 },

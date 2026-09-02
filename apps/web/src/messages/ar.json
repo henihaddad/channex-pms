@@ -1,11 +1,18 @@
 {
-  "app": { "name": "Channex PMS", "tagline": "إدارة العقارات لمن يديرون عقارات الآخرين." },
+  "app": {
+    "name": "Channex PMS",
+    "tagline": "إدارة العقارات لمن يديرون عقارات الآخرين."
+  },
   "nav": {
     "dashboard": "لوحة التحكم",
     "members": "الأعضاء",
     "organization": "المؤسسة",
     "audit": "سجل التدقيق",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "properties": "العقارات",
+    "calendar": "التقويم",
+    "channels": "القنوات",
+    "syncHealth": "حالة المزامنة"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -24,11 +31,14 @@
     "code": "الرمز",
     "continue": "متابعة",
     "acceptInvite": "قبول الدعوة",
-    "setPassword": "اختر كلمة مرور (للحسابات الجديدة فقط)"
+    "setPassword": "اختر كلمة مرور (للحسابات الجديدة فقط)",
+    "stepUpTitle": "تأكيد هويتك",
+    "stepUpHint": "هذا الإجراء حساس. أدخل كلمة المرور مرة أخرى للمتابعة؛ لن يُطلب منك ذلك مجددًا لمدة خمس دقائق.",
+    "stepUpSubmit": "تأكيد"
   },
   "dashboard": {
     "welcome": "مرحبًا، {name}",
-    "milestone": "المرحلة M0: الهوية والأدوار والتدقيق جاهزة. المخزون والقنوات تصل مع M2.",
+    "milestone": "المرحلة M2: العقارات وتقويم المحفظة وربط القنوات جاهزة. الحجوزات والعمليات تأتي مع M3.",
     "organizations": "مؤسساتك"
   },
   "members": {
@@ -57,5 +67,49 @@
     "actor": "الفاعل",
     "subject": "الموضوع",
     "when": "متى"
+  },
+  "properties": {
+    "title": "العقارات",
+    "new": "عقار جديد",
+    "import": "استيراد CSV",
+    "empty": "لا توجد عقارات بعد. أنشئ واحدًا أو استورد ملف CSV.",
+    "name": "الاسم",
+    "kind": "النوع",
+    "state": "الحالة",
+    "provisioning": "التجهيز",
+    "inventory": "أنواع الغرف / خطط الأسعار / الوحدات",
+    "templates": "القوالب",
+    "noTemplates": "لا توجد قوالب بعد. احفظ قالبًا من المعالج.",
+    "adopt": "اعتماد عقار موجود في Channex",
+    "adoptHint": "موجود في Channex؟ أدخل معرّف العقار وسنستورد أنواع الغرف وخطط الأسعار.",
+    "adoptSubmit": "اعتماد",
+    "importHint": "سطر لكل إعلان: title, kind, currency, city, country, base_rate, min_stay.",
+    "openCalendar": "فتح التقويم",
+    "connectChannel": "ربط قناة",
+    "forceResync": "إعادة مزامنة إجبارية",
+    "roomTypes": "أنواع الغرف",
+    "systemManaged": "إعلان بوحدة واحدة: يُدار نوع الغرفة والوحدة تلقائيًا.",
+    "ratePlans": "خطط الأسعار",
+    "channels": "القنوات",
+    "noChannels": "لا توجد قنوات مرتبطة.",
+    "policies": "السياسات",
+    "recentOps": "العمليات الأخيرة"
+  },
+  "calendar": {
+    "title": "التقويم"
+  },
+  "channels": {
+    "title": "القنوات",
+    "health": "لوحة الحالة",
+    "connect": "ربط قناة",
+    "accounts": "حسابات القنوات",
+    "connectAirbnb": "ربط Airbnb",
+    "empty": "لا توجد قنوات مرتبطة بعد.",
+    "events": "الأحداث الأخيرة",
+    "ack": "تأكيد الاطلاع",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "remove": "إزالة",
+    "importListings": "استيراد إعلانات Airbnb"
   }
 }

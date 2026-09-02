@@ -1,0 +1,59 @@
+# Self-hosting (spec 04 §4.8, spec 12 §12.4). One command: docker compose -f compose.selfhost.yml up -d
+# Set PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY and PUBLIC_URL in .env before the first start.
+services:
+  postgres:
+    image: postgres:16
+    environment: { POSTGRES_USER: pms, POSTGRES_PASSWORD: pms, POSTGRES_DB: pms }
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      { test: ["CMD-SHELL", "pg_isready -U pms"], interval: 5s, timeout: 3s, retries: 20 }
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redisdata:/data"]
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment: { MINIO_ROOT_USER: pms, MINIO_ROOT_PASSWORD: pms-minio-secret }
+    volumes: ["miniodata:/data"]
+  migrate:
+    build: { context: ., dockerfile: docker/Dockerfile, target: migrate }
+    environment: { DATABASE_URL: postgres://pms:pms@postgres:5432/pms }
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
+  web:
+    build: { context: ., dockerfile: docker/Dockerfile, target: web }
+    env_file: .env
+    environment:
+      PMS_ENV: production
+      DATABASE_URL: postgres://pms:pms@postgres:5432/pms
+      REDIS_URL: redis://redis:6379
+      NEXT_PUBLIC_APP_URL: "${PUBLIC_URL:-http://localhost}"
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        redis: { condition: service_started },
+      }
+    restart: unless-stopped
+  worker:
+    build: { context: ., dockerfile: docker/Dockerfile, target: worker }
+    env_file: .env
+    environment:
+      PMS_ENV: production
+      DATABASE_URL: postgres://pms:pms@postgres:5432/pms
+      REDIS_URL: redis://redis:6379
+      NEXT_PUBLIC_APP_URL: "${PUBLIC_URL:-http://localhost}"
+    depends_on:
+      {
+        migrate: { condition: service_completed_successfully },
+        redis: { condition: service_started },
+      }
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes: ["./docker/Caddyfile:/etc/caddy/Caddyfile:ro", "caddydata:/data"]
+    environment: { PUBLIC_HOST: "${PUBLIC_HOST:-localhost}" }
+    depends_on: [web]
+    restart: unless-stopped
+volumes: { pgdata: {}, redisdata: {}, miniodata: {}, caddydata: {} }

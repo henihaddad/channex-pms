@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "GET /room_types filtered by property, explicit pagination (default page size is 10)."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/room_types",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "994d1375-dbbd-4072-8724-b2ab32ce781b",
+          "type": "room_type",
+          "attributes": {
+            "title": "Standard Room",
+            "count_of_rooms": 20,
+            "occ_adults": 3,
+            "occ_children": 2,
+            "occ_infants": 1
+          }
+        }
+      ],
+      "meta": { "total": 1, "limit": 100, "page": 1 }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # 06 — Inventory, Rates & the Calendar
 
-**Status:** `review` — revised 2026-08-21: portfolio view is the default; `single_unit` properties render as single rows.
+**Status:** `accepted` (2026-09-02) — implemented in M2: property wizard with `kind`, templates, clone and CSV import; derived plans recomputed in the same transaction as the parent edit; the portfolio grid (virtualised rows and columns, keyboard editing, range toolbar, `expected_version` conflicts, server-backed undo, SSE cell states); bulk update with mandatory dry run and inverse-operation undo; rolling 730-day horizon. Not yet built: year heatmap, presence avatars (CAL-6), history popover UI (the audit-backed endpoint exists), mobile day view (CAL-9), yield rules (§6.5) and promotions (§6.6), which M6/M7 pick up.
 
 **Primary personas:** `revenue_manager`, `property_manager`, `portfolio_manager`.
 

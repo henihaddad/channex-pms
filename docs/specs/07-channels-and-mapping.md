@@ -1,6 +1,6 @@
 # 07 — Channels & Mapping
 
-**Status:** `review` — revised 2026-08-21: shared `ChannelAccount` credentials and the Airbnb OAuth path are first-class; bulk connection is an acceptance criterion.
+**Status:** `accepted` (2026-09-02) — implemented in M2: descriptor-driven wizard (CH-1..CH-4, CH-6), org-level `ChannelAccount` with Airbnb OAuth and bulk listing import with match-or-create (CH-5), mapping screen with confidence-scored suggestions, coverage warnings, cross-property and derived-plan validation, diff-before-save on live connections and targeted re-push (MAP-1..MAP-4, MAP-6), health board sorted worst-first with plain-language alerts (CH-7) and one-click reversible pause (CH-8), five-minute readiness poll. Not yet built: pattern/CSV bulk mapping and copy-from-property (MAP-5), the Channex channel iframe embed, per-channel revenue share (needs M6 rollups). Channel accounts are a step-up permission: the console re-authenticates before OAuth.
 
 **Primary personas:** `property_manager`, `portfolio_manager`, `revenue_manager`.
 

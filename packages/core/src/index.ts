@@ -16,3 +16,5 @@ export * from "./audit/index.js";
 export * from "./inventory/index.js";
 export * from "./connectivity/index.js";
 export * from "./reservations/index.js";
+export * from "./properties/index.js";
+export * from "./channels/index.js";

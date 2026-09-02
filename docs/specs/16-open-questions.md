@@ -79,7 +79,8 @@ To settle with Channex early, because D4 makes us a reseller-shaped partner:
 **Recommended yes, scheduled in M2** ([15](./15-roadmap.md)): most prospects
 already run Channex, and adopting their properties, mappings and webhook endpoints
 without dropping a booking during cutover is the strongest adoption lever we have.
-Confirm it stays in M2 if the milestone gets tight.
+**Shipped in M2** (2026-09-02): `importProperty` on the connectivity port, the
+"Adopt an existing Channex property" action, provisioning resumes at the webhook step.
 
 ### Q8 — Tenancy isolation
 
