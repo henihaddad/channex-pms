@@ -18,6 +18,7 @@ import {
   generateDueStatements,
   pollPayouts,
   escalateTurnovers,
+  expireHolds,
   markLiveIfSynced,
   orgsWithAutomation,
   pollReviews,
@@ -48,6 +49,8 @@ export const POST = publicRoute("test_hook", async (req) => {
     dailyClose?: boolean;
     statements?: boolean;
     rollups?: boolean;
+    /** Test-only: expire every live hold now instead of in 15 minutes (BE-5 without waiting). */
+    expireHoldsNow?: boolean;
   };
   const log = c.log.child({ hook: "drain" });
   let provisioned = 0;
@@ -143,6 +146,24 @@ export const POST = publicRoute("test_hook", async (req) => {
   const rollups =
     body.rollups && body.orgId ? await nightlyRollups(analyticsDeps, body.orgId) : null;
   const alerts = body.rollups && body.orgId ? await computeAlerts(analyticsDeps, body.orgId) : null;
+  // spec 10: holds expire on request so the funnel's BE-5 path can be asserted without the worker
+  if (body.expireHoldsNow && body.orgId)
+    await asSystem(c.db.db, body.orgId, (tx) =>
+      tx.execute(sql`update booking_hold set expires_at = now() where state = 'held'`),
+    );
+  const holds = await expireHolds(
+    {
+      db: c.db.db,
+      clock: c.clock,
+      crypto: c.crypto,
+      log,
+      mailer: c.mailer,
+      payments: c.payments,
+      lock: c.lock,
+      appUrl: c.config.NEXT_PUBLIC_APP_URL,
+    },
+    body.orgId,
+  );
   const closes = body.dailyClose
     ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
     : { closed: 0 };
@@ -197,5 +218,6 @@ export const POST = publicRoute("test_hook", async (req) => {
     statements,
     rollups,
     alerts,
+    holds,
   });
 });

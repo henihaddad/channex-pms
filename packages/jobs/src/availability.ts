@@ -1,5 +1,6 @@
 import { computeAvailable, LocalDate } from "@pms/core";
 import {
+  activeHoldCounts,
   bookedNightsByRoomType,
   DrizzleAriStore,
   DrizzleOperationsRepository,
@@ -10,7 +11,7 @@ import {
 import { queueAriPush } from "./ari-events.js";
 
 /**
- * INV-2 in one place: available = count − booked − out of order − blocks − keep-back,
+ * INV-2 in one place: available = count − booked − out of order − blocks − holds − keep-back,
  * recomputed for a room type over a date range and queued for push. Used after
  * blocks, unit status changes, unmapped-booking resolution and staff bookings.
  */
@@ -36,6 +37,15 @@ export async function recomputeAvailability(
     dateFrom,
     dateTo,
   );
+  // BE-5: a live hold is a room we cannot sell twice while a guest types a card number
+  const held = await activeHoldCounts(
+    tx,
+    propertyId,
+    roomTypeId,
+    dateFrom,
+    dateTo,
+    new Date(nowMs).toISOString(),
+  );
   const store = new DrizzleAriStore(tx);
   let cells = 0;
   let overbooked = 0;
@@ -45,7 +55,7 @@ export async function recomputeAvailability(
       countOfRooms: rt.count_of_rooms,
       booked: booked.get(`${roomTypeId}|${date}`) ?? 0,
       outOfOrder: 0,
-      blocks: blocked.get(date) ?? 0,
+      blocks: (blocked.get(date) ?? 0) + (held.get(date) ?? 0),
       keepBack: 0,
     });
     if (r.overbookedBy > 0) overbooked++;

@@ -113,6 +113,20 @@
       "when": 1788358619002,
       "tag": "0015_m6_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788361707679,
+      "tag": "0016_m7_booking_engine",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788361714127,
+      "tag": "0017_m7_rls",
+      "breakpoints": true
     }
   ]
 }

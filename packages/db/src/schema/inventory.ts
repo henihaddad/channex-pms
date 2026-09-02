@@ -67,6 +67,8 @@ export const ratePlan = pgTable(
       value: number;
     } | null>(),
     mealPlan: text("meal_plan"),
+    /** Spec 10 §10.5: sold on the direct channel only, never mapped to an OTA. */
+    directOnly: boolean("direct_only").notNull().default(false),
     taxSetId: uuid("tax_set_id"),
     policyId: uuid("policy_id"),
     createdAt: ts("created_at").notNull().default(now()),

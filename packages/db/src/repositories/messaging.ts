@@ -558,6 +558,39 @@ export class DrizzleMessagingRepository {
   }
 
   /** An outbound guest message, queued for `message.deliver`. Staff replies stop the SLA clock and end the automation handover. */
+  /** Spec 10 §10.6: a message typed in the guest portal lands as an inbound message on the direct thread. */
+  async addInboundGuestMessage(
+    threadId: string,
+    body: string,
+    sentAt: string,
+    sla?: { firstResponseMinutes: number; resolutionHours: number },
+  ): Promise<string> {
+    const id = Id.next();
+    await this.tx.insert(s.message).values({
+      id,
+      orgId: this.orgId,
+      threadId,
+      kind: "guest_message",
+      direction: "inbound",
+      authorType: "guest",
+      authorId: null,
+      bodyEnc: await this.crypto.seal(body),
+      providerMessageId: `portal:${id}`,
+      deliveryState: "received",
+      sentAt,
+    });
+    const due = firstResponseDue(sentAt, sla);
+    await this.tx.execute(sql`
+      update message_thread set unread_count = unread_count + 1, last_inbound_at = ${sentAt},
+        last_message_at = greatest(coalesce(last_message_at, ${sentAt}), ${sentAt}),
+        first_response_due_at = case when last_outbound_at is null or last_outbound_at < ${sentAt} then ${due} else first_response_due_at end,
+        first_response_at = case when last_outbound_at is null or last_outbound_at < ${sentAt} then null else first_response_at end,
+        automation_handover = true, state = case when state = 'closed' then 'open' else state end,
+        snoozed_until = null, updated_at = now()
+      where id = ${threadId}`);
+    return id;
+  }
+
   async queueGuestMessage(
     threadId: string,
     m: {

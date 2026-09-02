@@ -6,18 +6,14 @@ import {
   autoAssign,
   cancellationFee,
   checkSellable,
-  diffProjection,
   directBookingChange,
   directBookingRevision,
   Id,
-  projectRevision,
   type BookingRevisionPayload,
-  type Id as IdT,
 } from "@pms/core";
 import {
   DrizzleAriStore,
   DrizzleBillingRepository,
-  DrizzleBookingRepository,
   DrizzleOperationsRepository,
   DrizzlePropertyRepository,
   DrizzleReservationRepository,
@@ -29,7 +25,7 @@ import {
   type ReservationRow,
   type TaskRow,
 } from "@pms/db";
-import { issueCredential, queueAriPush, recomputeAvailability } from "@pms/jobs";
+import { applyDirectRevision, issueCredential, recomputeAvailability } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -611,42 +607,10 @@ export const createStaffBookingAction = withPermission<
   },
 );
 
+/** One apply path for staff, phone, walk-in and direct bookings (spec 08 §8.11); the engine uses the same function. */
 async function applyDirect(ctx: ActorCtx, rev: BookingRevisionPayload): Promise<string> {
   const c = await container();
-  const bookings = new DrizzleBookingRepository(ctx.tx, ctx.orgId, c.crypto);
-  const prev = await bookings.loadProjection(rev.bookingId);
-  const next = projectRevision(rev, prev?.bookingId ?? Id.next());
-  const diff = diffProjection(prev, next);
-  const now = c.clock.now().toString();
-  const event = {
-    type: "booking.revision_applied",
-    orgId: ctx.orgId as IdT,
-    aggregate: { kind: "booking", id: next.bookingId as IdT },
-    payload: {
-      propertyId: rev.propertyId,
-      bookingId: next.bookingId,
-      diff,
-      revisionId: rev.revisionId,
-    },
-    occurredAt: now,
-    dedupeKey: `booking.revision_applied:${rev.systemId}`,
-  };
-  await bookings.applyRevision({ revision: rev, projection: next, diff, events: [event], now });
-  const room = rev.rooms[0];
-  if (room?.roomTypeId)
-    await recomputeAvailability(
-      ctx.tx,
-      ctx.orgId,
-      rev.propertyId,
-      room.roomTypeId,
-      rev.arrivalDate,
-      rev.departureDate,
-      Date.now(),
-      "direct_booking",
-    );
-  // turnover tasks and credentials follow through the outbox consumer (booking.revision_applied), same as an OTA revision
-  await queueAriPush(ctx.tx, ctx.orgId, rev.propertyId, Date.now(), "direct_booking");
-  return next.bookingId;
+  return applyDirectRevision(c, ctx.tx, ctx.orgId, rev, "direct_booking");
 }
 
 /** OTA bookings are modified at the OTA (spec 08 §8.4); direct ones cancel here with the policy fee. */

@@ -33,6 +33,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <Link href={`/channels/new?propertyId=${d.property.id}`} className="underline">
             {t("connectChannel")}
           </Link>
+          <Link
+            href={`/properties/${d.property.id}/booking-engine`}
+            className="underline"
+            data-testid="open-booking-engine"
+          >
+            {t("bookingEngine")}
+          </Link>
         </div>
       </div>
       <Card>

@@ -17,7 +17,9 @@ import {
 } from "@pms/runtime";
 import {
   FakeLockProvider,
+  FakePaymentProvider,
   FakePayoutProvider,
+  type PaymentProvider,
   type PayoutProvider,
   type ConnectivityProvider,
   type Crypto,
@@ -26,7 +28,12 @@ import {
   type PasswordHasher,
   type TotpVerifier,
 } from "@pms/core";
-import { StripeConnectPayoutProvider, stripeTransport, type FakeProvider } from "@pms/connectivity";
+import {
+  StripeConnectPayoutProvider,
+  StripePaymentProvider,
+  stripeTransport,
+  type FakeProvider,
+} from "@pms/connectivity";
 import { selectProvider } from "@pms/jobs";
 import { Redis } from "ioredis";
 import { recordingMailer, testHooksEnabled } from "./test-hooks";
@@ -51,6 +58,8 @@ export interface WebContainer {
   lock: LockProvider;
   /** Owner payouts (spec 17 §17.4): Stripe Connect with STRIPE_SECRET_KEY, the fake otherwise. */
   payouts: PayoutProvider;
+  /** Guest payments (spec 10 §10.4): Stripe PaymentIntents with STRIPE_SECRET_KEY, the fake otherwise. */
+  payments: PaymentProvider;
 }
 
 declare global {
@@ -83,6 +92,9 @@ async function build(): Promise<WebContainer> {
     payouts: process.env.STRIPE_SECRET_KEY
       ? new StripeConnectPayoutProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
       : new FakePayoutProvider(),
+    payments: process.env.STRIPE_SECRET_KEY
+      ? new StripePaymentProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+      : new FakePaymentProvider(),
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,

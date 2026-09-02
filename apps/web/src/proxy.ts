@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PREFIXES = [
   "/login",
   "/owner-login",
+  "/book",
+  "/guest",
+  "/widget.js",
   "/signup",
   "/totp",
   "/invite",

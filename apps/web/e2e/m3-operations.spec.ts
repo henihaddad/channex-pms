@@ -43,7 +43,8 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.goto("/operations/crews");
   await page.getByLabel("Checklist name").fill("Standard changeover");
   await page.getByRole("button", { name: "Add checklist" }).click();
-  await expect(page.getByText("Standard changeover · changeover")).toBeVisible();
+  // a single PGlite connection serialises the suite: the portfolio spec's provisioning can hold it for a while
+  await expect(page.getByText("Standard changeover · changeover")).toBeVisible({ timeout: 90_000 });
 
   // staff booking arriving today, departing tomorrow; a second one arriving tomorrow makes a same-day changeover
   const today = new Date();

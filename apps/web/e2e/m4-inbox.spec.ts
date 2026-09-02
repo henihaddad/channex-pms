@@ -154,6 +154,8 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await expect(page.getByTestId("rating")).toHaveText("9/10");
   await page.locator('input[name="body"]').fill("Thank you, Ana!");
   await page.getByTestId("respond-review").click();
+  // the response is queued by a server action; drain only once it is on the page, or the drain races it
+  await expect(page.getByTestId("review-response")).toContainText("(queued)");
   await request.post("/api/v1/test/drain", { data: { orgId } });
   await page.reload();
   await expect(page.getByTestId("review-response")).toContainText("(sent)");

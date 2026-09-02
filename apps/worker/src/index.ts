@@ -1,6 +1,6 @@
 import { Worker, type Job } from "bullmq";
 import type { DomainEvent } from "@pms/core";
-import { rawRows, sql } from "@pms/db";
+import { rawRows, sql, withoutTenant } from "@pms/db";
 import { consoleMailer, QUEUES } from "@pms/runtime";
 import { MemoryCircuitBreaker, TokenBucket } from "@pms/sync";
 import { buildContainer } from "./container.js";
@@ -19,10 +19,15 @@ import {
 import { reconcileProperty } from "./processors/reconcile.js";
 import { processWebhook } from "./processors/webhook-ingest.js";
 import { selectProvider } from "./provider.js";
-import { FakeLockProvider, FakePayoutProvider } from "@pms/core";
-import { StripeConnectPayoutProvider, stripeTransport } from "@pms/connectivity";
+import { FakeLockProvider, FakePaymentProvider, FakePayoutProvider } from "@pms/core";
+import {
+  StripeConnectPayoutProvider,
+  StripePaymentProvider,
+  stripeTransport,
+} from "@pms/connectivity";
 import {
   escalateTurnovers,
+  expireHolds,
   extendHorizons,
   purgeCardMetadata,
   replanOperations,
@@ -43,6 +48,7 @@ import {
   computeAlertsForAll,
   nightlyRollups,
   reconcileStatements,
+  sendAbandonmentMails,
   sendScheduledReports,
   snapshotSource,
   propertiesToProvision,
@@ -114,6 +120,19 @@ const analyticsDeps = {
   crypto: c.crypto,
   log,
   mailer: consoleMailer(log),
+};
+// spec 10: holds expire every minute; abandonment mails (consent, opt-in) hourly. Stripe when configured.
+const engineDeps = {
+  db: c.db.db,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  mailer: consoleMailer(log),
+  payments: process.env.STRIPE_SECRET_KEY
+    ? new StripePaymentProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+    : new FakePaymentProvider(),
+  lock: opsDeps.lock,
+  appUrl: c.config.NEXT_PUBLIC_APP_URL,
 };
 const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
@@ -381,6 +400,23 @@ const workers: Worker[] = [
           if (n > 0) log.info({ sent: n }, "reports.scheduled.run");
           return;
         }
+        case "holds.expire": {
+          const n = await expireHolds(engineDeps);
+          if (n > 0) log.info({ released: n }, "holds.expire.run");
+          return;
+        }
+        case "holds.abandoned": {
+          let sent = 0;
+          for (const o of await withoutTenant(c.db.db, (tx) =>
+            rawRows<{ org_id: string }>(
+              tx,
+              sql`select distinct org_id from booking_engine_settings where abandonment_emails`,
+            ),
+          ))
+            sent += await sendAbandonmentMails(engineDeps, o.org_id);
+          if (sent > 0) log.info({ sent }, "holds.abandoned.run");
+          return;
+        }
         case "retention.purge": {
           const r = await purgeCardMetadata({ db: c.db.db, clock: c.clock, log });
           log.info(r, "retention.purge.run");
@@ -472,6 +508,12 @@ async function main(): Promise<void> {
     "retention.purge",
     { pattern: "40 4 * * *" },
     { name: "retention.purge" },
+  );
+  await system.upsertJobScheduler("holds.expire", { every: 60_000 }, { name: "holds.expire" });
+  await system.upsertJobScheduler(
+    "holds.abandoned",
+    { pattern: "25 * * * *" },
+    { name: "holds.abandoned" },
   );
   await system.upsertJobScheduler(
     "booking.ack_sweep",

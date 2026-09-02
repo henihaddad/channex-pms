@@ -49,6 +49,20 @@
     "publicReason": "auth"
   },
   {
+    "file": "src/app/(book)/book/book.actions.ts",
+    "export": "confirmAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "booking_engine"
+  },
+  {
+    "file": "src/app/(book)/book/book.actions.ts",
+    "export": "holdAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "booking_engine"
+  },
+  {
     "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "acknowledgeEventAction",
     "kind": "action",
@@ -612,6 +626,41 @@
     "permission": "owner:update"
   },
   {
+    "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
+    "export": "saveEngineSettingsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:update_settings"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
+    "export": "saveExtraAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "rate_plan:update"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
+    "export": "savePromoAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "rate_plan:update"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
+    "export": "setDirectOnlyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "rate_plan:update"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
+    "export": "toggleEngineAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:activate"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "addDerivedPlanAction",
     "kind": "action",
@@ -1026,6 +1075,30 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(guest)/guest/guest.actions.ts",
+    "export": "addExtraAction",
+    "kind": "action",
+    "wrapper": "withGuestSession"
+  },
+  {
+    "file": "src/app/(guest)/guest/guest.actions.ts",
+    "export": "cancelBookingAction",
+    "kind": "action",
+    "wrapper": "withGuestSession"
+  },
+  {
+    "file": "src/app/(guest)/guest/guest.actions.ts",
+    "export": "savePreCheckinAction",
+    "kind": "action",
+    "wrapper": "withGuestSession"
+  },
+  {
+    "file": "src/app/(guest)/guest/guest.actions.ts",
+    "export": "sendGuestMessageAction",
+    "kind": "action",
+    "wrapper": "withGuestSession"
+  },
+  {
     "file": "src/app/(owner)/owner/portal.actions.ts",
     "export": "disputeStatementAction",
     "kind": "action",
@@ -1247,6 +1320,13 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/guest/enter/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "guest_portal"
+  },
+  {
     "file": "src/app/api/v1/openapi.json/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1361,5 +1441,12 @@
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "webhook"
+  },
+  {
+    "file": "src/app/widget.js/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "booking_engine"
   }
 ]

@@ -9,3 +9,4 @@ export * from "./operations.js";
 export * from "./messaging.js";
 export * from "./owners.js";
 export * from "./analytics.js";
+export * from "./booking-engine.js";

@@ -133,7 +133,7 @@ finance reports. `v0.5`.
 
 ---
 
-## M7 — Direct booking engine *(~4 weeks)*
+## M7 — Direct booking engine *(~4 weeks)* ✅ shipped 2026-09-02 as v0.6
 
 - Direct channel as a `ChannelConnection`; local availability search honouring all
   restrictions; **multi-property search with map** (portfolio-first).
