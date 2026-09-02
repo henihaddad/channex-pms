@@ -1,0 +1,157 @@
+[
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
+    "export": "acceptInviteAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
+    "export": "loginAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
+    "export": "logoutAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
+    "export": "signUpAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
+    "export": "totpAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(console)/settings/audit/audit.actions.ts",
+    "export": "listAudit",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "audit:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/audit/audit.actions.ts",
+    "export": "verifyAudit",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "audit:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/members/members.actions.ts",
+    "export": "inviteMember",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "member:invite",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/members/members.actions.ts",
+    "export": "listMembers",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "member:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/members/members.actions.ts",
+    "export": "listPendingInvitations",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "member:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/members/members.actions.ts",
+    "export": "revokeMember",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "member:remove",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/organization/organization.actions.ts",
+    "export": "loadOrganization",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/organization/organization.actions.ts",
+    "export": "updateOrganization",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "org:update",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/health/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "health"
+  },
+  {
+    "file": "src/app/api/v1/auth/login/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/auth/logout/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/auth/refresh/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/auth/signup/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/auth/totp/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/authz/permissions/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "catalogue"
+  },
+  {
+    "file": "src/app/api/v1/test/last-invitation/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  }
+]

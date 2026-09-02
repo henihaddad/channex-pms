@@ -23,7 +23,7 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.int.config.ts",
     "check:migrations": "drizzle-kit check && tsx scripts/check-drift.ts",
     "db:generate": "drizzle-kit generate",

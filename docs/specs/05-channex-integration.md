@@ -1,6 +1,6 @@
 # 05 — Channex Integration & Sync Engine
 
-**Status:** `review`
+**Status:** `review` — requirement IDs in §5.8 renamed `CXMSG-n` on 2026-09-02 to avoid colliding with spec 09 (ADR-0002 batch)
 
 This is the spec that decides whether the platform is trustworthy. Everything
 here exists to satisfy two promises from [01](./01-vision-and-scope.md): *never
@@ -335,22 +335,22 @@ exception that Expedia EPS/EAN bookings have no Messages API support). The
 **Messages application must be installed on the property** in Channex before any
 of it works.
 
-- **MSG-1** The onboarding wizard checks for the Messages app and, if missing,
+- **CXMSG-1** The onboarding wizard checks for the Messages app and, if missing,
   tells the user exactly what to enable — a silent empty inbox is a support ticket.
-- **MSG-2** Threads and messages are mirrored locally so the inbox is fast,
+- **CXMSG-2** Threads and messages are mirrored locally so the inbox is fast,
   searchable, and readable during a provider outage.
-- **MSG-3** Inbound: `message` webhook triggers a thread pull; a 2-minute poll
+- **CXMSG-3** Inbound: `message` webhook triggers a thread pull; a 2-minute poll
   backstops it. Attachments are fetched and stored in our object store.
-- **MSG-4** Outbound sends are queued with `delivery_state`; failures are retried
+- **CXMSG-4** Outbound sends are queued with `delivery_state`; failures are retried
   and, if terminal, surfaced in-thread as a failed bubble with a retry button. We
   never show a message as delivered when it was not.
-- **MSG-5** Provider capabilities are declared per channel and drive the UI:
+- **CXMSG-5** Provider capabilities are declared per channel and drive the UI:
   attachments, thread closing, and Booking.com's **"no reply needed"** flag (which
   protects the property's response-time score) only appear where supported.
-- **MSG-6** Airbnb **inquiries** are threads without bookings; the parsed system
+- **CXMSG-6** Airbnb **inquiries** are threads without bookings; the parsed system
   message (dates, guests, price) is displayed as a structured card with
   pre-booking quote actions.
-- **MSG-7** Message bodies are guest PII: encrypted at rest, gated by
+- **CXMSG-7** Message bodies are guest PII: encrypted at rest, gated by
   `message:read`, excluded from logs and analytics payloads.
 
 ## 5.9 Reviews

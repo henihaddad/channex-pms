@@ -17,7 +17,7 @@ Estimates are sequencing, not commitments.
 
 ---
 
-## M0 — Foundations *(~3 weeks)*
+## M0 — Foundations *(~3 weeks)* ✅ exit criterion met 2026-09-02
 
 - Monorepo (`web` + `worker` + `packages/*`), CI, Docker Compose, lint/typecheck
   gates, the unwrapped-handler build check.

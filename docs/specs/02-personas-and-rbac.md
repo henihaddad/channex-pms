@@ -1,6 +1,6 @@
 # 02 — Personas & Role-Based Access Control
 
-**Status:** `review` — revised 2026-08-21 for the STR segment (owner, field-staff
+**Status:** `accepted` (2026-09-02) — `packages/authz` is generated from §2.3 and §2.4; the matrix test fails on drift. Sensitive permissions reach a role only through a `!` cell.
 and operations roles added).
 
 Access control is the feature most closed channel managers get wrong: they ship two

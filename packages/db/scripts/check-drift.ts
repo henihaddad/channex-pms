@@ -13,10 +13,13 @@ const committed = join(root, "migrations");
 const tmp = mkdtempSync(join(tmpdir(), "pms-drift-"));
 try {
   cpSync(committed, tmp, { recursive: true });
-  execSync(`pnpm exec drizzle-kit generate --out ${tmp} --name drift_check`, {
-    cwd: root,
-    stdio: "pipe",
-  });
+  execSync(
+    `pnpm exec drizzle-kit generate --dialect postgresql --schema ./src/schema/index.ts --casing snake_case --out ${tmp} --name drift_check`,
+    {
+      cwd: root,
+      stdio: "pipe",
+    },
+  );
   const before = readdirSync(committed).filter((f) => f.endsWith(".sql")).length;
   const after = readdirSync(tmp).filter((f) => f.endsWith(".sql")).length;
   if (after > before) {

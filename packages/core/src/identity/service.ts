@@ -308,7 +308,7 @@ export class IdentityService {
       to: invitation.email,
       template: "invitation",
       locale: input.locale,
-      params: { org: input.orgName, token },
+      params: { org: input.orgName, token, orgId: input.orgId },
     });
     return ok({ invitation, token });
   }

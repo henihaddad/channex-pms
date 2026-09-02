@@ -258,8 +258,8 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
 
 | Target | Contents |
 |---|---|
-| **Docker Compose** (default, self-host) | `web`, `api`, `worker`, `postgres`, `redis`, `minio`, `caddy`. One `.env`, one command, seedable demo data. |
-| **Helm chart** (portfolio / SaaS) | Separately scaled `api` and `worker` deployments, HPA, managed Postgres/Redis/S3, external secrets. |
+| **Docker Compose** (default, self-host) | `web`, `worker`, `migrate`, `postgres`, `redis`, `minio`, `caddy` (ADR-0002: no separate `api` app). One `.env`, one command, seedable demo data. |
+| **Helm chart** (portfolio / SaaS) | Separately scaled `web` and `worker` deployments, HPA, managed Postgres/Redis/S3, external secrets. |
 | **Single-container demo** | For evaluation only; SQLite is explicitly *not* supported — the ARI model needs Postgres. |
 
 Configuration is environment variables only (12-factor), validated at boot with a

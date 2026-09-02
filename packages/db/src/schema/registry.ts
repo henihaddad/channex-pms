@@ -27,6 +27,7 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   user: "global",
   session: "global",
   magic_link: "global",
+  org_membership: "global",
 };
 
 export const ORG_TABLES = Object.entries(TENANCY)

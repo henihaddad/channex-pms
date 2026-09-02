@@ -13,8 +13,11 @@ export {
   withTenant,
   asSystem,
   withoutTenant,
+  rowsOf,
+  rawRows,
   type Actor,
   type TenantContext,
   type Tx,
 } from "./tenant.js";
 export * from "./repositories/index.js";
+export { sql, eq, and, isNull, desc, asc } from "drizzle-orm";

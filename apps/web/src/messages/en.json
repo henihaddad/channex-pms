@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "Channex PMS",
+    "tagline": "Property management for people who manage properties for other people."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "members": "Members",
+    "organization": "Organization",
+    "audit": "Audit log",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Create your organization",
+    "email": "Email",
+    "password": "Password",
+    "name": "Your name",
+    "organizationName": "Organization name",
+    "slug": "URL slug",
+    "country": "Country (ISO code)",
+    "currency": "Currency (ISO code)",
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?",
+    "totpTitle": "Two-factor code",
+    "totpHint": "Enter the 6-digit code from your authenticator app.",
+    "code": "Code",
+    "continue": "Continue",
+    "acceptInvite": "Accept invitation",
+    "setPassword": "Choose a password (new accounts only)"
+  },
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "milestone": "Milestone M0: identity, roles and audit are live. Inventory and channels arrive with M2.",
+    "organizations": "Your organizations"
+  },
+  "members": {
+    "title": "Members",
+    "invite": "Invite a colleague",
+    "role": "Role",
+    "pending": "Pending invitations",
+    "revoke": "Revoke",
+    "sent": "Invitation sent to {email}",
+    "empty": "No members yet."
+  },
+  "org": {
+    "title": "Organization",
+    "name": "Name",
+    "locale": "Default locale",
+    "save": "Save",
+    "saved": "Saved."
+  },
+  "audit": {
+    "title": "Audit log",
+    "verify": "Chain verification",
+    "ok": "{checked} entries, chain intact",
+    "broken": "Chain broken at entry {seq}",
+    "seq": "#",
+    "action": "Action",
+    "actor": "Actor",
+    "subject": "Subject",
+    "when": "When"
+  }
+}

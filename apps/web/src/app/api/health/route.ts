@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { publicRoute } from "@/server/public";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
-  return NextResponse.json({ status: "ok", service: "web", time: new Date().toISOString() });
-}
+export const GET = publicRoute("health", async () =>
+  Response.json({ status: "ok", service: "web", time: new Date().toISOString() }),
+);

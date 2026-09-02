@@ -15,6 +15,13 @@
       "when": 1788325697111,
       "tag": "0001_rls_roles_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788326577174,
+      "tag": "0002_org_membership",
+      "breakpoints": true
     }
   ]
 }

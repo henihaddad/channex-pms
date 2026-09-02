@@ -226,3 +226,22 @@ export const apiKey = pgTable("api_key", {
   revokedAt: ts("revoked_at"),
   createdAt: ts("created_at").notNull().default(now()),
 });
+
+/**
+ * Global membership index: which organizations a user belongs to. Grants live
+ * under RLS, so the org switcher and login need a cross-tenant lookup that does
+ * not leak anything beyond "user X is a member of org Y".
+ */
+export const orgMembership = pgTable(
+  "org_membership",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organization.id),
+    createdAt: ts("created_at").notNull().default(now()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.orgId] })],
+);

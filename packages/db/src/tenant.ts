@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { Db, Schema } from "./client.js";
@@ -59,4 +59,19 @@ export function asSystem<T>(
  */
 export function withoutTenant<T>(db: Db, fn: (tx: Tx) => Promise<T>): Promise<T> {
   return db.transaction(async (tx) => fn(tx as unknown as Tx));
+}
+
+/** Rows of a raw `execute` result, whichever driver produced it. */
+export function rowsOf<T = Record<string, unknown>>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  const r = result as { rows?: T[] };
+  return r.rows ?? [];
+}
+
+/** Raw query returning typed rows. Use inside withTenant/asSystem for tenant tables. */
+export async function rawRows<T = Record<string, unknown>>(
+  executor: { execute(q: SQL): Promise<unknown> },
+  query: SQL,
+): Promise<T[]> {
+  return rowsOf<T>(await executor.execute(query));
 }

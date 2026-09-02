@@ -101,6 +101,12 @@ export class DrizzleIdentityRepository implements IdentityRepository {
       expiresAt: g.expiresAt,
       createdBy: g.createdBy,
     });
+    if (g.subjectType === "user") {
+      await this.tx
+        .insert(s.orgMembership)
+        .values({ userId: g.subjectId, orgId: g.orgId })
+        .onConflictDoNothing();
+    }
   }
 
   async listGrantsForSubject(
@@ -243,6 +249,20 @@ export class DrizzleIdentityRepository implements IdentityRepository {
       expiresAt: row.expiresAt,
       usedAt: row.usedAt,
     };
+  }
+
+  /** Organizations a user belongs to (global index, no tenant context needed). */
+  async listMemberships(userId: Id): Promise<Array<{ orgId: Id; name: string; slug: string }>> {
+    const rows = await this.tx
+      .select({
+        orgId: s.orgMembership.orgId,
+        name: s.organization.name,
+        slug: s.organization.slug,
+      })
+      .from(s.orgMembership)
+      .leftJoin(s.organization, eq(s.organization.id, s.orgMembership.orgId))
+      .where(eq(s.orgMembership.userId, userId));
+    return rows.map((r) => ({ orgId: r.orgId as Id, name: r.name ?? "", slug: r.slug ?? "" }));
   }
 }
 

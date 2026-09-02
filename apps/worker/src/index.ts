@@ -1,51 +1,77 @@
-import { Queue, Worker } from "bullmq";
-import { Redis } from "ioredis";
-import { LocalDate } from "@pms/core";
-import { loadConfig } from "./config.js";
-import { QUEUES, type SystemJob } from "./queues.js";
+import { Worker, type Job } from "bullmq";
+import { QUEUES } from "@pms/runtime";
+import { buildContainer } from "./container.js";
+import { verifyAllAuditChains } from "./jobs/audit-verify.js";
+import { emptySnapshotSource, runOtbSnapshots } from "./jobs/otb-snapshot.js";
+import { bullPublisher, startOutboxPublisher } from "./jobs/outbox-publisher.js";
 
-const config = loadConfig();
-const connection = new Redis(config.REDIS_URL, { maxRetriesPerRequest: null });
+const c = await buildContainer();
+const log = c.log;
 
-const log = (level: string, msg: string, extra: Record<string, unknown> = {}) => {
-  console.log(JSON.stringify({ level, msg, ts: new Date().toISOString(), ...extra }));
-};
-
-const systemQueue = new Queue<SystemJob["data"], void, SystemJob["name"]>(QUEUES.system, {
-  connection,
-});
-
-const worker = new Worker<SystemJob["data"], void, SystemJob["name"]>(
+/** System queue: schedulers and housekeeping. Per-domain queues get their processors in M1+. */
+const systemWorker = new Worker(
   QUEUES.system,
-  (job) => {
+  async (job: Job) => {
     switch (job.name) {
       case "heartbeat":
-        log("info", "heartbeat", { at: job.data.at, today: LocalDate.today("UTC").toString() });
-        return Promise.resolve();
+        log.debug({ at: new Date().toISOString() }, "heartbeat");
+        return;
+      case "otb.snapshot": {
+        const n = await runOtbSnapshots(c.db.db, c.clock, emptySnapshotSource, log);
+        log.info({ rows: n }, "otb.snapshot.run");
+        return;
+      }
+      case "audit.verify": {
+        const results = await verifyAllAuditChains(c.db.db, c.sha256Hex);
+        for (const r of results)
+          if (!r.ok)
+            log.error({ orgId: r.orgId, brokenAtSeq: r.brokenAtSeq }, "audit.chain.broken");
+        return;
+      }
+      default:
+        log.warn({ name: job.name }, "unrouted system job");
     }
   },
-  { connection, concurrency: config.WORKER_CONCURRENCY },
+  { connection: c.redis, concurrency: 2 },
+);
+systemWorker.on("failed", (job, err) =>
+  log.error({ job: job?.name, err: err.message }, "job.failed"),
 );
 
-worker.on("failed", (job, err) => log("error", "job failed", { job: job?.name, err: err.message }));
+const stopOutbox = startOutboxPublisher(c.db.db, bullPublisher(c.queues), {
+  intervalMs: 1000,
+  onError: (e) =>
+    log.error({ err: e instanceof Error ? e.message : String(e) }, "outbox.publish.failed"),
+});
 
 async function main(): Promise<void> {
-  await systemQueue.upsertJobScheduler(
-    "heartbeat",
-    { every: 60_000 },
-    { name: "heartbeat", data: { at: new Date().toISOString() } },
+  const system = c.queues[QUEUES.system];
+  await system.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
+  await system.upsertJobScheduler(
+    "otb.snapshot",
+    { pattern: "5 * * * *" },
+    { name: "otb.snapshot" },
   );
-  log("info", "worker started", {
-    queues: Object.values(QUEUES),
-    concurrency: config.WORKER_CONCURRENCY,
-  });
+  await system.upsertJobScheduler(
+    "audit.verify",
+    { pattern: "0 3 * * 0" },
+    { name: "audit.verify" },
+  );
+  log.info(
+    {
+      queues: Object.values(QUEUES),
+      driver: c.db.driver,
+      concurrency: c.config.WORKER_CONCURRENCY,
+    },
+    "worker.started",
+  );
 }
 
 async function shutdown(signal: string): Promise<void> {
-  log("info", "shutting down", { signal });
-  await worker.close();
-  await systemQueue.close();
-  await connection.quit();
+  log.info({ signal }, "worker.shutdown");
+  await stopOutbox();
+  await systemWorker.close();
+  await c.close();
   process.exit(0);
 }
 
@@ -53,6 +79,6 @@ process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
 
 main().catch((err: unknown) => {
-  log("error", "worker failed to start", { err: err instanceof Error ? err.message : String(err) });
+  log.error({ err: err instanceof Error ? err.message : String(err) }, "worker.start.failed");
   process.exit(1);
 });

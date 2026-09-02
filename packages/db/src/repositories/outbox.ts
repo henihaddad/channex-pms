@@ -2,7 +2,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { Id, type DomainEvent } from "@pms/core";
 import * as s from "../schema/index.js";
 import type { Db } from "../client.js";
-import type { Tx } from "../tenant.js";
+import { rowsOf, type Tx } from "../tenant.js";
 
 /** Write a domain event in the caller's transaction (transactional outbox, spec 03 §3.9). */
 export async function enqueueOutbox(
@@ -43,11 +43,12 @@ export async function drainOutbox(
   batch = 100,
 ): Promise<number> {
   return db.transaction(async (tx) => {
-    const rows = await tx.execute(sql`
+    const list = rowsOf(
+      await tx.execute(sql`
       select id, org_id, type, aggregate, payload, dedupe_key, request_id, occurred_at
       from outbox_event where published_at is null
-      order by occurred_at limit ${batch} for update skip locked`);
-    const list = (Array.isArray(rows) ? rows : rows.rows) as Array<Record<string, unknown>>;
+      order by occurred_at limit ${batch} for update skip locked`),
+    );
     let published = 0;
     for (const r of list) {
       const event: DomainEvent = {

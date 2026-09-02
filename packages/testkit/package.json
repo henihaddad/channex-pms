@@ -1,0 +1,39 @@
+{
+  "name": "@pms/testkit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fixtures, generators, demo seed and (from M1) the chaos scenario runner.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "seed": "tsx src/seed/cli.ts",
+    "test:integration": "vitest run --passWithNoTests --config vitest.int.config.ts"
+  },
+  "dependencies": {
+    "@pms/authz": "workspace:*",
+    "@pms/core": "workspace:*",
+    "@pms/db": "workspace:*",
+    "@pms/runtime": "workspace:*",
+    "fast-check": "^4.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

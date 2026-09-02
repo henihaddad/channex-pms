@@ -1,0 +1,64 @@
+{
+  "app": {
+    "name": "Channex PMS",
+    "tagline": "La gestion locative pour ceux qui gèrent les biens des autres."
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "members": "Membres",
+    "organization": "Organisation",
+    "audit": "Journal d'audit",
+    "signOut": "Se déconnecter"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signUp": "Créer votre organisation",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "name": "Votre nom",
+    "organizationName": "Nom de l'organisation",
+    "slug": "Identifiant d'URL",
+    "country": "Pays (code ISO)",
+    "currency": "Devise (code ISO)",
+    "noAccount": "Pas encore de compte ?",
+    "haveAccount": "Déjà un compte ?",
+    "totpTitle": "Code à deux facteurs",
+    "totpHint": "Saisissez le code à 6 chiffres de votre application d'authentification.",
+    "code": "Code",
+    "continue": "Continuer",
+    "acceptInvite": "Accepter l'invitation",
+    "setPassword": "Choisissez un mot de passe (nouveaux comptes)"
+  },
+  "dashboard": {
+    "welcome": "Bienvenue, {name}",
+    "milestone": "Jalon M0 : identité, rôles et audit sont en place. L'inventaire et les canaux arrivent avec M2.",
+    "organizations": "Vos organisations"
+  },
+  "members": {
+    "title": "Membres",
+    "invite": "Inviter un collègue",
+    "role": "Rôle",
+    "pending": "Invitations en attente",
+    "revoke": "Révoquer",
+    "sent": "Invitation envoyée à {email}",
+    "empty": "Aucun membre."
+  },
+  "org": {
+    "title": "Organisation",
+    "name": "Nom",
+    "locale": "Langue par défaut",
+    "save": "Enregistrer",
+    "saved": "Enregistré."
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "verify": "Vérification de la chaîne",
+    "ok": "{checked} entrées, chaîne intacte",
+    "broken": "Chaîne rompue à l'entrée {seq}",
+    "seq": "N°",
+    "action": "Action",
+    "actor": "Acteur",
+    "subject": "Objet",
+    "when": "Quand"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@pms/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Infrastructure adapters shared by apps/web and apps/worker: config, logging, crypto, TOTP, mail, queue names, DI container.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.0",
+    "@pms/authz": "workspace:*",
+    "@pms/core": "workspace:*",
+    "@pms/db": "workspace:*",
+    "jose": "^6.2.10",
+    "otpauth": "^9.5.1",
+    "pino": "^10.3.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

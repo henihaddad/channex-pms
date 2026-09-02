@@ -28,7 +28,7 @@ audited into both the operator log and the affected tenant's log.
 | **Impersonation** | Request, approval state, active sessions, full transcript ([02 §2.7](./02-personas-and-rbac.md#27-impersonation-and-break-glass)). |
 | **Jobs** | Manually trigger reconciliation, rollups, night audit, retention purges. |
 
-**OPS-1** No operator screen may display guest PII or message bodies by default.
+**OPCON-1** No operator screen may display guest PII or message bodies by default.
 Reaching that data requires an approved impersonation session, and the screens are
 designed so support can diagnose without it — errors, states and IDs, not names.
 
