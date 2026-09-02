@@ -105,8 +105,9 @@ export const ROWS: Readonly<Record<string, RowDef>> = {
   },
   "Unmapped booking queue": { read: [], full: ["booking:resolve_unmapped"] },
   "Turnover board": {
-    read: ["turnover:read"],
-    full: ["turnover:read", "turnover:update", "turnover:complete"],
+    // a full grant is a superset of the own grant: a coordinator can open the cleaner app for their own tasks
+    read: ["turnover:read", "turnover:read_own"],
+    full: ["turnover:read", "turnover:read_own", "turnover:update", "turnover:complete"],
     own: ["turnover:read_own", "turnover:update", "turnover:complete"],
   },
   "Assign crews / tasks": { read: [], full: ["turnover:assign", "checklist:manage"] },

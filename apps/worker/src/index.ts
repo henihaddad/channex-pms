@@ -19,8 +19,13 @@ import {
 import { reconcileProperty } from "./processors/reconcile.js";
 import { processWebhook } from "./processors/webhook-ingest.js";
 import { selectProvider } from "./provider.js";
+import { FakeLockProvider } from "@pms/core";
 import {
+  escalateTurnovers,
   extendHorizons,
+  purgeCardMetadata,
+  replanOperations,
+  runDailyCloses,
   markLiveIfSynced,
   pollChannelHealth,
   propertiesToProvision,
@@ -56,6 +61,14 @@ const provisioningDeps = {
   callbackBase: c.config.NEXT_PUBLIC_APP_URL,
 };
 const channelDeps = { db: c.db.db, provider, clock: c.clock, log };
+// Lock providers (spec 08 §8.4): manual door codes and the fake smart lock until a vendor adapter lands.
+const opsDeps = {
+  db: c.db.db,
+  clock: c.clock,
+  crypto: c.crypto,
+  lock: new FakeLockProvider(),
+  log,
+};
 const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
 
@@ -90,6 +103,8 @@ const workers: Worker[] = [
         if (data.type === "booking.revision_applied") {
           const r = await deriveAvailability(c.db.db, data, log, Date.now());
           log.debug({ ...r, dedupeKey: data.dedupeKey }, "availability.derived");
+          // RES-4, OPS-1, OPS-3, INV-14: turnover tasks and access credentials follow the revision
+          await replanOperations(opsDeps, data);
         } else if (data.type === "booking.pull") {
           await processBookings(
             bookingDeps,
@@ -202,6 +217,19 @@ const workers: Worker[] = [
           await pollChannelHealth(channelDeps);
           return;
         }
+        case "ops.escalate": {
+          await escalateTurnovers(opsDeps);
+          return;
+        }
+        case "daily_close": {
+          await runDailyCloses({ db: c.db.db, clock: c.clock, log });
+          return;
+        }
+        case "retention.purge": {
+          const r = await purgeCardMetadata({ db: c.db.db, clock: c.clock, log });
+          log.info(r, "retention.purge.run");
+          return;
+        }
         case "audit.verify": {
           for (const r of await verifyAllAuditChains(c.db.db, c.sha256Hex))
             if (!r.ok)
@@ -242,6 +270,17 @@ async function main(): Promise<void> {
     "channel.health_poll",
     { every: 300_000 },
     { name: "channel.health_poll" },
+  );
+  await system.upsertJobScheduler("ops.escalate", { every: 60_000 }, { name: "ops.escalate" });
+  await system.upsertJobScheduler(
+    "daily_close",
+    { pattern: "20 * * * *" },
+    { name: "daily_close" },
+  );
+  await system.upsertJobScheduler(
+    "retention.purge",
+    { pattern: "40 4 * * *" },
+    { name: "retention.purge" },
   );
   await system.upsertJobScheduler(
     "booking.ack_sweep",

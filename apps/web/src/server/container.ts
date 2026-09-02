@@ -15,7 +15,15 @@ import {
   type Logger,
   type TokenService,
 } from "@pms/runtime";
-import type { ConnectivityProvider, Crypto, Mailer, PasswordHasher, TotpVerifier } from "@pms/core";
+import {
+  FakeLockProvider,
+  type ConnectivityProvider,
+  type Crypto,
+  type LockProvider,
+  type Mailer,
+  type PasswordHasher,
+  type TotpVerifier,
+} from "@pms/core";
 import type { FakeProvider } from "@pms/connectivity";
 import { selectProvider } from "@pms/jobs";
 import { Redis } from "ioredis";
@@ -37,6 +45,8 @@ export interface WebContainer {
   fake?: FakeProvider;
   /** Realtime fan-in from the worker; null without REDIS_URL (the SSE endpoint then polls only). */
   redis: Redis | null;
+  /** Smart-lock port (spec 08 §8.4); the fake issues manual door codes until a vendor adapter lands. */
+  lock: LockProvider;
 }
 
 declare global {
@@ -65,6 +75,7 @@ async function build(): Promise<WebContainer> {
     provider: selected.provider,
     ...(selected.fake ? { fake: selected.fake } : {}),
     redis,
+    lock: new FakeLockProvider(),
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,

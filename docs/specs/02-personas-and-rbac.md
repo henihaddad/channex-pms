@@ -136,7 +136,7 @@ and `owner` roles safe.
 ## 2.4 Role → permission matrix
 
 `✓` full · `R` read only · `·` none · `!` granted but requires step-up auth ·
-`○` off by default, grantable via override · `⊙` own rows only
+`○` off by default, grantable via override · `⊙` own rows only · a `✓` cell is a superset of the row's `⊙` permissions (a coordinator can open the cleaner app for their own tasks)
 
 | Domain | `org_owner` | `org_admin` | `portfolio_manager` | `property_manager` | `revenue_manager` | `reservations_agent` | `ops_coordinator` | `cleaner` | `maintenance_tech` | `guest_relations` | `finance` | `owner` | `viewer` |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|

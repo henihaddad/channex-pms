@@ -151,6 +151,158 @@
     "permission": "channel:create"
   },
   {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "addCrewMemberAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:assign",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "assignTaskAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:assign",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "cancelBlockAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "block:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "completeTaskAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:complete",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "createBlockAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "block:manage",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "createChecklistAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "checklist:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "createCrewAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:assign",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "createIssueAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:create",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadBlocks",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "block:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadCrewsAndChecklists",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadFrontDesk",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadIssues",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadMyDay",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:read_own",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "reportIssueFromTaskAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "setUnitStatusAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "unit:update_status",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "suggestRouteAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:assign",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "taskStateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:update",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "updateIssueAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:update",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "addDerivedPlanAction",
     "kind": "action",
@@ -252,6 +404,170 @@
     "wrapper": "withPermission",
     "permission": "template:manage",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "acknowledgeAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "addChargeAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "charge:create"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "addNoteAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "note:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "addPaymentAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payment:capture"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "assignUnitAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:assign_unit"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "autoAssignAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:assign_unit"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "cancelDirectBookingAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:cancel"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "createStaffBookingAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:create",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "issueCredentialAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "access_credential:issue"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "issueInvoiceAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "invoice:issue"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "listReservations",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "loadReservation",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "loadUnmappedQueue",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "resolveUnmappedAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:resolve_unmapped"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "revealCredential",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "access_credential:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "revealGuestPii",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_pii",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "revealInstrument",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_payment_instrument",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "revokeCredentialAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "access_credential:revoke"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "saveViewAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "settlePaymentAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payment:refund"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "splitFolioAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "folio:update"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "stayStateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:check_in_out"
   },
   {
     "file": "src/app/(console)/settings/audit/audit.actions.ts",
@@ -447,6 +763,22 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/cleaner/day/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "turnover:read_own",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/cleaner/tasks/[id]/route.ts",
+    "export": "PATCH",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "turnover:complete",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/v1/openapi.json/route.ts",
     "export": "GET",
     "kind": "route",
@@ -467,6 +799,14 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "property:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/reservations/export/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "export:execute",
     "scope": "organization"
   },
   {

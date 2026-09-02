@@ -24,6 +24,22 @@ All notable changes to this project are documented here. The format follows
   endpoints with an OpenAPI 3.1 document and the Apache-2.0 `@channex-pms/sdk`; `packages/jobs`
   shared by the worker and the test hooks; `compose.selfhost.yml` with a multi-target Dockerfile.
 
+## [0.2.0] — 2026-09-02
+
+### Added
+
+- M3 reservations and operations: reservation list with shipped and saved views, filters and CSV
+  export; detail with human-readable revision timeline, acknowledgement badge, unit assignment and
+  auto-assign, check-in/out and no-show, access credentials through the `LockProvider` port (sealed,
+  masked, revoked and reissued within the revision's job, INV-14), audited guest PII and step-up
+  gated payment instrument reveals; mapping resolution queue; turnover tasks generated and re-planned
+  from booking diffs with same-day changeover windows, greedy routing, escalation, crews and
+  checklists; the cleaner PWA with an offline queue, photo-required checklists and issue reporting;
+  maintenance issues with availability blocks; unit blocks incl. owner stays; folios, charges,
+  tourist tax, deposit holds, gapless invoices and credit-note-only corrections, idempotent daily
+  close; front desk today board and room rack for hotel-kind properties; staff bookings and direct
+  cancellations on the one booking-creation path; card-metadata retention purge (PCI-4).
+
 ## [Unreleased]
 
 ### Added

@@ -1,7 +1,6 @@
 # 08 — Reservations, Turnover & Field Operations
 
-**Status:** `review` — revised 2026-08-21: turnover operations are the primary
-surface; the front desk remains for `hotel`-kind properties.
+**Status:** `accepted` (2026-09-02) — implemented in M3: reservation list with the shipped views, saved views and CSV export (RES-1..3); detail with revision timeline, acknowledgement, masked access credentials, audited PII and payment-instrument reveals; mapping resolution queue; turnover tasks generated and re-planned from revisions (OPS-1, OPS-3) with same-day windows, greedy routing (OPS-2), escalation (OPS-4), crews (OPS-5); the cleaner PWA with offline queue, photo-required checklists and issue reporting (OPS-6..8); maintenance with availability blocks and the rebill flag for M5; folios, charges, tourist tax, deposits, gapless invoices, daily close; front desk today board and room rack for hotel kinds; staff bookings and direct cancellations on the single booking path; blocks incl. owner stays; INV-14 within the revision's own job. Not yet built: map view, bulk actions on the list, registration cards and shift handover, recurring preventive maintenance (v1.1), automated code delivery (M4 automation).
 
 **Primary personas:** `ops_coordinator`, `cleaner`, `maintenance_tech`,
 `reservations_agent`, `property_manager`.

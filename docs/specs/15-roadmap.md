@@ -70,7 +70,7 @@ rates, sees them live. Tag `v0.1`; first design partner on it.
 
 ---
 
-## M3 — Reservations & operations *(~5 weeks)*
+## M3 — Reservations & operations *(~5 weeks)* ✅ exit met 2026-09-02 (simulated week on FakeClock; cleaner offline e2e)
 
 - Reservation list + saved views; detail with revision timeline and diffs.
 - Mapping resolution queue.

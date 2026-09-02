@@ -1,3 +1,4 @@
+import type { DomainEvent } from "@pms/core";
 import {
   AriStorePerCall,
   asSystem,
@@ -9,9 +10,12 @@ import {
 } from "@pms/db";
 import { withIdMap } from "@pms/connectivity";
 import {
+  escalateTurnovers,
   markLiveIfSynced,
   pollChannelHealth,
   propertiesToProvision,
+  replanOperations,
+  runDailyCloses,
   runProvisioning,
 } from "@pms/jobs";
 import { MemoryCircuitBreaker, pushProperty, TokenBucket } from "@pms/sync";
@@ -28,7 +32,7 @@ import { testHooksEnabled } from "@/server/test-hooks";
 export const POST = publicRoute("test_hook", async (req) => {
   if (!testHooksEnabled()) throw notFound();
   const c = await container();
-  const body = (await req.json().catch(() => ({}))) as { orgId?: string };
+  const body = (await req.json().catch(() => ({}))) as { orgId?: string; dailyClose?: boolean };
   const log = c.log.child({ hook: "drain" });
   let provisioned = 0;
   for (const p of await propertiesToProvision(c.db.db)) {
@@ -50,9 +54,29 @@ export const POST = publicRoute("test_hook", async (req) => {
       log.warn({ err: e instanceof Error ? e.message : String(e) }, "drain.provisioning.failed");
     }
   }
+  const events: DomainEvent[] = [];
   const published = await withoutTenant(c.db.db, (tx) =>
-    drainOutbox(tx, { publish: async () => {} }, 1000),
+    drainOutbox(
+      tx,
+      {
+        publish: async (e) => {
+          events.push(e);
+        },
+      },
+      1000,
+    ),
   );
+  const opsDeps = { db: c.db.db, clock: c.clock, crypto: c.crypto, lock: c.lock, log };
+  let replanned = 0;
+  for (const e of events)
+    if (e.type === "booking.revision_applied") {
+      await replanOperations(opsDeps, e);
+      replanned++;
+    }
+  const escalations = await escalateTurnovers(opsDeps);
+  const closes = body.dailyClose
+    ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
+    : { closed: 0 };
   const targets = await withoutTenant(c.db.db, (tx) =>
     rawRows<{ org_id: string; id: string }>(
       tx,
@@ -86,5 +110,14 @@ export const POST = publicRoute("test_hook", async (req) => {
     clock: c.clock,
     log,
   });
-  return Response.json({ provisioned, published, pushed, live, health });
+  return Response.json({
+    provisioned,
+    published,
+    pushed,
+    live,
+    health,
+    replanned,
+    escalations,
+    closes,
+  });
 });

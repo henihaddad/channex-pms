@@ -27,3 +27,13 @@ export {
   type RealtimePublisher,
   type AriRealtimeMessage,
 } from "./realtime.js";
+export {
+  replanOperations,
+  issueCredential,
+  escalateTurnovers,
+  runDailyCloses,
+  purgeCardMetadata,
+  PLAN_WINDOW_DAYS,
+  type OpsDeps,
+} from "./operations.js";
+export { recomputeAvailability } from "./availability.js";

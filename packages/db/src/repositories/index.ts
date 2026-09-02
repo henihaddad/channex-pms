@@ -37,3 +37,13 @@ export {
   type CellEdit,
   type CellEditOutcome,
 } from "./calendar.js";
+export { DrizzleOperationsRepository, type TaskRow } from "./operations.js";
+export { DrizzleBillingRepository, type FolioView } from "./billing.js";
+export {
+  DrizzleReservationRepository,
+  SHIPPED_VIEWS,
+  describeDiff,
+  type ReservationFilters,
+  type ReservationRow,
+  type ReservationDetail,
+} from "./reservations.js";

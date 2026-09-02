@@ -193,6 +193,10 @@ export const paymentInstrument = pgTable("payment_instrument", {
   expiry: text("expiry"),
   cardholder: text("cardholder"),
   providerTokenRef: text("provider_token_ref"),
+  /** Virtual card: balance and charge window surfaced with a deadline reminder (spec 08 §8.9). */
+  vccBalanceMinor: bigint("vcc_balance_minor", { mode: "number" }),
+  vccEffectiveFrom: ts("vcc_effective_from"),
+  vccEffectiveTo: ts("vcc_effective_to"),
   createdAt: ts("created_at").notNull().default(now()),
   purgeAfter: ts("purge_after"),
 });

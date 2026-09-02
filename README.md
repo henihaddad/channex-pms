@@ -30,12 +30,12 @@
 
 ---
 
-> **Status: v0.1 (milestone M2) shipped; M3 in progress.** The [specification](./docs/specs/) (17 documents,
+> **Status: v0.2 (milestone M3) shipped; M4 in progress.** The [specification](./docs/specs/) (17 documents,
 > decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with
 > row-level security, permission matrix, audit log), M1 (the Channex sync engine, webhook receiver,
 > booking ingestion with the ack loop, drift detection and a 200-scenario chaos suite) and M2
-> (properties, the portfolio calendar, channel connections and mapping) are done. Reservations and
-> operations arrive with M3. Everything so far has been proven against the built-in fake provider;
+> (properties, the portfolio calendar, channel connections and mapping) and M3 (reservations,
+> turnover operations, the cleaner app, folios and invoices) are done. Guest messaging arrives with M4. Everything so far has been proven against the built-in fake provider;
 > a Channex staging key is the next thing this project needs.
 
 ## Why this exists
@@ -118,8 +118,8 @@ paywalled in the self-hosted edition, and the only enterprise-licensed files are
 | M0        | Monorepo, CI, Compose, domain value objects, permission matrix          | done   |
 | M1        | Connectivity core: Channex adapter, ARI engine, fake provider           | done   |
 | M2        | Inventory, portfolio calendar, channel connection. First usable release | v0.1   |
-| M3        | Reservations and turnover operations                                    | next   |
-| M4        | Unified messaging                                                       |        |
+| M3        | Reservations and turnover operations                                    | v0.2   |
+| M4        | Unified messaging                                                       | next   |
 | M5        | Owner management                                                        |        |
 | M6        | Dashboards and reporting                                                |        |
 | M7        | Direct booking engine                                                   |        |
