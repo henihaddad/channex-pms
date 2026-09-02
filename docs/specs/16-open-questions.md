@@ -39,18 +39,21 @@ deliberate idiom break are normative in [14](./14-tech-stack.md).
 
 Billing, quotas, dunning and the operator console are in v1 (M8). The parity
 guarantee holds: the self-hosted build is never crippled, feature flags are never
-paywalls, open-core is rejected. This choice tilts Q5 toward a CLA — see below.
+paywalls, open-core is rejected. This choice is what led to D5 below.
+
+### ✅ D5 — Licence and contributor agreement: **fair-code (Sustainable Use License) + CLA**
+*(was Q5, decided 2026-09-02)*
+
+The n8n model. The platform is licensed under the
+[Sustainable Use License 1.0](../../LICENSE.md); files marked `.ee.` need the
+[Enterprise License](../../LICENSE_EE.md); the SDK, plugin interfaces and booking
+widget stay Apache-2.0. Contributors sign the four-sentence
+[CLA](../../CONTRIBUTOR_LICENSE_AGREEMENT.md) via a bot on their first PR. DCO was
+rejected because D4 makes relicensing rights necessary. Consequence for wording:
+where older text in these specs says "open source", read "source-available,
+fair-code". Rationale in [01 §1.10](./01-vision-and-scope.md#110-licence-and-governance).
 
 ## Open
-
-### Q5 — Contributor licensing: DCO or CLA?
-
-Now sharper because of D4: we *are* running a commercial hosted service on this
-code. A CLA preserves the option to offer commercial licences or relicense; DCO
-maximises contributor trust and minimises friction. Middle path worth considering:
-**DCO + a Contributor Agreement only for maintainers**, or the Fiduciary Licence
-Agreement (FLA) which vests rights in a steward while guaranteeing the code stays
-open. Needs a decision before the first external PR is accepted.
 
 ### Q6 — Commercial relationship with Channex
 

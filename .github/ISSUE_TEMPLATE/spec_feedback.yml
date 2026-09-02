@@ -1,0 +1,34 @@
+name: Specification feedback
+description: Disagree with a design decision, or point out something a real property would do differently.
+title: "[Spec] "
+labels: ["spec"]
+body:
+  - type: input
+    id: section
+    attributes:
+      label: Spec and section
+      description: Which document and section are you responding to?
+      placeholder: "17-owner-management.md §17.4"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong, or missing?
+      description: Quote the sentence if you can, then explain what would happen at a real property.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should it say instead?
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your perspective
+      options:
+        - I operate short-term rentals
+        - I operate a hotel or guesthouse
+        - I build distribution or PMS software
+        - I am a property owner
+        - Other

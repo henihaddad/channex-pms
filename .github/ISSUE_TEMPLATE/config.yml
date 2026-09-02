@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/henihaddad/channex-pms/security/advisories/new
+    about: Please report security issues privately, never in a public issue.
+  - name: Read the specification
+    url: https://github.com/henihaddad/channex-pms/tree/main/docs/specs
+    about: The design source of truth. Most questions are answered there.

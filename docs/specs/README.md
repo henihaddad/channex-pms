@@ -1,6 +1,6 @@
 # Platform Specification
 
-> Working title: **Channex PMS** — an open-source, multi-tenant property
+> Working title: **Channex PMS** — a fair-code, source-available, multi-tenant property
 > management and channel-management platform for short-term rental managers and
 > independent hotels, built on the [Channex.io](https://channex.io) API.
 
@@ -10,7 +10,7 @@ disagree, we fix the spec in the same pull request that fixes the code.
 **Decided 2026-08-21** (see [16](./16-open-questions.md)): vacation-rental /
 STR managers are the primary segment · v1 is the full platform including the
 booking engine · full-stack Next.js + a separate Node worker, no NestJS ·
-open source **and** a hosted SaaS from launch, with a hard parity guarantee.
+fair-code licensing (D5) **and** a hosted SaaS from launch, with a hard parity guarantee.
 
 ## Reading order
 

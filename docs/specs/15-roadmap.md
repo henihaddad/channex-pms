@@ -181,8 +181,8 @@ paying tenants.
 
 ## Suggested first two weeks
 
-1. Settle the two open questions that remain in [16](./16-open-questions.md)
-   (name, DCO vs CLA) — both block the public repo, neither blocks code.
+1. Settle the naming question that remains in [16](./16-open-questions.md)
+   (Q9); licensing is decided (D5). It blocks the public launch, not code.
 2. Scaffold the monorepo: `apps/web`, `apps/worker`, `packages/core`, CI, Compose.
 3. Write `packages/core` value objects — `Money`, `LocalDate`, `DateRange`,
    `Occupancy` — with property-based tests.

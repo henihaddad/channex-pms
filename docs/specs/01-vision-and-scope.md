@@ -149,13 +149,29 @@ Consequence for the roadmap: billing, quotas, dunning and the operator console a
 
 ## 1.10 Licence and governance
 
-**AGPL-3.0** for the server; **Apache-2.0** for the SDK, plugin interfaces and the
-embeddable booking widget.
+**Decided 2026-09-02 (D5).** The project is **fair-code**, on the n8n model, not OSI open source.
 
-AGPL stops a SaaS competitor taking the product closed while leaving every
-self-hoster completely free; permissive licensing on the integration surface avoids
-scaring off plugin authors and PMS vendors who want to interoperate.
+| Component | Licence |
+|---|---|
+| Platform: `apps/web`, `apps/worker`, `packages/core` and all other packages not listed below | [Sustainable Use License 1.0](../../LICENSE.md) |
+| Files with `.ee.` in the name or `.ee` in the directory | [Channex PMS Enterprise License](../../LICENSE_EE.md) |
+| `packages/sdk`, `packages/plugin-api`, `packages/booking-widget` | Apache-2.0 |
 
-Because we run a hosted offering ourselves, contributor licensing needs a decision:
-DCO keeps the barrier low, a CLA preserves relicensing options. See
-[Q5](./16-open-questions.md#q5--contributor-licensing-dco-or-cla).
+The Sustainable Use License lets anyone read, self-host, modify and use the software for their own
+business or personal use, free of charge, and offer consulting around it. It does not let anyone
+host it and charge others for access, or white-label it inside a product they sell; that needs an
+enterprise licence. This protects the hosted service (D4) without an open-core split: the
+self-hosted edition is the full product, and the only enterprise-gated code is explicitly marked
+`.ee.`.
+
+The integration surface stays permissive so plugin authors, PMS vendors and hoteliers embedding the
+booking widget on their own sites carry no restrictions.
+
+Contributors sign the four-sentence [Contributor License Agreement](../../CONTRIBUTOR_LICENSE_AGREEMENT.md)
+on their first pull request, which gives the project the right to relicense contributions. That
+right is what keeps enterprise licensing, and a later move to a more permissive licence, possible.
+
+Superseded: the earlier AGPL-3.0 + Apache-2.0 proposal. Its goal, stopping a SaaS competitor from
+taking the product closed while leaving self-hosters free, is met more directly by the Sustainable
+Use License, and it also lets us keep the term "fair-code" honest rather than calling a
+service-protecting licence "open source".

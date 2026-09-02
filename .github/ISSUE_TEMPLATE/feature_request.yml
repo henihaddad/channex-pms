@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a capability. Every feature must name the persona that wants it.
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: persona
+    attributes:
+      label: Which persona wants this?
+      description: See spec 02 for the role model.
+      options:
+        - Org owner / portfolio manager
+        - Revenue manager
+        - Reservations agent
+        - Operations manager
+        - Cleaner / housekeeping
+        - Maintenance
+        - Property owner (portal)
+        - Guest
+        - Platform operator
+        - Developer / plugin author
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem it solves
+      description: Describe the situation at the property, not the UI you imagine.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: How do people handle this today?

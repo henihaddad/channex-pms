@@ -1,0 +1,10 @@
+export const GITHUB = "https://github.com/henihaddad/channex-pms";
+export const SPEC = `${GITHUB}/tree/main/docs/specs`;
+export const ROADMAP = `${GITHUB}/blob/main/docs/specs/15-roadmap.md`;
+export const OPEN_QUESTIONS = `${GITHUB}/blob/main/docs/specs/16-open-questions.md`;
+export const LICENSE = `${GITHUB}/blob/main/LICENSE.md`;
+export const LICENSE_EE = `${GITHUB}/blob/main/LICENSE_EE.md`;
+export const CONTRIBUTING = `${GITHUB}/blob/main/CONTRIBUTING.md`;
+export const DISCUSSIONS = `${GITHUB}/discussions`;
+export const DESIGN_PARTNER = `${GITHUB}/issues/new?title=Design%20partner%3A%20%3Cyour%20region%3E&labels=design-partner`;
+export const SECURITY = `${GITHUB}/blob/main/SECURITY.md`;
