@@ -1,0 +1,32 @@
+{
+  "name": "@pms/sync",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure ARI algorithms: batch building (RLE, weekday, FIFO overrides), apply oracle, diffing, coalescing. No I/O.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@pms/core": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "fast-check": "^4.9.0",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

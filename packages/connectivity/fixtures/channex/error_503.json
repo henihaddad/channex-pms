@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/adapter",
+    "query": {
+      "code": "BookingCom"
+    }
+  },
+  "response": {
+    "status": 503,
+    "body": {
+      "errors": {
+        "code": "unavailable",
+        "title": "Service Unavailable"
+      }
+    }
+  }
+}

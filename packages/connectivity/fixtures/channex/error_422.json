@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/room_types"
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "errors": {
+        "code": "validation_error",
+        "title": "Validation Error",
+        "details": {
+          "count_of_rooms": ["can't be blank"]
+        }
+      }
+    }
+  }
+}

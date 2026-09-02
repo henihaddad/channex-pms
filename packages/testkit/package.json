@@ -20,14 +20,17 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "seed": "tsx src/seed/cli.ts",
-    "test:integration": "vitest run --passWithNoTests --config vitest.int.config.ts"
+    "test:integration": "vitest run --passWithNoTests --config vitest.int.config.ts",
+    "chaos": "tsx src/chaos/cli.ts"
   },
   "dependencies": {
     "@pms/authz": "workspace:*",
     "@pms/core": "workspace:*",
     "@pms/db": "workspace:*",
     "@pms/runtime": "workspace:*",
-    "fast-check": "^4.9.0"
+    "fast-check": "^4.9.0",
+    "@pms/connectivity": "workspace:*",
+    "@pms/sync": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22",

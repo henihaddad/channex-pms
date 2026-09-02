@@ -92,6 +92,9 @@ export const property = pgTable(
     timezone: text("timezone").notNull(),
     state: text("state").notNull().default("draft"), // draft|syncing|live|suspended|archived
     channexPropertyId: text("channex_property_id"),
+    /** High-entropy path token for the webhook receiver (spec 05 §5.5.1); rotatable. */
+    webhookToken: text("webhook_token").unique(),
+    webhookSecretEnc: text("webhook_secret_enc"),
     address: jsonb("address").notNull().default({}),
     settings: jsonb("settings").notNull().default({}),
     createdAt: ts("created_at").notNull().default(now()),

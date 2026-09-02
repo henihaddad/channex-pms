@@ -99,6 +99,14 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/sync-health/sync-health.actions.ts",
+    "export": "loadSyncHealth",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/health/route.ts",
     "export": "GET",
     "kind": "route",
@@ -153,5 +161,19 @@
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/property/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/webhooks/channex/[token]/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "webhook"
   }
 ]

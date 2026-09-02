@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- M1 connectivity core: `ConnectivityProvider` port with the spec 05 error taxonomy; `ChannexProvider`
+  over fetch/record/replay transports with docs-sourced fixtures and a contract suite; `FakeProvider`
+  with seeded fault injection (429, 5xx, timeouts, partial 422, duplicate/reordered/dropped webhooks,
+  unmapped bookings) and a ledger; ARI batch builder (run-length, weekday, base-plus-override with
+  FIFO-safe merging) proven by property tests; push pipeline with adaptive token bucket, circuit
+  breaker, per-cell versions and sampled read-back; booking ingestion with the ack loop, out-of-order
+  handling and the ack sweep; availability derivation from booking diffs; webhook receiver
+  (token + secret, persist-first, dedupe); nightly reconcile; Sync Health page; worker processors on
+  BullMQ; chaos runner asserting no booking lost and no cell permanently wrong (200/200 seeds).
+
 - M0 foundations: `packages/authz` generated from spec 02 with the matrix and evaluator tests;
   `packages/db` with tenancy schema, forced row-level security on every org table, hash-chained
   append-only audit log, transactional outbox and a PGlite test harness; identity (sign-up, login

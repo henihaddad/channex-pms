@@ -1,6 +1,6 @@
 # 05 — Channex Integration & Sync Engine
 
-**Status:** `review` — requirement IDs in §5.8 renamed `CXMSG-n` on 2026-09-02 to avoid colliding with spec 09 (ADR-0002 batch)
+**Status:** `accepted` (2026-09-02) — sync engine, webhook receiver, ingestion and ack loop implemented in M1 against `FakeProvider` and docs-sourced fixtures; the certification suite (§5.11) runs once a staging key exists. §5.8 IDs renamed `CXMSG-n`.
 
 This is the spec that decides whether the platform is trustworthy. Everything
 here exists to satisfy two promises from [01](./01-vision-and-scope.md): *never

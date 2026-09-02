@@ -13,3 +13,6 @@ export type { DomainEvent } from "./shared/domain-event.js";
 
 export * from "./identity/index.js";
 export * from "./audit/index.js";
+export * from "./inventory/index.js";
+export * from "./connectivity/index.js";
+export * from "./reservations/index.js";

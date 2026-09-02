@@ -111,6 +111,9 @@ importers:
       '@pms/authz':
         specifier: workspace:*
         version: link:../../packages/authz
+      '@pms/connectivity':
+        specifier: workspace:*
+        version: link:../../packages/connectivity
       '@pms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -120,6 +123,9 @@ importers:
       '@pms/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
+      '@pms/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       bullmq:
         specifier: ^6.3.4
         version: 6.3.4(ioredis@6.0.0)(pg@8.23.0)
@@ -167,6 +173,31 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
 
+  packages/connectivity:
+    dependencies:
+      '@pms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@pms/sync':
+        specifier: workspace:*
+        version: link:../sync
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
+      fast-check:
+        specifier: ^4.9.0
+        version: 4.9.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
+
   packages/core:
     dependencies:
       temporal-polyfill:
@@ -176,6 +207,9 @@ importers:
         specifier: ^14.0.2
         version: 14.0.2
     devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
       eslint:
         specifier: ^9
         version: 9.39.5(jiti@2.7.0)
@@ -269,11 +303,33 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
 
+  packages/sync:
+    dependencies:
+      '@pms/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      eslint:
+        specifier: ^9
+        version: 9.39.5(jiti@2.7.0)
+      fast-check:
+        specifier: ^4.9.0
+        version: 4.9.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@22.20.1)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13))
+
   packages/testkit:
     dependencies:
       '@pms/authz':
         specifier: workspace:*
         version: link:../authz
+      '@pms/connectivity':
+        specifier: workspace:*
+        version: link:../connectivity
       '@pms/core':
         specifier: workspace:*
         version: link:../core
@@ -283,6 +339,9 @@ importers:
       '@pms/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@pms/sync':
+        specifier: workspace:*
+        version: link:../sync
       fast-check:
         specifier: ^4.9.0
         version: 4.9.0

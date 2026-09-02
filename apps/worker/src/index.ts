@@ -1,42 +1,166 @@
 import { Worker, type Job } from "bullmq";
+import type { DomainEvent } from "@pms/core";
+import { rawRows, sql } from "@pms/db";
 import { QUEUES } from "@pms/runtime";
+import { MemoryCircuitBreaker, TokenBucket } from "@pms/sync";
 import { buildContainer } from "./container.js";
 import { verifyAllAuditChains } from "./jobs/audit-verify.js";
 import { emptySnapshotSource, runOtbSnapshots } from "./jobs/otb-snapshot.js";
 import { bullPublisher, startOutboxPublisher } from "./jobs/outbox-publisher.js";
+import { redisLease } from "./lease.js";
+import { processAriPush, type AriPushJob } from "./processors/ari-push.js";
+import { deriveAvailability } from "./processors/availability-derive.js";
+import {
+  livePropertyIds,
+  processAckSweep,
+  processBookings,
+  type BookingProcessJob,
+} from "./processors/booking-process.js";
+import { reconcileProperty } from "./processors/reconcile.js";
+import { processWebhook } from "./processors/webhook-ingest.js";
+import { selectProvider } from "./provider.js";
 
 const c = await buildContainer();
 const log = c.log;
-
-/** System queue: schedulers and housekeeping. Per-domain queues get their processors in M1+. */
-const systemWorker = new Worker(
-  QUEUES.system,
-  async (job: Job) => {
-    switch (job.name) {
-      case "heartbeat":
-        log.debug({ at: new Date().toISOString() }, "heartbeat");
-        return;
-      case "otb.snapshot": {
-        const n = await runOtbSnapshots(c.db.db, c.clock, emptySnapshotSource, log);
-        log.info({ rows: n }, "otb.snapshot.run");
-        return;
-      }
-      case "audit.verify": {
-        const results = await verifyAllAuditChains(c.db.db, c.sha256Hex);
-        for (const r of results)
-          if (!r.ok)
-            log.error({ orgId: r.orgId, brokenAtSeq: r.brokenAtSeq }, "audit.chain.broken");
-        return;
-      }
-      default:
-        log.warn({ name: job.name }, "unrouted system job");
-    }
+const { provider, kind: providerKind } = selectProvider(c.config, process.env, log, {
+  onResponse: ({ op, status, durationMs }) =>
+    log.debug({ op, status, durationMs }, "provider.response"),
+});
+const limiter = new TokenBucket(c.clock, { baseRatePerSecond: 5, burst: 10 });
+const breaker = new MemoryCircuitBreaker(c.clock, { failureThreshold: 5, cooldownMs: 60_000 });
+const lease = redisLease(c.redis);
+const alerts = {
+  unmappedBooking: async (i: { bookingId: string; propertyId: string; mappingState: string }) => {
+    log.error(i, "booking.unmapped.p1");
   },
-  { connection: c.redis, concurrency: 2 },
-);
-systemWorker.on("failed", (job, err) =>
-  log.error({ job: job?.name, err: err.message }, "job.failed"),
-);
+  ackLagging: async (i: { revisionId: string; propertyId: string; ageMs: number }) => {
+    log.error(i, "booking.ack.lagging");
+  },
+};
+const bookingDeps = { db: c.db.db, provider, crypto: c.crypto, clock: c.clock, log, alerts };
+const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
+
+const workers: Worker[] = [
+  new Worker<AriPushJob>(
+    QUEUES.ariPush,
+    (job) =>
+      processAriPush({ db: c.db.db, provider, limiter, breaker, clock: c.clock, log, lease }, job),
+    { ...workerOpts, concurrency: 4 },
+  ),
+
+  new Worker(
+    QUEUES.bookingProcess,
+    async (job: Job) => {
+      // events from the outbox: booking.revision_applied → availability; booking.pull → feed; explicit jobs → feed
+      const data = job.data as DomainEvent | BookingProcessJob;
+      if ("type" in data) {
+        if (data.type === "booking.revision_applied") {
+          const r = await deriveAvailability(c.db.db, data, log, Date.now());
+          log.debug({ ...r, dedupeKey: data.dedupeKey }, "availability.derived");
+        } else if (data.type === "booking.pull") {
+          await processBookings(
+            bookingDeps,
+            data.payload as BookingProcessJob,
+            String(job.id ?? data.dedupeKey),
+          );
+        }
+        return;
+      }
+      await processBookings(bookingDeps, data, String(job.id ?? "manual"));
+    },
+    workerOpts,
+  ),
+
+  new Worker(
+    QUEUES.webhookIngest,
+    async (job: Job<DomainEvent>) => {
+      await processWebhook(c.db.db, job.data, log);
+    },
+    { ...workerOpts, concurrency: 8 },
+  ),
+
+  new Worker(
+    QUEUES.reconcileAri,
+    async (job: Job) => {
+      const data = job.data as
+        DomainEvent | { orgId: string; propertyId: string; timezone: string };
+      const payload =
+        "type" in data ? (data.payload as { orgId: string; propertyId: string }) : data;
+      const [prop] = await rawRows<{ timezone: string }>(
+        c.db.db,
+        sql`select timezone from property where id = ${payload.propertyId}`,
+      );
+      await reconcileProperty(
+        { db: c.db.db, provider, limiter, breaker, clock: c.clock, log },
+        payload.orgId,
+        payload.propertyId,
+        prop?.timezone ?? "UTC",
+        String(job.id ?? "?"),
+      );
+    },
+    { ...workerOpts, concurrency: 1 },
+  ),
+
+  new Worker(
+    QUEUES.system,
+    async (job: Job) => {
+      switch (job.name) {
+        case "heartbeat":
+          return;
+        case "booking.ack_sweep":
+          await processAckSweep(bookingDeps, String(job.id ?? "sweep"));
+          return;
+        case "booking.poll": {
+          // HOOK-6: correctness never depends on webhook arrival
+          for (const p of await livePropertyIds(c.db.db)) {
+            await c.queues[QUEUES.bookingProcess].add(
+              "booking.poll",
+              { ...p, reason: "poll" } satisfies BookingProcessJob,
+              {
+                jobId: `booking.poll:${p.propertyId}:${String(Math.floor(Date.now() / 60_000))}`,
+                removeOnComplete: 500,
+                removeOnFail: 500,
+              },
+            );
+          }
+          return;
+        }
+        case "reconcile.nightly": {
+          for (const p of await livePropertyIds(c.db.db)) {
+            await c.queues[QUEUES.reconcileAri].add(
+              "reconcile",
+              { ...p, timezone: "UTC" },
+              {
+                jobId: `reconcile:${p.propertyId}:${new Date().toISOString().slice(0, 10)}`,
+                removeOnComplete: 100,
+                removeOnFail: 100,
+              },
+            );
+          }
+          return;
+        }
+        case "otb.snapshot": {
+          const n = await runOtbSnapshots(c.db.db, c.clock, emptySnapshotSource, log);
+          log.info({ rows: n }, "otb.snapshot.run");
+          return;
+        }
+        case "audit.verify": {
+          for (const r of await verifyAllAuditChains(c.db.db, c.sha256Hex))
+            if (!r.ok)
+              log.error({ orgId: r.orgId, brokenAtSeq: r.brokenAtSeq }, "audit.chain.broken");
+          return;
+        }
+        default:
+          log.warn({ name: job.name }, "unrouted system job");
+      }
+    },
+    { ...workerOpts, concurrency: 2 },
+  ),
+];
+for (const w of workers)
+  w.on("failed", (job, err) =>
+    log.error({ queue: w.name, job: job?.name, id: job?.id, err: err.message }, "job.failed"),
+  );
 
 const stopOutbox = startOutboxPublisher(c.db.db, bullPublisher(c.queues), {
   intervalMs: 1000,
@@ -47,6 +171,17 @@ const stopOutbox = startOutboxPublisher(c.db.db, bullPublisher(c.queues), {
 async function main(): Promise<void> {
   const system = c.queues[QUEUES.system];
   await system.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
+  await system.upsertJobScheduler(
+    "booking.ack_sweep",
+    { every: 60_000 },
+    { name: "booking.ack_sweep" },
+  );
+  await system.upsertJobScheduler("booking.poll", { every: 60_000 }, { name: "booking.poll" });
+  await system.upsertJobScheduler(
+    "reconcile.nightly",
+    { pattern: "30 3 * * *" },
+    { name: "reconcile.nightly" },
+  );
   await system.upsertJobScheduler(
     "otb.snapshot",
     { pattern: "5 * * * *" },
@@ -61,6 +196,7 @@ async function main(): Promise<void> {
     {
       queues: Object.values(QUEUES),
       driver: c.db.driver,
+      provider: providerKind,
       concurrency: c.config.WORKER_CONCURRENCY,
     },
     "worker.started",
@@ -70,11 +206,10 @@ async function main(): Promise<void> {
 async function shutdown(signal: string): Promise<void> {
   log.info({ signal }, "worker.shutdown");
   await stopOutbox();
-  await systemWorker.close();
+  await Promise.all(workers.map((w) => w.close()));
   await c.close();
   process.exit(0);
 }
-
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 process.on("SIGINT", () => void shutdown("SIGINT"));
 

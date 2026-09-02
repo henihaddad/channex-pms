@@ -30,10 +30,11 @@
 
 ---
 
-> **Status: milestone M0 in progress.** The [specification](./docs/specs/) (17 documents,
-> decided stack, M0 to M8 roadmap) is complete enough to build against, and the monorepo scaffold
-> is in place: `apps/web`, `apps/worker`, `packages/core` with the first domain value objects and
-> property-based tests, Docker Compose and CI. Nothing is usable by an operator yet.
+> **Status: milestone M2 in progress.** The [specification](./docs/specs/) (17 documents,
+> decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with row-level security, permission
+> matrix, audit log) and M1 (the Channex sync engine, webhook receiver, booking ingestion with the
+> ack loop, drift detection and a 200-scenario chaos suite) are done. Nothing is usable by an
+> operator yet; that arrives with M2.
 
 ## Why this exists
 

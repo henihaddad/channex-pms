@@ -1,0 +1,173 @@
+import { describe, expect, it } from "vitest";
+import { resolve } from "node:path";
+import { AuthError, ThrottleError, TransientError, ValidationError } from "@pms/core";
+import { ChannexProvider, maskPan } from "./provider.js";
+import { loadFixtures, ReplayTransport } from "../transport/fixtures.js";
+
+const fixtures = loadFixtures(resolve(import.meta.dirname, "../../fixtures/channex"));
+const meta = { dedupeKey: "t", requestId: "r" };
+const PROPERTY = "716305c4-561a-4561-a187-7f5b8aeb5920";
+
+function provider() {
+  const http = new ReplayTransport(fixtures);
+  return { p: new ChannexProvider(http), http };
+}
+
+describe("ChannexProvider contract (fixtures)", () => {
+  it("pushes availability with date ranges and reads task ids", async () => {
+    const { p, http } = provider();
+    const r = await p.pushAvailability(
+      {
+        propertyId: PROPERTY,
+        entries: [
+          { roomTypeId: "rt", dateFrom: "2026-10-01", dateTo: "2026-10-10", availability: 1 },
+        ],
+      },
+      meta,
+    );
+    expect(r).toMatchObject({
+      accepted: 1,
+      rejected: [],
+      taskIds: ["eb31d631-4fcc-478a-80c3-bf7a2acf0699"],
+    });
+    expect(http.calls[0]?.body).toEqual({
+      values: [
+        {
+          property_id: PROPERTY,
+          room_type_id: "rt",
+          date_from: "2026-10-01",
+          date_to: "2026-10-10",
+          availability: 1,
+        },
+      ],
+    });
+    expect(http.calls[0]?.headers).toMatchObject({ "idempotency-key": "t", "x-request-id": "r" });
+  });
+
+  it("turns 200-with-warnings into per-entry rejections and sends rates as minor units", async () => {
+    const { p, http } = provider();
+    const r = await p.pushRatesAndRestrictions(
+      {
+        propertyId: PROPERTY,
+        entries: [
+          {
+            ratePlanId: "rp",
+            dateFrom: "2026-10-01",
+            dateTo: "2026-10-03",
+            rate: -100,
+            minStay: 2,
+            days: ["fr", "sa"],
+          },
+          {
+            ratePlanId: "rp",
+            dateFrom: "2026-10-04",
+            dateTo: "2026-10-05",
+            rate: 12000,
+            stopSell: true,
+          },
+        ],
+      },
+      meta,
+    );
+    expect(r.accepted).toBe(1);
+    expect(r.rejected).toEqual([
+      { index: 0, reason: "rate: must be greater than or equal to 0", field: "rate" },
+    ]);
+    const body = http.calls[0]?.body as { values: Array<Record<string, unknown>> };
+    expect(body.values[0]).toMatchObject({ rate: -100, min_stay: 2, days: ["fr", "sa"] });
+    expect(body.values[1]).toMatchObject({ rate: 12000, stop_sell: true });
+  });
+
+  it("reads ARI back into the snapshot shape with minor-unit rates", async () => {
+    const { p } = provider();
+    const snap = await p.readAri(
+      { propertyId: PROPERTY, dateFrom: "2026-10-01", dateTo: "2026-10-02" },
+      meta,
+    );
+    expect(snap.availability).toEqual([
+      { roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b", date: "2026-10-01", availability: 1 },
+      { roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b", date: "2026-10-02", availability: 0 },
+    ]);
+    expect(snap.restrictions[1]).toMatchObject({
+      ratePlanId: "445835fb-7956-42ac-9efc-3e6f331f0808",
+      date: "2026-10-02",
+      rate: 15000,
+      minStay: 2,
+      stopSell: true,
+    });
+  });
+
+  it("parses the documented booking revision: money in minor units, masked card, nullable inventory refs", async () => {
+    const { p, http } = provider();
+    const page = await p.listBookingRevisions(PROPERTY, undefined, meta);
+    expect(page.nextCursor).toBeUndefined();
+    expect(http.calls[0]?.query).toMatchObject({ "pagination[limit]": "100" });
+    const rev = page.revisions[0]!;
+    expect(rev).toMatchObject({
+      systemId: "12331233123",
+      status: "new",
+      currency: "GBP",
+      amount: 22000,
+      otaCommission: 1000,
+      otaName: "Booking.com",
+      otaReservationCode: "9996013801",
+    });
+    expect(rev.rooms[0]).toMatchObject({
+      roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b",
+      days: { "2019-04-26": 20000 },
+      occupancy: { adults: 2, children: 0, infants: 0 },
+    });
+    expect(rev.services).toEqual([{ name: "Breakfast", amount: 2000, isInclusive: false }]);
+    expect(rev.guarantee).toEqual({
+      cardType: "VI",
+      maskedNumber: "411111******1111",
+      expiry: "10/2020",
+      cardholder: "Channex User",
+    });
+    expect(JSON.stringify(rev.guarantee)).not.toMatch(/\d{13,}/);
+    expect(rev.customer).toMatchObject({ email: "user@channex.io", country: "NL" });
+    await p.ackBookingRevisions([rev.revisionId], meta);
+    expect(http.calls.at(-1)?.path).toBe(
+      "/api/v1/booking_revisions/03dd7198-c5b7-493c-a889-74d0c2211de7/ack",
+    );
+  });
+
+  it("classifies errors per spec 05 §5.10", async () => {
+    const { p } = provider();
+    await expect(p.ensureGroup({ title: "x" }, meta)).rejects.toBeInstanceOf(AuthError);
+    await expect(
+      p.ensureRoomType(
+        {
+          propertyId: PROPERTY,
+          title: "x",
+          countOfRooms: 1,
+          occAdults: 2,
+          occChildren: 0,
+          occInfants: 0,
+          defaultOccupancy: 2,
+        },
+        meta,
+      ),
+    ).rejects.toBeInstanceOf(ValidationError);
+    const throttle = p.ensureRatePlan(
+      {
+        propertyId: PROPERTY,
+        roomTypeId: "rt",
+        title: "x",
+        currency: "EUR",
+        sellMode: "per_room",
+        options: [],
+      },
+      meta,
+    );
+    await expect(throttle).rejects.toBeInstanceOf(ThrottleError);
+    await throttle.catch((e: ThrottleError) => expect(e.retryAfterMs).toBe(2000));
+    await expect(p.getAdapterDescriptor("BookingCom", meta)).rejects.toBeInstanceOf(TransientError);
+  });
+
+  it("masks PANs defensively (INV-7)", () => {
+    expect(maskPan("4111111111111111")).toBe("411111******1111");
+    expect(maskPan("411111******1111")).toBe("411111******1111");
+    expect(maskPan("1234")).toBe("****");
+  });
+});

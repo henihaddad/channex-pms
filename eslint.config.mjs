@@ -73,6 +73,11 @@ export default tseslint.config(
     },
   },
   {
+    // Provider adapters stringify untrusted JSON fields defensively; an object here is a contract error, not a crash.
+    files: ["packages/connectivity/src/channex/**"],
+    rules: { "@typescript-eslint/no-base-to-string": "off" },
+  },
+  {
     files: ["**/*.test.ts", "**/*.spec.ts", "**/testing/**", "**/fake*/**", "**/fakes/**"],
     rules: {
       "@typescript-eslint/no-unsafe-assignment": "off",

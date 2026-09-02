@@ -22,6 +22,27 @@
       "when": 1788326577174,
       "tag": "0002_org_membership",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788341596712,
+      "tag": "0003_m1_ari_bookings",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788341597707,
+      "tag": "0004_m1_rls_and_checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788342534410,
+      "tag": "0005_webhook_token_resolver",
+      "breakpoints": true
     }
   ]
 }

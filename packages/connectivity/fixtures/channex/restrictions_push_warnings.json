@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "200 with per-entry warnings: valid entries are processed, invalid ignored (spec 05 \u00a75.10 partial)."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/restrictions"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "c2a4e0e1-1111-4a44-9b1a-000000000001",
+          "type": "task"
+        }
+      ],
+      "meta": {
+        "message": "Success",
+        "warnings": [
+          {
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "rate_plan_id": "445835fb-7956-42ac-9efc-3e6f331f0808",
+            "date_from": "2026-10-01",
+            "date_to": "2026-10-03",
+            "warning": {
+              "rate": ["must be greater than or equal to 0"]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

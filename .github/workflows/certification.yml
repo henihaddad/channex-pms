@@ -1,0 +1,28 @@
+name: Channex certification
+
+# Runs the certification suite against staging.channex.io when a key is configured (spec 05 §5.11).
+# Without the secret every test skips, so the workflow stays green and visible.
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certification:
+    runs-on: ubuntu-latest
+    env:
+      CHANNEX_STAGING_API_KEY: ${{ secrets.CHANNEX_STAGING_API_KEY }}
+      CHANNEX_STAGING_PROPERTY_ID: ${{ secrets.CHANNEX_STAGING_PROPERTY_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run build --filter=@pms/connectivity
+      - run: pnpm --filter @pms/connectivity test:certification

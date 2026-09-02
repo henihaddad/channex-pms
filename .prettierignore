@@ -8,3 +8,4 @@ website/package-lock.json
 .claude/skills
 docs/specs
 CHANGELOG.md
+apps/web/handlers.manifest.json

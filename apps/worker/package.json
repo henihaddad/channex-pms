@@ -21,7 +21,9 @@
     "zod": "^4.5.4",
     "@pms/db": "workspace:*",
     "@pms/runtime": "workspace:*",
-    "@pms/authz": "workspace:*"
+    "@pms/authz": "workspace:*",
+    "@pms/connectivity": "workspace:*",
+    "@pms/sync": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22",

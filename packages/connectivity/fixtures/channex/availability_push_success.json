@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/availability"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "eb31d631-4fcc-478a-80c3-bf7a2acf0699",
+          "type": "task"
+        }
+      ],
+      "meta": {
+        "message": "Success",
+        "warnings": []
+      }
+    }
+  }
+}

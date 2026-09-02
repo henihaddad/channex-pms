@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/rate_plans"
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "retry-after": "2"
+    },
+    "body": {
+      "errors": {
+        "code": "too_many_requests",
+        "title": "Too Many Requests"
+      }
+    }
+  }
+}

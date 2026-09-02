@@ -1,0 +1,36 @@
+{
+  "name": "@pms/connectivity",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ConnectivityProvider implementations: ChannexProvider (fetch/record/replay transports), FakeProvider with fault injection, contract and certification suites.",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "fixtures"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src certification",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:certification": "vitest run --config vitest.cert.config.ts"
+  },
+  "dependencies": {
+    "@pms/core": "workspace:*",
+    "@pms/sync": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "eslint": "^9",
+    "fast-check": "^4.9.0",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

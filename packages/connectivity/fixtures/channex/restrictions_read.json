@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Response shape assumed from docs: rate_plan_id \u2192 date \u2192 restriction values. Verify with the certification suite."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/restrictions",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "filter[date][gte]": "2026-10-01",
+      "filter[date][lte]": "2026-10-02",
+      "filter[restrictions]": "rate,min_stay,min_stay_arrival,min_stay_through,max_stay,closed_to_arrival,closed_to_departure,stop_sell"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "445835fb-7956-42ac-9efc-3e6f331f0808": {
+          "2026-10-01": {
+            "rate": "120.00",
+            "min_stay": 2,
+            "stop_sell": false,
+            "closed_to_arrival": false
+          },
+          "2026-10-02": {
+            "rate": "150.00",
+            "min_stay": 2,
+            "stop_sell": true,
+            "closed_to_arrival": false
+          }
+        }
+      },
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}

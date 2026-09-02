@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/groups"
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "errors": {
+        "code": "unauthorized",
+        "title": "Unauthorized"
+      }
+    }
+  }
+}

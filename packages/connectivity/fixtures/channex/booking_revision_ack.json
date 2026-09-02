@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Hand-authored from docs.channex.io; replaced by a recorded fixture once a staging key exists."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/booking_revisions/03dd7198-c5b7-493c-a889-74d0c2211de7/ack"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}

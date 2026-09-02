@@ -26,7 +26,8 @@
     "eslint": "^9",
     "fast-check": "^4.9.0",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "@types/node": "^22"
   },
   "files": [
     "dist"

@@ -31,6 +31,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm check
       - run: node scripts/check-pii-logs.mjs
+      - name: Chaos suite (no booking lost, no cell permanently wrong)
+        run: pnpm --filter @pms/testkit chaos 100 50
 
   integration:
     name: Integration (Postgres 16, Redis 7)

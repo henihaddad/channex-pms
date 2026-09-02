@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Response shape assumed from docs: room_type_id \u2192 date \u2192 availability. Verify with the certification suite."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/availability",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "filter[date][gte]": "2026-10-01",
+      "filter[date][lte]": "2026-10-02"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "994d1375-dbbd-4072-8724-b2ab32ce781b": {
+          "2026-10-01": 1,
+          "2026-10-02": 0
+        }
+      },
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}
