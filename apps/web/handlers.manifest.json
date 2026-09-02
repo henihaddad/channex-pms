@@ -715,6 +715,81 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "alertStateAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "deleteScheduleAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "listAlerts",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "listReports",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "loadDashboard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "refreshRollupsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "runFinancialReport",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read_financial"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "runOperationalReport",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "saveBudgetAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read_financial",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "saveScheduleAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "acknowledgeAction",
     "kind": "action",
@@ -1192,6 +1267,14 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "property:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/reports/[key]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "export:execute",
     "scope": "organization"
   },
   {

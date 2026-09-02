@@ -67,3 +67,22 @@ export {
   type OwnerDeps,
 } from "./owners.js";
 export { textPdf, pdfDataUri } from "./statement-pdf.js";
+export {
+  rollup,
+  nightlyRollups,
+  snapshotSource,
+  dashboardKpis,
+  computeAlerts,
+  computeAlertsForAll,
+  reconcileStatements,
+  REPORT_CATALOGUE,
+  runReport,
+  toCsv,
+  toPdf,
+  sendScheduledReports,
+  type AnalyticsDeps,
+  type DashboardKpis,
+  type ReportDefinition,
+  type ReportResult,
+  type ReportFilters,
+} from "./analytics.js";

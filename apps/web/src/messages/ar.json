@@ -18,7 +18,9 @@
     "frontDesk": "الاستقبال",
     "inbox": "الوارد",
     "reviews": "التقييمات",
-    "owners": "المالكون"
+    "owners": "المالكون",
+    "reports": "التقارير",
+    "alerts": "التنبيهات"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -43,9 +45,55 @@
     "stepUpSubmit": "تأكيد"
   },
   "dashboard": {
-    "welcome": "مرحبًا، {name}",
-    "milestone": "المرحلة M2: العقارات وتقويم المحفظة وربط القنوات جاهزة. الحجوزات والعمليات تأتي مع M3.",
-    "organizations": "مؤسساتك"
+    "welcome": "Welcome, {name}",
+    "milestone": "",
+    "organizations": "Your organizations",
+    "titles": {
+      "portfolio": "Quelles propriétés ont besoin de moi ?",
+      "property": "Is my property OK today?",
+      "revenue": "What should I price?",
+      "reservations": "What do I do next?",
+      "housekeeping": "Which rooms, in what order?",
+      "guest_relations": "Who is waiting on me?",
+      "finance": "Does the money reconcile?",
+      "viewer": "How is the portfolio doing?"
+    },
+    "allProperties": "All properties",
+    "filter": "Filter",
+    "freshness": "Rollup as of {at}",
+    "noRollup": "no rollup yet",
+    "refresh": "Refresh now",
+    "arrivals": "Arrivals today",
+    "departures": "Departures today",
+    "inHouse": "In house",
+    "occupancyTonight": "Occupancy tonight",
+    "revenueMtd": "Room revenue MTD",
+    "nights": "nights",
+    "paceUnavailable": "n/a: needs a year of snapshots",
+    "actionQueue": "Action queue",
+    "queueEmpty": "Nothing needs you right now.",
+    "queue": {
+      "unmapped": "Unmapped bookings",
+      "failedSync": "Failed or drifted sync cells",
+      "unassigned": "Unassigned rooms (7 days)",
+      "breaching": "Messages past SLA",
+      "unacked": "Unacknowledged revisions",
+      "alerts": "Open alerts",
+      "disputes": "Open statement disputes",
+      "expiringCards": "Virtual cards expiring",
+      "needsReply": "Messages needing reply"
+    },
+    "next7": "Next 7 nights",
+    "channelMix": "Channel mix (nights, * = estimated commission)",
+    "alerts": "Alerts",
+    "noAlerts": "No open alerts.",
+    "league": "Property league table (month to date)",
+    "property": "Property",
+    "budget": "Budget",
+    "outlier": "down >10% YoY",
+    "exportCsv": "Export CSV",
+    "recentBookings": "Bookings in the last 24 h",
+    "noRecent": "None yet."
   },
   "members": {
     "title": "الأعضاء",
@@ -513,5 +561,50 @@
     "documentsHint": "Your agreements, insurance and tax documents.",
     "noDocuments": "No documents yet.",
     "notAnOwner": "This login is not linked to an owner record."
+  },
+  "reports": {
+    "title": "التقارير",
+    "groups": {
+      "commercial": "Commercial",
+      "operational": "Operational",
+      "financial": "Financial",
+      "guest": "Guest"
+    },
+    "from": "From",
+    "to": "To",
+    "date": "Date (manifests)",
+    "property": "Property",
+    "allProperties": "All properties",
+    "run": "Run",
+    "basis": "Basis",
+    "rows": "rows",
+    "scheduleName": "Schedule name",
+    "recipients": "Recipients",
+    "schedule": "Schedule by email",
+    "pick": "Pick a report on the left. Every export prints its basis.",
+    "schedules": "Scheduled reports",
+    "noSchedules": "No schedules yet.",
+    "lastSent": "last sent",
+    "remove": "Remove",
+    "budgets": "Budgets",
+    "month": "Month",
+    "budgetRevenue": "Room revenue budget",
+    "budgetOccupancy": "Occupancy budget %",
+    "saveBudget": "Save budget"
+  },
+  "alertsPage": {
+    "title": "التنبيهات",
+    "states": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "actioned": "Actioned",
+      "resolved": "Resolved"
+    },
+    "empty": "Nothing here.",
+    "acknowledge": "Acknowledge",
+    "actioned": "Actioned",
+    "noisy": "noisy: under 20% actioned",
+    "actionRates": "Action rate per type (last 90 days, ALRT-1)",
+    "actionedOf": "actioned"
   }
 }

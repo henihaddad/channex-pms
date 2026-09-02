@@ -89,9 +89,12 @@ export function Field({
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
+export function Card({ children, className, ...rest }: ComponentProps<"div">) {
   return (
-    <div className={cx("rounded-xl border border-slate-200 bg-white p-6 shadow-sm", className)}>
+    <div
+      className={cx("rounded-xl border border-slate-200 bg-white p-6 shadow-sm", className)}
+      {...rest}
+    >
       {children}
     </div>
   );

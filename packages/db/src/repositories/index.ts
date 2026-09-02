@@ -66,3 +66,9 @@ export {
   type StatementLineRow,
   type PayoutRow,
 } from "./owners.js";
+export {
+  DrizzleAnalyticsRepository,
+  type DailyFactRow,
+  type PropertyLeagueRow,
+  type AlertRow,
+} from "./analytics.js";

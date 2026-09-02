@@ -21,3 +21,4 @@ export * from "./channels/index.js";
 export * from "./operations/index.js";
 export * from "./messaging/index.js";
 export * from "./owners/index.js";
+export * from "./analytics/index.js";

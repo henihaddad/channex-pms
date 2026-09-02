@@ -25,6 +25,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     { href: "/inbox", label: inboxLabel },
     { href: "/reviews", label: t("reviews") },
     { href: "/owners", label: t("owners") },
+    { href: "/reports", label: t("reports") },
+    { href: "/alerts", label: t("alerts") },
     { href: "/operations", label: t("operations") },
     { href: "/front-desk", label: t("frontDesk") },
     { href: "/channels", label: t("channels") },

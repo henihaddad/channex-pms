@@ -1,6 +1,6 @@
 # 11 — Dashboards & Analytics
 
-**Status:** `review` — revised 2026-08-21: owner-facing KPIs and statement reconciliation included.
+**Status:** `accepted` — implemented in M6 (v0.5, 2026-09-02); see §11.7 for what shipped and what is deferred. Revised 2026-08-21: owner-facing KPIs and statement reconciliation included.
 
 Two rules keep this module honest:
 
@@ -164,3 +164,49 @@ Deliberately unfashionable, because a hotel is small data:
 - Any dashboard widget can be drilled through to the underlying bookings.
 - A monthly owner statement can be produced and emailed without manual work.
 - No dashboard query exceeds 2 s p95 at 200 properties and 3 years of history.
+
+## 11.7 Implementation notes (M6, v0.5)
+
+- **Dictionary as code.** `core/analytics/kpis.ts` holds `KPI_DICTIONARY` (name, formula, unit) and
+  `kpis(rows)`, the one function every screen and export calls. Ratios are basis points so two
+  screens can be compared for exact equality; money stays in minor units. Property tests cover
+  order independence, additivity across ranges and RevPAR = occupancy × ADR within rounding.
+- **Rollups.** `fact_room_night`, `fact_booking` and `agg_daily_kpi` are rebuilt from operational
+  tables per org and date range (`rollups.nightly` at 02:45, last 45 days plus 400 ahead;
+  "Refresh now" on the dashboard). Because the range is recomputed, a cancellation restates its
+  original stay dates and a no-show stops counting as a sold night. Commission per night is
+  allocated by amount; channels without a reported commission carry an estimate at the channel's
+  usual rate, flagged `commission_estimated` and labelled on every report.
+- **Rooms available** = Σ `count_of_rooms` − maintenance/renovation blocks that reduce availability
+  on that night (out of service is not deducted). Total revenue adds folio lines other than room,
+  payment and deposit lines dated that day.
+- **Snapshots.** The nightly on-the-books job now has a real source; `pickup` and `pace` read
+  `otb_snapshot`. Pace reports `available: false` with a reason until a snapshot from the same
+  date last year exists, and the report prints "needs a year of snapshots" rather than a number.
+- **Realtime today.** Arrivals, departures, in-house, tonight's occupancy and the last 24 h of
+  bookings come straight off operational tables; every KPI card shows the rollup's freshness.
+- **Dashboards.** One layout per persona chosen from the user's highest role in the org; widgets
+  read the same numbers. Portfolio: league table sortable by RevPAR with outliers (room revenue
+  down more than 10 % YoY), action queue, channel mix. Property: today board, next 7 days,
+  MTD vs budget, action queue, sync strip. Revenue: 90-day occupancy strip, pickup, pace, low and
+  high demand dates, booking window. Reservations and guest relations: queues. Finance: revenue,
+  commission, withheld taxes, disputes, expiring cards. Viewer: KPIs vs last year, no PII.
+  Widget rearrangement, the rate-parity table, yield rule activity and the competitor plugin are
+  deferred.
+- **Reports.** Seventeen catalogue reports run through one `runReport`, export as CSV or PDF (the
+  dependency-free writer; XLSX deferred) with the basis printed on every file, and can be
+  scheduled daily, weekly or monthly by email. Financial reports need `report:read_financial`;
+  every export is audited under `export:execute`.
+- **Alerts.** Hourly rules (low occupancy within 7 days, zero-booking channel after 14 quiet days,
+  cancellation spike, sync degradation, unacked revisions, SLA breaches, review-score drop,
+  statement mismatch) raise one live alert per condition, resolve automatically when the condition
+  clears, and track the action rate per type; types under 20 % are flagged noisy (ALRT-1).
+  Delivery is in-app; email, push and Slack channels come with the notification transport.
+- **Reconciliation.** `statements.reconcile` (daily) compares each sent statement's booking-revenue
+  lines net of later restatements with the confirmed room revenue of the same property and period;
+  a mismatch is a critical alert and shows on the owner statement register. Unit-scoped
+  agreements are skipped.
+- **BI extension point.** Migration 0015 creates the read-only `reporting` schema
+  (`daily_kpi`, `room_night`, `booking` views) for Metabase or Superset.
+- **Perf.** The portfolio dashboard on the 200-listing seed loads under 2 s in the e2e budget.
+  Materialised views are not needed at this size and are deferred.

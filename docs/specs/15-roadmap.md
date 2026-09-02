@@ -120,7 +120,7 @@ changeovers, without a spreadsheet. `v0.2`.
 
 ---
 
-## M6 — Dashboards & reporting *(~3 weeks)*
+## M6 — Dashboards & reporting *(~3 weeks)* ✅ shipped 2026-09-02 as v0.5
 
 - KPI engine + nightly rollups over the snapshots collected since M0.
 - Role dashboards ([11 §11.2](./11-dashboards-and-analytics.md#112-role-dashboards)),

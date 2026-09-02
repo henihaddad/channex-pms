@@ -609,7 +609,9 @@ export class DrizzleOwnerRepository {
    * agreement's units) whose stay overlaps the period. Booking-level amounts
    * (OTA commission, withheld tax) are allocated over the booking's nights so a
    * night's share is the same whichever period bills it; the cleaning fee sits on
-   * the first night. The engine then keeps only nights inside the period.
+   * the first night. No-show stays are not billed (they are not sold nights in the
+   * reports either; a collected no-show fee is a manual adjustment). The engine
+   * then keeps only nights inside the period.
    */
   async nightsFor(
     terms: AgreementTerms,
@@ -644,6 +646,7 @@ export class DrizzleOwnerRepository {
           join booking b on b.id = br.booking_id
           left join booking_revision r on r.id = b.last_revision_id
           where b.property_id = ${terms.propertyId} and b.mapping_state = 'mapped' and b.status <> 'cancelled' and d.status = 'confirmed'
+            and not exists (select 1 from stay_state ss where ss.booking_id = b.id and ss.state = 'no_show')
             and b.departure_date > ${period.from} and b.arrival_date < ${period.to} ${unitFilter}
           group by b.id, d.date, r.normalised
           order by b.id, d.date`,

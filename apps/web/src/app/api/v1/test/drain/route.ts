@@ -11,8 +11,10 @@ import {
 import { withIdMap } from "@pms/connectivity";
 import {
   closeThreadRemote,
+  computeAlerts,
   deliverOutbound,
   executePayout,
+  nightlyRollups,
   generateDueStatements,
   pollPayouts,
   escalateTurnovers,
@@ -45,6 +47,7 @@ export const POST = publicRoute("test_hook", async (req) => {
     orgId?: string;
     dailyClose?: boolean;
     statements?: boolean;
+    rollups?: boolean;
   };
   const log = c.log.child({ hook: "drain" });
   let provisioned = 0;
@@ -135,6 +138,11 @@ export const POST = publicRoute("test_hook", async (req) => {
   if (c.payouts instanceof FakePayoutProvider) c.payouts.settle();
   const payoutPoll = await pollPayouts(ownerDeps, body.orgId);
   const statements = body.statements ? await generateDueStatements(ownerDeps, body.orgId) : null;
+  // spec 11: rollups and alerts on request so dashboards can be asserted without the nightly job
+  const analyticsDeps = { db: c.db.db, clock: c.clock, crypto: c.crypto, log, mailer: c.mailer };
+  const rollups =
+    body.rollups && body.orgId ? await nightlyRollups(analyticsDeps, body.orgId) : null;
+  const alerts = body.rollups && body.orgId ? await computeAlerts(analyticsDeps, body.orgId) : null;
   const closes = body.dailyClose
     ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
     : { closed: 0 };
@@ -187,5 +195,7 @@ export const POST = publicRoute("test_hook", async (req) => {
     payouts,
     payoutPoll,
     statements,
+    rollups,
+    alerts,
   });
 });

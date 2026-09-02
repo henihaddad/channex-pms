@@ -24,6 +24,21 @@ All notable changes to this project are documented here. The format follows
   endpoints with an OpenAPI 3.1 document and the Apache-2.0 `@channex-pms/sdk`; `packages/jobs`
   shared by the worker and the test hooks; `compose.selfhost.yml` with a multi-target Dockerfile.
 
+## [0.5.0] — 2026-09-02
+
+### Added
+
+- M6 dashboards and reporting: the KPI dictionary as code with property tests; nightly rollups
+  into `fact_room_night`, `fact_booking` and `agg_daily_kpi` with cancellation restatement and
+  labelled commission estimates; the live on-the-books snapshot source, pickup and pace (marked
+  unavailable until a year of snapshots exists); realtime today deltas; role dashboards for
+  portfolio, property, revenue, reservations, housekeeping, guest relations, finance and viewer
+  with a league table, outlier flags, action queues, "vs previous period" and budgets; a
+  seventeen-report catalogue with CSV and PDF export, basis printed on every file, saved
+  schedules by email; hourly alerts with once-per-condition raising, auto-resolution and
+  per-type action rates (ALRT-1); the daily statement-to-report reconciliation job; a read-only
+  `reporting` schema for BI tools.
+
 ## [0.4.0] — 2026-09-02
 
 ### Added

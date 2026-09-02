@@ -5,7 +5,7 @@ import { consoleMailer, QUEUES } from "@pms/runtime";
 import { MemoryCircuitBreaker, TokenBucket } from "@pms/sync";
 import { buildContainer } from "./container.js";
 import { verifyAllAuditChains } from "./jobs/audit-verify.js";
-import { emptySnapshotSource, runOtbSnapshots } from "./jobs/otb-snapshot.js";
+import { runOtbSnapshots } from "./jobs/otb-snapshot.js";
 import { bullPublisher, startOutboxPublisher } from "./jobs/outbox-publisher.js";
 import { redisLease } from "./lease.js";
 import { processAriPush, type AriPushJob } from "./processors/ari-push.js";
@@ -40,6 +40,11 @@ import {
   autoSendStatements,
   generateDueStatements,
   pollPayouts,
+  computeAlertsForAll,
+  nightlyRollups,
+  reconcileStatements,
+  sendScheduledReports,
+  snapshotSource,
   propertiesToProvision,
   publishAri,
   runProvisioning,
@@ -101,6 +106,14 @@ const ownerDeps = {
     ? new StripeConnectPayoutProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
     : new FakePayoutProvider(),
   appUrl: c.config.NEXT_PUBLIC_APP_URL,
+};
+// spec 11: rollups, alerts, reconciliation and scheduled reports
+const analyticsDeps = {
+  db: c.db.db,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  mailer: consoleMailer(log),
 };
 const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
@@ -265,7 +278,8 @@ const workers: Worker[] = [
           return;
         }
         case "otb.snapshot": {
-          const n = await runOtbSnapshots(c.db.db, c.clock, emptySnapshotSource, log);
+          // spec 11 §11.5: the snapshot source is live inventory and bookings since M6
+          const n = await runOtbSnapshots(c.db.db, c.clock, snapshotSource(), log);
           log.info({ rows: n }, "otb.snapshot.run");
           return;
         }
@@ -339,6 +353,32 @@ const workers: Worker[] = [
         case "payouts.poll": {
           const r = await pollPayouts(ownerDeps);
           if (r.paid + r.failed > 0) log.info(r, "payouts.poll.run");
+          return;
+        }
+        case "rollups.nightly": {
+          const r = await nightlyRollups(analyticsDeps);
+          log.info(r, "rollups.nightly.run");
+          return;
+        }
+        case "alerts.compute": {
+          const r = await computeAlertsForAll(analyticsDeps);
+          if (r.raised + r.resolved > 0) log.info(r, "alerts.compute.run");
+          return;
+        }
+        case "statements.reconcile": {
+          for (const o of await rawRows<{ org_id: string }>(
+            c.db.db,
+            sql`select distinct org_id from owner_statement where state in ('sent', 'paid')`,
+          )) {
+            const r = await reconcileStatements(analyticsDeps, o.org_id);
+            if (r.mismatches > 0)
+              log.error({ orgId: o.org_id, ...r }, "statements.reconcile.mismatch");
+          }
+          return;
+        }
+        case "reports.scheduled": {
+          const n = await sendScheduledReports(analyticsDeps);
+          if (n > 0) log.info({ sent: n }, "reports.scheduled.run");
           return;
         }
         case "retention.purge": {
