@@ -1,11 +1,47 @@
 {
   "version": 1,
   "skills": {
+    "crafting-effective-readmes": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "skillPath": "skills/crafting-effective-readmes/SKILL.md",
+      "computedHash": "c931a8c22160e8925400778fcb2266b5d1df762f3052edba65f72479f79f2d6c"
+    },
+    "create-readme": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/create-readme/SKILL.md",
+      "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "landing-page-copywriter": {
+      "source": "onewave-ai/claude-skills",
+      "sourceType": "github",
+      "skillPath": "landing-page-copywriter/SKILL.md",
+      "computedHash": "f86f1a5d1f6138f935b1d2760c958a7f8179a8584e8526fbd176bdcf7ab48304"
+    },
+    "landing-page-design": {
+      "source": "skills-101/superpowers",
+      "sourceType": "github",
+      "skillPath": "guides/design/landing-page-design/SKILL.md",
+      "computedHash": "435af3919183e91ded83197f9238740593cac886f45067dc729d8a7095fbfb5a"
+    },
+    "open-source-strategy": {
+      "source": "kostja94/marketing-skills",
+      "sourceType": "github",
+      "skillPath": "skills/strategies/commercial/open-source/SKILL.md",
+      "computedHash": "16b1d1e1aeed64f13b25b7ca59131ef20092aa3e232790840bf3b811c532c100"
+    },
+    "open-sourcing": {
+      "source": "trailofbits/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/open-sourcing/skills/open-sourcing/SKILL.md",
+      "computedHash": "2274e2b09904d5585cfbbf25aa83762a231cfa3f8f62a2515d7f6b86448e8e0e"
     }
   }
 }
