@@ -32,3 +32,4 @@ export {
 export type { FakeThread, FakeReview, FakeMessage } from "./fake/fake-provider.js";
 export { mulberry32 } from "./fake/rng.js";
 export { withIdMap, type IdMap } from "./id-map.js";
+export { StripeConnectPayoutProvider, stripeTransport } from "./stripe/payout.js";

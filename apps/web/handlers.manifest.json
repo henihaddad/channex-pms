@@ -22,6 +22,13 @@
   },
   {
     "file": "src/app/(auth)/auth.actions.ts",
+    "export": "requestMagicLinkAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
     "export": "signUpAction",
     "kind": "action",
     "wrapper": "publicAction",
@@ -472,6 +479,139 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "addDocumentAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:update"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "approveExpenseAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "expense:approve"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "approvePayoutAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payout:execute"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "approveStatementAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:approve"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "createExpenseAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "expense:create"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "createOwnerAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:create"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "generateStatementAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:generate"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "grantPortalAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:update"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "initiatePayoutAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payout:execute"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "listExpenses",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "expense:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "listOwners",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "listPayouts",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payout:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "listStatements",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "loadOwner",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "loadStatement",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "resolveDisputeAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:approve"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "saveAgreementAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "agreement:manage"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "sendStatementAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:send"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "setPayoutDetailsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:update"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "addDerivedPlanAction",
     "kind": "action",
@@ -811,6 +951,83 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "disputeStatementAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read_own"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalCalendar",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalDocuments",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "agreement:read"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalExpenses",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "expense:read"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalHome",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read_own"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalIssues",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:read"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalReviews",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "review:read"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalStatement",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read_own"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalStatements",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read_own"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "ownerStayAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "block:manage"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "raiseIssueAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "maintenance:create"
+  },
+  {
     "file": "src/app/api/health/route.ts",
     "export": "GET",
     "kind": "route",
@@ -883,6 +1100,13 @@
   {
     "file": "src/app/api/v1/auth/logout/route.ts",
     "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/api/v1/auth/magic/route.ts",
+    "export": "GET",
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "auth"
@@ -987,6 +1211,13 @@
   },
   {
     "file": "src/app/api/v1/test/last-invitation/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/last-mail/route.ts",
     "export": "GET",
     "kind": "route",
     "wrapper": "publicRoute",

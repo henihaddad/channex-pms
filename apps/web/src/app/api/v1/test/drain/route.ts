@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@pms/core";
+import { FakePayoutProvider, type DomainEvent } from "@pms/core";
 import {
   AriStorePerCall,
   asSystem,
@@ -12,6 +12,9 @@ import { withIdMap } from "@pms/connectivity";
 import {
   closeThreadRemote,
   deliverOutbound,
+  executePayout,
+  generateDueStatements,
+  pollPayouts,
   escalateTurnovers,
   markLiveIfSynced,
   orgsWithAutomation,
@@ -38,7 +41,11 @@ import { testHooksEnabled } from "@/server/test-hooks";
 export const POST = publicRoute("test_hook", async (req) => {
   if (!testHooksEnabled()) throw notFound();
   const c = await container();
-  const body = (await req.json().catch(() => ({}))) as { orgId?: string; dailyClose?: boolean };
+  const body = (await req.json().catch(() => ({}))) as {
+    orgId?: string;
+    dailyClose?: boolean;
+    statements?: boolean;
+  };
   const log = c.log.child({ hook: "drain" });
   let provisioned = 0;
   for (const p of await propertiesToProvision(c.db.db)) {
@@ -110,6 +117,24 @@ export const POST = publicRoute("test_hook", async (req) => {
     automation.failed += r.failed;
   }
   const delivered = body.orgId ? await deliverOutbound(messagingDeps, body.orgId) : null;
+  // spec 17: payouts queued by the console run here in tests; statements sweep on request
+  const ownerDeps = {
+    db: c.db.db,
+    clock: c.clock,
+    crypto: c.crypto,
+    log,
+    mailer: c.mailer,
+    payouts: c.payouts,
+  };
+  let payouts = 0;
+  for (const e of events)
+    if (e.type === "payout.execute") {
+      await executePayout(ownerDeps, e.orgId, (e.payload as { payoutId: string }).payoutId);
+      payouts++;
+    }
+  if (c.payouts instanceof FakePayoutProvider) c.payouts.settle();
+  const payoutPoll = await pollPayouts(ownerDeps, body.orgId);
+  const statements = body.statements ? await generateDueStatements(ownerDeps, body.orgId) : null;
   const closes = body.dailyClose
     ? await runDailyCloses({ db: c.db.db, clock: c.clock, log })
     : { closed: 0 };
@@ -159,5 +184,8 @@ export const POST = publicRoute("test_hook", async (req) => {
     reviews,
     automation,
     delivered,
+    payouts,
+    payoutPoll,
+    statements,
   });
 });

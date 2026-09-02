@@ -396,6 +396,31 @@ export class IdentityService {
     return ok(undefined);
   }
 
+  /** A portal user with no password: owners and cleaners sign in by magic link only (spec 02 §2.6, spec 17 §17.5). */
+  async createPasswordlessUser(input: {
+    email: string;
+    name: string;
+    locale: string;
+  }): Promise<Result<User>> {
+    const email = normaliseEmail(input.email);
+    if (await this.deps.repo.findUserByEmail(email))
+      return err(new DomainError("identity.email_taken", "A user with this email already exists"));
+    const user: User = {
+      id: Id.next(),
+      email,
+      name: input.name,
+      locale: input.locale,
+      passwordHash: null,
+      totpSecretSealed: null,
+      totpEnabled: false,
+      failedLoginCount: 0,
+      lockedUntil: null,
+      lastLoginAt: null,
+    };
+    await this.deps.repo.createUser(user);
+    return ok(user);
+  }
+
   /** Passwordless login for owners and cleaners (spec 02 §2.6). Always answers the same way to avoid enumeration. */
   async requestMagicLink(
     email: string,

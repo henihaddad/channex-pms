@@ -17,6 +17,8 @@ import {
 } from "@pms/runtime";
 import {
   FakeLockProvider,
+  FakePayoutProvider,
+  type PayoutProvider,
   type ConnectivityProvider,
   type Crypto,
   type LockProvider,
@@ -24,7 +26,7 @@ import {
   type PasswordHasher,
   type TotpVerifier,
 } from "@pms/core";
-import type { FakeProvider } from "@pms/connectivity";
+import { StripeConnectPayoutProvider, stripeTransport, type FakeProvider } from "@pms/connectivity";
 import { selectProvider } from "@pms/jobs";
 import { Redis } from "ioredis";
 import { recordingMailer, testHooksEnabled } from "./test-hooks";
@@ -47,6 +49,8 @@ export interface WebContainer {
   redis: Redis | null;
   /** Smart-lock port (spec 08 §8.4); the fake issues manual door codes until a vendor adapter lands. */
   lock: LockProvider;
+  /** Owner payouts (spec 17 §17.4): Stripe Connect with STRIPE_SECRET_KEY, the fake otherwise. */
+  payouts: PayoutProvider;
 }
 
 declare global {
@@ -76,6 +80,9 @@ async function build(): Promise<WebContainer> {
     ...(selected.fake ? { fake: selected.fake } : {}),
     redis,
     lock: new FakeLockProvider(),
+    payouts: process.env.STRIPE_SECRET_KEY
+      ? new StripeConnectPayoutProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+      : new FakePayoutProvider(),
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,

@@ -15,7 +15,8 @@ import {
 import { HttpProblem } from "@/server/errors";
 
 export interface FormState {
-  error?: string;
+  error?: string | null;
+  message?: string;
 }
 
 const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -95,6 +96,19 @@ export const acceptInviteAction = publicAction<[FormState, FormData], FormState>
     );
     if (state.error) return state;
     redirect("/");
+  },
+);
+
+/** Owner portal: passwordless. Always the same answer (no enumeration). */
+export const requestMagicLinkAction = publicAction<[FormState, FormData], FormState>(
+  "auth",
+  async (_prev, fd) => {
+    const { requestMagicLinkFlow } = await import("@/server/auth-flows");
+    await requestMagicLinkFlow(field(fd, "email"), "en");
+    return {
+      error: null,
+      message: "If that address belongs to an owner, a sign-in link is on its way.",
+    };
   },
 );
 

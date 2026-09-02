@@ -24,6 +24,27 @@ All notable changes to this project are documented here. The format follows
   endpoints with an OpenAPI 3.1 document and the Apache-2.0 `@channex-pms/sdk`; `packages/jobs`
   shared by the worker and the test hooks; `compose.selfhost.yml` with a multi-target Dockerfile.
 
+## [0.4.0] — 2026-09-02
+
+### Added
+
+- M5 owner management: owner records with documents and expiry flags, sealed payout
+  destinations shown masked (PAY-1), portal access as a passwordless `owner` grant on the owner's
+  group; versioned agreements for every model and commission basis with deductible, cleaning-fee,
+  owner-stay, payout and VAT terms, overlap refusal (AGR-1, AGR-2, INV-12); expense capture with
+  receipts, agreement-suggested rebill flag with override reason and approval with optional
+  four-eyes (EXP-1, EXP-2); the pure statement engine with per-night attribution, per-version
+  segments, labelled commission estimates, visible markup, owner-stay allowances, hold-back and
+  minimum payout, property-based tests and byte-identical regeneration (STMT-1..3, OWN-1);
+  restatement adjustments after send from the billed-night ledger (STMT-4, OWN-2); the
+  draft → approved → sent → paid workflow with review flags, previous-period column, PDF and
+  email, auto-send after N days (STMT-5); payouts through the `PayoutProvider` port with a fake
+  and a Stripe Connect adapter, step-up and four-eyes (PAY-1..3); the owner portal (dashboard,
+  calendar with self-service owner stays through ARI, statements with line drill-down, PDF and
+  dispute threads, expenses, maintenance with raise, reviews, documents) scoped hard to the
+  owner (PORT-1..3, OWN-3); worker schedulers `statements.sweep`, `statements.autosend`,
+  `payouts.poll`.
+
 ## [0.3.0] — 2026-09-02
 
 ### Added

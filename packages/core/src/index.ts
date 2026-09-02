@@ -20,3 +20,4 @@ export * from "./properties/index.js";
 export * from "./channels/index.js";
 export * from "./operations/index.js";
 export * from "./messaging/index.js";
+export * from "./owners/index.js";

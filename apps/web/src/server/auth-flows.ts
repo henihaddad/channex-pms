@@ -3,6 +3,8 @@ import { Id, IdentityService, type Invitation } from "@pms/core";
 import {
   DrizzleAuditWriter,
   DrizzleIdentityRepository,
+  rawRows,
+  sql,
   withoutTenant,
   withTenant,
   type Tx,
@@ -125,6 +127,50 @@ export async function loginFlow(email: string, password: string): Promise<LoginO
   });
   return { kind: "session", orgId };
 }
+
+/** Owner portal sign-in (spec 17 §17.5): request a link by email; the answer never says whether the email exists. */
+export async function requestMagicLinkFlow(email: string, locale: string): Promise<void> {
+  const c = await container();
+  await withoutTenant(c.db.db, async (tx) =>
+    (await identity(tx)).requestMagicLink(email, "owner_portal", locale),
+  );
+}
+
+/** Consume a magic link: a session for the user and the organization their owner record lives in. */
+export async function magicLinkFlow(token: string): Promise<{ orgId: Id | null }> {
+  const c = await container();
+  const fp = await deviceFingerprint();
+  const r = await withoutTenant(c.db.db, async (tx) =>
+    (await identity(tx)).consumeMagicLink(token, fp),
+  );
+  if (!r.ok) fail(r.error.code, r.error.message, 401);
+  // the owner's group scopes every portal permission check without a database read inside the transaction (ADR-0007)
+  const [ownerRow] = await withoutTenant(c.db.db, (tx) =>
+    rawRows<{ org_id: string; group_id: string | null }>(
+      tx,
+      sql`select org_id, group_id from owner where user_id = ${r.value.user.id} and archived_at is null order by created_at limit 1`,
+    ),
+  );
+  const orgId = (ownerRow?.org_id as Id | undefined) ?? (await pickOrg(r.value.user.id));
+  await setSessionCookies({
+    userId: r.value.user.id,
+    sessionId: r.value.tokens.sessionId,
+    refreshToken: r.value.tokens.refreshToken,
+    refreshExpiresAt: r.value.tokens.refreshExpiresAt,
+    ...(orgId ? { orgId } : {}),
+  });
+  const jar = await cookies();
+  if (ownerRow?.group_id)
+    jar.set(OWNER_SCOPE_COOKIE, ownerRow.group_id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+  return { orgId };
+}
+
+export const OWNER_SCOPE_COOKIE = "pms_owner_scope";
 
 export async function totpFlow(code: string): Promise<{ orgId: Id | null }> {
   const c = await container();

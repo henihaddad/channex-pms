@@ -19,7 +19,8 @@ import {
 import { reconcileProperty } from "./processors/reconcile.js";
 import { processWebhook } from "./processors/webhook-ingest.js";
 import { selectProvider } from "./provider.js";
-import { FakeLockProvider } from "@pms/core";
+import { FakeLockProvider, FakePayoutProvider } from "@pms/core";
+import { StripeConnectPayoutProvider, stripeTransport } from "@pms/connectivity";
 import {
   escalateTurnovers,
   extendHorizons,
@@ -36,6 +37,9 @@ import {
   runAutomation,
   syncReviews,
   syncThreads,
+  autoSendStatements,
+  generateDueStatements,
+  pollPayouts,
   propertiesToProvision,
   publishAri,
   runProvisioning,
@@ -85,6 +89,18 @@ const messagingDeps = {
   crypto: c.crypto,
   log,
   mailer: consoleMailer(log),
+};
+// spec 17: statements, PDFs and payouts. Stripe Connect when a secret key is set, the fake otherwise.
+const ownerDeps = {
+  db: c.db.db,
+  clock: c.clock,
+  crypto: c.crypto,
+  log,
+  mailer: consoleMailer(log),
+  payouts: process.env.STRIPE_SECRET_KEY
+    ? new StripeConnectPayoutProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
+    : new FakePayoutProvider(),
+  appUrl: c.config.NEXT_PUBLIC_APP_URL,
 };
 const realtime = c.redis;
 const workerOpts = { connection: c.redis, concurrency: c.config.WORKER_CONCURRENCY };
@@ -310,6 +326,21 @@ const workers: Worker[] = [
           log.info({ created: n }, "reviews.sweep.run");
           return;
         }
+        case "statements.sweep": {
+          const r = await generateDueStatements(ownerDeps);
+          log.info(r, "statements.sweep.run");
+          return;
+        }
+        case "statements.autosend": {
+          const n = await autoSendStatements(ownerDeps);
+          if (n > 0) log.info({ sent: n }, "statements.autosend.run");
+          return;
+        }
+        case "payouts.poll": {
+          const r = await pollPayouts(ownerDeps);
+          if (r.paid + r.failed > 0) log.info(r, "payouts.poll.run");
+          return;
+        }
         case "retention.purge": {
           const r = await purgeCardMetadata({ db: c.db.db, clock: c.clock, log });
           log.info(r, "retention.purge.run");
@@ -367,6 +398,21 @@ async function main(): Promise<void> {
   );
   await system.upsertJobScheduler("ops.escalate", { every: 60_000 }, { name: "ops.escalate" });
   await system.upsertJobScheduler("messages.poll", { every: 120_000 }, { name: "messages.poll" });
+  await system.upsertJobScheduler(
+    "statements.sweep",
+    { pattern: "0 4 * * *" },
+    { name: "statements.sweep" },
+  );
+  await system.upsertJobScheduler(
+    "statements.autosend",
+    { pattern: "30 4 * * *" },
+    { name: "statements.autosend" },
+  );
+  await system.upsertJobScheduler(
+    "payouts.poll",
+    { pattern: "10 * * * *" },
+    { name: "payouts.poll" },
+  );
   await system.upsertJobScheduler(
     "automation.tick",
     { every: 60_000 },

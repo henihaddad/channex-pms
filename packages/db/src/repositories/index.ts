@@ -57,3 +57,12 @@ export {
   type AutomationBooking,
   type ReviewRow,
 } from "./messaging.js";
+export {
+  DrizzleOwnerRepository,
+  type OwnerRow,
+  type AgreementRow,
+  type ExpenseRow,
+  type StatementRow,
+  type StatementLineRow,
+  type PayoutRow,
+} from "./owners.js";

@@ -30,13 +30,14 @@
 
 ---
 
-> **Status: v0.3 (milestone M4) shipped; M5 in progress.** The [specification](./docs/specs/) (17 documents,
+> **Status: v0.4 (milestone M5) shipped; M6 in progress.** The [specification](./docs/specs/) (17 documents,
 > decided stack, M0 to M8 roadmap) is complete enough to build against. M0 (identity, tenancy with
 > row-level security, permission matrix, audit log), M1 (the Channex sync engine, webhook receiver,
 > booking ingestion with the ack loop, drift detection and a 200-scenario chaos suite) and M2
 > (properties, the portfolio calendar, channel connections and mapping), M3 (reservations,
 > turnover operations, the cleaner app, folios and invoices) and M4 (the unified inbox, templates,
-> automation with door-code delivery, reviews) are done. Owner statements arrive with M5. Everything
+> automation with door-code delivery, reviews) and M5 (owner agreements, statements, payouts and
+> the owner portal) are done. Dashboards and reporting arrive with M6. Everything
 > is proven against the built-in fake provider, and the provider adapter is certified against the
 > Channex staging environment.
 
@@ -122,8 +123,8 @@ paywalled in the self-hosted edition, and the only enterprise-licensed files are
 | M2        | Inventory, portfolio calendar, channel connection. First usable release | v0.1   |
 | M3        | Reservations and turnover operations                                    | v0.2   |
 | M4        | Unified messaging                                                       | v0.3   |
-| M5        | Owner management                                                        | next   |
-| M6        | Dashboards and reporting                                                |        |
+| M5        | Owner management                                                        | v0.4   |
+| M6        | Dashboards and reporting                                                | next   |
 | M7        | Direct booking engine                                                   |        |
 | M8        | Hosted service, billing, hardening to v1.0                              |        |
 

@@ -1,4 +1,6 @@
 import type { NextRequest } from "next/server";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ZodType } from "zod";
 import {
   evaluate,
@@ -53,6 +55,8 @@ export interface PermissionOptions<A extends unknown[]> {
   redact?: readonly string[];
   /** Reads of non-PII data are permission-checked but not written to the audit log. Default true. */
   audit?: boolean;
+  /** Set by `withPermission.route`: the route flavour builds its own step-up redirect. */
+  routeFlavour?: boolean;
 }
 
 const WRAPPED = Symbol.for("pms.wrapped");
@@ -92,77 +96,91 @@ export function withPermission<A extends unknown[], O>(
     const [rid, locale, ip] = await Promise.all([requestId(), currentLocale(), clientIp()]);
     const actor: Actor = { type: "user", id: session.userId };
 
-    return withTenant(c.db.db, { orgId, actor, requestId: rid }, async (tx) => {
-      const repo = new DrizzleIdentityRepository(tx);
-      const grants = await repo.listGrantsForSubject("user", session.userId);
-      const target = opts.resolveScope
-        ? await opts.resolveScope(...args)
-        : { kind: "organization" as const, id: orgId };
-      const decision = evaluate({
-        permission,
-        target,
-        graph: await scopeGraph(tx, orgId),
-        now: c.clock.now().toString(),
-        grants: grants.map((g) => ({
-          role: g.roleKey
-            ? (g.roleKey as Parameters<typeof evaluate>[0]["grants"][number]["role"])
-            : {
-                custom: {
-                  key: "custom",
-                  allow: new Set(),
-                  stepUp: new Set(),
-                  rowFilter: new Map(),
-                  grantable: new Set(),
-                  maxScope: new Map(),
+    try {
+      return await withTenant(c.db.db, { orgId, actor, requestId: rid }, async (tx) => {
+        const repo = new DrizzleIdentityRepository(tx);
+        const grants = await repo.listGrantsForSubject("user", session.userId);
+        const target = opts.resolveScope
+          ? await opts.resolveScope(...args)
+          : { kind: "organization" as const, id: orgId };
+        const decision = evaluate({
+          permission,
+          target,
+          graph: await scopeGraph(tx, orgId),
+          now: c.clock.now().toString(),
+          grants: grants.map((g) => ({
+            role: g.roleKey
+              ? (g.roleKey as Parameters<typeof evaluate>[0]["grants"][number]["role"])
+              : {
+                  custom: {
+                    key: "custom",
+                    allow: new Set(),
+                    stepUp: new Set(),
+                    rowFilter: new Map(),
+                    grantable: new Set(),
+                    maxScope: new Map(),
+                  },
                 },
-              },
-          scope: { kind: g.scopeType, id: g.scopeId },
-          ...(g.overrides
-            ? {
-                overrides: {
-                  ...(g.overrides.allow ? { allow: g.overrides.allow as Permission[] } : {}),
-                  ...(g.overrides.deny ? { deny: g.overrides.deny as Permission[] } : {}),
-                },
-              }
-            : {}),
-          expiresAt: g.expiresAt,
-        })),
-      });
-      if (!decision.allow) throw forbidden(decision.missing, decision.reason);
-      if (decision.stepUp || opts.stepUp) {
-        // same transaction: a second connection would deadlock a single-connection driver (PGlite)
-        const row = await repo.findSessionById(session.sessionId);
-        const fresh =
-          row?.stepUpAt && Date.now() - new Date(row.stepUpAt).getTime() < STEP_UP_WINDOW_MS;
-        if (!fresh) throw stepUpRequired(permission);
-      }
-      const audit = new DrizzleAuditWriter(tx, c.sha256Hex);
-      const subject = opts.subject ? opts.subject(...args) : { kind: target.kind, id: target.id };
-      if (opts.audit !== false)
-        await audit.append({
-          orgId,
-          actor: actor as AuditActor,
-          action: permission,
-          subject,
-          after: redact(opts.auditInput ? opts.auditInput(...args) : args[0], opts.redact),
-          surface: "web",
-          ...(ip ? { ip } : {}),
-          requestId: rid,
-          occurredAt: c.clock.now().toString(),
+            scope: { kind: g.scopeType, id: g.scopeId },
+            ...(g.overrides
+              ? {
+                  overrides: {
+                    ...(g.overrides.allow ? { allow: g.overrides.allow as Permission[] } : {}),
+                    ...(g.overrides.deny ? { deny: g.overrides.deny as Permission[] } : {}),
+                  },
+                }
+              : {}),
+            expiresAt: g.expiresAt,
+          })),
         });
-      const ctx: ActorCtx = {
-        orgId,
-        userId: session.userId,
-        actor,
-        tx,
-        audit,
-        requestId: rid,
-        locale,
-        log: c.log.child({ requestId: rid, orgId }),
-      };
-      if (decision.rowFilter) ctx.rowFilter = decision.rowFilter;
-      return handler(ctx, ...args);
-    });
+        if (!decision.allow) throw forbidden(decision.missing, decision.reason);
+        if (decision.stepUp || opts.stepUp) {
+          // same transaction: a second connection would deadlock a single-connection driver (PGlite)
+          const row = await repo.findSessionById(session.sessionId);
+          const fresh =
+            row?.stepUpAt && Date.now() - new Date(row.stepUpAt).getTime() < STEP_UP_WINDOW_MS;
+          if (!fresh) throw stepUpRequired(permission);
+        }
+        const audit = new DrizzleAuditWriter(tx, c.sha256Hex);
+        const subject = opts.subject ? opts.subject(...args) : { kind: target.kind, id: target.id };
+        if (opts.audit !== false)
+          await audit.append({
+            orgId,
+            actor: actor as AuditActor,
+            action: permission,
+            subject,
+            after: redact(opts.auditInput ? opts.auditInput(...args) : args[0], opts.redact),
+            surface: "web",
+            ...(ip ? { ip } : {}),
+            requestId: rid,
+            occurredAt: c.clock.now().toString(),
+          });
+        const ctx: ActorCtx = {
+          orgId,
+          userId: session.userId,
+          actor,
+          tx,
+          audit,
+          requestId: rid,
+          locale,
+          log: c.log.child({ requestId: rid, orgId }),
+        };
+        if (decision.rowFilter) ctx.rowFilter = decision.rowFilter;
+        return handler(ctx, ...args);
+      });
+    } catch (e) {
+      // a form action that needs step-up sends the browser to re-authenticate and back (spec 02 §2.6)
+      if (e instanceof HttpProblem && e.code === "step_up_required" && !opts.routeFlavour) {
+        const referer = (await headers()).get("referer");
+        let next = "/";
+        if (referer) {
+          const u = new URL(referer);
+          next = `${u.pathname}${u.search}`;
+        }
+        redirect(`/step-up?next=${encodeURIComponent(next)}`);
+      }
+      throw e;
+    }
   };
   return Object.assign(wrapped, { [WRAPPED]: permission });
 }
@@ -183,7 +201,7 @@ withPermission.route = function route<I>(
 ): RouteHandler {
   const inner = withPermission<[I, NextRequest], Response>(
     permission,
-    { ...opts, auditInput: (input) => input },
+    { ...opts, auditInput: (input) => input, routeFlavour: true },
     (ctx, input, req) => handler(ctx, input, req),
   );
   const routeFn: RouteHandler = async (req, { params }) => {

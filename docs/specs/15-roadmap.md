@@ -105,7 +105,7 @@ changeovers, without a spreadsheet. `v0.2`.
 
 ---
 
-## M5 — Owners *(~4 weeks)*
+## M5 — Owners *(~4 weeks)* ✅ shipped 2026-09-02 as v0.4
 
 - Owner records, documents, versioned agreements (all models + commission bases).
 - Expense capture with receipts and approval flow.

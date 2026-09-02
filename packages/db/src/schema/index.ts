@@ -7,3 +7,4 @@ export * from "./channels.js";
 export { TENANCY, ORG_TABLES, type Tenancy } from "./registry.js";
 export * from "./operations.js";
 export * from "./messaging.js";
+export * from "./owners.js";
