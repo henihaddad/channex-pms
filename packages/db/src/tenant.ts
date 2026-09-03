@@ -29,11 +29,10 @@ export async function withTenant<T>(
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
-    await tx.execute(sql`set local role pms_app`);
-    await tx.execute(sql`select set_config('app.org_id', ${ctx.orgId}, true)`);
-    await tx.execute(sql`select set_config('app.actor_id', ${ctx.actor.id}, true)`);
-    await tx.execute(sql`select set_config('app.actor_type', ${ctx.actor.type}, true)`);
-    await tx.execute(sql`select set_config('app.request_id', ${ctx.requestId ?? ""}, true)`);
+    // one round trip for the role switch and every setting: on a remote database each statement costs a hop
+    await tx.execute(
+      sql`select set_config('role', 'pms_app', true), set_config('app.org_id', ${ctx.orgId}, true), set_config('app.actor_id', ${ctx.actor.id}, true), set_config('app.actor_type', ${ctx.actor.type}, true), set_config('app.request_id', ${ctx.requestId ?? ""}, true)`,
+    );
     return fn(tx as unknown as Tx);
   });
 }

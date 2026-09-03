@@ -145,11 +145,17 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await op.getByLabel("Tenant (blank = platform)").fill(orgId);
   await op.getByLabel("Reason (shown to the tenant)").fill("Rates not updating, ticket 42");
   await op.getByTestId("request-impersonation").click();
-  await expect(op.locator('[data-testid="impersonation-row"][data-state="approved"]')).toHaveCount(
-    1,
-  );
+  await expect(
+    op
+      .locator('[data-testid="impersonation-row"][data-state="approved"]')
+      .filter({ hasText: "· you ·" }),
+  ).toHaveCount(1);
   await op.getByTestId("enter-impersonation").click();
-  await expect(op.locator('[data-testid="impersonation-row"][data-state="active"]')).toHaveCount(1);
+  await expect(
+    op
+      .locator('[data-testid="impersonation-row"][data-state="active"]')
+      .filter({ hasText: "· you ·" }),
+  ).toHaveCount(1);
   await op.goto("/");
   await expect(op.getByTestId("impersonation-banner")).toBeVisible();
   // read-only, PII closed (OPCON-1): the reservations list opens, the inbox does not
@@ -158,7 +164,11 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await op.goto("/inbox");
   await expect(op.getByRole("heading", { name: "Permission denied" })).toBeVisible();
   await op.goto("/ops/impersonation");
-  await expect(op.locator('[data-testid="impersonation-row"][data-state="active"]')).toHaveCount(1);
+  await expect(
+    op
+      .locator('[data-testid="impersonation-row"][data-state="active"]')
+      .filter({ hasText: "· you ·" }),
+  ).toHaveCount(1);
   // the tenant sees the session in their audit log and support page
   await page.goto("/settings/support");
   await expect(

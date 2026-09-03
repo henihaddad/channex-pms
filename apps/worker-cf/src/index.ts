@@ -80,6 +80,16 @@ export default {
   async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const rt = runtime(env);
     const at = new Date(event.scheduledTime);
+    // keep an isolate of the web app warm at the placement colo: cold starts of the Next bundle cost ~300 ms
+    if (typeof env.NEXT_PUBLIC_APP_URL === "string")
+      for (const path of ["/api/health", "/login"])
+        ctx.waitUntil(
+          fetch(`${env.NEXT_PUBLIC_APP_URL}${path}`, {
+            headers: { "user-agent": "otabridge-warm" },
+          })
+            .then((r) => r.arrayBuffer())
+            .catch(() => undefined),
+        );
     ctx.waitUntil(
       (async () => {
         const published = await drainAll(env);

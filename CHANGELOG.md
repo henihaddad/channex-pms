@@ -54,7 +54,14 @@ All notable changes to this project are documented here. The format follows
   `apps/worker` is now a BullMQ adapter around them. Processors take a `JobControl` instead of a
   BullMQ `Job`.
 - `packages/db` connects with one client per transaction when `DATABASE_PER_REQUEST=1` and loads
-  PGlite on demand; `MIGRATIONS_FOLDER` became `migrationsFolder()`.
+  PGlite on demand; `MIGRATIONS_FOLDER` became `migrationsFolder()`. With a request `scope`
+  (the web app on Workers passes its request context) every transaction and query of one request
+  shares a single connection, serialised as on the development database, closed shortly after
+  the last use. `withTenant` applies the role switch and all settings in one statement. Together
+  these cut a console page from 6 to 7 connections and 36 to 58 statements to 1 connection and
+  roughly half the statements.
+- The web Worker runs with Cloudflare Smart Placement (near the database, not the visitor), and
+  the jobs Worker's minute tick keeps one web isolate warm.
 
 ### Fixed
 

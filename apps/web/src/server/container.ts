@@ -83,7 +83,13 @@ async function build(): Promise<WebContainer> {
   }
   const config = loadConfig();
   const log = createLogger({ level: config.LOG_LEVEL, service: "web" });
-  const db = await connect();
+  // one database connection per request, closed shortly after the response (ADR-0008)
+  const db = await connect(process.env, {
+    scope: () => {
+      const cf = cfContext();
+      return cf ? { key: cf.ctx, waitUntil: (p) => cf.ctx.waitUntil(p) } : undefined;
+    },
+  });
   if (db.driver === "pglite") {
     // Development without Postgres: the in-process database is migrated on first use.
     await db.migrate();

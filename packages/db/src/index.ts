@@ -5,8 +5,10 @@ export {
   connectPg,
   connectPglite,
   migrationsFolder,
+  type ConnectPgOptions,
   type Db,
   type DbHandle,
+  type RequestScope,
   type Schema,
 } from "./client.js";
 export {

@@ -7,6 +7,8 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "binding": "ASSETS", "directory": ".open-next/assets" },
   "observability": { "enabled": true },
+  // ADR-0008: run next to Hyperdrive and Neon rather than next to the visitor; every request makes many database round trips
+  "placement": { "mode": "smart" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "otabridge-app" }],
   "hyperdrive": [
     {

@@ -24,9 +24,15 @@ long-running process, so no poll loop, no `setInterval`, no Redis lease.
    one implementation; `apps/worker` adapts them to BullMQ, `apps/worker-cf` to Cloudflare
    Queues and Cron Triggers. Rule 3 of spec 14 §14.3 holds: the worker is a separate Worker.
 2. **Postgres is Neon behind Hyperdrive.** D1 was rejected: the schema relies on row-level
-   security, triggers, `jsonb` and exclusion constraints. `packages/db` opens one `pg` client
-   per transaction when `DATABASE_PER_REQUEST=1` (`PerRequestPool`); Hyperdrive holds the real
-   pool next to the origin. Migrations run from CI or a laptop with `db:migrate:neon`, which
+   security, triggers, `jsonb` and exclusion constraints. `packages/db` opens `pg` clients on
+   demand when `DATABASE_PER_REQUEST=1` (`PerRequestPool`): one per request when the caller
+   passes a request scope (the web app passes its Cloudflare request context), shared by every
+   transaction and query of that request in FIFO order, exactly the single-connection model the
+   PGlite suites already enforce, and closed 300 ms after the last use through `waitUntil`;
+   otherwise one per transaction. `withTenant` sets the role and every setting in a single
+   statement. Hyperdrive holds the real pool next to the origin. The web Worker runs with
+   Smart Placement so it executes near Hyperdrive and Neon instead of near the visitor: a
+   console page issues some thirty statements, and each one is a round trip. Migrations run from CI or a laptop with `db:migrate:neon`, which
    speaks the wire protocol over a WebSocket, because the Workers themselves never migrate
    (spec 14 §14.7).
 3. **Shims, not forks.** `@pms/runtime/shims/*` replace `@node-rs/argon2` (pure-JS Argon2id from
@@ -63,8 +69,15 @@ long-running process, so no poll loop, no `setInterval`, no Redis lease.
 - The FakeProvider and the test-hook mail store are per isolate. The end-to-end suite therefore
   runs against a single local `wrangler dev` (workerd against PGlite over the wire protocol) as
   the runtime gate; against the deployment only a smoke subset is meaningful.
-- Argon2id in pure JS costs a few hundred milliseconds of CPU per login on Workers, well inside
-  the budget; the parameters (spec 13 §13.5) did not change.
+- Argon2id in pure JS costs about 1.5 s of CPU per login on Workers (WebAssembly compiled at
+  runtime is not allowed there, so the WASM implementations are out); the parameters
+  (spec 13 §13.5) did not change. Measured on the deployment: a JSON API call takes about
+  200 ms, a console page 500 to 900 ms, dominated by database round trips (Worker in
+  Virginia, Neon in Ohio) and by cold isolates evaluating the Next.js bundle (250 to 500 ms of
+  CPU on the first request an isolate serves). The jobs Worker's minute tick fetches the web
+  app to keep one isolate warm. Moving the Neon project to the region the placement engine
+  picks, and cutting statements per page, are the next levers; a WebAssembly Argon2 loaded as
+  a module would fix the login cost.
 - `wrangler dev` presents requests under the configured custom domain; local runs pass
   `--host localhost:8787` (one hostname for cookies and redirects) so server-action redirects
   resolve locally.
