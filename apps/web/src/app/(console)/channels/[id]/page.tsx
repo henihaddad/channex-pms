@@ -13,7 +13,11 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
         {v.connection.propertyTitle} · {v.connection.adapterCode}
       </PageTitle>
       <Card>
-        <p className="text-sm text-muted">
+        <p
+          className="text-sm text-muted"
+          data-testid="connection-state"
+          data-state={v.connection.state}
+        >
           State {v.connection.state} ·{" "}
           {v.connection.readiness.ready
             ? "ready"

@@ -89,7 +89,8 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByTestId("save-mappings").click();
   await expect(page.getByText(/^Saved:/)).toBeVisible();
   await page.getByTestId("activate-connection").click();
-  await expect(page.getByTestId("activated")).toBeVisible();
+  // the success alert is transient: the page refreshes and the Activate card leaves once the state is active
+  await expect(page.getByTestId("connection-state")).toHaveAttribute("data-state", "active");
   await page.goto("/channels");
   await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(1);
   void airbnbPropertyId;

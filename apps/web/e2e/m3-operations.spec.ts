@@ -137,7 +137,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await folio.locator("input[name=amount]").first().fill("30");
   await folio.getByRole("button", { name: "Add charge" }).click();
   await expect(folio).toContainText("Late check-out");
-  await page.getByTestId("issue-invoice").click();
+  await folio.getByTestId("issue-invoice").click();
   await expect(page.getByTestId("folio").first()).toContainText("INV-");
   await page.goto("/settings/audit");
   await expect(page.locator("code", { hasText: "booking:read_pii" }).first()).toBeVisible();
