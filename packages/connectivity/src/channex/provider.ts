@@ -36,6 +36,8 @@ import {
   type WebhookSpec,
   type ImportedProperty,
   type RemoteChannel,
+  type AirbnbConnectionLinkSpec,
+  type RemoteListing,
 } from "@pms/core";
 import type { HttpRequest, HttpResponse, HttpTransport } from "../transport/http.js";
 
@@ -245,7 +247,7 @@ export class ChannexProvider implements ConnectivityProvider {
     );
     const pa = obj(obj(obj(p).data).attributes);
     const rels = obj(obj(obj(p).data).relationships);
-    const groupId = obj(obj(obj(rels.groups).data ?? {})).id;
+    const groupId = groupIdOf(rels);
     const roomTypes = (
       await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)
     ).map((r) => {
@@ -603,6 +605,110 @@ export class ChannexProvider implements ConnectivityProvider {
         }),
       };
     });
+  }
+  async createAirbnbConnectionLink(
+    spec: AirbnbConnectionLinkSpec,
+    meta: CallMeta,
+  ): Promise<{ url: string }> {
+    // Channex requires the group; a property carries it under relationships.groups.
+    let groupId = spec.groupId;
+    if (!groupId) {
+      const first = spec.propertyIds[0];
+      if (!first) throw new ContractError("connection link needs at least one property", {});
+      const prop = await this.call(
+        "properties.get",
+        { method: "GET", path: `/api/v1/properties/${first}` },
+        meta,
+      );
+      const g = groupIdOf(obj(obj(obj(prop).data).relationships));
+      if (typeof g !== "string")
+        throw new ContractError("property without a group; cannot build the Airbnb link", {
+          body: prop,
+        });
+      groupId = g;
+    }
+    const body = await this.call(
+      "airbnb.connection_link",
+      {
+        method: "POST",
+        path: "/api/v1/meta/airbnb/connection_link",
+        body: {
+          connection_link: {
+            group_id: groupId,
+            properties: spec.propertyIds,
+            redirect_uri: spec.redirectUri,
+            failure_redirect_uri: spec.failureRedirectUri,
+            token: spec.token,
+            title: spec.title,
+            ...(spec.channelId ? { channel_id: spec.channelId } : {}),
+            settings: {
+              min_stay_type: "Arrival",
+              booking_amount_settings: "Payout Amount",
+              ...spec.settings,
+            },
+          },
+        },
+      },
+      meta,
+    );
+    const url = obj(obj(obj(body).data).attributes).url;
+    if (typeof url !== "string") throw new ContractError("connection_link without a url", { body });
+    return { url };
+  }
+
+  async listChannelListings(ref: ProviderRef, meta: CallMeta): Promise<RemoteListing[]> {
+    const body = await this.call(
+      "airbnb.listings",
+      { method: "GET", path: `/api/v1/channels/${ref.id}/action/listings` },
+      meta,
+    );
+    const values = arr(obj(obj(obj(body).data).listing_id_dictionary).values);
+    return values.map((raw) => {
+      const v = obj(raw);
+      return {
+        id: String(v.id),
+        title: String(v.title ?? v.id),
+        ...(typeof v.type === "string" ? { type: v.type } : {}),
+        ...(typeof v.city === "string" ? { city: v.city } : {}),
+        ...(typeof v.country_code === "string" ? { countryCode: v.country_code } : {}),
+        ...(Array.isArray(v.occupancies) ? { occupancies: v.occupancies.map(Number) } : {}),
+        ...(typeof v.quality_status === "string" ? { qualityStatus: v.quality_status } : {}),
+      };
+    });
+  }
+
+  async mapListing(
+    ref: ProviderRef,
+    mapping: { ratePlanId: string; listingId: string },
+    meta: CallMeta,
+  ): Promise<ProviderRef> {
+    const body = await this.call(
+      "airbnb.mapping.create",
+      {
+        method: "POST",
+        path: `/api/v1/channels/${ref.id}/mappings`,
+        body: {
+          mapping: {
+            rate_plan_id: mapping.ratePlanId,
+            settings: { listing_id: mapping.listingId },
+          },
+        },
+      },
+      meta,
+    );
+    return { id: idOf(body) };
+  }
+
+  async loadFutureReservations(ref: ProviderRef, meta: CallMeta): Promise<void> {
+    await this.call(
+      "airbnb.load_future_reservations",
+      {
+        method: "POST",
+        path: `/api/v1/channels/${ref.id}/execute/load_future_reservations`,
+        body: {},
+      },
+      meta,
+    );
   }
 
   // ---- reservations ------------------------------------------------------------------
@@ -1033,6 +1139,14 @@ export function maskPan(input: string): string {
   const digits = input.replace(/\D/g, "");
   if (digits.length < 13) return input.replace(/\d/g, "*");
   return `${digits.slice(0, 6)}${"*".repeat(digits.length - 10)}${digits.slice(-4)}`;
+}
+
+/** The property's group: docs show `groups: { data: { id } }`, staging answers a bare array of groups. */
+function groupIdOf(rels: Record<string, unknown>): unknown {
+  const groups = rels.groups;
+  if (Array.isArray(groups)) return obj(groups[0]).id;
+  const data = obj(groups).data;
+  return Array.isArray(data) ? obj(data[0]).id : obj(data).id;
 }
 
 function idOf(body: unknown): string {

@@ -264,3 +264,68 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
     ]);
   });
 });
+
+describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
+  const CHANNEL = "3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90";
+
+  it("asks Channex for Airbnb's authorisation link with our callback and token", async () => {
+    const { p, http } = provider();
+    const r = await p.createAirbnbConnectionLink(
+      {
+        propertyIds: [PROPERTY],
+        redirectUri: "https://app.example/cb",
+        failureRedirectUri: "https://app.example/cb?failed=1",
+        token: "tok",
+        title: "Airbnb",
+      },
+      meta,
+    );
+    expect(r.url).toMatch(/^https:\/\/www\.airbnb\.com\/oauth2\/auth/);
+    expect(http.calls[0]).toMatchObject({ method: "GET", path: `/api/v1/properties/${PROPERTY}` });
+    expect(http.calls[1]).toMatchObject({
+      method: "POST",
+      path: "/api/v1/meta/airbnb/connection_link",
+      body: {
+        connection_link: {
+          group_id: "3a1f0c5e-1111-4a3b-9c1d-000000000001",
+          properties: [PROPERTY],
+          redirect_uri: "https://app.example/cb",
+          failure_redirect_uri: "https://app.example/cb?failed=1",
+          token: "tok",
+          title: "Airbnb",
+          settings: { min_stay_type: "Arrival", booking_amount_settings: "Payout Amount" },
+        },
+      },
+    });
+  });
+
+  it("lists the host's listings, maps one to a rate plan and starts the reservation import", async () => {
+    const { p, http } = provider();
+    const listings = await p.listChannelListings({ id: CHANNEL }, meta);
+    expect(listings).toEqual([
+      {
+        id: "12345678",
+        title: "Cozy Studio in Paris",
+        type: "Entire home/apt",
+        city: "Paris",
+        countryCode: "FR",
+        occupancies: [1, 2, 3, 4],
+        qualityStatus: "excellent",
+      },
+    ]);
+    const m = await p.mapListing(
+      { id: CHANNEL },
+      { ratePlanId: "rp-remote-1", listingId: "12345678" },
+      meta,
+    );
+    expect(m).toEqual({ id: "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e" });
+    expect(http.calls[1]?.body).toEqual({
+      mapping: { rate_plan_id: "rp-remote-1", settings: { listing_id: "12345678" } },
+    });
+    await p.loadFutureReservations({ id: CHANNEL }, meta);
+    expect(http.calls[2]).toMatchObject({
+      method: "POST",
+      path: `/api/v1/channels/${CHANNEL}/execute/load_future_reservations`,
+    });
+  });
+});

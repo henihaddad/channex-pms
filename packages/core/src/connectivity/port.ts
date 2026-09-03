@@ -202,6 +202,32 @@ export interface Readiness {
   issues: string[];
 }
 
+/** What the provider needs to start Airbnb's authorisation on our behalf (Channex: connection link). */
+export interface AirbnbConnectionLinkSpec {
+  propertyIds: string[];
+  groupId?: string;
+  /** Where Airbnb sends the host back on success; the provider appends `channel_id` and our `token`. */
+  redirectUri: string;
+  failureRedirectUri: string;
+  /** Our opaque token, echoed back so the callback can bind the result to the session. */
+  token: string;
+  title: string;
+  /** Re-authorise an existing connection instead of creating one. */
+  channelId?: string;
+  settings?: Record<string, unknown>;
+}
+
+/** An Airbnb listing as the connected host account exposes it through the provider. */
+export interface RemoteListing {
+  id: string;
+  title: string;
+  type?: string;
+  city?: string;
+  countryCode?: string;
+  occupancies?: number[];
+  qualityStatus?: string;
+}
+
 /** A channel connection as the provider holds it, for mirroring connections made in the provider's own UI. */
 export interface RemoteChannel {
   id: string;
@@ -303,6 +329,21 @@ export interface ConnectivityProvider {
   createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }>;
   /** The connections the provider holds for a property, to mirror those made in its own UI. */
   listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]>;
+  /** Airbnb's OAuth URL for the host to authorise the provider (CH-5); the connection exists, inactive, when they return. */
+  createAirbnbConnectionLink(
+    spec: AirbnbConnectionLinkSpec,
+    meta: CallMeta,
+  ): Promise<{ url: string }>;
+  /** The listings of the Airbnb account behind a connection. */
+  listChannelListings(ref: ProviderRef, meta: CallMeta): Promise<RemoteListing[]>;
+  /** Map one listing to one rate plan on an Airbnb connection (asynchronous on the provider side). */
+  mapListing(
+    ref: ProviderRef,
+    mapping: { ratePlanId: string; listingId: string },
+    meta: CallMeta,
+  ): Promise<ProviderRef>;
+  /** Import the account's future reservations after activation, without guest notifications. */
+  loadFutureReservations(ref: ProviderRef, meta: CallMeta): Promise<void>;
   // reservations
   listBookingRevisions(
     propertyId: string,

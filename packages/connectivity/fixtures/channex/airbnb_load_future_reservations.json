@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API examples › Airbnb: background import of future reservations, no guest notifications."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels/3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90/execute/load_future_reservations"
+  },
+  "response": { "status": 200, "body": { "meta": { "message": "Reservations loading started" } } }
+}

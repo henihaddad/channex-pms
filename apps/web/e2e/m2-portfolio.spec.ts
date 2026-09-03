@@ -65,18 +65,34 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.goto("/properties");
   await expect(page.locator('tr[data-state="live"]')).toHaveCount(20);
 
-  // Airbnb is a primary path (CH-5): OAuth once at org level, then bulk listing import with match-or-create
+  // Airbnb is a primary path (CH-5): authorised once through Channex (the Airbnb partner), which
+  // sends the host back with the new channel; then listings map to rate plans and the connection activates
+  await page.goto("/properties");
+  const airbnbListing = page.getByRole("link", { name: "Listing 02" });
+  const airbnbPropertyId = (await airbnbListing.getAttribute("href"))!.split("/").pop()!;
   await page.goto("/channels");
   await page.getByTestId("connect-airbnb").click();
-  // channel accounts are a step-up permission (spec 02 §2.4 `!`): re-enter the password once, then OAuth proceeds
+  // channel accounts are a step-up permission (spec 02 §2.4 `!`): re-enter the password once, then the link proceeds
   await expect(page).toHaveURL(/\/step-up/);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Confirm" }).click();
-  await expect(page).toHaveURL(/\/channels$/);
-  await expect(page.getByTestId("accounts")).toContainText("Fake Airbnb host");
-  await page.getByTestId("import-listings").click();
-  await page.getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByTestId("import-result")).toContainText("connected");
+  await expect(page).toHaveURL(/\/channels\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("AirBNB");
+  await expect(page.getByTestId("mapping-editor")).toBeVisible();
+  const airbnbRows = page.locator('[data-testid^="map-"]');
+  await expect(airbnbRows.first()).toBeVisible();
+  const n = await airbnbRows.count();
+  for (let i = 0; i < n; i++) {
+    const testId = (await airbnbRows.nth(i).getAttribute("data-testid"))!;
+    await pickOption(page, { testId }, { index: 1 });
+  }
+  await page.getByTestId("save-mappings").click();
+  await expect(page.getByText(/^Saved:/)).toBeVisible();
+  await page.getByTestId("activate-connection").click();
+  await expect(page.getByTestId("activated")).toBeVisible();
+  await page.goto("/channels");
+  await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(1);
+  void airbnbPropertyId;
 
   // Booking.com through the descriptor-driven wizard (CH-1..CH-6)
   await page.goto("/properties");
@@ -97,7 +113,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByTestId("wizard-activate").click();
   await expect(page.getByText(/Active\. A full ARI push/)).toBeVisible();
   await page.getByTestId("wizard-done").click();
-  await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(1);
+  await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(2);
 
   // channels the provider alone can authorise are connected inside Channex's embedded screen (CH-5);
   // pulling mirrors what Channex holds, so the connection just activated shows up once, not twice
@@ -108,8 +124,13 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   const frame = page.frameLocator('[data-testid="channex-screen"]');
   await expect(frame.getByTestId("fake-channex-screen")).toBeVisible();
   await page.getByTestId("sync-connections").click();
-  await expect(page.getByTestId("mirrored-connection")).toHaveCount(1);
-  await expect(page.getByTestId("mirrored-connection").first()).toContainText("BookingCom");
+  await expect(page.getByTestId("mirrored-connection")).toHaveCount(2);
+  await expect(
+    page.getByTestId("mirrored-connection").filter({ hasText: "BookingCom" }),
+  ).toHaveCount(1);
+  await expect(page.getByTestId("mirrored-connection").filter({ hasText: "AirBNB" })).toHaveCount(
+    1,
+  );
 
   // edit a rate on the calendar: optimistic pending → synced over SSE after the push
   await page.goto(`/calendar?propertyId=${propertyId}&days=14`);

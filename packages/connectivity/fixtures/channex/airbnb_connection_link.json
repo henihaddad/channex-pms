@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API examples › Airbnb: a two-hour OAuth link; Airbnb returns the host to redirect_uri with success, channel_id and our token."
+  },
+  "request": { "method": "POST", "path": "/api/v1/meta/airbnb/connection_link" },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "type": "connection_link",
+        "attributes": { "url": "https://www.airbnb.com/oauth2/auth?client_id=channex&state=abc" }
+      }
+    }
+  }
+}

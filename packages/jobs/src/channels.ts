@@ -86,6 +86,24 @@ export async function activateConnection(
       }),
     );
   }
+  if (conn.adapterCode === "AirBNB" && conn.settings.managedIn === "channex") {
+    // Airbnb through Channex (CH-5): listings map one by one on the provider; push what is not there yet.
+    const remote = await deps.provider.listChannels(idMap.property.remote, meta("list"));
+    const held = new Set(
+      (remote.find((r) => r.id === channexChannelId)?.mappings ?? []).map(
+        (m) => `${m.ratePlanId}:${m.roomCode ?? ""}`,
+      ),
+    );
+    for (const m of mappings) {
+      const remotePlanId = remotePlan.get(m.ratePlanId) ?? m.ratePlanId;
+      if (held.has(`${remotePlanId}:${m.roomCode}`)) continue;
+      await deps.provider.mapListing(
+        { id: channexChannelId },
+        { ratePlanId: remotePlanId, listingId: m.roomCode },
+        meta(`map:${m.ratePlanId}`),
+      );
+    }
+  }
   const readiness = await deps.provider.checkReadiness({ id: channexChannelId }, meta("readiness"));
   if (!readiness.ready) {
     await run((tx) =>
@@ -97,6 +115,8 @@ export async function activateConnection(
     return { activated: false, readiness };
   }
   await deps.provider.setChannelActive({ id: channexChannelId }, true, meta("activate"));
+  if (conn.adapterCode === "AirBNB" && conn.settings.managedIn === "channex")
+    await deps.provider.loadFutureReservations({ id: channexChannelId }, meta("load_reservations"));
   const next = transition(conn.state, "activated");
   const now = deps.clock.now().epochMilliseconds;
   await run(async (tx) => {

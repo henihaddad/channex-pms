@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API examples › Airbnb: listings of the connected host account."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90/action/listings"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "listing_id_dictionary": {
+          "values": [
+            {
+              "id": "12345678",
+              "title": "Cozy Studio in Paris",
+              "type": "Entire home/apt",
+              "occupancies": [1, 2, 3, 4],
+              "synchronization_category": "standard_pricing",
+              "city": "Paris",
+              "country_code": "FR",
+              "quality_status": "excellent"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

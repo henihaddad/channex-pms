@@ -10,6 +10,7 @@ import type {
   PushResult,
   RestrictionBatch,
   RemoteChannel,
+  AirbnbConnectionLinkSpec,
 } from "@pms/core";
 
 /** Local id ↔ provider id for one property (property.channex_property_id, room_type.channex_room_type_id, rate_plan.channex_rate_plan_id). */
@@ -81,6 +82,22 @@ export function withIdMap(inner: ConnectivityProvider, map: IdMap): Connectivity
     },
     createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
       return inner.createChannelSession(out(propertyId), meta);
+    },
+    createAirbnbConnectionLink(
+      spec: AirbnbConnectionLinkSpec,
+      meta: CallMeta,
+    ): Promise<{ url: string }> {
+      return inner.createAirbnbConnectionLink(
+        { ...spec, propertyIds: spec.propertyIds.map(out) },
+        meta,
+      );
+    },
+    mapListing(
+      ref: ProviderRef,
+      mapping: { ratePlanId: string; listingId: string },
+      meta: CallMeta,
+    ): Promise<ProviderRef> {
+      return inner.mapListing(ref, { ...mapping, ratePlanId: out(mapping.ratePlanId) }, meta);
     },
     async listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]> {
       const rows = await inner.listChannels(out(propertyId), meta);

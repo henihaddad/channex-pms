@@ -359,6 +359,45 @@ export const activateAction = withPermission<
   },
 );
 
+/**
+ * What the channel offers to map against. Airbnb through Channex (CH-5) has no
+ * hotel-style rooms: the host's listings are the rooms and each listing is one rate.
+ */
+async function theirRooms(
+  c: Awaited<ReturnType<typeof container>>,
+  ctx: ActorCtx,
+  connection: ConnectionRow,
+  remotePropertyId: string,
+  settings: Record<string, unknown>,
+): Promise<TheirRoom[]> {
+  if (
+    connection.adapterCode === "AirBNB" &&
+    connection.settings.managedIn === "channex" &&
+    connection.channexChannelId
+  ) {
+    const listings = await c.provider.listChannelListings(
+      { id: connection.channexChannelId },
+      meta(ctx, "channel.listings"),
+    );
+    return listings.map((l) => ({
+      code: l.id,
+      title: `${l.title}${l.city ? ` · ${l.city}` : ""}`,
+      rates: [
+        {
+          code: l.id,
+          title: l.type ?? "Listing",
+          ...(l.occupancies?.length ? { occupancy: Math.max(...l.occupancies) } : {}),
+        },
+      ],
+    }));
+  }
+  const options = await c.provider.readChannelMappingOptions(
+    { adapterCode: connection.adapterCode, propertyId: remotePropertyId, settings },
+    meta(ctx, "channel.mapping_details"),
+  );
+  return options.rooms;
+}
+
 export interface ConnectionView {
   connection: ConnectionRow;
   mappings: MappingRow[];
@@ -386,19 +425,16 @@ export const loadConnection = withPermission<[string], ConnectionView>(
         ? (JSON.parse(await c.crypto.open(connection.settingsEnc)) as Record<string, string>)
         : {}),
     };
-    const options = await c.provider.readChannelMappingOptions(
-      { adapterCode: connection.adapterCode, propertyId: idMap.property.remote, settings },
-      meta(ctx, "channel.mapping_details"),
-    );
+    const theirs = await theirRooms(c, ctx, connection, idMap.property.remote, settings);
     const ours = ourPlans(d);
     const mappings = await ch.listMappings(id);
     return {
       connection: { ...connection, settingsEnc: null },
       mappings,
       ours,
-      theirs: options.rooms,
-      suggestions: suggestMappings(ours, options.rooms, mappings),
-      warnings: coverageWarnings(ours, options.rooms, mappings),
+      theirs,
+      suggestions: suggestMappings(ours, theirs, mappings),
+      warnings: coverageWarnings(ours, theirs, mappings),
       events: await ch.listEvents({ connectionId: id, limit: 20 }),
     };
   },
@@ -423,22 +459,15 @@ export const saveMappingsAction = withPermission<
     const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
     const d = (await repo.get(connection.propertyId))!;
     const idMap = await repo.idMap(connection.propertyId);
-    const options = await c.provider.readChannelMappingOptions(
-      {
-        adapterCode: connection.adapterCode,
-        propertyId: idMap.property.remote,
-        settings: connection.settings,
-      },
-      meta(ctx, "channel.mapping_details"),
-    );
+    const rooms = await theirRooms(c, ctx, connection, idMap.property.remote, connection.settings);
     const ours = ourPlans(d);
-    const errors = validateMappings(mappings, ours, connection.propertyId, options.rooms);
+    const errors = validateMappings(mappings, ours, connection.propertyId, rooms);
     if (errors.length > 0)
       throw new HttpProblem(422, "mapping_invalid", errors.map((e) => e.message).join("; "));
     const before = await ch.listMappings(connectionId);
     const diff = mappingDiff(before, mappings);
     await ch.replaceMappings(connectionId, mappings, () => Id.next());
-    const warnings = coverageWarnings(ours, options.rooms, mappings);
+    const warnings = coverageWarnings(ours, rooms, mappings);
     await ch.updateConnection(connectionId, {
       readiness: { ready: warnings.length === 0, issues: warnings.map((w) => w.message) },
     });

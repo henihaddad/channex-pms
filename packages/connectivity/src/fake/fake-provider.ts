@@ -14,6 +14,8 @@ import {
   type CallMeta,
   type ChannelSpec,
   type RemoteChannel,
+  type AirbnbConnectionLinkSpec,
+  type RemoteListing,
   type CloseReason,
   type ConnectionSettings,
   type ConnectivityProvider,
@@ -164,6 +166,10 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly acked = new Set<string>();
   private readonly bookings = new Map<string, BookingRevisionPayload>();
   private readonly created = new Map<string, unknown>();
+  private readonly listingMappings = new Map<
+    string,
+    Array<{ ratePlanId: string; listingId: string }>
+  >();
   private readonly pendingWebhooks: WebhookPayload[] = [];
   private readonly threads = new Map<string, FakeThread>();
   private readonly reviews = new Map<string, FakeReview>();
@@ -461,22 +467,85 @@ export class FakeProvider implements ConnectivityProvider {
     for (const [key, id] of this.created.entries()) {
       if (!key.startsWith("channel:") || typeof id !== "string") continue;
       const spec = JSON.parse(key.slice("channel:".length)) as ChannelSpec;
-      if (spec.propertyId !== propertyId) continue;
+      const props = Array.isArray(spec.settings.properties)
+        ? (spec.settings.properties as string[])
+        : [spec.propertyId];
+      if (!props.includes(propertyId)) continue;
       out.push({
         id,
         adapterCode: spec.adapterCode,
         title: spec.adapterCode,
         isActive: true,
         status: "active",
-        mappings: spec.mappings.map((m) => ({
-          ratePlanId: m.ratePlanId,
-          roomCode: m.roomCode,
-          rateCode: m.rateCode,
-          ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
-        })),
+        mappings: [
+          ...spec.mappings.map((m) => ({
+            ratePlanId: m.ratePlanId,
+            roomCode: m.roomCode,
+            rateCode: m.rateCode,
+            ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
+          })),
+          ...(this.listingMappings.get(id) ?? []).map((m) => ({
+            ratePlanId: m.ratePlanId,
+            roomCode: m.listingId,
+            rateCode: m.listingId,
+          })),
+        ],
       });
     }
     return out;
+  }
+  /** Consent is immediate: the link is the caller's own callback with a freshly remembered channel. */
+  async createAirbnbConnectionLink(
+    spec: AirbnbConnectionLinkSpec,
+    meta: CallMeta,
+  ): Promise<{ url: string }> {
+    this.guard("airbnb.connection_link", meta);
+    const ref = this.remember("channel", {
+      adapterCode: "AirBNB",
+      propertyId: spec.propertyIds[0] ?? "",
+      settings: { properties: spec.propertyIds },
+      mappings: [],
+    });
+    const u = new URL(spec.redirectUri);
+    u.searchParams.set("success", "true");
+    u.searchParams.set("channel_id", ref.id);
+    u.searchParams.set("token", spec.token);
+    return { url: u.toString() };
+  }
+  async listChannelListings(_ref: ProviderRef, meta: CallMeta): Promise<RemoteListing[]> {
+    this.guard("airbnb.listings", meta);
+    return [
+      {
+        id: "10000001",
+        title: "Fake Loft by the River",
+        type: "Entire home/apt",
+        city: "Porto",
+        countryCode: "PT",
+        occupancies: [1, 2, 3, 4],
+      },
+      {
+        id: "10000002",
+        title: "Fake Garden Studio",
+        type: "Entire home/apt",
+        city: "Porto",
+        countryCode: "PT",
+        occupancies: [1, 2],
+      },
+    ];
+  }
+  async mapListing(
+    ref: ProviderRef,
+    mapping: { ratePlanId: string; listingId: string },
+    meta: CallMeta,
+  ): Promise<ProviderRef> {
+    this.guard("airbnb.mapping.create", meta);
+    const list = this.listingMappings.get(ref.id) ?? [];
+    list.push(mapping);
+    this.listingMappings.set(ref.id, list);
+    return { id: Id.next() };
+  }
+  async loadFutureReservations(_ref: ProviderRef, meta: CallMeta): Promise<void> {
+    this.guard("airbnb.load_future_reservations", meta);
   }
 
   // ---- reservations ------------------------------------------------------------------

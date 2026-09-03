@@ -8,14 +8,18 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- Channel connections through Channex (spec 07 CH-5): `/channels/connect` embeds Channex's own
-  channel screen for one property through a one-time token (`POST /auth/one_time_token`), where
-  Airbnb and the OTAs that need the provider's authorisation are connected; "Pull connections
-  from Channex" mirrors what Channex holds (`GET /channels?filter[property_id]`) into
-  `ChannelConnection` rows with their rate plan mappings. `ConnectivityProvider` gains
-  `createChannelSession` and `listChannels` (Channex, Fake, id-map). The direct Airbnb OAuth
-  button only appears when `AIRBNB_CLIENT_ID` is configured, since Airbnb issues those
-  credentials to approved partners such as Channex, not to individual operators.
+- Airbnb through Channex (spec 07 CH-5): "Connect Airbnb" asks Channex, the approved Airbnb
+  partner, for Airbnb's authorisation link (`POST /meta/airbnb/connection_link`) for the live
+  properties; the host consents on airbnb.com and returns with the new channel, which becomes one
+  inactive `ChannelConnection` per property. The connection page lists the host's listings
+  (`GET /channels/{id}/action/listings`) to map to rate plans; activation pushes the mappings
+  (`POST /channels/{id}/mappings`), activates and imports future reservations. Channex's staging
+  Airbnb app accepts real hosts, so this works against the staging key. `/channels/connect` embeds
+  Channex's channel screen for the remaining provider-only channels and pulls Channex's connections
+  into `ChannelConnection` rows. `ConnectivityProvider` gains `createAirbnbConnectionLink`,
+  `listChannelListings`, `mapListing`, `loadFutureReservations`, `createChannelSession` and
+  `listChannels` (Channex with docs fixtures, Fake, id-map). The direct Airbnb OAuth adapter is gone:
+  Airbnb issues those credentials to partners, not operators.
 - Cloudflare deployment target (ADR-0008): `apps/web` builds for Workers with
   `@opennextjs/cloudflare` (`build:cf`, `deploy:cf`); `apps/worker-cf` runs the job runtime on
   Cloudflare Queues, a one-minute Cron Trigger scheduler and a Durable Object lease per property;

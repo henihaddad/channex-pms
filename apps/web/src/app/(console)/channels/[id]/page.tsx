@@ -2,6 +2,7 @@ import { Card, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadConnection } from "../channels.actions";
 import { ConnectionMapping } from "./connection-mapping";
+import { ActivateButton } from "./activate-button";
 
 export default async function ConnectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -30,6 +31,14 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
       <Card>
         <ConnectionMapping view={v} />
       </Card>
+      {v.connection.state !== "active" && v.connection.state !== "removed" ? (
+        <Card title="Activate">
+          <p className="mb-3 text-sm text-muted">
+            Save the mappings first. Activation checks readiness, then pushes the full horizon.
+          </p>
+          <ActivateButton connectionId={v.connection.id} label="Activate connection" />
+        </Card>
+      ) : null}
       <Card title={"Events"}>
         <ul className="text-sm">
           {v.events.map((e) => (
