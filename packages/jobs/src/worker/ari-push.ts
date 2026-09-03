@@ -1,8 +1,8 @@
-import type { Job } from "bullmq";
 import type { Clock, ConnectivityProvider } from "@pms/core";
 import { AriStorePerCall, type Db } from "@pms/db";
 import { pushProperty, RetryLater, type CircuitBreaker, type RateLimiter } from "@pms/sync";
 import type { Logger } from "@pms/runtime";
+import type { Lease } from "./lease.js";
 
 export interface AriPushDeps {
   db: Db;
@@ -11,11 +11,7 @@ export interface AriPushDeps {
   breaker: CircuitBreaker;
   clock: Clock;
   log: Logger;
-  /** One in-flight push per property (spec 04 §4.5). */
-  lease: {
-    acquire(key: string, ttlMs: number): Promise<boolean>;
-    release(key: string): Promise<void>;
-  };
+  lease: Lease;
   verifySampleRate?: number;
 }
 
@@ -24,15 +20,26 @@ export interface AriPushJob {
   propertyId: string;
 }
 
+/** What a processor may ask of the queue it runs on, whichever queue that is (BullMQ, Cloudflare Queues, the test SimQueue). */
+export interface JobControl {
+  id: string;
+  /** Re-run this job after the delay instead of completing it. */
+  delay(ms: number): Promise<void>;
+}
+
 /**
  * ari.push processor: serialised per property, coalesced by the outbox dedupe
  * key, retried via delayed re-enqueue on throttle/outage (spec 05 §5.4.4).
  */
-export async function processAriPush(deps: AriPushDeps, job: Job<AriPushJob>): Promise<void> {
-  const { orgId, propertyId } = job.data;
+export async function processAriPush(
+  deps: AriPushDeps,
+  data: AriPushJob,
+  ctl: JobControl,
+): Promise<void> {
+  const { orgId, propertyId } = data;
   const key = `ari:lock:${propertyId}`;
   if (!(await deps.lease.acquire(key, 120_000))) {
-    await job.moveToDelayed(Date.now() + 2_000, job.token);
+    await ctl.delay(2_000);
     return;
   }
   try {
@@ -44,7 +51,7 @@ export async function processAriPush(deps: AriPushDeps, job: Job<AriPushJob>): P
       limiter: deps.limiter,
       breaker: deps.breaker,
       clock: deps.clock,
-      meta: { dedupeKey: `ari.push:${job.id ?? propertyId}`, requestId: `job:${job.id ?? "?"}` },
+      meta: { dedupeKey: `ari.push:${ctl.id}`, requestId: `job:${ctl.id}` },
       verifySampleRate: deps.verifySampleRate ?? 0.05,
       log: deps.log,
     });
@@ -52,7 +59,7 @@ export async function processAriPush(deps: AriPushDeps, job: Job<AriPushJob>): P
   } catch (e) {
     if (e instanceof RetryLater) {
       deps.log.warn({ orgId, propertyId, delayMs: e.delayMs, reason: e.reason }, "ari.push.retry");
-      await job.moveToDelayed(Date.now() + e.delayMs, job.token);
+      await ctl.delay(e.delayMs);
       return;
     }
     throw e;

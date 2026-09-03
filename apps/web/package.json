@@ -13,25 +13,31 @@
     "check:handlers": "tsx ../../scripts/check-handlers.ts",
     "prebuild": "tsx ../../scripts/check-handlers.ts",
     "test": "vitest run --passWithNoTests",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:cf": "PMS_TARGET=cloudflare opennextjs-cloudflare build",
+    "preview:cf": "wrangler dev",
+    "deploy:cf": "wrangler deploy"
   },
   "dependencies": {
-    "@pms/core": "workspace:*",
-    "next": "^16.3.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "zod": "^4.5.4",
+    "@opennextjs/cloudflare": "^1.20.6",
     "@pms/authz": "workspace:*",
-    "@pms/db": "workspace:*",
-    "@pms/runtime": "workspace:*",
-    "next-intl": "^4.14.2",
-    "@pms/jobs": "workspace:*",
+    "@pms/cloudflare": "workspace:*",
     "@pms/connectivity": "workspace:*",
+    "@pms/core": "workspace:*",
+    "@pms/db": "workspace:*",
+    "@pms/jobs": "workspace:*",
+    "@pms/runtime": "workspace:*",
     "@pms/sync": "workspace:*",
     "@tanstack/react-virtual": "^3.13.12",
-    "ioredis": "^6.0.0"
+    "ioredis": "^6.0.0",
+    "next": "^16.3.4",
+    "next-intl": "^4.14.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22",
     "@types/react": "^19.2.18",
@@ -39,10 +45,9 @@
     "eslint": "^9",
     "eslint-config-next": "^16.3.4",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5",
-    "tsx": "^4.23.13",
     "ts-morph": "^28.0.0",
-    "vitest": "^4.1.11",
-    "@playwright/test": "1.56.1"
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

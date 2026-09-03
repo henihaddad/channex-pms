@@ -22,6 +22,17 @@ async function signUp(page: Page, stamp: string): Promise<string> {
 }
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
+/** Today in the property's timezone (the wizard default), at noon UTC so day offsets stay on the same date. */
+function localToday(): Date {
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${day}T12:00:00Z`);
+}
+
 test("owner agreement → statement → send → owner portal → dispute → payout", async ({
   page,
   request,
@@ -40,7 +51,7 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await request.post("/api/v1/test/drain", { data: { orgId } });
 
   // a booking from today (3 nights) on the single booking path; rates exist from yesterday onwards
-  const now = new Date();
+  const now = localToday();
   const month = iso(now).slice(0, 7);
   const arr = iso(now);
   const dep = iso(new Date(now.getTime() + 3 * 86_400_000));

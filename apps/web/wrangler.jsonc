@@ -1,0 +1,44 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // ADR-0008: the console, portals, booking engine, webhooks and API on Cloudflare Workers.
+  "name": "otabridge-app",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "binding": "ASSETS", "directory": ".open-next/assets" },
+  "observability": { "enabled": true },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "otabridge-app" }],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "bbdca61d0dbf4a708041624215a6ee3a",
+      "localConnectionString": "postgres://postgres:postgres@127.0.0.1:5433/postgres",
+    },
+  ],
+  "queues": {
+    "producers": [
+      { "binding": "Q_ARI_PUSH", "queue": "otabridge-ari-push" },
+      { "binding": "Q_BOOKING_PROCESS", "queue": "otabridge-booking-process" },
+      { "binding": "Q_BOOKING_ACK_SWEEP", "queue": "otabridge-booking-ack-sweep" },
+      { "binding": "Q_WEBHOOK_INGEST", "queue": "otabridge-webhook-ingest" },
+      { "binding": "Q_MESSAGES_SYNC", "queue": "otabridge-messages-sync" },
+      { "binding": "Q_AUTOMATION_RUN", "queue": "otabridge-automation-run" },
+      { "binding": "Q_RECONCILE_ARI", "queue": "otabridge-reconcile-ari" },
+      { "binding": "Q_REPORTS_BUILD", "queue": "otabridge-reports-build" },
+      { "binding": "Q_NOTIFY_DELIVER", "queue": "otabridge-notify-deliver" },
+      { "binding": "Q_SYSTEM", "queue": "otabridge-system" },
+    ],
+  },
+  "routes": [{ "pattern": "app.otabridge.com", "custom_domain": true }],
+  "vars": {
+    "PMS_ENV": "production",
+    "PMS_MODE": "hosted",
+    "NEXT_PUBLIC_APP_URL": "https://app.otabridge.com",
+    "CHANNEX_ENV": "staging",
+    "DATABASE_PER_REQUEST": "1",
+    "MAIL_TRANSPORT": "resend",
+    "LOG_LEVEL": "info",
+    "PMS_SELLER_COUNTRY": "PT",
+  },
+  // Secrets (wrangler secret put): PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY, RESEND_API_KEY, STRIPE_SECRET_KEY
+}

@@ -29,3 +29,9 @@ test-results/
 
 # local data
 data/
+
+# cloudflare
+.open-next/
+.wrangler/
+.dev.vars
+.dev.vars.*

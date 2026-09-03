@@ -50,7 +50,12 @@ export class FetchTransport implements HttpTransport {
         signal: controller.signal,
       };
       if (req.body !== undefined) init.body = JSON.stringify(req.body);
-      const res = await this.fetchImpl(`${this.baseUrl}${req.path}${queryString(req.query)}`, init);
+      // called on the global, never on this instance: Workers reject `fetch` with a foreign `this`
+      const res = await this.fetchImpl.call(
+        globalThis,
+        `${this.baseUrl}${req.path}${queryString(req.query)}`,
+        init,
+      );
       const text = await res.text();
       let body: unknown = null;
       try {

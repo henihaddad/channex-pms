@@ -18,13 +18,14 @@ export function SearchForm({
   attributes,
 }: {
   action: string;
-  sp: SearchParams;
+  sp: SearchParams & { org?: string };
   labels: Record<string, string>;
   attributes?: string[];
 }) {
   return (
     <form action={action} method="get" className="grid gap-3 sm:grid-cols-5" data-testid="search">
       {sp.embed ? <input type="hidden" name="embed" value="1" /> : null}
+      {sp.org ? <input type="hidden" name="org" value={sp.org} /> : null}
       <div>
         <Label htmlFor="arrival">{labels.arrival!}</Label>
         <Input id="arrival" name="arrival" type="date" required defaultValue={sp.arrival} />

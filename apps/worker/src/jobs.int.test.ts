@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { FakeClock, Id, LocalDate, type DomainEvent } from "@pms/core";
 import { createTestDb } from "@pms/db/testing";
 import { enqueueOutbox, schema, sql, withoutTenant, withTenant, type DbHandle } from "@pms/db";
-import { runOtbSnapshots, type SnapshotSource } from "./otb-snapshot.js";
-import { routeEvent, startOutboxPublisher } from "./outbox-publisher.js";
-import { verifyAllAuditChains } from "./audit-verify.js";
+import { runOtbSnapshots, type SnapshotSource } from "@pms/jobs";
+import { routeEvent, startOutboxPublisher } from "./jobs/outbox-publisher.js";
+import { verifyAllAuditChains } from "@pms/jobs";
 
 let handle: DbHandle;
 const ORG = Id.next();

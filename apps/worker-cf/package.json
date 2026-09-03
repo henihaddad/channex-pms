@@ -1,0 +1,33 @@
+{
+  "name": "@pms/worker-cf",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The job worker on Cloudflare: Queues consumers, a one-minute Cron Trigger scheduler and a Durable Object lease per property, running the shared runtime from @pms/jobs (ADR-0008).",
+  "license": "SEE LICENSE IN ../../LICENSE.md",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "deploy": "wrangler deploy",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@pms/cloudflare": "workspace:*",
+    "@pms/connectivity": "workspace:*",
+    "@pms/core": "workspace:*",
+    "@pms/db": "workspace:*",
+    "@pms/jobs": "workspace:*",
+    "@pms/runtime": "workspace:*",
+    "@pms/sync": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260902.1",
+    "@types/node": "^22",
+    "eslint": "^9",
+    "typescript": "^5",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.128.0"
+  }
+}

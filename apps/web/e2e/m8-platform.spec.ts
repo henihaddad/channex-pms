@@ -31,6 +31,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   page,
   request,
   browser,
+  baseURL,
 }) => {
   test.setTimeout(300_000);
   const stamp = Date.now().toString(36);
@@ -73,7 +74,9 @@ test("onboarding → billing → plugins → operator console → impersonation 
   const sinkSecretProbe = await request.get("/api/v1/test/plugin-sink");
   expect(sinkSecretProbe.status()).toBe(200);
   await page.goto("/settings/plugins");
-  await page.getByLabel("Endpoint URL").fill("http://localhost:3100/api/v1/test/plugin-sink");
+  await page
+    .getByLabel("Endpoint URL")
+    .fill(new URL("/api/v1/test/plugin-sink", baseURL ?? "http://localhost:3100").toString());
   await page.locator("#manifest").fill(
     JSON.stringify({
       key: "e2e-sink",
@@ -132,7 +135,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await request.post("/api/v1/test/operator", { data: { email: operator.email } });
   await op.goto("/ops");
   await expect(op.getByTestId("fleet-health")).toBeVisible();
-  await op.goto("/ops/tenants?q=Mia");
+  await op.goto(`/ops/tenants?q=mia-${stamp}`);
   await expect(op.locator('[data-testid="tenant-row"][data-state="active"]')).toHaveCount(1);
   await op.goto(`/ops/inspector/${propertyId}`);
   await expect(op.getByTestId("sync-inspector")).toBeVisible();

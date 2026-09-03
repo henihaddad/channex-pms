@@ -39,6 +39,39 @@ console tracks the five steps to the first pushed rate.
 | `PMS_MODE`                       | `hosted` turns on plans, quotas and billing; unset means self-hosted with everything included       |
 | `PMS_SELLER_COUNTRY`             | Hosted mode: the operator's VAT country                                                             |
 
+## Hosted on Cloudflare (ADR-0008)
+
+The hosted service runs the same code on Cloudflare Workers: `apps/web` through
+`@opennextjs/cloudflare`, the job worker as `apps/worker-cf` on Queues and a Cron Trigger, and
+Postgres on Neon behind Hyperdrive. Nothing here changes self-hosting.
+
+1. Create the resources once: a Hyperdrive config pointing at the Neon database (caching
+   disabled), the queues named in `apps/worker-cf/wrangler.jsonc` (`otabridge-*` plus
+   `otabridge-dlq`), and the custom domain on the zone. Put the Hyperdrive id in both
+   `wrangler.jsonc` files.
+2. Migrate from a machine that can reach Neon (CI or a laptop):
+   `NEON_DIRECT_URL=… pnpm --filter @pms/db db:migrate:neon`. The script speaks the wire protocol
+   over a WebSocket, so it also works behind an HTTPS proxy; it grants `pms_app` to the connecting
+   role on first run.
+3. Secrets, per Worker (`wrangler secret put <NAME>` in `apps/web` and `apps/worker-cf`):
+   `PMS_MASTER_KEY` and `PMS_SESSION_KEY` (the same values in both; the boot check requires them),
+   `CHANNEX_API_KEY`, `RESEND_API_KEY` (mail), optionally `STRIPE_SECRET_KEY`. Plain settings live
+   in the `vars` block of each `wrangler.jsonc`.
+4. Build and deploy: `pnpm --filter @pms/web build:cf && pnpm --filter @pms/web deploy:cf` and
+   `pnpm --filter @pms/worker-cf deploy`. `.github/workflows/deploy-cloudflare.yml` does the same
+   from `main` once CI is green, when the `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and
+   `NEON_DIRECT_URL` repository secrets exist.
+5. Local run on the real runtime: start a Postgres on `127.0.0.1:5433` (the Hyperdrive
+   `localConnectionString`), migrate it, put development values in `apps/web/.dev.vars`, then
+   `pnpm --filter @pms/web build:cf && pnpm --filter @pms/web exec wrangler dev --port 8787 --host localhost:8787`.
+   The end-to-end suite runs against it with `E2E_BASE_URL=http://localhost:8787`. Start
+   `wrangler dev` with `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` (wrangler otherwise loads the
+   repository `.env`, and a real `CHANNEX_API_KEY` would put the fake-provider suite on staging).
+
+Operational differences from the compose deployment: jobs scheduled more often than a minute run
+once a minute; the realtime grid polls (no Redis); the mail transport is Resend over HTTPS; the
+outbox is published by the request that wrote it and by the worker's minute tick.
+
 ## First operator (hosted mode only)
 
 ```sh

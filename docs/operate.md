@@ -29,6 +29,11 @@ What to watch, what runs when, and where to look when something is off.
 | `rollups.nightly`, `statements.sweep`, `statements.autosend`, `retention.purge` | 04:00–04:40  | Analytics, owner statements, retention                     |
 | `billing.close`, `dunning.run`                                                  | 05:00, 05:30 | Period invoices, dunning and trial expiry (hosted)         |
 
+On Cloudflare (ADR-0008) the same table applies with one difference: the worker has a single
+Cron Trigger every minute and `dueJobs()` decides what is due, so anything scheduled more often
+than a minute runs once a minute. Every due job is its own `system` queue message; failures
+retry with backoff and land in `otabridge-dlq` after the configured attempts.
+
 ## Runbooks
 
 `docs/runbooks/` holds the fifteen runbooks of spec 12 §12.2, one per failure the system is

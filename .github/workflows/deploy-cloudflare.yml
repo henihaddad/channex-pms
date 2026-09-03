@@ -1,0 +1,61 @@
+name: Deploy (Cloudflare)
+
+# ADR-0008. Deploys the web app and the jobs worker to Cloudflare Workers from main once CI is
+# green. Runs only when the repository secrets exist; forks and pull requests never deploy.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      NEON_DIRECT_URL: ${{ secrets.NEON_DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check secrets
+        if: env.CLOUDFLARE_API_TOKEN == '' || env.NEON_DIRECT_URL == ''
+        run: echo "::notice::Cloudflare or Neon secrets missing; skipping deploy" && exit 0
+      - name: Build packages
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: pnpm turbo run build --filter=@pms/jobs --filter=@pms/cloudflare
+      - name: Migrate the database (forward-only, spec 14 §14.7)
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: pnpm --filter @pms/db db:migrate:neon
+      - name: Build the web app for Workers
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: pnpm --filter @pms/web build:cf
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          PMS_VERSION: ${{ github.sha }}
+      - name: Deploy the jobs worker
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: pnpm --filter @pms/worker-cf deploy
+      - name: Deploy the web app
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: pnpm --filter @pms/web deploy:cf
+      - name: Smoke
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
+        run: curl --fail --silent --max-time 30 https://app.otabridge.com/api/health

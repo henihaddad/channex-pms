@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { DrizzleOperatorRepository, withoutTenant, type Tx } from "@pms/db";
 import { container } from "./container";
+import { kickOutbox } from "./outbox-kick";
 import { forbidden, unauthorized } from "./errors";
 import { problemResponse, type RouteHandler, type RouteParams } from "./with-permission";
 import { currentSession, requestId } from "./session";
@@ -98,8 +99,13 @@ export const withOperator: OperatorFn = Object.assign(
     opts: { audit?: boolean },
     handler: (ctx: OperatorCtx, ...args: A) => Promise<O>,
   ) => {
-    const wrapped = (...args: A): Promise<O> =>
-      runAsOperator(action, (ctx) => handler(ctx, ...args), { audit: opts.audit !== false });
+    const wrapped = async (...args: A): Promise<O> => {
+      const out = await runAsOperator(action, (ctx) => handler(ctx, ...args), {
+        audit: opts.audit !== false,
+      });
+      await kickOutbox();
+      return out;
+    };
     return Object.assign(wrapped, { [PUBLIC]: "operator" });
   },
   {
@@ -111,9 +117,11 @@ export const withOperator: OperatorFn = Object.assign(
       const fn: RouteHandler = async (req, { params }) => {
         try {
           const input = opts.input ? opts.input(req, await params) : (undefined as I);
-          return await runAsOperator(action, (ctx) => handler(ctx, input, req), {
+          const res = await runAsOperator(action, (ctx) => handler(ctx, input, req), {
             audit: opts.audit !== false,
           });
+          await kickOutbox();
+          return res;
         } catch (e) {
           return problemResponse(e);
         }

@@ -17,12 +17,12 @@ import {
   DrizzleOperationsRepository,
   DrizzlePropertyRepository,
   DrizzleReservationRepository,
-  rawRows,
-  sql,
   type FolioView,
+  rawRows,
   type ReservationDetail,
   type ReservationFilters,
   type ReservationRow,
+  sql,
   type TaskRow,
 } from "@pms/db";
 import { applyDirectRevision, issueCredential, recomputeAvailability } from "@pms/jobs";
@@ -58,7 +58,12 @@ export const listReservations = withPermission<
 >("booking:read", { scope: "organization", audit: false }, async (ctx, filters) => {
   const c = await container();
   const repo = reservations(ctx, c);
-  const today = c.clock.today("UTC").toString();
+  // "today" is a property-local date (spec 08): the portfolio list takes its oldest property's zone
+  const [tz] = await rawRows<{ timezone: string }>(
+    ctx.tx,
+    sql`select timezone from property where archived_at is null order by created_at limit 1`,
+  );
+  const today = c.clock.today(tz?.timezone ?? "UTC").toString();
   return {
     ...(await repo.list(filters, today)),
     views: await repo.savedViews(ctx.userId, "reservations"),

@@ -14,12 +14,12 @@ import {
 } from "@pms/db";
 import { MemoryCircuitBreaker, TokenBucket } from "@pms/sync";
 import { createLogger } from "@pms/runtime";
-import { processBookings } from "./booking-process.js";
-import { deriveAvailability } from "./availability-derive.js";
-import { processWebhook } from "./webhook-ingest.js";
-import { processAriPush } from "./ari-push.js";
-import { reconcileProperty } from "./reconcile.js";
-import { memoryLease } from "../lease.js";
+import { processBookings } from "@pms/jobs";
+import { deriveAvailability } from "@pms/jobs";
+import { processWebhook } from "@pms/jobs";
+import { processAriPush } from "@pms/jobs";
+import { reconcileProperty } from "@pms/jobs";
+import { memoryLease } from "@pms/jobs";
 
 let handle: DbHandle;
 const ORG = Id.next();
@@ -157,12 +157,11 @@ describe("worker processors end to end on PGlite", () => {
     });
     const breaker = new MemoryCircuitBreaker(clock);
     const delayed: number[] = [];
-    const job = {
-      data: { orgId: ORG, propertyId: PROP },
+    const job = { orgId: ORG, propertyId: PROP };
+    const ctl = {
       id: "p1",
-      token: "t",
-      moveToDelayed: async (ts: number) => {
-        delayed.push(ts);
+      delay: async (ms: number) => {
+        delayed.push(Date.now() + ms);
       },
     };
     const deps = {
@@ -175,9 +174,9 @@ describe("worker processors end to end on PGlite", () => {
       lease: memoryLease(),
       verifySampleRate: 0,
     };
-    await processAriPush(deps, job as unknown as Parameters<typeof processAriPush>[1]);
+    await processAriPush(deps, job, ctl);
     expect(delayed).toHaveLength(1);
-    await processAriPush(deps, job as unknown as Parameters<typeof processAriPush>[1]);
+    await processAriPush(deps, job, ctl);
     const snap = await fake.readAri(
       { propertyId: PROP, dateFrom: "2026-10-01", dateTo: "2026-10-02" },
       { dedupeKey: "x", requestId: "x" },
@@ -199,7 +198,7 @@ describe("worker processors end to end on PGlite", () => {
       "r1",
     );
     expect(drift).toBe(1);
-    await processAriPush(deps, job as unknown as Parameters<typeof processAriPush>[1]);
+    await processAriPush(deps, job, ctl);
     expect(
       (
         await fake.readAri(

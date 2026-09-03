@@ -1,7 +1,10 @@
 import type { Redis } from "ioredis";
+import type { Lease } from "@pms/jobs";
+
+export { memoryLease } from "@pms/jobs";
 
 /** Per-property in-flight lease: SET NX PX; released only by the holder. */
-export function redisLease(redis: Redis) {
+export function redisLease(redis: Redis): Lease {
   const tokens = new Map<string, string>();
   return {
     async acquire(key: string, ttlMs: number): Promise<boolean> {
@@ -20,23 +23,6 @@ export function redisLease(redis: Redis) {
         key,
         token,
       );
-    },
-  };
-}
-
-/** In-process lease for tests and the chaos runner. */
-export function memoryLease() {
-  const held = new Map<string, number>();
-  return {
-    async acquire(key: string, ttlMs: number): Promise<boolean> {
-      const now = Date.now();
-      const until = held.get(key);
-      if (until && until > now) return false;
-      held.set(key, now + ttlMs);
-      return true;
-    },
-    async release(key: string): Promise<void> {
-      held.delete(key);
     },
   };
 }

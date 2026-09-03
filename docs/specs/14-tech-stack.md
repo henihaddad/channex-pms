@@ -128,6 +128,13 @@ a Postgres pool. Therefore:
 - Vercel may host the marketing site if we want its preview workflow, but the
   product itself runs in containers. We do **not** split the app to fit a serverless
   platform.
+- **Cloudflare (hosted service, ADR-0008):** the one serverless target that met the
+  conditions without a split. The same `apps/web` runs on Workers through OpenNext; the
+  worker stays a separate Worker (`apps/worker-cf`) over Cloudflare Queues and a Cron
+  Trigger, running the processors shared with `apps/worker` from `packages/jobs`; Postgres
+  is Neon behind Hyperdrive with one connection per transaction. Redis is replaced by a
+  Durable Object lease and by polling for realtime. The outbox is published by the request
+  that wrote it (`waitUntil`) and by the worker's minute tick.
 
 ## 14.7 Component decisions
 

@@ -3,11 +3,11 @@ import { SystemClock, type Clock } from "@pms/core";
 import { connect, type DbHandle } from "@pms/db";
 import {
   argon2Hasher,
-  consoleMailer,
   createCrypto,
   createLogger,
   createTokenService,
   loadConfig,
+  selectMailer,
   totpVerifier,
   DEV_MASTER_KEY,
   DEV_SESSION_KEY,
@@ -40,6 +40,7 @@ import {
 import { selectProvider } from "@pms/jobs";
 import { Redis } from "ioredis";
 import { recordingMailer, testHooksEnabled } from "./test-hooks";
+import { cfContext } from "./cf-context";
 
 export interface WebContainer {
   config: Config;
@@ -74,6 +75,12 @@ declare global {
 }
 
 async function build(): Promise<WebContainer> {
+  // ADR-0008: on Workers the database is the Hyperdrive binding, one connection per transaction
+  const hyperdrive = cfContext()?.env.HYPERDRIVE;
+  if (hyperdrive) {
+    process.env.DATABASE_URL = hyperdrive.connectionString;
+    process.env.DATABASE_PER_REQUEST = "1";
+  }
   const config = loadConfig();
   const log = createLogger({ level: config.LOG_LEVEL, service: "web" });
   const db = await connect();
@@ -109,7 +116,9 @@ async function build(): Promise<WebContainer> {
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,
     totp: totpVerifier,
-    mailer: testHooksEnabled() ? recordingMailer(consoleMailer(log)) : consoleMailer(log),
+    mailer: testHooksEnabled()
+      ? recordingMailer(selectMailer(config, log))
+      : selectMailer(config, log),
     tokens: createTokenService(config.PMS_SESSION_KEY ?? DEV_SESSION_KEY),
     sha256Hex: (s) => createHash("sha256").update(s).digest("hex"),
   };

@@ -10,6 +10,7 @@ const PUBLIC_PREFIXES = [
   "/totp",
   "/invite",
   "/api/",
+  "/webhooks/",
   "/_next/",
   "/favicon",
   "/icon",

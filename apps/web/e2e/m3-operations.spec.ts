@@ -21,6 +21,17 @@ async function signUp(page: Page, stamp: string): Promise<string> {
 }
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
+/** Today in the property's timezone (the wizard default), at noon UTC so day offsets stay on the same date. */
+function localToday(): Date {
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${day}T12:00:00Z`);
+}
+
 test("staff booking → turnover task → cleaner completes offline → folio invoiced", async ({
   page,
   request,
@@ -47,7 +58,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await expect(page.getByText("Standard changeover · changeover")).toBeVisible({ timeout: 90_000 });
 
   // staff booking arriving today, departing tomorrow; a second one arriving tomorrow makes a same-day changeover
-  const today = new Date();
+  const today = localToday();
   const d1 = iso(today);
   const d2 = iso(new Date(today.getTime() + 86_400_000));
   const d3 = iso(new Date(today.getTime() + 3 * 86_400_000));

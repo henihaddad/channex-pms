@@ -27,6 +27,7 @@ import { clientIp, currentLocale, currentOrgId, currentSession, requestId } from
 import { currentImpersonation } from "./operator";
 import { consoleAccess, type TenantState } from "@pms/core";
 import { DrizzleOperatorRepository, withoutTenant } from "@pms/db";
+import { kickOutbox } from "./outbox-kick";
 
 /** Permissions that reveal guest PII or message bodies: never available to an impersonating operator (OPCON-1). */
 const IMPERSONATION_BLOCKED: ReadonlySet<string> = new Set([
@@ -145,7 +146,7 @@ export function withPermission<A extends unknown[], O>(
     }
 
     try {
-      return await withTenant(c.db.db, { orgId, actor, requestId: rid }, async (tx) => {
+      const result = await withTenant(c.db.db, { orgId, actor, requestId: rid }, async (tx) => {
         const repo = new DrizzleIdentityRepository(tx);
         // spec 12 §12.3: a suspended or expired tenant keeps syncing but the console closes, except billing
         const [orgRow] = await rawRows<{ state: TenantState }>(
@@ -249,6 +250,8 @@ export function withPermission<A extends unknown[], O>(
         if (decision.rowFilter) ctx.rowFilter = decision.rowFilter;
         return handler(ctx, ...args);
       });
+      await kickOutbox();
+      return result;
     } catch (e) {
       // a form action that needs step-up sends the browser to re-authenticate and back (spec 02 §2.6)
       if (e instanceof HttpProblem && e.code === "step_up_required" && !opts.routeFlavour) {

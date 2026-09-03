@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type Progress = { key: string; done: boolean; photoRef?: string };
 interface Task {
@@ -45,6 +45,23 @@ const subscribeOnline = (cb: () => void) => {
     window.removeEventListener("offline", cb);
   };
 };
+/** Server tasks with the not-yet-synced local updates applied on top (OPS-6). */
+const withPending = (serverTasks: Task[]): Task[] => {
+  const q = load<Queued[]>(KEY_QUEUE, []);
+  return serverTasks.map((t) =>
+    q
+      .filter((i) => i.taskId === t.id)
+      .reduce<Task>(
+        (acc, i) => ({
+          ...acc,
+          state: i.body.state,
+          progress: i.body.progress ?? acc.progress,
+          photos: i.body.photos ?? acc.photos,
+        }),
+        t,
+      ),
+  );
+};
 const nowIso = () => new Date().toISOString();
 const nowMs = () => Date.now();
 const save = (k: string, v: unknown) => {
@@ -78,7 +95,8 @@ export function CleanerApp({ today }: { today: string }) {
       const res = await fetch(`/api/v1/cleaner/day?date=${date}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const day = (await res.json()) as { tasks: Task[] };
-      setTasks(day.tasks);
+      // OPS-6: local updates stay authoritative until they are synced, whatever the server says meanwhile
+      setTasks(withPending(day.tasks));
       save(KEY_DAY, { date, tasks: day.tasks });
       setStatus("");
     } catch {
@@ -90,10 +108,11 @@ export function CleanerApp({ today }: { today: string }) {
     }
   }, [date]);
 
-  const flush = useCallback(async () => {
+  /** Send what is queued; returns how many were delivered. Items queued meanwhile are kept. */
+  const flushOnce = useCallback(async (): Promise<number> => {
     const q = load<Queued[]>(KEY_QUEUE, []);
-    if (q.length === 0 || !navigator.onLine) return;
-    const remaining: Queued[] = [];
+    if (q.length === 0 || !navigator.onLine) return 0;
+    const sent = new Set<string>();
     for (const item of q) {
       try {
         const res = await fetch(`/api/v1/cleaner/tasks/${item.taskId}`, {
@@ -106,14 +125,32 @@ export function CleanerApp({ today }: { today: string }) {
           const p = (await res.json()) as { detail?: string };
           setStatus(`Rejected: ${p.detail ?? res.status}`);
         }
+        sent.add(item.id);
       } catch {
-        remaining.push(item);
+        /* stays queued */
       }
     }
+    const remaining = load<Queued[]>(KEY_QUEUE, []).filter((i) => !sent.has(i.id));
     save(KEY_QUEUE, remaining);
     setQueue(remaining);
     if (remaining.length === 0) await refresh();
+    return sent.size;
   }, [refresh]);
+  const flushing = useRef<Promise<void> | null>(null);
+  const flush = useCallback(async () => {
+    // one flush at a time: a second one would resend what the first still has in flight
+    while (flushing.current) await flushing.current;
+    const run = (async () => {
+      // keep going while deliveries succeed and new updates arrived during the previous pass
+      for (let pass = 0; pass < 10; pass++) if ((await flushOnce()) === 0) break;
+    })();
+    flushing.current = run;
+    try {
+      await run;
+    } finally {
+      if (flushing.current === run) flushing.current = null;
+    }
+  }, [flushOnce]);
 
   // fetch-on-mount and sync-on-reconnect set state after awaits; the compiler heuristic cannot tell
   /* eslint-disable react-hooks/set-state-in-effect */

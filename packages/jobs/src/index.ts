@@ -128,3 +128,40 @@ export {
   IMPERSONATION,
   type PlatformDeps,
 } from "./platform.js";
+export {
+  processAriPush,
+  type AriPushDeps,
+  type AriPushJob,
+  type JobControl,
+} from "./worker/ari-push.js";
+export { deriveAvailability } from "./worker/availability-derive.js";
+export {
+  processBookings,
+  processAckSweep,
+  livePropertyIds,
+  type BookingDeps,
+  type BookingProcessJob,
+} from "./worker/booking-process.js";
+export { reconcileProperty, RECONCILE_HORIZON_DAYS } from "./worker/reconcile.js";
+export { processWebhook } from "./worker/webhook-ingest.js";
+export { verifyAllAuditChains } from "./worker/audit-verify.js";
+export {
+  runOtbSnapshots,
+  emptySnapshotSource,
+  HORIZON_DAYS as OTB_HORIZON_DAYS,
+  type SnapshotSource,
+} from "./worker/otb-snapshot.js";
+export { memoryLease, type Lease } from "./worker/lease.js";
+export { routeEvent } from "./worker/route.js";
+export {
+  buildWorkerDeps,
+  handleQueueJob,
+  runSystemJob,
+  cronMatches,
+  dueJobs,
+  SCHEDULE,
+  type WorkerWiring,
+  type WorkerDeps,
+  type Enqueue,
+  type EnqueueOptions,
+} from "./worker/runtime.js";

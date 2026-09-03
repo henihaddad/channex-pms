@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Cloudflare deployment target (ADR-0008): `apps/web` builds for Workers with
+  `@opennextjs/cloudflare` (`build:cf`, `deploy:cf`); `apps/worker-cf` runs the job runtime on
+  Cloudflare Queues, a one-minute Cron Trigger scheduler and a Durable Object lease per property;
+  `@pms/cloudflare` holds the queue bindings and the outbox publisher over Queues; the outbox is
+  drained after every request chokepoint through `waitUntil`; `db:migrate:neon` migrates Neon over
+  a WebSocket; `MAIL_TRANSPORT=resend`; deploy workflow `deploy-cloudflare.yml`.
+- `@pms/runtime/shims/*`: pure-JS Argon2id (PHC-compatible with the native hashes), a console JSON
+  logger with the same redaction list, PGlite and ioredis stubs, aliased into Workers bundles only.
+
 - Channex certification suite run against staging: provisioning with natural-key reconciliation
   (PROV-3), ARI round trip, property import and adapter descriptors, with recorded fixtures;
   provider corrections for the flat property address, `min_stay` mode and descriptor shape.
@@ -37,6 +46,30 @@ All notable changes to this project are documented here. The format follows
 - CI: lint, typecheck, test and build on every push and pull request.
 - Fair-code licensing (Sustainable Use License, Enterprise License, CLA), README, community
   files and the landing page in `website/`.
+
+### Changed
+
+- The queue processors, the `system` job table and the schedule moved from `apps/worker` into
+  `packages/jobs/src/worker` (`handleQueueJob`, `runSystemJob`, `SCHEDULE`, `dueJobs`);
+  `apps/worker` is now a BullMQ adapter around them. Processors take a `JobControl` instead of a
+  BullMQ `Job`.
+- `packages/db` connects with one client per transaction when `DATABASE_PER_REQUEST=1` and loads
+  PGlite on demand; `MIGRATIONS_FOLDER` became `migrationsFolder()`.
+
+### Fixed
+
+- The console proxy no longer redirects the Channex webhook receiver (`/webhooks/*`) to the login
+  page; the receiver authenticates by path token and secret.
+- The cleaner app keeps not-yet-synced local updates when a day refresh lands, and syncs one queue
+  at a time, so a fast accept → on-site sequence can no longer lose the second update.
+- The storefront search keeps its organization scope across searches.
+- Reservation saved views ("arrivals today" and friends) use the property-local date instead of
+  UTC.
+- The worker's per-property provider calls (ARI push, reconcile, booking pull, thread and review
+  sync) now go out with the property's Channex ids and come back with local ones, as the
+  test-hook drain always did; the queue path previously pushed local ids and Channex rejected
+  every cell. ARI push jobs also read their ids from the outbox envelope.
+- The Channex HTTP transport calls `fetch` on the global, which Cloudflare Workers require.
 
 ## [1.0.0] — 2026-09-02
 

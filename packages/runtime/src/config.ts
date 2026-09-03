@@ -16,8 +16,11 @@ export const configSchema = z.object({
   PMS_SESSION_KEY: z.string().min(32).optional(),
   NEXT_PUBLIC_APP_URL: z.string().default("http://localhost:3000"),
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error"]).default("info"),
-  MAIL_TRANSPORT: z.enum(["console", "smtp"]).default("console"),
+  MAIL_TRANSPORT: z.enum(["console", "smtp", "resend"]).default("console"),
   SMTP_URL: z.string().optional(),
+  /** HTTPS mail API (the transport Cloudflare Workers can use). */
+  RESEND_API_KEY: z.string().optional(),
+  MAIL_FROM: z.string().default("Channex PMS <no-reply@otabridge.com>"),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
 });
 

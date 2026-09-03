@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { problemResponse, type RouteHandler, type RouteParams } from "./with-permission";
+import { kickOutbox } from "./outbox-kick";
 
 export type PublicReason =
   "health" | "auth" | "webhook" | "booking_engine" | "guest_portal" | "catalogue" | "test_hook";
@@ -16,7 +17,9 @@ export function publicRoute(
 ): RouteHandler {
   const fn: RouteHandler = async (req, { params }) => {
     try {
-      return await handler(req, await params);
+      const res = await handler(req, await params);
+      await kickOutbox();
+      return res;
     } catch (e) {
       return problemResponse(e);
     }
@@ -28,5 +31,10 @@ export function publicAction<A extends unknown[], O>(
   reason: PublicReason,
   handler: (...args: A) => Promise<O>,
 ): (...args: A) => Promise<O> {
-  return Object.assign((...args: A) => handler(...args), { [PUBLIC]: reason });
+  const wrapped = async (...args: A): Promise<O> => {
+    const out = await handler(...args);
+    await kickOutbox();
+    return out;
+  };
+  return Object.assign(wrapped, { [PUBLIC]: reason });
 }

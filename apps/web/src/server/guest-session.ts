@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { rawRows, sql, withoutTenant, withTenant, type Tx } from "@pms/db";
 import { container } from "./container";
+import { kickOutbox } from "./outbox-kick";
 import { HttpProblem, unauthorized } from "./errors";
 import { currentLocale, requestId } from "./session";
 
@@ -74,7 +75,7 @@ export function withGuestSession<A extends unknown[], O>(
     if (!row) throw unauthorized();
     const c = await container();
     const [rid, locale] = await Promise.all([requestId(), currentLocale()]);
-    return withTenant(
+    const out = await withTenant(
       c.db.db,
       { orgId: row.org_id, actor: { type: "guest", id: row.id }, requestId: rid },
       (tx) =>
@@ -90,6 +91,8 @@ export function withGuestSession<A extends unknown[], O>(
           ...args,
         ),
     );
+    await kickOutbox();
+    return out;
   };
   return Object.assign(wrapped, { [PUBLIC]: "guest_portal" });
 }

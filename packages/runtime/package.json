@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./shims/*": {
+      "types": "./dist/shims/*.d.ts",
+      "default": "./dist/shims/*.js"
     }
   },
   "files": [
@@ -21,6 +25,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@noble/hashes": "^1.8.0",
     "@node-rs/argon2": "^2.2.0",
     "@pms/authz": "workspace:*",
     "@pms/core": "workspace:*",

@@ -4,7 +4,7 @@ export {
   connect,
   connectPg,
   connectPglite,
-  MIGRATIONS_FOLDER,
+  migrationsFolder,
   type Db,
   type DbHandle,
   type Schema,

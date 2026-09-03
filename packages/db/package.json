@@ -28,22 +28,28 @@
     "check:migrations": "drizzle-kit check && tsx scripts/check-drift.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
-    "operator:grant": "tsx scripts/grant-operator.ts"
+    "operator:grant": "tsx scripts/grant-operator.ts",
+    "db:migrate:neon": "tsx scripts/migrate-neon.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@neondatabase/serverless": "^1.1.0",
     "@pms/authz": "workspace:*",
     "@pms/core": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@types/node": "^22",
     "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
+    "https-proxy-agent": "^7.0.6",
     "tsx": "^4.23.13",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "ws": "^8.21.0"
   }
 }

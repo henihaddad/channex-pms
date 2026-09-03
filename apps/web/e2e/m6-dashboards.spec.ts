@@ -21,6 +21,17 @@ async function signUp(page: Page, stamp: string): Promise<string> {
 }
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
+/** Today in the property's timezone (the wizard default), at noon UTC so day offsets stay on the same date. */
+function localToday(): Date {
+  const day = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${day}T12:00:00Z`);
+}
+
 test("rollup → dashboard, report and export agree; alerts; 200-property dashboard under 2 s", async ({
   page,
   request,
@@ -38,7 +49,7 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
   await request.post("/api/v1/test/drain", { data: { orgId } });
 
   // two staff bookings this month, from today
-  const now = new Date();
+  const now = localToday();
   const month = iso(now).slice(0, 7);
   for (const [offset, name] of [
     [0, "Ana"],
@@ -91,7 +102,11 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
     "data-type",
     "low_occupancy",
   );
-  await page.getByTestId("action-alert").first().click();
+  // wait for the action to commit: with a pooled database the list page can otherwise render first
+  await Promise.all([
+    page.waitForResponse((r) => r.request().method() === "POST" && r.url().includes("/alerts")),
+    page.getByTestId("action-alert").first().click(),
+  ]);
   await page.goto("/alerts?state=actioned");
   await expect(page.getByTestId("alert-item").first()).toHaveAttribute("data-state", "actioned");
 

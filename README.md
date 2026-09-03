@@ -102,6 +102,11 @@ pnpm check             # lint, typecheck, test, build
 Self-hosting is one command with Docker Compose (`compose.selfhost.yml`: web, worker, one-shot
 migrate, Postgres, Redis, MinIO, Caddy); [docs/install.md](./docs/install.md) has the full path:
 
+The hosted service runs the same code on Cloudflare Workers (Next.js through OpenNext, the job
+worker on Queues and a Cron Trigger, Postgres on Neon behind Hyperdrive); see
+[ADR-0008](docs/adr/0008-cloudflare-deployment-target.md) and the Cloudflare section of
+[docs/install.md](docs/install.md).
+
 ```sh
 # set PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY and PUBLIC_URL in .env first
 docker compose up

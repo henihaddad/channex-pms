@@ -8,5 +8,5 @@ export {
 export { createLogger, REDACTED_FIELDS, type Logger } from "./logger.js";
 export { argon2Hasher, totpVerifier, createCrypto, timingSafeEqualStrings } from "./crypto.js";
 export { createTokenService, type TokenService, type AccessClaims } from "./tokens.js";
-export { consoleMailer, memoryMailer } from "./mailer.js";
+export { consoleMailer, memoryMailer, renderMail, resendMailer, selectMailer } from "./mailer.js";
 export { QUEUES, PRIORITY, type QueueName, type JobEnvelope } from "./queues.js";

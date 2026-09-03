@@ -33,7 +33,13 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   // a template from the wizard, then 20 listings from it in one CSV import (listing #40 in three minutes)
   await page.goto("/properties/new");
   await page.getByLabel("Title").fill("Template source");
-  await page.getByRole("button", { name: "Save as template" }).click();
+  // wait for the action to commit: with a pooled database the list page can otherwise render first
+  await Promise.all([
+    page.waitForResponse(
+      (r) => r.request().method() === "POST" && r.url().includes("/properties/new"),
+    ),
+    page.getByRole("button", { name: "Save as template" }).click(),
+  ]);
   await page.goto("/properties");
   await expect(page.getByText(/^Template /)).toBeVisible();
   await page.goto("/properties/import");
