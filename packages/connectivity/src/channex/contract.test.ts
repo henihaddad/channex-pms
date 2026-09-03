@@ -239,7 +239,7 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
   it("asks for a one-time token for the property and returns it", async () => {
     const { p, http } = provider();
     const r = await p.createChannelSession(PROPERTY, meta);
-    expect(r).toEqual({ token: "94feab9f-60e6-411b-d854-8f12004d8bc8" });
+    expect(r).toEqual({ token: "example-one-time-token" });
     expect(http.calls[0]).toMatchObject({
       method: "POST",
       path: "/api/v1/auth/one_time_token",

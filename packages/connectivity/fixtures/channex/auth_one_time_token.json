@@ -7,7 +7,7 @@
   "response": {
     "status": 200,
     "body": {
-      "data": { "token": "94feab9f-60e6-411b-d854-8f12004d8bc8" },
+      "data": { "token": "example-one-time-token" },
       "meta": {
         "message": "You are successfully received one-time token! Use it for exchange to JWT"
       }
