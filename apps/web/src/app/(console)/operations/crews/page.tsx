@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle, Select, Textarea } from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   addCrewMemberAction,
@@ -48,8 +48,7 @@ export default async function CrewsPage() {
           </form>
         </Card>
       ))}
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("checklists")}</h2>
+      <Card title={t("checklists")}>
         <ul className="mb-3 text-sm">
           {checklists.map((c) => (
             <li key={c.id}>
@@ -65,7 +64,7 @@ export default async function CrewsPage() {
         >
           <Field label="Checklist name" name="checklistName" />
           <div>
-            <label className="mb-1 block text-xs font-medium">Task type</label>
+            <Label>Task type</Label>
             <Select name="taskType">
               <option value="changeover">changeover</option>
               <option value="departure">departure</option>
@@ -74,13 +73,11 @@ export default async function CrewsPage() {
             </Select>
           </div>
           <div className="col-span-3">
-            <label className="mb-1 block text-xs font-medium">
-              Items, one per line; end with * when a photo is required
-            </label>
-            <textarea
+            <Label>Items, one per line; end with * when a photo is required</Label>
+            <Textarea
               name="items"
               rows={4}
-              className="w-full rounded-md border border-line-strong p-2 text-sm"
+              className="w-full rounded-md border border-border-secondary p-2 text-sm"
               defaultValue={"Beds made*\nBathroom cleaned*\nBins emptied\nKeys in lockbox"}
             />
           </div>

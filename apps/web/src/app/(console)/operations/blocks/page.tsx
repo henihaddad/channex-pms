@@ -1,5 +1,17 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Input, PageTitle, Select } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  Label,
+  PageTitle,
+  Select,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   cancelBlockAction,
@@ -22,7 +34,7 @@ export default async function BlocksPage() {
           data-testid="block-form"
         >
           <div className="col-span-2">
-            <label className="mb-1 block text-xs font-medium">Unit</label>
+            <Label>Unit</Label>
             <Select name="unitId" required>
               {units.map((u) => (
                 <option key={u.id} value={u.id} data-property={u.propertyId} data-rt={u.roomTypeId}>
@@ -34,7 +46,7 @@ export default async function BlocksPage() {
           <Field label="From" name="dateFrom" type="date" />
           <Field label="To (exclusive)" name="dateTo" type="date" />
           <div>
-            <label className="mb-1 block text-xs font-medium">Reason</label>
+            <Label>Reason</Label>
             <Select name="reason">
               <option value="owner_stay">owner stay</option>
               <option value="maintenance">maintenance</option>
@@ -49,42 +61,44 @@ export default async function BlocksPage() {
         </form>
       </Card>
       <Card>
-        <table className="w-full text-sm">
-          <tbody>
+        <Table>
+          <TBody>
             {blocks.map((b) => (
-              <tr key={b.id} className="border-t border-line">
-                <td className="py-1">
+              <Tr key={b.id}>
+                <Td>
                   {b.propertyTitle} · {b.unitName ?? "room type"}
-                </td>
-                <td>
+                </Td>
+                <Td>
                   {b.dateFrom} → {b.dateTo}
-                </td>
-                <td>
+                </Td>
+                <Td>
                   {b.reason}
                   {b.reducesAvailability ? "" : " (no availability impact)"}
-                </td>
-                <td className="text-end">
+                </Td>
+                <Td className="text-end">
                   <form action={cancelBlockAction}>
                     <input type="hidden" name="blockId" value={b.id} />
-                    <button className="text-xs text-rose underline">{t("remove")}</button>
+                    <button className="text-xs text-danger underline">{t("remove")}</button>
                   </form>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("unitStatus")}</h2>
+      <Card title={t("unitStatus")}>
         <ul className="text-sm">
           {units.map((u) => (
-            <li key={u.id} className="flex items-center justify-between border-t border-line py-1">
+            <li
+              key={u.id}
+              className="flex items-center justify-between border-t border-border py-1"
+            >
               <span>
                 {u.propertyTitle} · {u.name}
               </span>
               <form action={setUnitStatusAction} className="flex items-center gap-1">
                 <input type="hidden" name="unitId" value={u.id} />
-                <Select name="status" defaultValue={u.status} className="h-7 w-44 text-xs">
+                <Select name="status" defaultValue={u.status} className="w-44" size="sm">
                   {[
                     "clean",
                     "dirty",
@@ -98,7 +112,7 @@ export default async function BlocksPage() {
                     </option>
                   ))}
                 </Select>
-                <Button type="submit" variant="secondary" className="h-7 px-2 text-xs">
+                <Button type="submit" variant="secondary" size="sm">
                   Set
                 </Button>
               </form>

@@ -13,7 +13,7 @@ export default async function OwnerReviews() {
       <Card className="text-sm">
         {rows.length === 0 ? <p className="text-xs text-muted">{t("noReviews")}</p> : null}
         {rows.map((r) => (
-          <p key={r.id} className="border-t border-line py-1 text-xs">
+          <p key={r.id} className="border-t border-border py-1 text-xs">
             <strong>{r.rating}/10</strong> · {r.propertyTitle} · {r.ota} ·{" "}
             {r.insertedAt.slice(0, 10)}: {r.body}
           </p>

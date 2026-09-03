@@ -109,7 +109,13 @@
     "outlier": "down >10% YoY",
     "exportCsv": "Export CSV",
     "recentBookings": "Bookings in the last 24 h",
-    "noRecent": "None yet."
+    "noRecent": "None yet.",
+    "thisMonth": "This month",
+    "allAlerts": "All alerts",
+    "when": "When",
+    "channel": "Channel",
+    "stay": "Stay",
+    "total": "Total"
   },
   "members": {
     "title": "Members",
@@ -252,7 +258,18 @@
       "cancelled_this_week": "Cancelled this week",
       "modified_since_yesterday": "Modified since yesterday",
       "payment_action_needed": "Payment action needed"
-    }
+    },
+    "dateType": "Date",
+    "dateTypes": {
+      "arrival": "Arrival",
+      "departure": "Departure",
+      "stay": "Stay",
+      "booked": "Booked"
+    },
+    "from": "From",
+    "to": "To",
+    "noResults": "No reservations match these filters.",
+    "noResultsHint": "Change the dates or the view, or create a booking."
   },
   "operations": {
     "title": "Turnover board",
@@ -414,7 +431,12 @@
     "ourResponse": "Our response",
     "respondPlaceholder": "Thank the guest…",
     "respond": "Respond",
-    "noResponseSupport": "This OTA does not accept responses."
+    "noResponseSupport": "This OTA does not accept responses.",
+    "via": "via",
+    "dates": "Dates",
+    "unit": "Unit",
+    "thread": "Conversation",
+    "assignee": "Assignee"
   },
   "owners": {
     "title": "Owners",
@@ -578,7 +600,8 @@
     "noReviews": "No reviews yet.",
     "documentsHint": "Your agreements, insurance and tax documents.",
     "noDocuments": "No documents yet.",
-    "notAnOwner": "This login is not linked to an owner record."
+    "notAnOwner": "This login is not linked to an owner record.",
+    "guest": "Guest"
   },
   "reports": {
     "title": "Reports",
@@ -608,7 +631,93 @@
     "month": "Month",
     "budgetRevenue": "Room revenue budget",
     "budgetOccupancy": "Occupancy budget %",
-    "saveBudget": "Save budget"
+    "saveBudget": "Save budget",
+    "cadence": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "format": "Format",
+    "cadenceLabel": "Cadence",
+    "result": "Result",
+    "filters": "Filters",
+    "description": "Every export prints the basis it was computed on.",
+    "scheduleHint": "Sends the report you are looking at, with these filters, by email.",
+    "report": "Report",
+    "recipientsLabel": "Recipients",
+    "noReport": "Pick a report on the left to run it here.",
+    "exportCsv": "CSV",
+    "exportPdf": "PDF",
+    "catalogue": {
+      "production_by_day": {
+        "name": "Production by day",
+        "description": "Rooms available, sold, occupancy, ADR, RevPAR per day."
+      },
+      "kpi_summary": {
+        "name": "KPI summary",
+        "description": "The dictionary's numbers for the range, per property."
+      },
+      "pace_pickup": {
+        "name": "Pace and pickup",
+        "description": "On the books per stay month with 7-day pickup and STLY where snapshots allow."
+      },
+      "booking_window": {
+        "name": "Booking window",
+        "description": "Lead-time distribution per channel."
+      },
+      "channel_performance": {
+        "name": "Channel performance",
+        "description": "Nights, revenue, commission (estimates labelled) and net ADR per channel."
+      },
+      "arrivals": {
+        "name": "Arrivals manifest",
+        "description": "Who arrives on a date, with unit and channel."
+      },
+      "departures": {
+        "name": "Departures manifest",
+        "description": "Who leaves on a date."
+      },
+      "in_house": {
+        "name": "In-house manifest",
+        "description": "Who is staying on a date."
+      },
+      "sync_health_history": {
+        "name": "Sync health history",
+        "description": "Channel events per day."
+      },
+      "unmapped_history": {
+        "name": "Unmapped booking history",
+        "description": "Bookings that arrived without a mapping."
+      },
+      "daily_revenue": {
+        "name": "Daily revenue",
+        "description": "Room revenue, extras, commission and withheld taxes per day (daily close basis)."
+      },
+      "commission_reconciliation": {
+        "name": "Commission reconciliation",
+        "description": "Reported vs estimated commission per booking."
+      },
+      "invoice_register": {
+        "name": "Invoice register",
+        "description": "Invoices and credit notes issued."
+      },
+      "owner_statement_register": {
+        "name": "Owner statement register",
+        "description": "Every statement with its reconciliation to the revenue report."
+      },
+      "guest_repeat": {
+        "name": "Guest history and repeat rate",
+        "description": "Repeat guests and stays per guest, no contact details."
+      },
+      "review_scores": {
+        "name": "Review scores",
+        "description": "Ratings per property and channel by month."
+      },
+      "message_response": {
+        "name": "Message response performance",
+        "description": "First-response medians per property and channel."
+      }
+    }
   },
   "alertsPage": {
     "title": "Alerts",

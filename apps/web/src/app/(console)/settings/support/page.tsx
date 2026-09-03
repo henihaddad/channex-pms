@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   decideImpersonationAction,
@@ -15,8 +15,7 @@ export default async function SupportPage() {
   return (
     <div className="space-y-6">
       <PageTitle>{t("title")}</PageTitle>
-      <Card>
-        <h2 className="font-semibold">{t("accessTitle")}</h2>
+      <Card title={t("accessTitle")}>
         <p className="text-xs text-muted">{t("accessHint")}</p>
         {v.access ? (
           <div className="mt-2 flex items-center gap-3 text-sm">
@@ -27,8 +26,8 @@ export default async function SupportPage() {
               <Button
                 type="submit"
                 variant="secondary"
-                className="h-7 text-xs"
                 data-testid="revoke-support-access"
+                size="sm"
               >
                 {t("revoke")}
               </Button>
@@ -37,23 +36,22 @@ export default async function SupportPage() {
         ) : (
           <form action={grantSupportAccessAction} className="mt-2 flex items-end gap-2">
             <Field label={t("hours")} name="hours" type="number" defaultValue="24" />
-            <label className="flex items-center gap-1 text-sm">
+            <Label>
               <input type="checkbox" name="writeAllowed" /> {t("writeAllowed")}
-            </label>
+            </Label>
             <Button type="submit" data-testid="grant-support-access">
               {t("grant")}
             </Button>
           </form>
         )}
       </Card>
-      <Card>
-        <h2 className="font-semibold">{t("requests")}</h2>
+      <Card title={t("requests")}>
         {v.requests.length === 0 ? <p className="text-sm text-muted">{t("noRequests")}</p> : null}
         <ul className="mt-1 space-y-2 text-sm" data-testid="impersonation-requests">
           {v.requests.map((r) => (
             <li
               key={r.id}
-              className="rounded border border-line p-2"
+              className="rounded border border-border p-2"
               data-testid="impersonation-request"
               data-state={r.state}
             >
@@ -71,8 +69,8 @@ export default async function SupportPage() {
                       <Button
                         type="submit"
                         variant="secondary"
-                        className="h-7 text-xs"
                         data-testid={`impersonation-${d}`}
+                        size="sm"
                       >
                         {d === "approve"
                           ? t("approve")
@@ -100,8 +98,7 @@ export default async function SupportPage() {
           ))}
         </ul>
       </Card>
-      <Card>
-        <h2 className="font-semibold">{t("diagnostics")}</h2>
+      <Card title={t("diagnostics")}>
         <p className="text-xs text-muted">{t("diagnosticsHint")}</p>
         <a
           className="mt-2 inline-block text-sm underline"

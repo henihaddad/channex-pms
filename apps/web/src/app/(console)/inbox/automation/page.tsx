@@ -1,5 +1,17 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Field,
+  Label,
+  PageTitle,
+  Select,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { PROVIDER_LABELS, TRIGGERS } from "@/server/inbox";
 import {
@@ -36,14 +48,14 @@ export default async function AutomationPage({
           {view.rules.map((r) => (
             <div
               key={r.id}
-              className="border-t border-line py-2 text-sm"
+              className="border-t border-border py-2 text-sm"
               data-testid="rule-row"
               data-enabled={r.enabled ? "1" : "0"}
             >
               <p className="font-medium">
                 {r.name} <span className="text-xs text-muted">v{r.version}</span>{" "}
                 <span
-                  className={`rounded px-1 text-[10px] ${r.enabled ? "bg-mint-soft text-mint-deep" : "bg-canvas"}`}
+                  className={`rounded px-1 text-xs ${r.enabled ? "bg-success-soft text-success-soft-foreground" : "bg-background"}`}
                 >
                   {r.enabled ? t("enabled") : t("disabled")}
                 </span>
@@ -61,18 +73,13 @@ export default async function AutomationPage({
                 <form action={toggleRuleAction}>
                   <input type="hidden" name="id" value={r.id} />
                   <input type="hidden" name="enabled" value={r.enabled ? "0" : "1"} />
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    className="h-6 text-xs"
-                    data-testid="toggle-rule"
-                  >
+                  <Button type="submit" variant="secondary" data-testid="toggle-rule" size="sm">
                     {r.enabled ? t("disable") : t("enable")}
                   </Button>
                 </form>
                 <a
                   href={`/inbox/automation?test=${r.id}`}
-                  className="rounded border border-line-strong px-2 text-xs leading-6"
+                  className="rounded border border-border-secondary px-2 text-xs leading-6"
                   data-testid="test-send"
                 >
                   {t("testSend")}
@@ -82,7 +89,7 @@ export default async function AutomationPage({
           ))}
           {preview ? (
             <div
-              className="rounded border border-sky/40 bg-sky-soft p-2 text-xs"
+              className="rounded border border-accent/40 bg-accent-soft p-2 text-xs"
               data-testid="test-preview"
             >
               <p className="font-semibold">
@@ -90,7 +97,7 @@ export default async function AutomationPage({
               </p>
               <p className="whitespace-pre-wrap">{preview.text}</p>
               {preview.missing.length ? (
-                <p className="text-rose">
+                <p className="text-danger">
                   {t("missing")}: {preview.missing.join(", ")}
                 </p>
               ) : null}
@@ -110,7 +117,9 @@ export default async function AutomationPage({
                 <span>
                   {p.title}{" "}
                   {p.killSwitch ? (
-                    <span className="rounded bg-rose-soft px-1 text-rose">{t("stopped")}</span>
+                    <Chip color="danger" size="sm">
+                      {t("stopped")}
+                    </Chip>
                   ) : null}
                 </span>
                 <input type="hidden" name="propertyId" value={p.id} />
@@ -118,7 +127,8 @@ export default async function AutomationPage({
                 <Button
                   type="submit"
                   variant={p.killSwitch ? "secondary" : "danger"}
-                  className="h-6 text-xs"
+
+                  size="sm"
                 >
                   {p.killSwitch ? t("resumeAutomation") : t("stopAutomation")}
                 </Button>
@@ -131,37 +141,22 @@ export default async function AutomationPage({
             <form action={saveRuleAction} className="space-y-2">
               <Field label={t("ruleName")} name="name" />
               <div>
-                <label htmlFor="trigger" className="text-sm font-medium">
-                  {t("trigger")}
-                </label>
-                <select
-                  id="trigger"
-                  name="trigger"
-                  className="h-9 w-full rounded border border-line-strong px-2 text-sm"
-                >
+                <Select label={t("trigger")} name="trigger">
                   {TRIGGERS.map((tr) => (
                     <option key={tr} value={tr}>
                       {t(`triggers.${tr}`)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
-                <label htmlFor="templateId" className="text-sm font-medium">
-                  {t("template")}
-                </label>
-                <select
-                  id="templateId"
-                  name="templateId"
-                  required
-                  className="h-9 w-full rounded border border-line-strong px-2 text-sm"
-                >
+                <Select label={t("template")} name="templateId" required>
                   {view.templates.map((tpl) => (
                     <option key={tpl.id} value={tpl.id}>
                       {tpl.name} ({tpl.locale})
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Field label={t("offsetDays")} name="offsetDays" type="number" required={false} />
@@ -183,9 +178,9 @@ export default async function AutomationPage({
               <fieldset className="text-xs">
                 <legend className="font-medium">{t("onlyChannels")}</legend>
                 {Object.entries(PROVIDER_LABELS).map(([code, label]) => (
-                  <label key={code} className="me-3">
+                  <Label key={code}>
                     <input type="checkbox" name="providers" value={code} /> {label}
-                  </label>
+                  </Label>
                 ))}
               </fieldset>
               <Button type="submit" data-testid="save-rule">
@@ -193,28 +188,22 @@ export default async function AutomationPage({
               </Button>
             </form>
           </Card>
-          <Card>
-            <p className="text-sm font-medium">{t("recentRuns")}</p>
-            <table className="mt-1 w-full text-xs">
-              <tbody>
+          <Card title={t("recentRuns")}>
+            <Table className="mt-1">
+              <TBody>
                 {view.runs.map((r) => (
-                  <tr
-                    key={r.id}
-                    className="border-t border-line"
-                    data-testid="run-row"
-                    data-state={r.state}
-                  >
-                    <td className="py-1">
+                  <Tr key={r.id} data-testid="run-row" data-state={r.state}>
+                    <Td>
                       {r.ruleName} v{r.ruleVersion}
-                    </td>
-                    <td>{r.propertyTitle}</td>
-                    <td>{r.state}</td>
-                    <td className="text-muted">{r.reason ?? ""}</td>
-                    <td className="text-muted">{r.executedAt.slice(0, 16)}</td>
-                  </tr>
+                    </Td>
+                    <Td>{r.propertyTitle}</Td>
+                    <Td>{r.state}</Td>
+                    <Td>{r.reason ?? ""}</Td>
+                    <Td>{r.executedAt.slice(0, 16)}</Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </Card>
         </div>
       </div>

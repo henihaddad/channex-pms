@@ -17,7 +17,7 @@ export default async function PayoutsPage() {
         {rows.map((p) => (
           <div
             key={p.id}
-            className="flex items-center justify-between border-t border-line py-2 text-sm"
+            className="flex items-center justify-between border-t border-border py-2 text-sm"
             data-testid="payout-row"
             data-state={p.state}
           >
@@ -26,16 +26,16 @@ export default async function PayoutsPage() {
                 {p.ownerName}
               </Link>{" "}
               · {money(p.amountMinor, p.currency)} · {p.method} ·{" "}
-              <span className="rounded bg-canvas px-1 text-xs">{p.state}</span>
+              <span className="rounded bg-background px-1 text-xs">{p.state}</span>
               {p.failureReason ? (
-                <span className="ms-1 text-xs text-rose">{p.failureReason}</span>
+                <span className="ms-1 text-xs text-danger">{p.failureReason}</span>
               ) : null}
               {p.reference ? <span className="ms-1 text-xs text-muted">{p.reference}</span> : null}
             </span>
             {p.state === "awaiting_approval" ? (
               <form action={approvePayoutAction}>
                 <input type="hidden" name="id" value={p.id} />
-                <Button type="submit" variant="secondary" className="h-7 text-xs">
+                <Button type="submit" variant="secondary" size="sm">
                   {t("approvePayout")}
                 </Button>
               </form>

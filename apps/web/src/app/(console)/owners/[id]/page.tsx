@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import { Button, Card, DateInput, Field, Input, Label, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { EXPENSE_CATEGORIES, money } from "@/server/owners";
 import {
@@ -49,24 +49,15 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           </p>
           <form action={setPayoutDetailsAction} className="flex gap-2">
             <input type="hidden" name="ownerId" value={v.owner.id} />
-            <input
-              name="payoutDetails"
-              placeholder={t("payoutPlaceholder")}
-              className="h-8 flex-1 rounded border border-line-strong px-2 text-xs"
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              className="h-8 text-xs"
-              data-testid="save-payout-details"
-            >
+            <Input name="payoutDetails" placeholder={t("payoutPlaceholder")} />
+            <Button type="submit" variant="secondary" data-testid="save-payout-details" size="sm">
               {t("save")}
             </Button>
           </form>
           <div className="flex items-center gap-2">
             {v.owner.userId ? (
               <span
-                className="rounded bg-mint-soft px-2 py-0.5 text-xs text-mint-deep"
+                className="rounded bg-success-soft px-2 py-0.5 text-xs text-success-soft-foreground"
                 data-testid="portal-granted"
               >
                 {t("portalOn")}
@@ -74,12 +65,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             ) : (
               <form action={grantPortalAction}>
                 <input type="hidden" name="ownerId" value={v.owner.id} />
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  className="h-8 text-xs"
-                  data-testid="grant-portal"
-                >
+                <Button type="submit" variant="secondary" data-testid="grant-portal" size="sm">
                   {t("grantPortal")}
                 </Button>
               </form>
@@ -92,7 +78,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               <p key={d.id} className="text-xs">
                 {d.kind}: {d.filename} {d.expiresAt ? `· ${t("expires")} ${d.expiresAt}` : ""}{" "}
                 {d.expiringSoon ? (
-                  <span className="text-amber-deep">⚠ {t("expiringSoon")}</span>
+                  <span className="text-warning-soft-foreground">⚠ {t("expiringSoon")}</span>
                 ) : null}
               </p>
             ))}
@@ -101,33 +87,28 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               className="mt-1 flex flex-wrap items-center gap-1 text-xs"
             >
               <input type="hidden" name="ownerId" value={v.owner.id} />
-              <Select name="kind" className="h-7 w-28">
+              <Select name="kind" className="w-28" size="sm">
                 <option value="contract">contract</option>
                 <option value="insurance">insurance</option>
                 <option value="tax_form">tax form</option>
                 <option value="other">other</option>
               </Select>
               <input type="file" name="file" className="text-xs" />
-              <input
-                type="date"
-                name="expiresAt"
-                className="h-7 rounded border border-line-strong px-1"
-              />
-              <Button type="submit" variant="secondary" className="h-7 text-xs">
+              <DateInput name="expiresAt" />
+              <Button type="submit" variant="secondary" size="sm">
                 {t("addDocument")}
               </Button>
             </form>
           </div>
         </Card>
-        <Card className="space-y-2 text-sm">
-          <p className="font-medium">{t("agreements")}</p>
+        <Card className="space-y-2 text-sm" title={t("agreements")}>
           {v.agreements.length === 0 ? (
             <p className="text-xs text-muted">{t("noAgreements")}</p>
           ) : null}
           {v.agreements.map((a) => (
             <div
               key={a.id}
-              className="rounded border border-line p-2 text-xs"
+              className="rounded border border-border p-2 text-xs"
               data-testid="agreement-row"
             >
               <p className="font-medium">
@@ -148,18 +129,17 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               </p>
               <form action={generateStatementAction} className="mt-1 flex items-center gap-1">
                 <input type="hidden" name="agreementKey" value={a.agreementKey} />
-                <input
+                <Input
                   type="month"
                   name="periodMonth"
                   defaultValue={defaultPeriod.slice(0, 7)}
-                  className="h-7 rounded border border-line-strong px-1"
                   data-testid="period-month"
                 />
                 <Button
                   type="submit"
                   variant="secondary"
-                  className="h-7 text-xs"
                   data-testid="generate-statement"
+                  size="sm"
                 >
                   {t("generateStatement")}
                 </Button>
@@ -186,10 +166,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           <input type="hidden" name="ownerId" value={v.owner.id} />
           <p className="col-span-3 font-medium">{t("newAgreement")}</p>
           <div>
-            <label htmlFor="propertyId" className="text-sm font-medium">
-              {t("property")}
-            </label>
-            <Select id="propertyId" name="propertyId" required>
+            <Select label={t("property")} name="propertyId" required>
               {v.properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title} ({p.currency})
@@ -198,10 +175,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             </Select>
           </div>
           <div>
-            <label htmlFor="agreementKey" className="text-sm font-medium">
-              {t("newVersionOf")}
-            </label>
-            <Select id="agreementKey" name="agreementKey" defaultValue="">
+            <Select label={t("newVersionOf")} name="agreementKey" defaultValue="">
               <option value="">{t("newAgreementOption")}</option>
               {[...new Map(v.agreements.map((a) => [a.agreementKey, a])).values()].map((a) => (
                 <option key={a.agreementKey} value={a.agreementKey}>
@@ -212,10 +186,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           </div>
           <Field label={t("effectiveFrom")} name="effectiveFrom" type="date" />
           <div>
-            <label htmlFor="model" className="text-sm font-medium">
-              {t("model")}
-            </label>
-            <Select id="model" name="model" defaultValue="commission_pct">
+            <Select label={t("model")} name="model" defaultValue="commission_pct">
               <option value="commission_pct">commission %</option>
               <option value="fixed_fee">fixed fee</option>
               <option value="tiered">tiered</option>
@@ -230,14 +201,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             required={false}
           />
           <div>
-            <label htmlFor="commissionBasis" className="text-sm font-medium">
-              {t("basis")}
-            </label>
-            <Select
-              id="commissionBasis"
-              name="commissionBasis"
-              defaultValue="net_of_ota_commission"
-            >
+            <Select label={t("basis")} name="commissionBasis" defaultValue="net_of_ota_commission">
               <option value="gross">gross</option>
               <option value="net_of_ota_commission">net of OTA commission</option>
               <option value="net_of_tax">net of tax</option>
@@ -252,57 +216,37 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             <legend className="font-medium">{t("deductibles")}</legend>
             {EXPENSE_CATEGORIES.map((c) => (
               <div key={c}>
-                <label htmlFor={`deductible_${c}`}>{c}</label>
+                <Label htmlFor={`deductible_${c}`}>{c}</Label>
                 <Select
                   id={`deductible_${c}`}
                   name={`deductible_${c}`}
                   defaultValue={c === "consumables" ? "absorbed" : "at_cost"}
-                  className="h-8"
+
+                  size="sm"
                 >
                   <option value="at_cost">at cost</option>
                   <option value="marked_up">marked up</option>
                   <option value="absorbed">absorbed</option>
                 </Select>
-                <input
-                  name={`markup_${c}`}
-                  type="number"
-                  placeholder="markup %"
-                  className="mt-1 h-7 w-full rounded border border-line-strong px-1"
-                />
+                <Input name={`markup_${c}`} type="number" placeholder="markup %" />
               </div>
             ))}
           </fieldset>
           <div>
-            <label htmlFor="cleaningFees" className="text-sm font-medium">
-              {t("cleaning")}
-            </label>
-            <Select id="cleaningFees" name="cleaningFees" defaultValue="kept">
+            <Select label={t("cleaning")} name="cleaningFees" defaultValue="kept">
               <option value="kept">kept by manager</option>
               <option value="passed">passed to owner</option>
               <option value="split">split</option>
             </Select>
-            <input
-              name="cleaningOwnerPct"
-              type="number"
-              placeholder="owner %"
-              className="mt-1 h-7 w-full rounded border border-line-strong px-1 text-xs"
-            />
+            <Input name="cleaningOwnerPct" type="number" placeholder="owner %" />
           </div>
           <div>
-            <label htmlFor="ownerStays" className="text-sm font-medium">
-              {t("ownerStays")}
-            </label>
-            <Select id="ownerStays" name="ownerStays" defaultValue="free">
+            <Select label={t("ownerStays")} name="ownerStays" defaultValue="free">
               <option value="free">free</option>
               <option value="at_cost">at cost</option>
               <option value="rate">at a rate</option>
             </Select>
-            <input
-              name="ownerStayNightly"
-              type="number"
-              placeholder="per night"
-              className="mt-1 h-7 w-full rounded border border-line-strong px-1 text-xs"
-            />
+            <Input name="ownerStayNightly" type="number" placeholder="per night" />
           </div>
           <Field
             label={t("allowance")}
@@ -311,10 +255,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             required={false}
           />
           <div>
-            <label htmlFor="payoutFrequency" className="text-sm font-medium">
-              {t("payoutSchedule")}
-            </label>
-            <Select id="payoutFrequency" name="payoutFrequency" defaultValue="monthly">
+            <Select label={t("payoutSchedule")} name="payoutFrequency" defaultValue="monthly">
               <option value="monthly">monthly</option>
               <option value="fortnightly">fortnightly</option>
             </Select>
@@ -341,22 +282,17 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             required={false}
           />
           <div className="flex items-end gap-2 text-xs">
-            <label>
+            <Label>
               <input type="checkbox" name="vatOnFee" /> {t("vatOnFee")}
-            </label>
-            <input
-              name="vatRate"
-              type="number"
-              placeholder="VAT %"
-              className="h-7 w-20 rounded border border-line-strong px-1"
-            />
+            </Label>
+            <Input name="vatRate" type="number" placeholder="VAT %" className="w-20" />
           </div>
           <fieldset className="col-span-3 text-xs">
             <legend className="font-medium">{t("units")}</legend>
             {v.units.map((u) => (
-              <label key={u.id} className="me-3">
+              <Label key={u.id}>
                 <input type="checkbox" name="unitIds" value={u.id} /> {u.name}
-              </label>
+              </Label>
             ))}
           </fieldset>
           <div className="col-span-3">

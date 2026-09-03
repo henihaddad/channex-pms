@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fillDate, pickOption } from "./ui";
 
 /**
  * M4 exit (spec 15): a guest message reaches the inbox with an unread badge and
@@ -55,9 +56,9 @@ test("guest message → inbox → template reply; note never leaves; automation 
   const d1 = iso(new Date(Date.now() + 86_400_000));
   const d2 = iso(new Date(Date.now() + 3 * 86_400_000));
   await page.goto("/reservations/new");
-  await expect(page.getByLabel("Rate plan").locator("option")).toHaveCount(1);
-  await page.getByLabel("Arrival").fill(d1);
-  await page.getByLabel("Departure").fill(d2);
+  await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
+  await fillDate(page, "arrivalDate", d1);
+  await fillDate(page, "departureDate", d2);
   await page.getByLabel("Guest first name").fill("Ana");
   await page.getByLabel("Guest surname").fill("Silva");
   await page.getByLabel("Email").fill(`ana-${stamp}@example.com`);
@@ -88,7 +89,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await expect(page.getByTestId("booking-sidebar")).toContainText(`${d1} → ${d2}`);
 
   // MSG-4: the send button names the guest and the channel; the template renders real values
-  await page.getByTestId("template-select").selectOption({ label: "Early check-in (en)" });
+  await pickOption(page, { testId: "template-select" }, { label: "Early check-in (en)" });
   await expect(page.getByTestId("guest-body")).toHaveValue(/Hi Ana, early check-in at Inbox Flat/);
   await expect(page.getByTestId("send-guest")).toHaveText("Send to Ana via Booking.com");
   await page.getByTestId("send-guest").click();
@@ -116,7 +117,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   // automation: a booking-confirmed rule; a new booking gets a labelled automated message
   await page.goto("/inbox/automation");
   await page.getByLabel("Rule name").fill("Thank you");
-  await page.getByLabel("Trigger").selectOption("booking_confirmed");
+  await pickOption(page, { label: "Trigger" }, { value: "booking_confirmed" });
   await page.getByTestId("save-rule").click();
   await expect(page.getByTestId("rule-row")).toHaveAttribute("data-enabled", "0");
   await page.getByTestId("toggle-rule").click();
@@ -124,8 +125,8 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await page.getByTestId("test-send").click();
   await expect(page.getByTestId("test-preview")).toContainText("Hi Ana");
   await page.goto("/reservations/new");
-  await page.getByLabel("Arrival").fill(iso(new Date(Date.now() + 5 * 86_400_000)));
-  await page.getByLabel("Departure").fill(iso(new Date(Date.now() + 6 * 86_400_000)));
+  await fillDate(page, "arrivalDate", iso(new Date(Date.now() + 5 * 86_400_000)));
+  await fillDate(page, "departureDate", iso(new Date(Date.now() + 6 * 86_400_000)));
   await page.getByLabel("Guest first name").fill("Bo");
   await page.getByLabel("Guest surname").fill("Costa");
   await page.getByLabel("Email").fill(`bo-${stamp}@example.com`);

@@ -1,4 +1,4 @@
-import { Button, Input, Label } from "@/components/ui";
+import { Button, Checkbox, DateInput, Input, Label } from "@/components/ui";
 
 export interface SearchParams {
   arrival?: string;
@@ -28,11 +28,11 @@ export function SearchForm({
       {sp.org ? <input type="hidden" name="org" value={sp.org} /> : null}
       <div>
         <Label htmlFor="arrival">{labels.arrival!}</Label>
-        <Input id="arrival" name="arrival" type="date" required defaultValue={sp.arrival} />
+        <DateInput name="arrival" required defaultValue={sp.arrival} />
       </div>
       <div>
         <Label htmlFor="departure">{labels.departure!}</Label>
-        <Input id="departure" name="departure" type="date" required defaultValue={sp.departure} />
+        <DateInput name="departure" required defaultValue={sp.departure} />
       </div>
       <div>
         <Label htmlFor="adults">{labels.adults!}</Label>
@@ -62,18 +62,17 @@ export function SearchForm({
       </div>
       {attributes && attributes.length > 0 ? (
         <fieldset className="sm:col-span-4">
-          <legend className="text-xs text-muted">{labels.attributes}</legend>
+          <legend className="mb-1 text-sm font-medium text-foreground">{labels.attributes}</legend>
           <div className="flex flex-wrap gap-3 text-sm">
             {attributes.map((a) => (
-              <label key={a} className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  name="attributes"
-                  value={a}
-                  defaultChecked={(sp.attributes ?? "").split(",").includes(a)}
-                />
+              <Checkbox
+                key={a}
+                name="attributes"
+                value={a}
+                defaultChecked={(sp.attributes ?? "").split(",").includes(a)}
+              >
                 {a}
-              </label>
+              </Checkbox>
             ))}
           </div>
         </fieldset>

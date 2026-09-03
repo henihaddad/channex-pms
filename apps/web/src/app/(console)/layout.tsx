@@ -8,12 +8,14 @@ import { consoleContext } from "@/server/console-context";
 import { memberships } from "@/server/auth-flows";
 import { logoutAction } from "../(auth)/auth.actions";
 import { Logo } from "@/components/logo";
+import { Alert, Button } from "@/components/ui";
 import { NavLink } from "./nav-link";
 
 /**
  * The console shell. The sidebar is grouped by what an operator does, not by
- * module: today's work, the portfolio, insight, settings. The bridge rail along
- * the top of the workspace is the brand's one device.
+ * module: today's work, the portfolio, insight, settings. It sits in HeroUI's
+ * dark scope so it reads as chrome; the workspace uses the light theme. The
+ * bridge rail along the top is the brand's one device.
  */
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const session = await currentSession();
@@ -76,24 +78,29 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ],
     },
   ];
+  const done = cx?.onboarding?.filter((s) => s.done).length ?? 0;
+  const next = cx?.onboarding?.find((s) => !s.done);
   return (
     <div className="flex min-h-screen">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-ink text-white/80">
-        <div className="px-5 pt-5 pb-4">
-          <Link href="/" className="inline-flex text-white" aria-label="OTAbridge">
+      <aside
+        className="dark sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-background text-foreground"
+        data-theme="dark"
+      >
+        <div className="px-5 pt-5 pb-3">
+          <Link href="/" className="inline-flex text-foreground" aria-label="OTAbridge">
             <Logo size={30} />
           </Link>
-          <div className="bridge-rail mt-4 h-px w-full opacity-70" />
+          <div className="bridge-rail mt-4 h-px w-full opacity-60" />
           {org ? (
-            <p className="mt-3 truncate text-xs font-medium text-white/55" data-testid="org-name">
+            <p className="mt-3 truncate text-xs font-medium text-muted" data-testid="org-name">
               {org.name}
             </p>
           ) : null}
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
+        <nav className="scrollbar flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
           {groups.map((g) => (
             <div key={g.label} className="mb-4">
-              <p className="mb-1 px-3 text-[0.65rem] font-semibold tracking-[0.14em] text-white/40 uppercase">
+              <p className="mb-1 px-3 text-[0.65rem] font-semibold tracking-[0.14em] text-muted uppercase">
                 {g.label}
               </p>
               <ul className="space-y-0.5">
@@ -112,102 +119,107 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             </div>
           ))}
         </nav>
-        <div className="border-t border-white/10 px-5 py-4">
+        <div className="border-t border-border px-4 py-4">
           {cx?.isOperator ? (
             <Link
               href="/ops"
-              className="mb-3 block text-xs text-sky hover:text-white"
+              className="mb-3 block px-1 text-xs text-accent hover:underline"
               data-testid="ops-link"
             >
               {to("title")} →
             </Link>
           ) : null}
           <form action={logoutAction}>
-            <button
-              type="submit"
-              className="w-full rounded-lg border border-white/15 px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:border-white/40 hover:text-white"
-            >
+            <Button type="submit" variant="secondary" size="sm" fullWidth>
               {t("signOut")}
-            </button>
+            </Button>
           </form>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="bridge-rail h-[3px] w-full" aria-hidden="true" />
         <main className="flex-1 px-8 py-7">
-          {cx?.impersonation ? (
-            <p
-              className="mb-4 rounded-lg border border-amber/40 bg-amber-soft px-3 py-2 text-sm text-text"
-              data-testid="impersonation-banner"
-            >
-              {to("banner", {
-                org: cx.impersonation.orgName,
-                time: cx.impersonation.expiresAt.slice(11, 16),
-              })}{" "}
-              <Link href="/ops/impersonation" className="font-medium underline">
-                {to("leave")}
-              </Link>
-            </p>
-          ) : null}
-          {cx?.state === "past_due" ? (
-            <p
-              className="mb-4 rounded-lg border border-amber/40 bg-amber-soft px-3 py-2 text-sm text-text"
-              data-testid="tenant-banner"
-              data-state="past_due"
-            >
-              {tb("dunning", { date: "" })}{" "}
-              <Link href="/settings/billing" className="font-medium underline">
-                {t("billing")}
-              </Link>
-            </p>
-          ) : null}
-          {cx?.announcements.map((a) => (
-            <p
-              key={a.id}
-              className={`mb-4 rounded-lg border px-3 py-2 text-sm text-text ${a.level === "incident" ? "border-rose/40 bg-rose-soft" : a.level === "warning" ? "border-amber/40 bg-amber-soft" : "border-sky/40 bg-sky-soft"}`}
-              data-testid="announcement-banner"
-            >
-              <strong>{a.title}</strong> {a.body}
-            </p>
-          ))}
-          {cx?.onboarding ? (
-            <div
-              className="mb-5 rounded-card border border-line bg-surface px-4 py-3 text-sm shadow-card"
-              data-testid="onboarding-checklist"
-            >
-              <p className="font-display font-semibold text-ink">{tob("title")}</p>
-              <ol className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1">
-                {cx.onboarding.map((s) => (
-                  <li key={s.key} data-step={s.key} data-done={s.done ? "1" : "0"}>
-                    <Link
-                      href={s.href}
-                      className={
-                        s.done
-                          ? "text-muted line-through decoration-mint/60"
-                          : "font-medium text-ink underline decoration-sky/60 underline-offset-4 hover:decoration-sky"
-                      }
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
+            {cx?.impersonation ? (
+              <Alert tone="warning" data-testid="impersonation-banner">
+                {to("banner", {
+                  org: cx.impersonation.orgName,
+                  time: cx.impersonation.expiresAt.slice(11, 16),
+                })}{" "}
+                <Link href="/ops/impersonation" className="font-medium underline">
+                  {to("leave")}
+                </Link>
+              </Alert>
+            ) : null}
+            {cx?.state === "past_due" ? (
+              <Alert tone="warning" data-testid="tenant-banner" data-state="past_due">
+                {tb("dunning", { date: "" })}{" "}
+                <Link href="/settings/billing" className="font-medium underline">
+                  {t("billing")}
+                </Link>
+              </Alert>
+            ) : null}
+            {cx?.announcements.map((a) => (
+              <Alert
+                key={a.id}
+                tone={a.level === "incident" ? "error" : a.level === "warning" ? "warning" : "info"}
+                title={a.title}
+                data-testid="announcement-banner"
+              >
+                {a.body}
+              </Alert>
+            ))}
+            {cx?.onboarding ? (
+              <div
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl bg-surface px-4 py-2.5 text-sm shadow-surface"
+                data-testid="onboarding-checklist"
+              >
+                <span className="font-medium text-foreground">
+                  {tob("title")}{" "}
+                  <span className="text-muted tabular-nums">
+                    {done}/{cx.onboarding.length}
+                  </span>
+                </span>
+                <div className="flex h-1.5 w-32 overflow-hidden rounded-full bg-default">
+                  <div
+                    className="bridge-rail h-full rounded-full"
+                    style={{ width: `${(done / cx.onboarding.length) * 100}%` }}
+                  />
+                </div>
+                <ol className="flex flex-wrap gap-x-4 gap-y-1">
+                  {cx.onboarding.map((s) => (
+                    <li
+                      key={s.key}
+                      data-step={s.key}
+                      data-done={s.done ? "1" : "0"}
+                      className={s.done || s.key === next?.key ? "" : "hidden"}
                     >
-                      {s.done ? "✓ " : "○ "}
-                      {tob(s.key)}
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : null}
-          {cx?.access === "billing_only" ? (
-            <div
-              className="mb-4 rounded-lg border border-rose/40 bg-rose-soft px-4 py-3 text-sm text-text"
-              data-testid="tenant-banner"
-              data-state={cx.state}
-            >
-              {cx.state === "expired" ? tb("expired") : tb("suspended")}{" "}
-              <Link href="/settings/billing" className="font-medium underline">
-                {t("billing")}
-              </Link>
-            </div>
-          ) : null}
-          {children}
+                      <Link
+                        href={s.href}
+                        className={
+                          s.done
+                            ? "text-muted line-through decoration-success/60"
+                            : "font-medium text-accent underline-offset-4 hover:underline"
+                        }
+                      >
+                        {s.done ? "✓ " : "→ "}
+                        {tob(s.key)}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : null}
+            {cx?.access === "billing_only" ? (
+              <Alert tone="error" data-testid="tenant-banner" data-state={cx.state}>
+                {cx.state === "expired" ? tb("expired") : tb("suspended")}{" "}
+                <Link href="/settings/billing" className="font-medium underline">
+                  {t("billing")}
+                </Link>
+              </Alert>
+            ) : null}
+            {children}
+          </div>
         </main>
       </div>
     </div>

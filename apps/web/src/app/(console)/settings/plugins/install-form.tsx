@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { installPluginAction } from "./plugins.actions";
-import { Alert, Button, Field, Label } from "@/components/ui";
+import { Alert, Button, Field, Label, Textarea } from "@/components/ui";
 
 export function InstallForm({ labels }: { labels: Record<string, string> }) {
   const [state, action, pending] = useActionState(installPluginAction, {});
@@ -24,11 +24,11 @@ export function InstallForm({ labels }: { labels: Record<string, string> }) {
       />
       <div>
         <Label htmlFor="manifest">{labels.manifest!}</Label>
-        <textarea
+        <Textarea
           id="manifest"
           name="manifest"
           rows={4}
-          className="w-full rounded border border-line-strong p-2 font-mono text-xs"
+          className="w-full rounded border border-border-secondary p-2 font-mono text-xs"
         />
       </div>
       <Button type="submit" disabled={pending} data-testid="install-plugin">

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { setFlagAction } from "../ops.actions";
@@ -34,9 +34,9 @@ export default async function FlagsPage() {
             required={false}
             defaultValue="0"
           />
-          <label className="flex items-center gap-2 text-sm">
+          <Label>
             <input type="checkbox" name="enabled" /> {t("enabled")}
-          </label>
+          </Label>
           <div>
             <Button type="submit" data-testid="save-flag">
               {t("save")}

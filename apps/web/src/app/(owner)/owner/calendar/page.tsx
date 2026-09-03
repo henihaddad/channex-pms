@@ -19,11 +19,10 @@ export default async function OwnerCalendar() {
     <div className="space-y-4">
       <PageTitle>{t("nav.calendar")}</PageTitle>
       <p className="text-sm text-muted">{t("calendarHint")}</p>
-      <Card className="text-sm">
-        <p className="font-medium">{t("bookings")}</p>
+      <Card className="text-sm" title={t("bookings")}>
         {v.bookings.length === 0 ? <p className="text-xs text-muted">{t("noBookings")}</p> : null}
         {v.bookings.map((b) => (
-          <p key={b.id} className="border-t border-line py-1 text-xs" data-testid="owner-booking">
+          <p key={b.id} className="border-t border-border py-1 text-xs" data-testid="owner-booking">
             {b.arrivalDate} → {b.departureDate} · {b.guestFirstName} · {b.channel} ·{" "}
             {b.propertyTitle} {b.unit ? `· ${b.unit}` : ""} · {b.status}
           </p>
@@ -32,7 +31,7 @@ export default async function OwnerCalendar() {
         {v.blocks.map((b) => (
           <p
             key={b.id}
-            className="border-t border-line py-1 text-xs"
+            className="border-t border-border py-1 text-xs"
             data-testid="owner-block"
             data-reason={b.reason}
           >
@@ -48,10 +47,7 @@ export default async function OwnerCalendar() {
         >
           <p className="col-span-2 font-medium">{t("ownerStay")}</p>
           <div className="col-span-2">
-            <label htmlFor="propertyId" className="text-sm font-medium">
-              {t("property")}
-            </label>
-            <Select id="propertyId" name="propertyId">
+            <Select label={t("property")} name="propertyId">
               {v.properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}

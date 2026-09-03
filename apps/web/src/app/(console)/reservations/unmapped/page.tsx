@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Chip, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadUnmappedQueue, resolveUnmappedAction } from "../reservations.actions";
 
@@ -13,13 +13,17 @@ export default async function UnmappedPage() {
       <Card>
         {queue.length === 0 ? <p className="text-sm text-muted">{t("queueEmpty")}</p> : null}
         {queue.map((b) => (
-          <div key={b.id} className="border-t border-line py-2 text-sm" data-testid="unmapped-row">
+          <div
+            key={b.id}
+            className="border-t border-border py-2 text-sm"
+            data-testid="unmapped-row"
+          >
             <p className="font-medium">
               {b.propertyTitle} · {b.otaName} {b.otaReservationCode} · {b.arrivalDate} →{" "}
               {b.departureDate}{" "}
-              <span className="rounded bg-rose-soft px-1.5 text-[10px] text-rose">
+              <Chip color="danger" size="sm">
                 {b.mappingState}
-              </span>
+              </Chip>
             </p>
             <p className="text-xs text-muted">
               OTA codes: room {b.rooms[0]?.otaRoomCode ?? "?"} · rate{" "}
@@ -30,12 +34,13 @@ export default async function UnmappedPage() {
               <input type="hidden" name="propertyId" value={b.propertyId} />
               <Select
                 name="pick"
-                className="h-8 max-w-md"
+                className="max-w-md"
                 defaultValue={
                   b.suggestions[0]
                     ? `${b.suggestions[0].roomTypeId}|${b.suggestions[0].ratePlanId}`
                     : ""
                 }
+                size="sm"
               >
                 {b.suggestions.map((s) => (
                   <option key={s.ratePlanId} value={`${s.roomTypeId}|${s.ratePlanId}`}>
@@ -45,7 +50,7 @@ export default async function UnmappedPage() {
               </Select>
               <input type="hidden" name="roomTypeId" value={b.suggestions[0]?.roomTypeId ?? ""} />
               <input type="hidden" name="ratePlanId" value={b.suggestions[0]?.ratePlanId ?? ""} />
-              <Button type="submit" className="h-8" data-testid="resolve">
+              <Button type="submit" data-testid="resolve" size="sm">
                 {t("resolve")}
               </Button>
               <span className="text-xs text-muted">{t("thenFixMapping")}</span>

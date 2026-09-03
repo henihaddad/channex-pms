@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { confirmAction, type ConfirmState } from "../../../book.actions";
-import { Alert, Button, Field, Label } from "@/components/ui";
+import { Alert, Button, Field, Label, Textarea } from "@/components/ui";
 
 /**
  * One form, one idempotency key (BE-6): a double click sends the same key twice and
@@ -40,7 +40,7 @@ export function CheckoutForm({
         </Alert>
       ) : null}
       {state.requiresAction ? (
-        <fieldset className="rounded border border-amber/50 bg-amber-soft p-3 text-sm">
+        <fieldset className="rounded border border-warning/50 bg-warning-soft p-3 text-sm">
           <legend>{labels.payment}</legend>
           <p data-testid="requires-action">{labels.requiresAction}</p>
           <Button type="submit" disabled={pending} className="mt-2" data-testid="complete-3ds">
@@ -80,16 +80,16 @@ export function CheckoutForm({
             />
             <div className="sm:col-span-2">
               <Label htmlFor="requests">{labels.requests!}</Label>
-              <textarea
+              <Textarea
                 id="requests"
                 name="requests"
                 rows={2}
-                className="w-full rounded border border-line-strong p-2 text-sm"
+                className="w-full rounded border border-border-secondary p-2 text-sm"
               />
             </div>
-            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <Label>
               <input type="checkbox" name="consent" /> {labels.consent}
-            </label>
+            </Label>
           </fieldset>
           {needsPayment ? (
             <fieldset className="space-y-2">

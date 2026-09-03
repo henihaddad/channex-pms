@@ -5,7 +5,7 @@ import { guestPortal } from "@pms/jobs";
 import { container } from "@/server/container";
 import { money } from "@/server/booking-engine";
 import { currentGuest } from "@/server/guest-session";
-import { Button, Card, Input, Label } from "@/components/ui";
+import { Button, Card, Input, Label, TBody, Table, Td, Textarea, Tr } from "@/components/ui";
 import {
   addExtraAction,
   cancelBookingAction,
@@ -56,12 +56,11 @@ export default async function GuestPortalPage({
           <p data-testid="guest-cancelled">{t("cancelled")}</p>
         </Card>
       ) : null}
-      <Card data-testid="guest-access" data-state={p.access.state}>
-        <h2 className="font-semibold">{t("access")}</h2>
+      <Card data-testid="guest-access" data-state={p.access.state} title={t("access")}>
         {p.access.state === "revealed" ? (
           <p className="mt-1 text-sm">
             {t("accessCode")}:{" "}
-            <code className="rounded bg-canvas px-2 py-0.5 text-lg" data-testid="door-code">
+            <code className="rounded bg-background px-2 py-0.5 text-lg" data-testid="door-code">
               {p.access.code}
             </code>
             <span className="ms-2 text-xs text-muted">
@@ -81,10 +80,9 @@ export default async function GuestPortalPage({
         ) : null}
       </Card>
       {p.status !== "cancelled" ? (
-        <Card>
-          <h2 className="font-semibold">{t("preCheckin")}</h2>
+        <Card title={t("preCheckin")}>
           {p.preCheckin.completedAt ? (
-            <p className="text-xs text-mint-deep" data-testid="precheckin-done">
+            <p className="text-xs text-success-soft-foreground" data-testid="precheckin-done">
               {t("preCheckinDone", { time: p.preCheckin.completedAt.slice(0, 16) })}
             </p>
           ) : null}
@@ -108,11 +106,11 @@ export default async function GuestPortalPage({
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="guests">{t("guests")}</Label>
-              <textarea
+              <Textarea
                 id="guests"
                 name="guests"
                 rows={2}
-                className="w-full rounded border border-line-strong p-2 text-sm"
+                className="w-full rounded border border-border-secondary p-2 text-sm"
                 defaultValue={p.preCheckin.guests.map((g) => `${g.name} ${g.surname}`).join("\n")}
               />
             </div>
@@ -122,28 +120,27 @@ export default async function GuestPortalPage({
           </form>
         </Card>
       ) : null}
-      <Card>
-        <h2 className="font-semibold">{t("folio")}</h2>
-        <table className="mt-1 w-full text-sm" data-testid="guest-folio">
-          <tbody>
-            <tr>
-              <td>Stay</td>
-              <td className="text-end">{money(p.totalMinor, cur)}</td>
-            </tr>
+      <Card title={t("folio")}>
+        <Table className="mt-1" data-testid="guest-folio">
+          <TBody>
+            <Tr>
+              <Td>Stay</Td>
+              <Td className="text-end">{money(p.totalMinor, cur)}</Td>
+            </Tr>
             {p.folio.lines.map((l, i) => (
-              <tr key={i} data-kind={l.kind}>
-                <td>{l.description}</td>
-                <td className="text-end">{money(l.amountMinor, cur)}</td>
-              </tr>
+              <Tr key={i} data-kind={l.kind}>
+                <Td>{l.description}</Td>
+                <Td className="text-end">{money(l.amountMinor, cur)}</Td>
+              </Tr>
             ))}
-            <tr className="border-t border-line font-semibold">
-              <td>{t("balance")}</td>
-              <td className="text-end" data-testid="guest-balance">
+            <Tr className="font-semibold">
+              <Td>{t("balance")}</Td>
+              <Td className="text-end" data-testid="guest-balance">
                 {money(p.folio.balanceMinor, cur)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </Td>
+            </Tr>
+          </TBody>
+        </Table>
         {p.extras.length > 0 && p.status !== "cancelled" ? (
           <div className="mt-3">
             <h3 className="text-sm font-semibold">{t("extras")}</h3>
@@ -156,12 +153,7 @@ export default async function GuestPortalPage({
                   <form action={addExtraAction}>
                     <input type="hidden" name="propertyId" value={p.property.id} />
                     <input type="hidden" name="extraId" value={e.id} />
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      className="h-7 text-xs"
-                      data-testid="add-extra"
-                    >
+                    <Button type="submit" variant="secondary" data-testid="add-extra" size="sm">
                       {t("addExtra")}
                     </Button>
                   </form>
@@ -171,8 +163,7 @@ export default async function GuestPortalPage({
           </div>
         ) : null}
       </Card>
-      <Card>
-        <h2 className="font-semibold">{t("messages")}</h2>
+      <Card title={t("messages")}>
         <ul className="mt-1 space-y-1 text-sm" data-testid="guest-messages">
           {p.messages.map((m, i) => (
             <li
@@ -180,7 +171,7 @@ export default async function GuestPortalPage({
               data-direction={m.direction}
               className={m.direction === "inbound" ? "text-end" : ""}
             >
-              <span className="rounded bg-canvas px-2 py-1">{m.body}</span>
+              <span className="rounded bg-background px-2 py-1">{m.body}</span>
             </li>
           ))}
         </ul>
@@ -197,8 +188,7 @@ export default async function GuestPortalPage({
         </form>
       </Card>
       {p.status !== "cancelled" ? (
-        <Card>
-          <h2 className="font-semibold">{t("cancel")}</h2>
+        <Card title={t("cancel")}>
           {p.cancellation.allowed ? (
             <form action={cancelBookingAction} className="mt-1 text-sm">
               <p>

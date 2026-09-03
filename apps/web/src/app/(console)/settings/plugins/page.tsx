@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle } from "@/components/ui";
+import { Button, Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { InstallForm } from "./install-form";
 import { loadPlugins, retryDeliveriesAction, setPluginEnabledAction } from "./plugins.actions";
@@ -12,14 +12,13 @@ export default async function PluginsPage() {
     <div className="space-y-6">
       <PageTitle>{t("title")}</PageTitle>
       <p className="text-sm text-muted">{t("hint")}</p>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("installed")}</h2>
+      <Card title={t("installed")}>
         {plugins.length === 0 ? <p className="text-sm text-muted">{t("none")}</p> : null}
         <ul className="space-y-2 text-sm" data-testid="plugin-list">
           {plugins.map((p) => (
             <li
               key={p.id}
-              className="rounded border border-line p-2"
+              className="rounded border border-border p-2"
               data-testid="plugin-row"
               data-enabled={p.enabled ? "1" : "0"}
             >
@@ -48,18 +47,13 @@ export default async function PluginsPage() {
                 <form action={setPluginEnabledAction}>
                   <input type="hidden" name="pluginId" value={p.id} />
                   <input type="hidden" name="enabled" value={p.enabled ? "0" : "1"} />
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    className="h-7 text-xs"
-                    data-testid="toggle-plugin"
-                  >
+                  <Button type="submit" variant="secondary" data-testid="toggle-plugin" size="sm">
                     {p.enabled ? t("disable") : t("enable")}
                   </Button>
                 </form>
                 <form action={retryDeliveriesAction}>
                   <input type="hidden" name="pluginId" value={p.id} />
-                  <Button type="submit" variant="secondary" className="h-7 text-xs">
+                  <Button type="submit" variant="secondary" size="sm">
                     {t("retry")}
                   </Button>
                 </form>
@@ -68,8 +62,7 @@ export default async function PluginsPage() {
           ))}
         </ul>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("install")}</h2>
+      <Card title={t("install")}>
         <InstallForm
           labels={{
             endpoint: t("endpoint"),
@@ -80,31 +73,30 @@ export default async function PluginsPage() {
         />
         <p className="mt-2 text-xs text-muted">{t("reference")}</p>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("deliveries")}</h2>
-        <table className="w-full text-xs" data-testid="deliveries">
-          <thead className="text-muted">
-            <tr>
-              <th className="text-start">{t("delivery")}</th>
-              <th className="text-start">{t("events")}</th>
-              <th className="text-start">{t("state")}</th>
-              <th className="text-end">{t("attempts")}</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card title={t("deliveries")}>
+        <Table data-testid="deliveries">
+          <THead>
+            <Tr>
+              <Th>{t("delivery")}</Th>
+              <Th>{t("events")}</Th>
+              <Th>{t("state")}</Th>
+              <Th className="text-end">{t("attempts")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {deliveries.map((d) => (
-              <tr key={d.id} data-testid="delivery-row" data-state={d.state}>
-                <td>{d.pluginKey}</td>
-                <td>{d.eventType}</td>
-                <td>
+              <Tr key={d.id} data-testid="delivery-row" data-state={d.state}>
+                <Td>{d.pluginKey}</Td>
+                <Td>{d.eventType}</Td>
+                <Td>
                   {d.state}
                   {d.lastError ? ` (${d.lastError})` : ""}
-                </td>
-                <td className="text-end">{d.attempts}</td>
-              </tr>
+                </Td>
+                <Td className="text-end">{d.attempts}</Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

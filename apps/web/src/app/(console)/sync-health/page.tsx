@@ -25,7 +25,7 @@ export default async function SyncHealthPage() {
               <div key={s}>
                 <dt className="text-xs uppercase text-muted">{s}</dt>
                 <dd
-                  className={`font-mono ${s === "failed" || s === "conflicted" ? (p.cells[s] ? "text-rose" : "") : ""}`}
+                  className={`font-mono ${s === "failed" || s === "conflicted" ? (p.cells[s] ? "text-danger" : "") : ""}`}
                 >
                   {p.cells[s] ?? 0}
                 </dd>
@@ -33,7 +33,7 @@ export default async function SyncHealthPage() {
             ))}
             <div>
               <dt className="text-xs uppercase text-muted">unacked</dt>
-              <dd className={`font-mono ${p.unackedBookings ? "text-rose" : ""}`}>
+              <dd className={`font-mono ${p.unackedBookings ? "text-danger" : ""}`}>
                 {p.unackedBookings}
               </dd>
             </div>

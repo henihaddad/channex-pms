@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { currentSession } from "@/server/session";
 import { currentImpersonation, currentOperator } from "@/server/operator";
-import { Card } from "@/components/ui";
+import { Alert, Card } from "@/components/ui";
+import { Logo } from "@/components/logo";
 import { leaveImpersonationAction } from "./ops.actions";
 
 /** The operator console shell (spec 12 §12.1): outside tenancy, operators only, no guest data anywhere. */
@@ -36,38 +37,46 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   ] as const;
   return (
     <div className="flex min-h-screen" data-testid="ops-console">
-      <aside className="w-56 shrink-0 border-e border-line bg-ink p-4 text-white/80">
-        <p className="mb-6 text-sm font-bold">{t("title")}</p>
-        <nav className="space-y-1">
+      <aside
+        className="dark sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-background p-4 text-foreground"
+        data-theme="dark"
+      >
+        <Logo size={26} suffix={t("title")} />
+        <div className="bridge-rail mt-4 mb-4 h-px w-full opacity-60" />
+        <nav className="flex flex-col gap-0.5">
           {links.map(([href, label]) => (
             <Link
               key={href}
               href={href}
-              className="block rounded-md px-3 py-2 text-sm hover:bg-ink-3"
+              className="rounded-xl px-3 py-2 text-sm text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
             >
               {label}
             </Link>
           ))}
-          <Link href="/" className="mt-4 block px-3 text-xs text-faint underline">
+          <Link href="/" className="mt-4 px-3 text-xs text-accent hover:underline">
             console →
           </Link>
         </nav>
-        <p className="mt-8 text-[11px] text-faint">{t("noPii")}</p>
+        <p className="mt-auto text-xs text-muted">{t("noPii")}</p>
       </aside>
-      <main className="flex-1 p-8">
-        {imp ? (
-          <form
-            action={leaveImpersonationAction}
-            className="mb-4 rounded bg-amber-soft p-2 text-sm text-amber-deep"
-          >
-            {t("banner", { org: imp.orgName, time: imp.expiresAt.slice(11, 16) })}{" "}
-            <button className="underline" type="submit">
-              {t("leave")}
-            </button>
-          </form>
-        ) : null}
-        {children}
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="bridge-rail h-[3px] w-full" aria-hidden="true" />
+        <main className="flex-1 px-8 py-7">
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-4">
+            {imp ? (
+              <form action={leaveImpersonationAction}>
+                <Alert tone="warning">
+                  {t("banner", { org: imp.orgName, time: imp.expiresAt.slice(11, 16) })}{" "}
+                  <button className="font-medium underline" type="submit">
+                    {t("leave")}
+                  </button>
+                </Alert>
+              </form>
+            ) : null}
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

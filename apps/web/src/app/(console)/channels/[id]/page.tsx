@@ -30,12 +30,11 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
       <Card>
         <ConnectionMapping view={v} />
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">Events</h2>
+      <Card title={"Events"}>
         <ul className="text-sm">
           {v.events.map((e) => (
-            <li key={e.id} className="border-t border-line py-1">
-              <span className="me-2 text-[10px] uppercase text-muted">{e.severity}</span>
+            <li key={e.id} className="border-t border-border py-1">
+              <span className="me-2 text-xs uppercase text-muted">{e.severity}</span>
               {e.message}
             </li>
           ))}

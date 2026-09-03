@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-/** A sidebar entry; the active one carries the mint-to-sky bar, the brand's device. */
+/** A sidebar entry. Lives in the sidebar's dark scope, so HeroUI's dark tokens apply. */
 export function NavLink({
   href,
   label,
@@ -24,24 +24,24 @@ export function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       data-testid={testId}
-      className={`relative flex items-center justify-between rounded-md px-3 py-1.5 text-[0.875rem] transition-colors ${
+      className={`relative flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-white/[0.07] font-semibold text-white"
-          : "text-white/70 hover:bg-white/[0.05] hover:text-white"
+          ? "bg-surface font-medium text-foreground shadow-surface"
+          : "text-muted hover:bg-surface-secondary hover:text-foreground"
       }`}
     >
       {active ? (
         <span
-          className="bridge-rail absolute inset-y-1.5 -start-3 w-[3px] rounded-full"
+          className="bridge-rail absolute inset-y-2 -start-3 w-[3px] rounded-full"
           aria-hidden="true"
         />
       ) : null}
       <span className="truncate">{label}</span>
       {badge && badge > 0 ? (
         <span
-          className={`ms-2 rounded-full px-1.5 text-[0.68rem] font-semibold tabular-nums ${alert ? "bg-amber text-ink" : "bg-mint text-ink"}`}
+          className={`chip chip--primary chip--sm ${alert ? "chip--warning" : "chip--accent"} tabular-nums`}
         >
-          {badge}
+          <span className="chip__label">{badge}</span>
         </span>
       ) : null}
     </Link>

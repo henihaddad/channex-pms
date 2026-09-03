@@ -63,7 +63,7 @@ export function ConnectionWizard({
   };
   return (
     <div className="space-y-4" data-testid="connection-wizard" data-step={step}>
-      <ol className="flex flex-wrap gap-1 text-[11px]">
+      <ol className="flex flex-wrap gap-1 text-xs">
         {[
           "Pick channel",
           "Settings",
@@ -76,7 +76,7 @@ export function ConnectionWizard({
         ].map((s, i) => (
           <li
             key={s}
-            className={`rounded px-2 py-0.5 ${i + 1 === step ? "bg-mint-deep text-white" : i + 1 < step ? "bg-mint-soft text-mint-deep" : "bg-canvas text-muted"}`}
+            className={`rounded px-2 py-0.5 ${i + 1 === step ? "bg-success text-white" : i + 1 < step ? "bg-success-soft text-success-soft-foreground" : "bg-background text-muted"}`}
           >
             {i + 1}. {s}
           </li>
@@ -86,11 +86,10 @@ export function ConnectionWizard({
       {step === 1 ? (
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <Label htmlFor="adapter">Channel</Label>
             <Select
-              id="adapter"
+              label={"Channel"}
               value={adapterCode}
-              onChange={(e) => setAdapterCode(e.target.value as (typeof ADAPTERS)[number])}
+              onChange={(v) => setAdapterCode(v as (typeof ADAPTERS)[number])}
             >
               {ADAPTERS.map((a) => (
                 <option key={a} value={a}>
@@ -100,12 +99,7 @@ export function ConnectionWizard({
             </Select>
           </div>
           <div>
-            <Label htmlFor="property">Property</Label>
-            <Select
-              id="property"
-              value={propertyId}
-              onChange={(e) => setPropertyId(e.target.value)}
-            >
+            <Select label={"Property"} value={propertyId} onChange={(v) => setPropertyId(v)}>
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -114,8 +108,11 @@ export function ConnectionWizard({
             </Select>
           </div>
           <div>
-            <Label htmlFor="account">Shared account (optional)</Label>
-            <Select id="account" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <Select
+              label={"Shared account (optional)"}
+              value={accountId}
+              onChange={(v) => setAccountId(v)}
+            >
               <option value="">None</option>
               {accounts
                 .filter((a) => a.adapterCode === adapterCode)
@@ -149,7 +146,7 @@ export function ConnectionWizard({
                 {f.label}
                 {f.required ? " *" : ""}
                 {!["string", "text", "password", "select", "number"].includes(f.type) ? (
-                  <span className="ms-2 text-xs text-amber-deep">
+                  <span className="ms-2 text-xs text-warning-soft-foreground">
                     unknown field type &quot;{f.type}&quot;, shown as text
                   </span>
                 ) : null}
@@ -158,7 +155,7 @@ export function ConnectionWizard({
                 <Select
                   id={`f-${f.name}`}
                   value={settings[f.name] ?? ""}
-                  onChange={(e) => setSettings({ ...settings, [f.name]: e.target.value })}
+                  onChange={(v) => setSettings({ ...settings, [f.name]: v })}
                 >
                   <option value="">—</option>
                   {f.options.map((o) => (
@@ -261,7 +258,7 @@ export function ConnectionWizard({
         <div className="space-y-3">
           <Alert tone="success">Connection created inactive (CH-4).</Alert>
           {created.warnings.map((w) => (
-            <p key={w.ref + w.code} className="text-xs text-amber-deep">
+            <p key={w.ref + w.code} className="text-xs text-warning-soft-foreground">
               {w.message}
             </p>
           ))}

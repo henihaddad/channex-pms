@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Input, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Input, Label, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { createIssueAction, loadIssues, loadBlocks } from "../operations/operations.actions";
 import { updateIssueAction } from "../operations/operations.actions";
@@ -18,7 +18,7 @@ export default async function MaintenancePage() {
           data-testid="issue-form"
         >
           <div className="col-span-2">
-            <label className="mb-1 block text-xs font-medium">Unit</label>
+            <Label>Unit</Label>
             <Select name="unitId">
               {units.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -29,7 +29,7 @@ export default async function MaintenancePage() {
           </div>
           <input type="hidden" name="propertyId" value={units[0]?.propertyId ?? ""} />
           <div>
-            <label className="mb-1 block text-xs font-medium">Severity</label>
+            <Label>Severity</Label>
             <Select name="severity" defaultValue="normal">
               <option value="low">low</option>
               <option value="normal">normal</option>
@@ -38,16 +38,10 @@ export default async function MaintenancePage() {
             </Select>
           </div>
           <Field label="Category" name="category" defaultValue="general" required={false} />
-          <label className="flex items-center gap-1 text-xs">
+          <Label>
             <input type="checkbox" name="blocksAvailability" /> block availability (
-            <Input
-              name="blockDays"
-              type="number"
-              defaultValue={3}
-              className="h-6 w-14 text-xs"
-            />{" "}
-            days)
-          </label>
+            <Input name="blockDays" type="number" defaultValue={3} className="h-6 w-14" /> days)
+          </Label>
           <Button type="submit">{t("reportIssue")}</Button>
           <div className="col-span-6">
             <Field label="Description" name="description" />
@@ -57,10 +51,10 @@ export default async function MaintenancePage() {
       <Card>
         <ul className="text-sm" data-testid="issues">
           {issues.map((i) => (
-            <li key={i.id} className="border-t border-line py-2" data-state={i.state}>
+            <li key={i.id} className="border-t border-border py-2" data-state={i.state}>
               <p>
                 <span
-                  className={`me-2 rounded px-1.5 text-[10px] uppercase ${i.severity === "urgent" ? "bg-rose-soft text-rose" : i.severity === "high" ? "bg-amber-soft text-amber-deep" : "bg-canvas"}`}
+                  className={`me-2 rounded px-1.5 text-xs uppercase ${i.severity === "urgent" ? "bg-danger-soft text-danger" : i.severity === "high" ? "bg-warning-soft text-warning-soft-foreground" : "bg-background"}`}
                 >
                   {i.severity}
                 </span>
@@ -81,7 +75,7 @@ export default async function MaintenancePage() {
                   className="mt-1 flex flex-wrap items-center gap-1 text-xs"
                 >
                   <input type="hidden" name="issueId" value={i.id} />
-                  <Select name="state" defaultValue={i.state} className="h-7 w-32">
+                  <Select name="state" defaultValue={i.state} className="w-32" size="sm">
                     <option value="open">open</option>
                     <option value="assigned">assigned</option>
                     <option value="in_progress">in progress</option>
@@ -90,7 +84,7 @@ export default async function MaintenancePage() {
                   <Input
                     name="vendor"
                     placeholder="vendor"
-                    className="h-7 w-32"
+                    className="w-32"
                     defaultValue={i.vendor ?? ""}
                   />
                   <Input
@@ -98,13 +92,13 @@ export default async function MaintenancePage() {
                     type="number"
                     step="0.01"
                     placeholder="cost"
-                    className="h-7 w-24"
+                    className="w-24"
                   />
-                  <label className="flex items-center gap-1">
+                  <Label>
                     <input type="checkbox" name="rebillToOwner" defaultChecked={i.rebillToOwner} />{" "}
                     {t("rebillOwner")}
-                  </label>
-                  <Button type="submit" variant="secondary" className="h-7 px-2">
+                  </Label>
+                  <Button type="submit" variant="secondary" size="sm">
                     Update
                   </Button>
                 </form>

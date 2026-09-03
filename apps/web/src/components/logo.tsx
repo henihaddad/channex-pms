@@ -38,7 +38,7 @@ export function Wordmark({ className, suffix }: { className?: string; suffix?: s
     <span className={`font-display text-[1.05rem] leading-none font-bold ${className ?? ""}`}>
       <span className="bridge-text">OTA</span>
       <span>bridge</span>
-      {suffix ? <span className="text-faint font-medium"> · {suffix}</span> : null}
+      {suffix ? <span className="text-muted font-medium"> · {suffix}</span> : null}
     </span>
   );
 }

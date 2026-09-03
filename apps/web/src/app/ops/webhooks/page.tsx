@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Input, PageTitle } from "@/components/ui";
+import { Button, Card, Input, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { replayWebhookAction } from "../ops.actions";
@@ -39,39 +39,39 @@ export default async function WebhooksPage({
         </Button>
       </form>
       <Card>
-        <table className="w-full text-xs" data-testid="webhook-explorer">
-          <thead className="text-muted">
-            <tr>
-              <th className="text-start">{t("event")}</th>
-              <th className="text-start">{t("state")}</th>
-              <th className="text-end">{t("attempts")}</th>
-              <th className="text-start">{t("dedupe")}</th>
-              <th className="text-start">{t("received")}</th>
-              <th className="text-start">{t("error")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
+        <Table data-testid="webhook-explorer">
+          <THead>
+            <Tr>
+              <Th>{t("event")}</Th>
+              <Th>{t("state")}</Th>
+              <Th className="text-end">{t("attempts")}</Th>
+              <Th>{t("dedupe")}</Th>
+              <Th>{t("received")}</Th>
+              <Th>{t("error")}</Th>
+              <Th />
+            </Tr>
+          </THead>
+          <TBody>
             {rows.map((w) => (
-              <tr key={w.id} data-testid="webhook-row" data-state={w.state}>
-                <td>{w.event}</td>
-                <td>{w.state}</td>
-                <td className="text-end">{w.attempts}</td>
-                <td>{w.dedupeKey.slice(0, 32)}</td>
-                <td>{w.receivedAt.slice(0, 19)}</td>
-                <td>{w.lastError?.slice(0, 60) ?? ""}</td>
-                <td>
+              <Tr key={w.id} data-testid="webhook-row" data-state={w.state}>
+                <Td>{w.event}</Td>
+                <Td>{w.state}</Td>
+                <Td className="text-end">{w.attempts}</Td>
+                <Td>{w.dedupeKey.slice(0, 32)}</Td>
+                <Td>{w.receivedAt.slice(0, 19)}</Td>
+                <Td>{w.lastError?.slice(0, 60) ?? ""}</Td>
+                <Td>
                   <form action={replayWebhookAction}>
                     <input type="hidden" name="webhookId" value={w.id} />
                     <button className="underline" type="submit" data-testid="replay-webhook">
                       {t("replay")}
                     </button>
                   </form>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

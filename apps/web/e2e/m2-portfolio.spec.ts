@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { pickOption } from "./ui";
 
 /**
  * M2 exit criterion (spec 15): a 20-listing portfolio from a template, connect
@@ -43,7 +44,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.goto("/properties");
   await expect(page.getByText(/^Template /)).toBeVisible();
   await page.goto("/properties/import");
-  await page.getByLabel("Template").selectOption({ index: 1 });
+  await pickOption(page, { label: "Template" }, { index: 1 });
   const rows = Array.from(
     { length: 20 },
     (_, i) =>
@@ -53,7 +54,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
     .getByLabel("CSV")
     .fill(["title,kind,currency,city,country,base_rate,min_stay", ...rows].join("\n"));
   await page.getByTestId("import-submit").click();
-  await expect(page.locator('p[role="alert"]')).toContainText("Created 20 properties");
+  await expect(page.locator(".alert")).toContainText("Created 20 properties");
 
   // the worker's provisioning and initial push, run in-process by the test hook
   const drained = (await (
@@ -83,7 +84,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   const href = await firstListing.getAttribute("href");
   const propertyId = href!.split("/").pop()!;
   await page.goto(`/channels/new?propertyId=${propertyId}`);
-  await page.getByLabel("Channel").selectOption("BookingCom");
+  await pickOption(page, { label: "Channel" }, { value: "BookingCom" });
   await page.getByTestId("wizard-next").click();
   await page.getByTestId("field-hotel_id").fill("12345");
   await page.getByTestId("wizard-test").click();

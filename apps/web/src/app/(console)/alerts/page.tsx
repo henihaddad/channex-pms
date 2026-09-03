@@ -23,7 +23,7 @@ export default async function AlertsPage({
           <Link
             key={s}
             href={`/alerts?state=${s}`}
-            className={`rounded px-2 py-1 ${(sp.state ?? "open") === s ? "bg-line font-semibold" : "hover:bg-canvas"}`}
+            className={`rounded px-2 py-1 ${(sp.state ?? "open") === s ? "bg-default font-semibold" : "hover:bg-background"}`}
           >
             {t(`states.${s}`)}
           </Link>
@@ -34,7 +34,7 @@ export default async function AlertsPage({
         {v.rows.map((a) => (
           <div
             key={a.id}
-            className="flex items-start justify-between gap-2 border-t border-line py-2 text-sm"
+            className="flex items-start justify-between gap-2 border-t border-border py-2 text-sm"
             data-testid="alert-item"
             data-type={a.type}
             data-state={a.state}
@@ -42,7 +42,7 @@ export default async function AlertsPage({
             <div>
               <p>
                 <span
-                  className={`me-1 rounded px-1 text-xs ${a.severity === "critical" ? "bg-rose-soft text-rose" : a.severity === "warning" ? "bg-amber-soft text-amber-deep" : "bg-canvas"}`}
+                  className={`me-1 rounded px-1 text-xs ${a.severity === "critical" ? "bg-danger-soft text-danger" : a.severity === "warning" ? "bg-warning-soft text-warning-soft-foreground" : "bg-background"}`}
                 >
                   {a.severity}
                 </span>
@@ -62,12 +62,7 @@ export default async function AlertsPage({
                   <form action={alertStateAction}>
                     <input type="hidden" name="id" value={a.id} />
                     <input type="hidden" name="state" value="acknowledged" />
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      className="h-7 text-xs"
-                      data-testid="ack-alert"
-                    >
+                    <Button type="submit" variant="secondary" data-testid="ack-alert" size="sm">
                       {t("acknowledge")}
                     </Button>
                   </form>
@@ -75,7 +70,7 @@ export default async function AlertsPage({
                 <form action={alertStateAction}>
                   <input type="hidden" name="id" value={a.id} />
                   <input type="hidden" name="state" value="actioned" />
-                  <Button type="submit" className="h-7 text-xs" data-testid="action-alert">
+                  <Button type="submit" data-testid="action-alert" size="sm">
                     {t("actioned")}
                   </Button>
                 </form>
@@ -84,8 +79,7 @@ export default async function AlertsPage({
           </div>
         ))}
       </Card>
-      <Card className="text-xs">
-        <p className="font-medium">{t("actionRates")}</p>
+      <Card className="text-xs" title={t("actionRates")}>
         {v.stats.map((s) => (
           <p key={s.type}>
             {s.type}: {s.actioned}/{s.raised} {t("actionedOf")}

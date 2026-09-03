@@ -21,8 +21,7 @@ export function InviteForm({
         <Input id="email" name="email" type="email" required />
       </div>
       <div className="w-56">
-        <Label htmlFor="roleKey">{labels.role}</Label>
-        <Select id="roleKey" name="roleKey" defaultValue="property_manager">
+        <Select label={labels.role} name="roleKey" defaultValue="property_manager">
           {roles.map((r) => (
             <option key={r} value={r}>
               {r}

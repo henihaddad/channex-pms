@@ -80,7 +80,7 @@ export default async function StorefrontPage({
           {results.map((r) => (
             <li
               key={r.property.id}
-              className="rounded-lg border border-line p-3"
+              className="rounded-lg border border-border p-3"
               data-testid="storefront-card"
             >
               <h3 className="font-semibold">
@@ -122,12 +122,12 @@ function Map({ results, label }: { results: StorefrontResult[]; label: string })
   const x = (lng: number) => 20 + ((lng - Math.min(...lngs)) / span(lngs)) * 560;
   const y = (lat: number) => 280 - ((lat - Math.min(...lats)) / span(lats)) * 240;
   return (
-    <figure className="rounded-lg border border-line bg-canvas p-2">
+    <figure className="rounded-lg border border-border bg-background p-2">
       <svg viewBox="0 0 600 300" role="img" aria-label={label} className="h-48 w-full">
         {results.map((r, i) => (
           <g key={r.property.id}>
             <circle cx={x(lngs[i]!)} cy={y(lats[i]!)} r={6} className="fill-emerald-600" />
-            <text x={x(lngs[i]!) + 9} y={y(lats[i]!) + 4} className="fill-slate-700 text-[11px]">
+            <text x={x(lngs[i]!) + 9} y={y(lats[i]!) + 4} className="fill-slate-700 text-xs">
               {r.property.title}
             </text>
           </g>

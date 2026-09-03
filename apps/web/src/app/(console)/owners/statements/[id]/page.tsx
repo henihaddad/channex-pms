@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Input,
+  PageTitle,
+  Select,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/server/owners";
 import {
@@ -44,19 +55,21 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         {t("statement")} {st.periodFrom.slice(0, 7)} · {st.ownerName} · {st.propertyTitle}
       </PageTitle>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded bg-canvas px-2 py-0.5" data-testid="statement-state">
+        <span className="rounded bg-background px-2 py-0.5" data-testid="statement-state">
           {st.state}
         </span>
         {st.disputeState === "open" ? (
           <form action={resolveDisputeAction} className="flex items-center gap-1">
             <input type="hidden" name="id" value={st.id} />
-            <span className="rounded bg-rose-soft px-2 py-0.5 text-rose">{t("disputed")}</span>
+            <Chip color="danger" size="sm">
+              {t("disputed")}
+            </Chip>
             {st.disputeThreadId ? (
               <Link className="underline" href={`/inbox?view=all&thread=${st.disputeThreadId}`}>
                 {t("openThread")}
               </Link>
             ) : null}
-            <Button type="submit" variant="secondary" className="h-7 text-xs">
+            <Button type="submit" variant="secondary" size="sm">
               {t("markResolved")}
             </Button>
           </form>
@@ -90,25 +103,17 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         {st.state === "sent" && st.payouts.every((p) => p.state === "failed") ? (
           <form action={initiatePayoutAction} className="flex items-center gap-1">
             <input type="hidden" name="statementId" value={st.id} />
-            <select
+            <Select
               name="method"
-              className="h-8 rounded border border-line-strong px-1 text-xs"
+
               defaultValue="manual"
+              size="sm"
             >
               <option value="manual">{t("manualTransfer")}</option>
               <option value="provider">{v.payoutProvider}</option>
-            </select>
-            <input
-              name="reference"
-              placeholder={t("bankReference")}
-              className="h-8 rounded border border-line-strong px-2 text-xs"
-            />
-            <Button
-              type="submit"
-              variant="secondary"
-              className="h-8 text-xs"
-              data-testid="initiate-payout"
-            >
+            </Select>
+            <Input name="reference" placeholder={t("bankReference")} />
+            <Button type="submit" variant="secondary" data-testid="initiate-payout" size="sm">
               {t("recordPayout")} {money(Number(st.totals.payable ?? 0), st.currency)}
             </Button>
             <span className="text-xs text-muted">
@@ -118,8 +123,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         ) : null}
       </div>
       {st.anomalies.length ? (
-        <Card className="border-amber/50 bg-amber-soft text-sm">
-          <p className="font-medium">{t("reviewFlags")}</p>
+        <Card className="border-warning/50 bg-warning-soft text-sm" title={t("reviewFlags")}>
           <ul className="list-disc ps-5 text-xs" data-testid="anomalies">
             {st.anomalies.map((a) => (
               <li key={a}>{a}</li>
@@ -144,13 +148,13 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
               )
               .join(" · ")}
           </p>
-          <table className="w-full text-xs" data-testid="statement-lines">
-            <tbody>
+          <Table data-testid="statement-lines">
+            <TBody>
               {st.lines.map((l) => (
-                <tr key={l.id} className="border-t border-line" data-kind={l.kind}>
-                  <td className="py-0.5 text-muted">{l.date}</td>
-                  <td>{l.kind.replace(/_/g, " ")}</td>
-                  <td>
+                <Tr key={l.id} data-kind={l.kind}>
+                  <Td>{l.date}</Td>
+                  <Td>{l.kind.replace(/_/g, " ")}</Td>
+                  <Td>
                     {l.bookingId ? (
                       <Link className="underline" href={`/reservations/${l.bookingId}`}>
                         {l.description}
@@ -166,56 +170,57 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                         ({t("origin")})
                       </Link>
                     ) : null}
-                  </td>
-                  <td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</td>
-                  <td className="text-faint">v{l.agreementVersion}</td>
-                </tr>
+                  </Td>
+                  <Td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</Td>
+                  <Td>v{l.agreementVersion}</Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
           {st.warnings.map((w) => (
-            <p key={w} className="text-xs text-amber-deep">
+            <p key={w} className="text-xs text-warning-soft-foreground">
               {w}
             </p>
           ))}
         </Card>
         <div className="space-y-4">
           <Card className="text-xs">
-            <table className="w-full" data-testid="statement-totals">
-              <tbody>
+            <Table data-testid="statement-totals">
+              <TBody>
                 {TOTAL_KEYS.map((k) => (
-                  <tr key={k} className={k === "netDue" ? "font-semibold" : ""}>
-                    <td className="py-0.5">{t(`totals.${k}`)}</td>
-                    <td className="text-end tabular-nums" data-total={k}>
+                  <Tr key={k} className={k === "netDue" ? "font-semibold" : ""}>
+                    <Td>{t(`totals.${k}`)}</Td>
+                    <Td className="text-end tabular-nums" data-total={k}>
                       {money(Number(st.totals[k] ?? 0), st.currency)}
-                    </td>
-                    <td className="text-end text-faint tabular-nums">
+                    </Td>
+                    <Td className="text-end tabular-nums">
                       {prev ? money(Number(prev.totals[k] ?? 0), st.currency) : ""}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
             {prev ? (
               <p className="mt-1 text-muted">
                 {t("previousColumn", { period: prev.periodFrom.slice(0, 7) })}
               </p>
             ) : null}
           </Card>
-          <Card className="text-xs">
-            <p className="font-medium">{t("payouts")}</p>
+          <Card className="text-xs" title={t("payouts")}>
             {st.payouts.length === 0 ? <p className="text-muted">{t("noPayouts")}</p> : null}
             {st.payouts.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between border-t border-line py-1"
+                className="flex items-center justify-between border-t border-border py-1"
                 data-testid="payout-row"
                 data-state={p.state}
               >
                 <span>
                   {money(p.amountMinor, p.currency)} · {p.method} · {p.state}
                   {p.providerRef ? ` · ${p.providerRef}` : ""}
-                  {p.failureReason ? <span className="text-rose"> · {p.failureReason}</span> : null}
+                  {p.failureReason ? (
+                    <span className="text-danger"> · {p.failureReason}</span>
+                  ) : null}
                 </span>
                 {p.state === "awaiting_approval" ? (
                   <form action={approvePayoutAction}>
@@ -223,8 +228,8 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                     <Button
                       type="submit"
                       variant="secondary"
-                      className="h-7 text-xs"
                       data-testid="approve-payout"
+                      size="sm"
                     >
                       {t("approvePayout")}
                     </Button>

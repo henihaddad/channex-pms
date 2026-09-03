@@ -30,14 +30,14 @@ export function CredentialPanel({
     <div className="space-y-2 text-sm">
       {status !== "cancelled" ? (
         <div className="flex items-center gap-2">
-          <Select value={type} onChange={(e) => setType(e.target.value)} className="h-8 w-40">
+          <Select value={type} onChange={(v) => setType(v)} className="h-8 w-40">
             <option value="door_code">door code</option>
             <option value="smart_lock">smart lock</option>
             <option value="lockbox">lockbox</option>
             <option value="key_handover">key handover</option>
           </Select>
           <Button
-            className="h-8"
+            size="sm"
             disabled={pending}
             data-testid="issue-code"
             onClick={() =>
@@ -58,7 +58,10 @@ export function CredentialPanel({
         </div>
       ) : null}
       {issued ? (
-        <p className="rounded bg-mint-soft p-2 font-mono text-mint-deep" data-testid="issued-code">
+        <p
+          className="rounded bg-success-soft p-2 font-mono text-success-soft-foreground"
+          data-testid="issued-code"
+        >
           {issued}
         </p>
       ) : null}
@@ -123,8 +126,9 @@ export function GuestPanel({
         </p>
       ) : (
         <Button
+          size="sm"
           variant="secondary"
-          className="mt-2 h-8"
+          className="mt-2"
           disabled={pending}
           data-testid="reveal-pii"
           onClick={() =>
@@ -171,8 +175,8 @@ export function InstrumentPanel({
         ))
       ) : (
         <Button
+          size="sm"
           variant="secondary"
-          className="h-8"
           disabled={pending}
           onClick={() =>
             start(async () => {
@@ -187,7 +191,7 @@ export function InstrumentPanel({
           {label} ({count})
         </Button>
       )}
-      {error ? <p className="text-xs text-rose">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
     </div>
   );
 }

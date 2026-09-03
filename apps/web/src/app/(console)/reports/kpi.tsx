@@ -7,7 +7,7 @@ export const money = (minor: number | null, currency: string): string =>
     ? "—"
     : `${(minor / 100).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 
-/** A KPI card: the value, its formula as a tooltip (spec 11 §11.1) and the change against the previous period. */
+/** A KPI tile: the value, its formula as a tooltip (spec 11 §11.1) and the change against the previous period. */
 export function Kpi({
   label,
   value,
@@ -34,18 +34,26 @@ export function Kpi({
       ? Math.round(((current - delta) * 1000) / Math.abs(delta)) / 10
       : null;
   const body = (
-    <div title={hint} data-testid={testId}>
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-lg font-semibold tabular-nums">{value}</p>
+    <div
+      title={hint}
+      data-testid={testId}
+      className="flex h-full min-w-0 flex-col gap-0.5 rounded-2xl bg-surface-secondary px-4 py-3"
+    >
+      <span className="truncate text-xs font-medium text-muted">{label}</span>
+      <span className="text-xl font-semibold tracking-tight text-foreground tabular-nums">
+        {value}
+      </span>
       {change !== null ? (
-        <p className={`text-[10px] ${change >= 0 ? "text-mint-deep" : "text-rose"}`}>
+        <span
+          className={`text-xs tabular-nums ${change >= 0 ? "text-success-soft-foreground" : "text-danger"}`}
+        >
           {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs previous
-        </p>
+        </span>
       ) : null}
     </div>
   );
   return href ? (
-    <Link href={href} className="hover:bg-canvas">
+    <Link href={href} className="block rounded-2xl transition-opacity hover:opacity-80">
       {body}
     </Link>
   ) : (

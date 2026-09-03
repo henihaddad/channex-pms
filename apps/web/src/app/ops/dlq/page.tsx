@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Input, PageTitle } from "@/components/ui";
+import { Button, Card, Input, PageTitle, TBody, Table, Td, Tr } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { dlqAction } from "../ops.actions";
@@ -14,32 +14,28 @@ export default async function DlqPage() {
     <div className="space-y-4">
       <PageTitle>{t("dlq")}</PageTitle>
       <Card>
-        <table className="w-full text-xs" data-testid="dlq">
-          <tbody>
+        <Table data-testid="dlq">
+          <TBody>
             {rows.map((r) => (
-              <tr key={`${r.kind}:${r.id}`} data-testid="dlq-row" data-kind={r.kind}>
-                <td>{r.kind}</td>
-                <td>{r.label}</td>
-                <td>{r.attempts}</td>
-                <td>{r.at.slice(0, 19)}</td>
-                <td>{r.lastError?.slice(0, 80) ?? ""}</td>
-                <td>
+              <Tr key={`${r.kind}:${r.id}`} data-testid="dlq-row" data-kind={r.kind}>
+                <Td>{r.kind}</Td>
+                <Td>{r.label}</Td>
+                <Td>{r.attempts}</Td>
+                <Td>{r.at.slice(0, 19)}</Td>
+                <Td>{r.lastError?.slice(0, 80) ?? ""}</Td>
+                <Td>
                   <form action={dlqAction} className="flex gap-1">
                     <input type="hidden" name="kind" value={r.kind} />
                     <input type="hidden" name="id" value={r.id} />
                     <input type="hidden" name="orgId" value={r.orgId} />
-                    <Input
-                      name="reason"
-                      placeholder={t("discardReason")}
-                      className="h-7 w-40 text-xs"
-                    />
+                    <Input name="reason" placeholder={t("discardReason")} className="w-40" />
                     <Button
                       type="submit"
                       name="op"
                       value="requeue"
                       variant="secondary"
-                      className="h-7 text-xs"
                       data-testid="dlq-requeue"
+                      size="sm"
                     >
                       {t("requeue")}
                     </Button>
@@ -48,16 +44,17 @@ export default async function DlqPage() {
                       name="op"
                       value="discard"
                       variant="secondary"
-                      className="h-7 text-xs"
+
+                      size="sm"
                     >
                       {t("discard")}
                     </Button>
                   </form>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

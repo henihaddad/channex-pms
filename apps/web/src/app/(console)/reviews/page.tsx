@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle } from "@/components/ui";
+import { Button, Card, Chip, Input, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { providerLabel } from "@/server/inbox";
 import { listReviews, respondReviewAction } from "../inbox/inbox.actions";
@@ -24,10 +24,11 @@ export default async function ReviewsPage({
     <div className="space-y-4">
       <PageTitle>{t("reviews")}</PageTitle>
       <form className="flex flex-wrap gap-2 text-xs">
-        <select
+        <Select
           name="property"
           defaultValue={sp.property ?? ""}
-          className="h-8 rounded border border-line-strong px-1"
+
+          size="sm"
         >
           <option value="">{t("allProperties")}</option>
           {properties.map((p) => (
@@ -35,11 +36,12 @@ export default async function ReviewsPage({
               {p.title}
             </option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
           name="state"
           defaultValue={sp.state ?? ""}
-          className="h-8 rounded border border-line-strong px-1"
+
+          size="sm"
         >
           <option value="">{t("anyState")}</option>
           {["pending", "queued", "responded", "failed", "not_supported"].map((s) => (
@@ -47,17 +49,17 @@ export default async function ReviewsPage({
               {s}
             </option>
           ))}
-        </select>
-        <input
+        </Select>
+        <Input
           name="minRating"
           type="number"
           min={0}
           max={10}
           defaultValue={sp.minRating ?? ""}
           placeholder={t("minRating")}
-          className="h-8 w-24 rounded border border-line-strong px-2"
+          className="w-24"
         />
-        <Button type="submit" variant="secondary" className="h-8 text-xs">
+        <Button type="submit" variant="secondary" size="sm">
           {t("filter")}
         </Button>
       </form>
@@ -66,7 +68,7 @@ export default async function ReviewsPage({
         {rows.map((r) => (
           <div
             key={r.id}
-            className="border-t border-line py-2 text-sm"
+            className="border-t border-border py-2 text-sm"
             data-testid="review-row"
             data-state={r.responseState}
           >
@@ -75,14 +77,14 @@ export default async function ReviewsPage({
               {providerLabel(r.provider)} · {r.propertyTitle} ·{" "}
               <span className="text-xs text-muted">{r.insertedAt.slice(0, 10)}</span>
               {r.responseDueAt && r.responseState === "pending" ? (
-                <span className="ms-2 rounded bg-amber-soft px-1 text-[10px] text-amber-deep">
+                <Chip color="warning" size="sm" className="ms-2">
                   {t("respondBy")} {r.responseDueAt.slice(0, 16).replace("T", " ")}
-                </span>
+                </Chip>
               ) : null}
             </p>
-            <p className="whitespace-pre-wrap text-text">{r.body}</p>
+            <p className="whitespace-pre-wrap text-foreground">{r.body}</p>
             {r.response ? (
-              <p className="mt-1 rounded bg-sky-soft p-2 text-xs" data-testid="review-response">
+              <p className="mt-1 rounded bg-accent-soft p-2 text-xs" data-testid="review-response">
                 <strong>
                   {t("ourResponse")} ({r.response.deliveryState}):
                 </strong>{" "}
@@ -92,13 +94,8 @@ export default async function ReviewsPage({
               <form action={respondReviewAction} className="mt-1 flex gap-1">
                 <input type="hidden" name="reviewId" value={r.id} />
                 <input type="hidden" name="propertyId" value={r.propertyId} />
-                <input
-                  name="body"
-                  required
-                  placeholder={t("respondPlaceholder")}
-                  className="h-8 flex-1 rounded border border-line-strong px-2 text-xs"
-                />
-                <Button type="submit" className="h-8 text-xs" data-testid="respond-review">
+                <Input name="body" required placeholder={t("respondPlaceholder")} />
+                <Button type="submit" data-testid="respond-review" size="sm">
                   {t("respond")}
                 </Button>
               </form>

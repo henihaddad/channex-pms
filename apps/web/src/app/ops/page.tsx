@@ -36,8 +36,7 @@ export default async function FleetPage() {
           </Card>
         ))}
       </div>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("worst")}</h2>
+      <Card title={t("worst")}>
         <ul className="text-sm">
           {h.worstProperties.map((p) => (
             <li key={p.propertyId}>

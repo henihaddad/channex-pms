@@ -1,7 +1,18 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PROVISION_STEPS } from "@pms/core";
-import { Button, Card, Field, Input, Label, PageTitle, Select } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Field,
+  Input,
+  PageTitle,
+  Select,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   addDerivedPlanAction,
@@ -24,7 +35,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       <div className="flex items-center justify-between">
         <PageTitle>{d.property.title}</PageTitle>
         <div className="flex items-center gap-3 text-sm">
-          <span className="rounded bg-canvas px-2 py-0.5 text-xs" data-testid="property-state">
+          <span className="rounded bg-background px-2 py-0.5 text-xs" data-testid="property-state">
             {d.property.state}
           </span>
           <Link href={`/calendar?propertyId=${d.property.id}`} className="underline">
@@ -42,20 +53,19 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </Link>
         </div>
       </div>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("provisioning")}</h2>
+      <Card title={t("provisioning")}>
         <ol className="flex flex-wrap gap-2 text-xs" data-testid="provisioning-steps">
           {PROVISION_STEPS.map((s, i) => (
             <li
               key={s}
-              className={`rounded px-2 py-1 ${i < stepIndex || d.provisioning?.step === "live" ? "bg-mint-soft text-mint-deep" : i === stepIndex ? "bg-sky-soft text-sky-deep" : "bg-canvas text-muted"}`}
+              className={`rounded px-2 py-1 ${i < stepIndex || d.provisioning?.step === "live" ? "bg-success-soft text-success-soft-foreground" : i === stepIndex ? "bg-accent-soft text-accent" : "bg-background text-muted"}`}
             >
               {s}
             </li>
           ))}
         </ol>
         {d.provisioning?.lastError ? (
-          <p className="mt-2 text-xs text-rose">
+          <p className="mt-2 text-xs text-danger">
             {d.provisioning.lastError} (attempt {d.provisioning.attempts})
           </p>
         ) : null}
@@ -73,18 +83,17 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </Button>
         </form>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("roomTypes")}</h2>
-        <table className="w-full text-sm">
-          <tbody>
+      <Card title={t("roomTypes")}>
+        <Table>
+          <TBody>
             {visibleRoomTypes.map((rt) => (
-              <tr key={rt.id} className="border-t border-line">
-                <td className="py-2 font-medium">{rt.title}</td>
-                <td className="text-xs text-muted">
+              <Tr key={rt.id}>
+                <Td>{rt.title}</Td>
+                <Td>
                   {rt.occAdults} adults · {rt.occChildren} children ·{" "}
                   {d.units.filter((u) => u.roomTypeId === rt.id).length} units
-                </td>
-                <td className="text-end">
+                </Td>
+                <Td className="text-end">
                   <form
                     action={updateRoomTypeCountAction}
                     className="flex items-center justify-end gap-2"
@@ -102,22 +111,21 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                       Set count
                     </Button>
                   </form>
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
             {visibleRoomTypes.length === 0 ? (
-              <tr>
-                <td className="py-2 text-xs text-muted">{t("systemManaged")}</td>
-              </tr>
+              <Tr>
+                <Td>{t("systemManaged")}</Td>
+              </Tr>
             ) : null}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("ratePlans")}</h2>
+      <Card title={t("ratePlans")}>
         <ul className="mb-4 text-sm" data-testid="rate-plans">
           {d.ratePlans.map((rp) => (
-            <li key={rp.id} className="border-t border-line py-1">
+            <li key={rp.id} className="border-t border-border py-1">
               {rp.title}{" "}
               <span className="text-xs text-muted">
                 · {d.roomTypes.find((r) => r.id === rp.roomTypeId)?.title} · {rp.currency}
@@ -137,8 +145,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <input type="hidden" name="propertyId" value={d.property.id} />
           <Field label="Derived plan title" name="title" placeholder="Non-refundable" />
           <div>
-            <Label htmlFor="parentRatePlanId">Parent</Label>
-            <Select id="parentRatePlanId" name="parentRatePlanId">
+            <Select label={"Parent"} name="parentRatePlanId">
               {d.ratePlans.map((rp) => (
                 <option key={rp.id} value={rp.id}>
                   {rp.title}
@@ -147,15 +154,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </Select>
           </div>
           <div>
-            <Label htmlFor="direction">Direction</Label>
-            <Select id="direction" name="direction">
+            <Select label={"Direction"} name="direction">
               <option value="decrease">decrease</option>
               <option value="increase">increase</option>
             </Select>
           </div>
           <div>
-            <Label htmlFor="kind">By</Label>
-            <Select id="kind" name="kind">
+            <Select label={"By"} name="kind">
               <option value="percent">percent (bp)</option>
               <option value="amount">amount (minor)</option>
             </Select>
@@ -166,14 +171,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </div>
         </form>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("channels")}</h2>
+      <Card title={t("channels")}>
         {d.connections.length === 0 ? (
           <p className="text-sm text-muted">{t("noChannels")}</p>
         ) : (
           <ul className="text-sm">
             {d.connections.map((c) => (
-              <li key={c.id} className="border-t border-line py-1">
+              <li key={c.id} className="border-t border-border py-1">
                 <Link href={`/channels/${c.id}`} className="hover:underline">
                   {c.adapterCode}
                 </Link>{" "}
@@ -190,8 +194,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </ul>
         )}
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("policies")}</h2>
+      <Card title={t("policies")}>
         <ul className="mb-3 text-sm">
           {d.policies.map((p) => (
             <li key={p.id}>
@@ -210,8 +213,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         </form>
       </Card>
       {d.bulkOps.length > 0 ? (
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("recentOps")}</h2>
+        <Card title={t("recentOps")}>
           <ul className="text-xs text-muted">
             {d.bulkOps.map((o) => (
               <li key={o.id}>

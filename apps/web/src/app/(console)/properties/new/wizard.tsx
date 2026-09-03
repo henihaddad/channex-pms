@@ -41,9 +41,9 @@ export function PropertyWizard({
       {state.error ? <Alert>{state.error}</Alert> : null}
       <fieldset className="grid grid-cols-3 gap-3">
         {(["single_unit", "multi_unit", "hotel"] as const).map((k) => (
-          <label
+          <Label
             key={k}
-            className={`cursor-pointer rounded-lg border p-3 text-sm ${kind === k ? "border-mint bg-mint-soft" : "border-line"}`}
+            className={`cursor-pointer rounded-lg border p-3 text-sm ${kind === k ? "border-success bg-success-soft" : "border-border"}`}
           >
             <input
               type="radio"
@@ -61,14 +61,13 @@ export function PropertyWizard({
                   ? "Several units of one or more types."
                   : "Room types with counts; front-desk features."}
             </p>
-          </label>
+          </Label>
         ))}
       </fieldset>
       <div className="grid grid-cols-2 gap-4">
         <Field label="Title" name="title" placeholder="Alfama Loft" />
         <div>
-          <Label htmlFor="templateId">Template</Label>
-          <Select id="templateId" name="templateId" defaultValue="">
+          <Select label={"Template"} name="templateId" defaultValue="">
             <option value="">None</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
@@ -87,10 +86,10 @@ export function PropertyWizard({
           <Label>Groups</Label>
           <div className="flex flex-wrap gap-3 text-sm">
             {groups.map((g) => (
-              <label key={g.id}>
+              <Label key={g.id}>
                 <input type="checkbox" name="groupIds" value={g.id} className="me-1" />
                 {g.name}
-              </label>
+              </Label>
             ))}
           </div>
         </div>
@@ -181,12 +180,8 @@ export function PropertyWizard({
             {kind !== "single_unit" ? (
               <Select
                 value={rp.roomTypeTitle ?? roomTypes[0]?.title}
-                onChange={(e) =>
-                  setRatePlans(
-                    ratePlans.map((x, j) =>
-                      j === i ? { ...x, roomTypeTitle: e.target.value } : x,
-                    ),
-                  )
+                onChange={(v) =>
+                  setRatePlans(ratePlans.map((x, j) => (j === i ? { ...x, roomTypeTitle: v } : x)))
                 }
               >
                 {roomTypes.map((rt) => (

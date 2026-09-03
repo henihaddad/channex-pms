@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pickOption } from "./ui";
 
 /**
  * M0 exit criterion (spec 15): sign up, create an org, invite a colleague with a
@@ -26,9 +27,9 @@ test("sign up, invite a colleague, accept, and see it audited", async ({
   // invite a colleague as property_manager
   await page.goto("/settings/members");
   await page.getByLabel("Email").fill(`bob-${stamp}@example.com`);
-  await page.getByLabel("Role").selectOption("property_manager");
+  await pickOption(page, { label: "Role" }, { value: "property_manager" });
   await page.getByRole("button", { name: "Invite a colleague" }).click();
-  await expect(page.locator('p[role="alert"]')).toContainText(`bob-${stamp}@example.com`);
+  await expect(page.locator(".alert")).toContainText(`bob-${stamp}@example.com`);
 
   // the audit log shows the invitation and verifies
   await page.goto("/settings/audit");

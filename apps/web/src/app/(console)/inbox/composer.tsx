@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { MessageTemplate } from "@pms/core";
-import { Button } from "@/components/ui";
+import { Button, Select, Textarea } from "@/components/ui";
 import { addNoteAction, previewTemplateAction, sendReplyAction } from "./inbox.actions";
 
 interface Props {
@@ -61,30 +61,32 @@ export function Composer(p: Props) {
   };
   return (
     <div className="space-y-2" data-testid="composer" data-mode={mode}>
-      <div className="flex gap-1 text-xs">
+      <div className="flex flex-wrap gap-1">
         {p.canSend ? (
-          <button
+          <Button
             type="button"
+            size="sm"
+            variant={mode === "guest" ? "primary" : "ghost"}
             onClick={() => switchTo("guest")}
-            className={`rounded-t px-3 py-1 ${mode === "guest" ? "bg-sky-soft font-semibold text-sky-deep" : "bg-canvas"}`}
             data-testid="mode-guest"
           >
             {p.labels.replyMode}
-          </button>
+          </Button>
         ) : null}
-        <button
+        <Button
           type="button"
+          size="sm"
+          variant={mode === "note" ? "secondary" : "ghost"}
           onClick={() => switchTo("note")}
-          className={`rounded-t px-3 py-1 ${mode === "note" ? "bg-amber-soft font-semibold text-amber-deep" : "bg-canvas"}`}
           data-testid="mode-note"
         >
           {p.labels.noteMode}
-        </button>
+        </Button>
       </div>
       {mode === "guest" ? (
         <form
           action={sendReplyAction}
-          className="space-y-2 rounded-b-lg rounded-tr-lg border border-sky/40 bg-sky-soft p-3"
+          className="flex flex-col gap-2 rounded-2xl bg-accent-soft p-3"
           data-testid="guest-composer"
           onSubmit={() => setText("")}
         >
@@ -92,13 +94,12 @@ export function Composer(p: Props) {
           <input type="hidden" name="propertyId" value={p.propertyId} />
           <input type="hidden" name="templateId" value={templateId} />
           <div className="flex items-center gap-2 text-xs">
-            <label htmlFor="template">{p.labels.template}</label>
-            <select
-              id="template"
+            <Select
+              label={p.labels.template}
               value={templateId}
-              onChange={(e) => pick(e.target.value)}
-              className="h-7 rounded border border-line-strong bg-white px-1"
-              data-testid="template-select"
+              onChange={(v) => pick(v)}
+              size="sm"
+              testId="template-select"
             >
               <option value="">—</option>
               {applicable.map((t) => (
@@ -106,21 +107,21 @@ export function Composer(p: Props) {
                   {t.name} ({t.locale})
                 </option>
               ))}
-            </select>
+            </Select>
             {pending ? <span className="text-muted">{p.labels.preview}</span> : null}
             {missing.length ? (
-              <span className="text-rose" data-testid="missing-vars">
+              <span className="text-danger" data-testid="missing-vars">
                 {p.labels.missing}: {missing.join(", ")}
               </span>
             ) : null}
           </div>
-          <textarea
+          <Textarea
             name="body"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
             required
-            className="w-full rounded border border-sky/40 bg-white p-2 text-sm"
+            className="w-full rounded border border-accent/40 bg-surface p-2 text-sm"
             data-testid="guest-body"
             placeholder={`${p.labels.sendTo} ${p.guestFirstName}…`}
           />
@@ -131,20 +132,20 @@ export function Composer(p: Props) {
       ) : (
         <form
           action={addNoteAction}
-          className="space-y-2 rounded-b-lg rounded-tr-lg border border-amber/50 bg-amber-soft p-3"
+          className="flex flex-col gap-2 rounded-2xl bg-warning-soft p-3"
           data-testid="note-composer"
           onSubmit={() => setText("")}
         >
           <input type="hidden" name="threadId" value={p.threadId} />
           <input type="hidden" name="propertyId" value={p.propertyId} />
-          <p className="text-xs text-amber-deep">{p.labels.noteHint}</p>
-          <textarea
+          <p className="text-xs text-warning-soft-foreground">{p.labels.noteHint}</p>
+          <Textarea
             name="body"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={3}
             required
-            className="w-full rounded border border-amber/50 bg-white p-2 text-sm"
+            className="w-full rounded border border-warning/50 bg-surface p-2 text-sm"
             data-testid="note-body"
           />
           <Button type="submit" variant="secondary" data-testid="save-note">

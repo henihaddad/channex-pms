@@ -14,7 +14,7 @@ export default async function OwnerExpenses() {
       <Card className="text-sm">
         {rows.length === 0 ? <p className="text-xs text-muted">{t("noExpenses")}</p> : null}
         {rows.map((e) => (
-          <p key={e.id} className="border-t border-line py-1 text-xs" data-testid="owner-expense">
+          <p key={e.id} className="border-t border-border py-1 text-xs" data-testid="owner-expense">
             {e.date} · {e.propertyTitle} · {e.category} · {e.description} ·{" "}
             {money(e.amountMinor, e.currency)}
             {e.receiptRef ? " · 🧾" : ""}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Input, PageTitle } from "@/components/ui";
+import { Button, Card, Input, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { tenantEventAction } from "../ops.actions";
@@ -34,37 +34,37 @@ export default async function TenantsPage({
         </Button>
       </form>
       <Card>
-        <table className="w-full text-sm" data-testid="tenants">
-          <thead className="text-xs text-muted">
-            <tr>
-              <th className="text-start">{t("tenants")}</th>
-              <th className="text-start">{t("state")}</th>
-              <th className="text-start">{t("plan")}</th>
-              <th className="text-end">{t("units")}</th>
-              <th className="text-end">{t("pendingCells")}</th>
-              <th className="text-end">{t("unacked")}</th>
-              <th className="text-end">{t("incidents")}</th>
-              <th className="text-start">{t("lastActivity")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
+        <Table data-testid="tenants">
+          <THead>
+            <Tr>
+              <Th>{t("tenants")}</Th>
+              <Th>{t("state")}</Th>
+              <Th>{t("plan")}</Th>
+              <Th className="text-end">{t("units")}</Th>
+              <Th className="text-end">{t("pendingCells")}</Th>
+              <Th className="text-end">{t("unacked")}</Th>
+              <Th className="text-end">{t("incidents")}</Th>
+              <Th>{t("lastActivity")}</Th>
+              <Th />
+            </Tr>
+          </THead>
+          <TBody>
             {rows.map((r) => (
-              <tr key={r.id} data-testid="tenant-row" data-state={r.state}>
-                <td>
+              <Tr key={r.id} data-testid="tenant-row" data-state={r.state}>
+                <Td>
                   {r.name}{" "}
                   <span className="text-xs text-muted">
                     /{r.slug} · {r.country}
                   </span>
-                </td>
-                <td>{r.state}</td>
-                <td>{r.planKey ?? "—"}</td>
-                <td className="text-end">{r.activeUnits}</td>
-                <td className="text-end">{r.pendingCells}</td>
-                <td className="text-end">{r.unackedBookings}</td>
-                <td className="text-end">{r.openIncidents}</td>
-                <td>{r.lastActivityAt?.slice(0, 16) ?? "—"}</td>
-                <td className="text-end">
+                </Td>
+                <Td>{r.state}</Td>
+                <Td>{r.planKey ?? "—"}</Td>
+                <Td className="text-end">{r.activeUnits}</Td>
+                <Td className="text-end">{r.pendingCells}</Td>
+                <Td className="text-end">{r.unackedBookings}</Td>
+                <Td className="text-end">{r.openIncidents}</Td>
+                <Td>{r.lastActivityAt?.slice(0, 16) ?? "—"}</Td>
+                <Td className="text-end">
                   <Link href={`/ops/impersonation?orgId=${r.id}`} className="text-xs underline">
                     {t("impersonation")}
                   </Link>
@@ -72,16 +72,16 @@ export default async function TenantsPage({
                     <form action={tenantEventAction} className="inline">
                       <input type="hidden" name="orgId" value={r.id} />
                       <input type="hidden" name="event" value="reactivated" />
-                      <Button type="submit" variant="secondary" className="ms-2 h-6 text-xs">
+                      <Button type="submit" variant="secondary" className="ms-2" size="sm">
                         reactivate
                       </Button>
                     </form>
                   ) : null}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

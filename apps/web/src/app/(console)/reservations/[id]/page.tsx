@@ -1,6 +1,20 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Input, PageTitle, Select } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  DateInput,
+  Field,
+  Input,
+  Label,
+  PageTitle,
+  Select,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   acknowledgeAction,
@@ -45,7 +59,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span
-            className={`rounded px-2 py-0.5 text-xs ${d.status === "cancelled" ? "bg-canvas" : "bg-mint-soft text-mint-deep"}`}
+            className={`rounded px-2 py-0.5 text-xs ${d.status === "cancelled" ? "bg-background" : "bg-success-soft text-success-soft-foreground"}`}
           >
             {d.status}
           </span>
@@ -54,7 +68,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
               <input type="hidden" name="bookingId" value={d.id} />
               <input type="hidden" name="propertyId" value={d.propertyId} />
               <input type="hidden" name="revisionId" value={d.lastRevisionId} />
-              <Button type="submit" variant="secondary" className="h-8" data-testid="acknowledge">
+              <Button type="submit" variant="secondary" data-testid="acknowledge" size="sm">
                 {t("acknowledgeChange")}
               </Button>
             </form>
@@ -63,7 +77,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             <form action={cancelDirectBookingAction}>
               <input type="hidden" name="bookingId" value={d.id} />
               <input type="hidden" name="propertyId" value={d.propertyId} />
-              <Button type="submit" variant="danger" className="h-8" title={t("cancelSideEffects")}>
+              <Button type="submit" variant="danger" size="sm" aria-label={t("cancelSideEffects")}>
                 {t("cancel")}
               </Button>
             </form>
@@ -76,12 +90,11 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("stay")}</h2>
+        <Card title={t("stay")}>
           {d.rooms.map((r) => (
-            <div key={r.id} className="border-t border-line py-2 text-sm" data-testid="stay-room">
+            <div key={r.id} className="border-t border-border py-2 text-sm" data-testid="stay-room">
               <p>
-                {r.roomTypeTitle ?? <span className="text-rose">unmapped room</span>} ·{" "}
+                {r.roomTypeTitle ?? <span className="text-danger">unmapped room</span>} ·{" "}
                 {r.ratePlanTitle ?? "—"} · {r.occupancy.adults} adults, {r.occupancy.children}{" "}
                 children{r.occupancy.ages?.length ? ` (ages ${r.occupancy.ages.join(", ")})` : ""}
               </p>
@@ -98,7 +111,8 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                   <Select
                     name="unitId"
                     defaultValue={r.assignedUnitId ?? ""}
-                    className="h-8 max-w-xs"
+                    className="max-w-xs"
+                    size="sm"
                   >
                     <option value="">{t("unassigned")}</option>
                     {v.units
@@ -109,7 +123,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                         </option>
                       ))}
                   </Select>
-                  <Button type="submit" variant="secondary" className="h-8">
+                  <Button type="submit" variant="secondary" size="sm">
                     {t("assign")}
                   </Button>
                 </form>
@@ -117,7 +131,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 <p className="text-xs text-muted">{t("singleUnitNoAssign")}</p>
               )}
               <div className="mt-1 flex items-center gap-2 text-xs">
-                <span className="rounded bg-canvas px-1.5">{r.stayState}</span>
+                <span className="rounded bg-background px-1.5">{r.stayState}</span>
                 {r.stayState === "expected" ? (
                   <>
                     <form action={stayStateAction}>
@@ -135,7 +149,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                       <input type="hidden" name="bookingRoomId" value={r.id} />
                       <input type="hidden" name="state" value="no_show" />
                       <input type="hidden" name="reason" value="did not arrive" />
-                      <button className="underline text-rose">{t("noShow")}</button>
+                      <button className="underline text-danger">{t("noShow")}</button>
                     </form>
                   </>
                 ) : null}
@@ -157,14 +171,13 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             <form action={autoAssignAction} className="mt-2">
               <input type="hidden" name="bookingId" value={d.id} />
               <input type="hidden" name="propertyId" value={d.propertyId} />
-              <Button type="submit" variant="secondary" className="h-8">
+              <Button type="submit" variant="secondary" size="sm">
                 {t("autoAssign")}
               </Button>
             </form>
           ) : null}
         </Card>
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("access")}</h2>
+        <Card title={t("access")}>
           <CredentialPanel
             bookingId={d.id}
             propertyId={d.propertyId}
@@ -181,7 +194,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                   <input type="hidden" name="bookingId" value={d.id} />
                   <input type="hidden" name="propertyId" value={d.propertyId} />
                   <input type="hidden" name="credentialId" value={c.id} />
-                  <button className="text-rose underline">{t("revoke")}</button>
+                  <button className="text-danger underline">{t("revoke")}</button>
                 </form>
               </li>
             ))}
@@ -190,12 +203,10 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("guest")}</h2>
+        <Card title={t("guest")}>
           <GuestPanel bookingId={d.id} guest={d.guest} label={t("revealPii")} />
         </Card>
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("financials")}</h2>
+        <Card title={t("financials")}>
           <dl className="grid grid-cols-2 gap-1 text-sm">
             <dt>{t("roomRevenue")}</dt>
             <dd className="text-end">{money(d.financials.roomRevenueMinor, d.currency)}</dd>
@@ -225,46 +236,49 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
         </Card>
       </div>
 
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("folios")}</h2>
+      <Card title={t("folios")}>
         {v.folios.map((f) => (
-          <div key={f.id} className="mb-4 border-t border-line pt-2 text-sm" data-testid="folio">
+          <div key={f.id} className="mb-4 border-t border-border pt-2 text-sm" data-testid="folio">
             <div className="flex items-center justify-between">
               <p className="font-medium">
                 {f.label} · {f.currency}
               </p>
-              <p className={f.balance.balanceMinor > 0 ? "text-rose" : "text-mint-deep"}>
+              <p
+                className={
+                  f.balance.balanceMinor > 0 ? "text-danger" : "text-success-soft-foreground"
+                }
+              >
                 {t("balance")} {money(f.balance.balanceMinor, f.currency)}
                 {f.balance.heldMinor ? ` · held ${money(f.balance.heldMinor, f.currency)}` : ""}
               </p>
             </div>
-            <table className="mt-1 w-full text-xs">
-              <tbody>
+            <Table className="mt-1">
+              <TBody>
                 {f.lines.map((l) => (
-                  <tr key={l.id} className="border-t border-line">
-                    <td className="py-0.5">{l.date}</td>
-                    <td>{l.kind}</td>
-                    <td>{l.description}</td>
-                    <td className="text-end">{money(l.amountMinor, f.currency)}</td>
-                    <td className="text-end text-faint">{l.invoiceId ? "invoiced" : ""}</td>
-                  </tr>
+                  <Tr key={l.id}>
+                    <Td>{l.date}</Td>
+                    <Td>{l.kind}</Td>
+                    <Td>{l.description}</Td>
+                    <Td className="text-end">{money(l.amountMinor, f.currency)}</Td>
+                    <Td className="text-end">{l.invoiceId ? "invoiced" : ""}</Td>
+                  </Tr>
                 ))}
                 {f.payments.map((p) => (
-                  <tr key={p.id} className="border-t border-line text-mint-deep">
-                    <td className="py-0.5">{p.receivedAt.slice(0, 10)}</td>
-                    <td>{p.method}</td>
-                    <td>
+                  <Tr key={p.id} className="text-success-soft-foreground">
+                    <Td>{p.receivedAt.slice(0, 10)}</Td>
+                    <Td>{p.method}</Td>
+                    <Td>
                       {p.state}
                       {p.reason ? ` · ${p.reason}` : ""}
-                    </td>
-                    <td className="text-end">−{money(p.amountMinor, f.currency)}</td>
-                    <td className="text-end">
+                    </Td>
+                    <Td className="text-end">−{money(p.amountMinor, f.currency)}</Td>
+                    <Td className="text-end">
                       {p.state === "held" ? (
                         <form action={settlePaymentAction} className="inline-flex gap-1">
                           <input type="hidden" name="bookingId" value={d.id} />
                           <input type="hidden" name="propertyId" value={d.propertyId} />
                           <input type="hidden" name="paymentId" value={p.id} />
-                          <Input name="reason" placeholder="reason" className="h-6 w-28 text-xs" />
+                          <Input name="reason" placeholder="reason" className="h-6 w-28" />
                           <button name="state" value="captured" className="underline">
                             capture
                           </button>
@@ -277,17 +291,17 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                           <input type="hidden" name="bookingId" value={d.id} />
                           <input type="hidden" name="propertyId" value={d.propertyId} />
                           <input type="hidden" name="paymentId" value={p.id} />
-                          <Input name="reason" placeholder="reason" className="h-6 w-28 text-xs" />
-                          <button name="state" value="refunded" className="underline text-rose">
+                          <Input name="reason" placeholder="reason" className="h-6 w-28" />
+                          <button name="state" value="refunded" className="underline text-danger">
                             refund
                           </button>
                         </form>
                       ) : null}
-                    </td>
-                  </tr>
+                    </Td>
+                  </Tr>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
             <p className="mt-1 text-xs text-muted">
               {f.invoices
                 .map((i) => `${i.kind} ${i.number} ${money(i.totalMinor, f.currency)}`)
@@ -298,23 +312,23 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 <input type="hidden" name="bookingId" value={d.id} />
                 <input type="hidden" name="propertyId" value={d.propertyId} />
                 <input type="hidden" name="folioId" value={f.id} />
-                <Select name="kind" className="h-8 w-32">
+                <Select name="kind" className="w-32" size="sm">
                   <option value="extra">extra</option>
                   <option value="cleaning_fee">cleaning fee</option>
                   <option value="tourist_tax">tourist tax</option>
                   <option value="damage">damage</option>
                   <option value="adjustment">adjustment</option>
                 </Select>
-                <Input name="description" placeholder="description" className="h-8 w-40" />
-                <Input name="date" type="date" defaultValue={d.arrivalDate} className="h-8 w-36" />
+                <Input name="description" placeholder="description" className="w-40" />
+                <DateInput name="date" defaultValue={d.arrivalDate} className="w-36" />
                 <Input
                   name="amount"
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  className="h-8 w-24"
+                  className="w-24"
                 />
-                <Button type="submit" variant="secondary" className="h-8">
+                <Button type="submit" variant="secondary" size="sm">
                   {t("addCharge")}
                 </Button>
               </form>
@@ -322,7 +336,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 <input type="hidden" name="bookingId" value={d.id} />
                 <input type="hidden" name="propertyId" value={d.propertyId} />
                 <input type="hidden" name="folioId" value={f.id} />
-                <Select name="method" className="h-8 w-32">
+                <Select name="method" className="w-32" size="sm">
                   <option value="card">card</option>
                   <option value="cash">cash</option>
                   <option value="bank_transfer">bank transfer</option>
@@ -334,13 +348,13 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                   type="number"
                   step="0.01"
                   placeholder="0.00"
-                  className="h-8 w-24"
+                  className="w-24"
                 />
-                <label className="flex items-center gap-1">
+                <Label>
                   <input type="checkbox" name="hold" />
                   deposit hold
-                </label>
-                <Button type="submit" variant="secondary" className="h-8">
+                </Label>
+                <Button type="submit" variant="secondary" size="sm">
                   {t("addPayment")}
                 </Button>
               </form>
@@ -348,28 +362,23 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 <input type="hidden" name="bookingId" value={d.id} />
                 <input type="hidden" name="propertyId" value={d.propertyId} />
                 <input type="hidden" name="folioId" value={f.id} />
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  className="h-8"
-                  data-testid="issue-invoice"
-                >
+                <Button type="submit" variant="secondary" data-testid="issue-invoice" size="sm">
                   {t("issueInvoice")}
                 </Button>
               </form>
               <form action={splitFolioAction} className="flex items-end gap-1">
                 <input type="hidden" name="bookingId" value={d.id} />
                 <input type="hidden" name="propertyId" value={d.propertyId} />
-                <Input name="label" placeholder="Split label" className="h-8 w-28" />
+                <Input name="label" placeholder="Split label" className="w-28" />
                 {f.lines
                   .filter((l) => !l.invoiceId)
                   .map((l) => (
-                    <label key={l.id} className="flex items-center gap-1">
+                    <Label key={l.id}>
                       <input type="checkbox" name="lineId" value={l.id} />
                       {l.description.slice(0, 12)}
-                    </label>
+                    </Label>
                   ))}
-                <Button type="submit" variant="secondary" className="h-8">
+                <Button type="submit" variant="secondary" size="sm">
                   {t("split")}
                 </Button>
               </form>
@@ -379,12 +388,11 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("operations")}</h2>
+        <Card title={t("operations")}>
           {v.tasks.length === 0 ? <p className="text-sm text-muted">—</p> : null}
           <ul className="text-sm">
             {v.tasks.map((x) => (
-              <li key={x.id} className="border-t border-line py-1">
+              <li key={x.id} className="border-t border-border py-1">
                 <Link href={`/operations?date=${x.date}`} className="hover:underline">
                   {x.date} · {x.type}
                   {x.isSameDay ? " · same-day" : ""}
@@ -396,20 +404,19 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             ))}
           </ul>
         </Card>
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("timeline")}</h2>
+        <Card title={t("timeline")}>
           <ol className="text-sm" data-testid="timeline">
             {d.revisions.map((r) => (
-              <li key={r.id} className="border-t border-line py-1">
+              <li key={r.id} className="border-t border-border py-1">
                 <span className="text-xs text-muted">
                   {r.insertedAt.slice(0, 16)} · {r.revisionType} · {r.systemId.slice(0, 12)}
                 </span>
                 <br />
                 {r.timelineText}
                 {!r.acknowledged && r.revisionType === "modified" ? (
-                  <span className="ms-2 rounded bg-amber-soft px-1.5 text-[10px] text-amber-deep">
+                  <Chip color="warning" size="sm" className="ms-2">
                     {t("unacknowledged")}
-                  </span>
+                  </Chip>
                 ) : null}
               </li>
             ))}
@@ -417,13 +424,12 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
         </Card>
       </div>
 
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("notes")}</h2>
+      <Card title={t("notes")}>
         <ul className="mb-2 text-sm">
           {v.notes.map((n) => (
-            <li key={n.id} className="border-t border-line py-1">
+            <li key={n.id} className="border-t border-border py-1">
               {n.pinned ? "📌 " : ""}
-              {n.body} <span className="text-xs text-faint">{n.createdAt.slice(0, 16)}</span>
+              {n.body} <span className="text-xs text-muted">{n.createdAt.slice(0, 16)}</span>
             </li>
           ))}
         </ul>
@@ -433,9 +439,9 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
           <div className="flex-1">
             <Field label={t("addNote")} name="body" />
           </div>
-          <label className="text-xs">
+          <Label>
             <input type="checkbox" name="pinned" /> pin
-          </label>
+          </Label>
           <Button type="submit" variant="secondary">
             {t("save")}
           </Button>

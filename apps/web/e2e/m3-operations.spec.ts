@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fillDate, pickOption } from "./ui";
 
 /**
  * M3 exit (spec 15): a staff booking on the single creation path generates a
@@ -67,9 +68,9 @@ test("staff booking → turnover task → cleaner completes offline → folio in
     [d2, d3, "Bo"],
   ] as const) {
     await page.goto("/reservations/new");
-    await expect(page.getByLabel("Rate plan").locator("option")).toHaveCount(1);
-    await page.getByLabel("Arrival").fill(arr);
-    await page.getByLabel("Departure").fill(dep);
+    await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
+    await fillDate(page, "arrivalDate", arr);
+    await fillDate(page, "departureDate", dep);
     await page.getByLabel("Guest first name").fill(name);
     await page.getByLabel("Guest surname").fill("Silva");
     await page.getByLabel("Email").fill(`${name.toLowerCase()}-${stamp}@example.com`);
@@ -83,8 +84,8 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   const lane = page.getByTestId("turnover-lane");
   await expect(lane.locator("[data-task]")).toHaveCount(1);
   await expect(lane).toContainText("changeover");
-  await lane.getByTestId("assignee").selectOption({ label: "Me" });
-  await lane.getByRole("button", { name: "Assign" }).click();
+  await pickOption(page, { locator: lane.getByTestId("assignee") }, { label: "Me" });
+  await lane.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(lane.locator('[data-state="assigned"]')).toHaveCount(1);
 
   // the cleaner app: accept, go offline, complete with a photo, come back online, nothing lost

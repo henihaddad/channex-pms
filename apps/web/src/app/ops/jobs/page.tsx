@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { requestJobAction } from "../ops.actions";
@@ -24,8 +24,7 @@ export default async function JobsPage() {
       <Card>
         <form action={requestJobAction} className="flex items-end gap-2">
           <div>
-            <Label htmlFor="kind">{t("jobKind")}</Label>
-            <Select id="kind" name="kind">
+            <Select label={t("jobKind")} name="kind">
               {KINDS.map((k) => (
                 <option key={k} value={k}>
                   {k}
@@ -39,8 +38,7 @@ export default async function JobsPage() {
           </Button>
         </form>
       </Card>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("recent")}</h2>
+      <Card title={t("recent")}>
         <ul className="text-xs" data-testid="job-requests">
           {rows.map((r) => (
             <li key={r.id} data-testid="job-row" data-state={r.state}>

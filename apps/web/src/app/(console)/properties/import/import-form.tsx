@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { importCsvAction } from "../properties.actions";
-import { Alert, Button, Field, Label, Select } from "@/components/ui";
+import { Alert, Button, Field, Label, Select, Textarea } from "@/components/ui";
 
 export function ImportForm({ templates }: { templates: Array<{ id: string; name: string }> }) {
   const [state, action, pending] = useActionState(importCsvAction, {});
@@ -16,14 +16,13 @@ export function ImportForm({ templates }: { templates: Array<{ id: string; name:
         </Alert>
       ) : null}
       {state.errors?.map((e) => (
-        <p key={e} className="text-xs text-rose">
+        <p key={e} className="text-xs text-danger">
           {e}
         </p>
       ))}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="templateId">Template</Label>
-          <Select id="templateId" name="templateId" defaultValue="">
+          <Select label={"Template"} name="templateId" defaultValue="">
             <option value="">None</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>
@@ -36,11 +35,11 @@ export function ImportForm({ templates }: { templates: Array<{ id: string; name:
       </div>
       <div>
         <Label htmlFor="csv">CSV</Label>
-        <textarea
+        <Textarea
           id="csv"
           name="csv"
           rows={12}
-          className="w-full rounded-md border border-line-strong p-2 font-mono text-xs"
+          className="w-full rounded-md border border-border-secondary p-2 font-mono text-xs"
           defaultValue={
             "title,kind,currency,city,country,base_rate,min_stay\nAlfama Loft,single_unit,EUR,Lisbon,PT,120,2\n"
           }

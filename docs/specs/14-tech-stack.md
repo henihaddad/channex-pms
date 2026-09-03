@@ -150,7 +150,7 @@ a Postgres pool. Therefore:
 | Auth | Own session layer (Argon2id, TOTP, refresh rotation) + OIDC/SAML | Step-up auth and audited impersonation are too domain-specific to outsource. |
 | Client state | **TanStack Query** | Optimistic calendar and inbox mutations, cache invalidation, offline queueing for housekeeping. |
 | Realtime | WebSocket gateway in `apps/worker` (or a small `apps/realtime`), Redis pub/sub, SSE fallback | Next route handlers are a poor fit for long-lived sockets. |
-| UI | React + Tailwind + shadcn/ui + Radix | Accessible primitives, design system we own. |
+| UI | React + Tailwind v4 + HeroUI v3 (React Aria) behind `apps/web/src/components/ui` | Accessible primitives with a finished design system; the kit is the only import surface (ADR-0010). |
 | Calendar grid | **Custom, on TanStack Virtual** | Nothing off-the-shelf handles 400 editable cells, three data layers, per-cell sync state, range paste and server-backed undo. |
 | Tables | TanStack Table | Reservation lists, statements, reports. |
 | Charts | Recharts, escalating to visx for heatmaps | |

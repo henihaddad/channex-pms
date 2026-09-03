@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { TEMPLATE_VARIABLES } from "@pms/core";
-import { Button, Card, Field, PageTitle } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle, Textarea } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { PROVIDER_LABELS } from "@/server/inbox";
 import { archiveTemplateAction, listTemplates, saveTemplateAction } from "../inbox.actions";
@@ -18,11 +18,11 @@ export default async function TemplatesPage() {
           {templates.map((tpl) => (
             <div
               key={tpl.id}
-              className="border-t border-line py-2 text-sm"
+              className="border-t border-border py-2 text-sm"
               data-testid="template-row"
             >
               <p className="font-medium">
-                {tpl.name} <span className="rounded bg-canvas px-1 text-[10px]">{tpl.locale}</span>{" "}
+                {tpl.name} <span className="rounded bg-background px-1 text-xs">{tpl.locale}</span>{" "}
                 <span className="text-xs text-muted">{tpl.category}</span>
                 {tpl.channelScope ? (
                   <span className="ms-1 text-xs text-muted">
@@ -32,13 +32,13 @@ export default async function TemplatesPage() {
               </p>
               <p className="whitespace-pre-wrap text-xs text-muted">{tpl.body}</p>
               {tpl.warnings.length ? (
-                <p className="text-xs text-amber-deep" data-testid="promo-warning">
+                <p className="text-xs text-warning-soft-foreground" data-testid="promo-warning">
                   ⚠ {tpl.warnings.join("; ")}
                 </p>
               ) : null}
               <form action={archiveTemplateAction} className="mt-1">
                 <input type="hidden" name="id" value={tpl.id} />
-                <Button type="submit" variant="secondary" className="h-6 text-xs">
+                <Button type="submit" variant="secondary" size="sm">
                   {t("archive")}
                 </Button>
               </form>
@@ -53,24 +53,22 @@ export default async function TemplatesPage() {
             <fieldset className="text-xs">
               <legend className="font-medium">{t("channelScope")}</legend>
               {Object.entries(PROVIDER_LABELS).map(([code, label]) => (
-                <label key={code} className="me-3">
+                <Label key={code}>
                   <input type="checkbox" name="channelScope" value={code} /> {label}
-                </label>
+                </Label>
               ))}
             </fieldset>
             <div>
-              <label htmlFor="body" className="text-sm font-medium">
-                {t("body")}
-              </label>
-              <textarea
+              <Label htmlFor="body">{t("body")}</Label>
+              <Textarea
                 id="body"
                 name="body"
                 rows={6}
                 required
-                className="w-full rounded border border-line-strong p-2 text-sm"
+                className="w-full rounded border border-border-secondary p-2 text-sm"
               />
             </div>
-            <p className="text-[10px] text-muted">
+            <p className="text-xs text-muted">
               {t("variables")}: {TEMPLATE_VARIABLES.map((v) => `{{${v}}}`).join(" ")}
             </p>
             <Button type="submit" data-testid="save-template">

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createStaffBookingAction } from "../reservations.actions";
 import { loadProperty } from "../../properties/[id]/property.actions";
-import { Alert, Button, Field, Label, Select } from "@/components/ui";
+import { Alert, Button, Field, Select } from "@/components/ui";
 
 /** Staff booking (spec 08 §8.11): availability-checked, priced from the rate plan, one code path with the booking engine. */
 export function StaffBookingForm({
@@ -39,12 +39,11 @@ export function StaffBookingForm({
         </div>
       ) : null}
       <div>
-        <Label htmlFor="propertyId">Property</Label>
         <Select
-          id="propertyId"
+          label={"Property"}
           name="propertyId"
           value={propertyId}
-          onChange={(e) => setPropertyId(e.target.value)}
+          onChange={(v) => setPropertyId(v)}
         >
           {properties.map((p) => (
             <option key={p.id} value={p.id}>
@@ -54,8 +53,7 @@ export function StaffBookingForm({
         </Select>
       </div>
       <div>
-        <Label htmlFor="source">Source</Label>
-        <Select id="source" name="source" defaultValue="staff">
+        <Select label={"Source"} name="source" defaultValue="staff">
           <option value="staff">staff</option>
           <option value="phone">phone</option>
           <option value="walk_in">walk-in</option>
@@ -63,12 +61,11 @@ export function StaffBookingForm({
         </Select>
       </div>
       <div>
-        <Label htmlFor="roomTypeId">Room type</Label>
         <Select
-          id="roomTypeId"
+          label={"Room type"}
           name="roomTypeId"
           value={roomTypeId}
-          onChange={(e) => setRoomTypeId(e.target.value)}
+          onChange={(v) => setRoomTypeId(v)}
         >
           {inventory.roomTypes.map((r) => (
             <option key={r.id} value={r.id}>
@@ -78,8 +75,7 @@ export function StaffBookingForm({
         </Select>
       </div>
       <div>
-        <Label htmlFor="ratePlanId">Rate plan</Label>
-        <Select id="ratePlanId" name="ratePlanId">
+        <Select label={"Rate plan"} name="ratePlanId">
           {inventory.ratePlans
             .filter((r) => r.roomTypeId === roomTypeId)
             .map((r) => (

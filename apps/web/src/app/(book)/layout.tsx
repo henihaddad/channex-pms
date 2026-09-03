@@ -6,15 +6,17 @@ import { Logo } from "@/components/logo";
 export default async function BookLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations("book");
   return (
-    <div className="mx-auto min-h-screen max-w-4xl p-4" data-testid="booking-engine">
+    <div className="mx-auto min-h-screen max-w-4xl p-4 sm:p-6" data-testid="booking-engine">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:rounded focus:bg-white focus:p-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:rounded-xl focus:bg-surface focus:p-2 focus:shadow-surface"
       >
         Skip to content
       </a>
-      <main id="main">{children}</main>
-      <footer className="mt-10 flex items-center gap-2 border-t border-line pt-3 text-xs text-muted">
+      <main id="main" className="flex flex-col gap-5">
+        {children}
+      </main>
+      <footer className="mt-10 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted">
         <Logo size={18} />
         <span>{t("poweredBy")}</span>
       </footer>

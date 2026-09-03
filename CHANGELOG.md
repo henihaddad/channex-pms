@@ -49,6 +49,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The web app's components are HeroUI v3 (React Aria + Tailwind v4) behind the kit in
+  `apps/web/src/components/ui` (ADR-0010): buttons, fields, selects, date pickers, cards, chips,
+  alerts and server-rendered tables that reuse HeroUI's table styles. HeroUI's default theme is
+  kept; the brand contributes the accent, the two typefaces and the logo. Pages may only import
+  the kit (lint rule). Console screens were reorganised on the kit (reports, dashboard,
+  reservations, inbox, owner portal); French and Arabic gained the ~310 strings each that were
+  still English; report names are localised.
 - OTAbridge design system: the console, auth, owner portal, booking engine and guest surfaces
   carry the OTAbridge name and logo mark, Bricolage Grotesque display and Manrope body type
   (self-hosted), an ink sidebar with grouped navigation, and one palette (ink, mint, sky, amber,

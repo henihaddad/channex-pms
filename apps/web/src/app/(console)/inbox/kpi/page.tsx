@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle } from "@/components/ui";
+import { Card, PageTitle, TBody, Table, Td, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { providerLabel } from "@/server/inbox";
 import { loadKpi } from "../inbox.actions";
@@ -24,39 +24,39 @@ export default async function KpiPage({
           {t("medianFirstResponse", { days })}: <strong>{min(kpi.overall)}</strong>
         </p>
         <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
-          <table>
-            <tbody>
+          <Table>
+            <TBody>
               {kpi.byProperty.map((r) => (
-                <tr key={r.propertyId} className="border-t border-line">
-                  <td className="py-1">{r.title}</td>
-                  <td>{min(r.median)}</td>
-                  <td className="text-muted">n={r.n}</td>
-                </tr>
+                <Tr key={r.propertyId}>
+                  <Td>{r.title}</Td>
+                  <Td>{min(r.median)}</Td>
+                  <Td>n={r.n}</Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-          <table>
-            <tbody>
+            </TBody>
+          </Table>
+          <Table>
+            <TBody>
               {kpi.byChannel.map((r) => (
-                <tr key={r.provider} className="border-t border-line">
-                  <td className="py-1">{providerLabel(r.provider)}</td>
-                  <td>{min(r.median)}</td>
-                  <td className="text-muted">n={r.n}</td>
-                </tr>
+                <Tr key={r.provider}>
+                  <Td>{providerLabel(r.provider)}</Td>
+                  <Td>{min(r.median)}</Td>
+                  <Td>n={r.n}</Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-          <table>
-            <tbody>
+            </TBody>
+          </Table>
+          <Table>
+            <TBody>
               {kpi.byAgent.map((r) => (
-                <tr key={r.agentId ?? "none"} className="border-t border-line">
-                  <td className="py-1">{r.agentId ?? t("staff")}</td>
-                  <td>{min(r.median)}</td>
-                  <td className="text-muted">n={r.n}</td>
-                </tr>
+                <Tr key={r.agentId ?? "none"}>
+                  <Td>{r.agentId ?? t("staff")}</Td>
+                  <Td>{min(r.median)}</Td>
+                  <Td>n={r.n}</Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       </Card>
     </div>

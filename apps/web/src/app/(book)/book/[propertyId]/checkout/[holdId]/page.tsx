@@ -5,6 +5,7 @@ import { container } from "@/server/container";
 import { money, orgForHold } from "@/server/booking-engine";
 import { CheckoutForm } from "./checkout-form";
 import { EmbedResizer } from "../../embed-resizer";
+import { TBody, Table, Td, Tr } from "@/components/ui";
 
 /** Steps 4–5 (spec 10 §10.2): the itemised quote (BE-1), guest details, payment per policy. */
 export default async function CheckoutPage({
@@ -46,34 +47,34 @@ export default async function CheckoutPage({
         {hold.arrivalDate} → {hold.departureDate} · {q.nights}{" "}
         {q.nights === 1 ? t("night") : t("nights")}
       </p>
-      <section aria-labelledby="quote-title" className="rounded-lg border border-line p-3">
+      <section aria-labelledby="quote-title" className="rounded-lg border border-border p-3">
         <h2 id="quote-title" className="mb-2 font-semibold">
           {t("quote")}
         </h2>
-        <table className="w-full text-sm" data-testid="quote">
-          <tbody>
+        <Table data-testid="quote">
+          <TBody>
             {rows.map(([label, minor]) => (
-              <tr key={label}>
-                <td>{label}</td>
-                <td className="text-end">{money(minor, cur)}</td>
-              </tr>
+              <Tr key={label}>
+                <Td>{label}</Td>
+                <Td className="text-end">{money(minor, cur)}</Td>
+              </Tr>
             ))}
-            <tr className="border-t border-line font-semibold">
-              <td>{t("total")}</td>
-              <td className="text-end" data-testid="quote-total">
+            <Tr className="font-semibold">
+              <Td>{t("total")}</Td>
+              <Td className="text-end" data-testid="quote-total">
                 {money(q.totalMinor, cur)}
-              </td>
-            </tr>
-            <tr>
-              <td>
+              </Td>
+            </Tr>
+            <Tr>
+              <Td>
                 {t("dueNow")} ({q.dueNowLabel})
-              </td>
-              <td className="text-end" data-testid="quote-due">
+              </Td>
+              <Td className="text-end" data-testid="quote-due">
                 {money(q.dueNowMinor, cur)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </Td>
+            </Tr>
+          </TBody>
+        </Table>
         <p className="mt-1 text-xs text-muted">{t("chargeCurrency", { currency: cur })}</p>
       </section>
       {!expired ? (

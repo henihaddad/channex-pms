@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Chip, Field, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { createOwnerAction, listOwners } from "./owners.actions";
 
@@ -30,7 +30,7 @@ export default async function OwnersPage() {
           {rows.map((o) => (
             <div
               key={o.id}
-              className="flex items-center justify-between border-t border-line py-2 text-sm"
+              className="flex items-center justify-between border-t border-border py-2 text-sm"
               data-testid="owner-row"
             >
               <div>
@@ -44,7 +44,9 @@ export default async function OwnersPage() {
               </div>
               <span className="text-xs">
                 {o.userId ? (
-                  <span className="rounded bg-mint-soft px-1 text-mint-deep">{t("portalOn")}</span>
+                  <Chip color="success" size="sm">
+                    {t("portalOn")}
+                  </Chip>
                 ) : null}
               </span>
             </div>
@@ -54,10 +56,7 @@ export default async function OwnersPage() {
           <form action={createOwnerAction} className="space-y-2">
             <p className="font-medium">{t("newOwner")}</p>
             <div>
-              <label htmlFor="type" className="text-sm font-medium">
-                {t("type")}
-              </label>
-              <Select id="type" name="type" defaultValue="individual">
+              <Select label={t("type")} name="type" defaultValue="individual">
                 <option value="individual">{t("individual")}</option>
                 <option value="company">{t("company")}</option>
               </Select>

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle } from "@/components/ui";
+import { Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listAudit, verifyAudit } from "./audit.actions";
 
@@ -11,43 +11,42 @@ export default async function AuditPage() {
   return (
     <div className="space-y-6">
       <PageTitle>{t("title")}</PageTitle>
-      <Card>
-        <h2 className="mb-1 font-semibold">{t("verify")}</h2>
-        <p className={verification.ok ? "text-mint-deep" : "text-rose"}>
+      <Card title={t("verify")}>
+        <p className={verification.ok ? "text-success-soft-foreground" : "text-danger"}>
           {verification.ok
             ? t("ok", { checked: verification.checked })
             : t("broken", { seq: verification.brokenAtSeq ?? 0 })}
         </p>
       </Card>
       <Card>
-        <table className="w-full text-sm">
-          <thead className="text-start text-xs uppercase text-muted">
-            <tr>
-              <th className="py-1 text-start">{t("seq")}</th>
-              <th className="text-start">{t("action")}</th>
-              <th className="text-start">{t("actor")}</th>
-              <th className="text-start">{t("subject")}</th>
-              <th className="text-start">{t("when")}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <THead className="uppercase">
+            <Tr>
+              <Th>{t("seq")}</Th>
+              <Th>{t("action")}</Th>
+              <Th>{t("actor")}</Th>
+              <Th>{t("subject")}</Th>
+              <Th>{t("when")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {rows.map((r) => (
-              <tr key={r.seq} className="border-t border-line">
-                <td className="py-1 font-mono text-xs">{r.seq}</td>
-                <td>
+              <Tr key={r.seq}>
+                <Td className="font-mono">{r.seq}</Td>
+                <Td>
                   <code className="text-xs">{r.action}</code>
-                </td>
-                <td className="text-xs text-muted">
+                </Td>
+                <Td>
                   {r.actor.type}:{r.actor.id.slice(0, 8)}
-                </td>
-                <td className="text-xs text-muted">
+                </Td>
+                <Td>
                   {r.subject.kind}:{String(r.subject.id).slice(0, 8)}
-                </td>
-                <td className="text-xs text-muted">{new Date(r.occurredAt).toISOString()}</td>
-              </tr>
+                </Td>
+                <Td>{new Date(r.occurredAt).toISOString()}</Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

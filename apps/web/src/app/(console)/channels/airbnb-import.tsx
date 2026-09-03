@@ -16,8 +16,8 @@ export function AirbnbImport({ accountId, label }: { accountId: string; label: s
   return (
     <div className="mt-2">
       <Button
+        size="sm"
         variant="secondary"
-        className="h-7 px-2 text-xs"
         disabled={pending}
         onClick={() => start(async () => setRows(await importListingsPreview({ accountId })))}
         data-testid="import-listings"
@@ -38,7 +38,7 @@ export function AirbnbImport({ accountId, label }: { accountId: string; label: s
             </p>
           ))}
           <Button
-            className="h-7 px-2 text-xs"
+            size="sm"
             disabled={pending}
             onClick={() =>
               start(async () => {
@@ -60,7 +60,7 @@ export function AirbnbImport({ accountId, label }: { accountId: string; label: s
         </div>
       ) : null}
       {result ? (
-        <p className="mt-1 text-xs text-mint-deep" data-testid="import-result">
+        <p className="mt-1 text-xs text-success-soft-foreground" data-testid="import-result">
           {result}
         </p>
       ) : null}

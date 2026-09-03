@@ -16,7 +16,7 @@ export default async function OwnerStatements() {
         {rows.map((s) => (
           <p
             key={s.id}
-            className="flex justify-between border-t border-line py-1"
+            className="flex justify-between border-t border-border py-1"
             data-testid="owner-statement"
           >
             <Link className="underline" href={`/owner/statements/${s.id}`}>

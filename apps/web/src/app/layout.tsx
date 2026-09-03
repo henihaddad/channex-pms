@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { RTL_LOCALES } from "@/i18n/request";
+import { UiProvider } from "@/components/ui/provider";
 import "./globals.css";
 
 // Self-hosted (BE-11: no third-party requests). Bricolage Grotesque for titles, Manrope for the interface.
@@ -33,11 +34,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={locale}
       dir={RTL_LOCALES.has(locale) ? "rtl" : "ltr"}
-      className={`h-full antialiased ${display.variable} ${body.variable}`}
+      className={`light h-full antialiased ${display.variable} ${body.variable}`}
+      data-theme="light"
     >
-      <body className="min-h-full bg-canvas text-text">
+      <body className="min-h-full bg-background text-foreground">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <UiProvider locale={locale}>{children}</UiProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fillDate } from "./ui";
 
 /**
  * M6 exit (spec 15, spec 11 §11.6): after a rollup the dashboard, the report
@@ -56,11 +57,9 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
     [3, "Bo"],
   ] as const) {
     await page.goto("/reservations/new");
-    await expect(page.getByLabel("Rate plan").locator("option")).toHaveCount(1);
-    await page.getByLabel("Arrival").fill(iso(new Date(now.getTime() + offset * 86_400_000)));
-    await page
-      .getByLabel("Departure")
-      .fill(iso(new Date(now.getTime() + (offset + 2) * 86_400_000)));
+    await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
+    await fillDate(page, "arrivalDate", iso(new Date(now.getTime() + offset * 86_400_000)));
+    await fillDate(page, "departureDate", iso(new Date(now.getTime() + (offset + 2) * 86_400_000)));
     await page.getByLabel("Guest first name").fill(name);
     await page.getByLabel("Guest surname").fill("Silva");
     await page.getByLabel("Email").fill(`${name.toLowerCase()}-${stamp}@example.com`);

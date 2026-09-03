@@ -7,7 +7,7 @@ export default async function SignupPage() {
   const t = await getTranslations("auth");
   return (
     <Card>
-      <h1 className="mb-5 font-display text-2xl font-bold tracking-tight text-ink">
+      <h1 className="mb-5 font-display text-2xl font-bold tracking-tight text-foreground">
         {t("signUp")}
       </h1>
       <SignupForm
@@ -25,7 +25,7 @@ export default async function SignupPage() {
       <p className="mt-5 text-sm text-muted">
         {t("haveAccount")}{" "}
         <Link
-          className="font-medium text-ink underline decoration-sky underline-offset-4"
+          className="font-medium text-foreground underline decoration-accent underline-offset-4"
           href="/login"
         >
           {t("signIn")}

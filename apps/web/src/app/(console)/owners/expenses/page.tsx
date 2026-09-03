@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { EXPENSE_CATEGORIES, money } from "@/server/owners";
 import { approveExpenseAction, createExpenseAction, listExpenses } from "../owners.actions";
@@ -19,20 +19,20 @@ export default async function ExpensesPage({
       <div className="grid grid-cols-[2fr_1fr] gap-4">
         <Card>
           <form className="mb-2 flex gap-2 text-xs">
-            <Select name="state" defaultValue={sp.state ?? ""} className="h-8 w-40">
+            <Select name="state" defaultValue={sp.state ?? ""} className="w-40" size="sm">
               <option value="">{t("anyState")}</option>
               <option value="submitted">submitted</option>
               <option value="approved">approved</option>
               <option value="rejected">rejected</option>
             </Select>
-            <Button type="submit" variant="secondary" className="h-8 text-xs">
+            <Button type="submit" variant="secondary" size="sm">
               {t("filter")}
             </Button>
           </form>
           {v.rows.map((e) => (
             <div
               key={e.id}
-              className="flex items-center justify-between border-t border-line py-2 text-sm"
+              className="flex items-center justify-between border-t border-border py-2 text-sm"
               data-testid="expense-row"
               data-state={e.state}
             >
@@ -54,7 +54,7 @@ export default async function ExpensesPage({
                   <form action={approveExpenseAction}>
                     <input type="hidden" name="id" value={e.id} />
                     <input type="hidden" name="propertyId" value={e.propertyId} />
-                    <Button type="submit" className="h-7 text-xs" data-testid="approve-expense">
+                    <Button type="submit" data-testid="approve-expense" size="sm">
                       {t("approve")}
                     </Button>
                   </form>
@@ -62,7 +62,7 @@ export default async function ExpensesPage({
                     <input type="hidden" name="id" value={e.id} />
                     <input type="hidden" name="propertyId" value={e.propertyId} />
                     <input type="hidden" name="decision" value="reject" />
-                    <Button type="submit" variant="secondary" className="h-7 text-xs">
+                    <Button type="submit" variant="secondary" size="sm">
                       {t("reject")}
                     </Button>
                   </form>
@@ -75,10 +75,7 @@ export default async function ExpensesPage({
           <form action={createExpenseAction} className="space-y-2" data-testid="expense-form">
             <p className="font-medium">{t("newExpense")}</p>
             <div>
-              <label htmlFor="propertyId" className="text-sm font-medium">
-                {t("property")}
-              </label>
-              <Select id="propertyId" name="propertyId">
+              <Select label={t("property")} name="propertyId">
                 {v.properties.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
@@ -93,10 +90,7 @@ export default async function ExpensesPage({
               defaultValue={new Date().toISOString().slice(0, 10)}
             />
             <div>
-              <label htmlFor="category" className="text-sm font-medium">
-                {t("category")}
-              </label>
-              <Select id="category" name="category" defaultValue="maintenance">
+              <Select label={t("category")} name="category" defaultValue="maintenance">
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -107,12 +101,12 @@ export default async function ExpensesPage({
             <Field label={t("vendor")} name="vendor" required={false} />
             <Field label={t("description")} name="description" />
             <Field label={t("amount")} name="amount" type="number" />
-            <label className="block text-xs">
+            <Label>
               <input type="checkbox" name="rebillable" defaultChecked /> {t("rebillable")}
-            </label>
+            </Label>
             <Field label={t("rebillReason")} name="rebillReason" required={false} />
             <div className="text-xs">
-              <label htmlFor="receipt">{t("receipt")}</label>
+              <Label htmlFor="receipt">{t("receipt")}</Label>
               <input
                 id="receipt"
                 type="file"

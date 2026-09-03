@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { fillDate } from "./ui";
 
 /**
  * M5 exit (spec 15): close a month on the seed-free path. An owner with an
@@ -59,9 +60,9 @@ test("owner agreement → statement → send → owner portal → dispute → pa
     iso(new Date(now.getTime() + i * 86_400_000)).startsWith(month),
   ).length;
   await page.goto("/reservations/new");
-  await expect(page.getByLabel("Rate plan").locator("option")).toHaveCount(1);
-  await page.getByLabel("Arrival").fill(arr);
-  await page.getByLabel("Departure").fill(dep);
+  await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
+  await fillDate(page, "arrivalDate", arr);
+  await fillDate(page, "departureDate", dep);
   await page.getByLabel("Guest first name").fill("Ana");
   await page.getByLabel("Guest surname").fill("Silva");
   await page.getByLabel("Email").fill(`ana-${stamp}@example.com`);
@@ -79,7 +80,7 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await page.locator('input[name="payoutDetails"]').fill("PT50000201231234567890154");
   await page.getByTestId("save-payout-details").click();
   await expect(page.getByTestId("payout-masked")).toHaveText("••••0154");
-  await page.locator('input[name="effectiveFrom"]').fill(`${month}-01`);
+  await fillDate(page, "effectiveFrom", `${month}-01`);
   await page.getByTestId("save-agreement").click();
   await expect(page.getByTestId("agreement-row")).toContainText("20% commission");
   await page.getByTestId("grant-portal").click();
@@ -87,7 +88,7 @@ test("owner agreement → statement → send → owner portal → dispute → pa
 
   // an approved, rebillable expense last month
   await page.goto("/owners/expenses");
-  await page.getByLabel("Date").fill(arr);
+  await fillDate(page, "date", arr);
   await page.getByLabel("Description").fill("Boiler service");
   await page.getByLabel("Amount").fill("80");
   await page.getByTestId("create-expense").click();
@@ -143,8 +144,8 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   // PORT-3: an owner stay blocks inventory
   const stayFrom = iso(new Date(Date.now() + 20 * 86_400_000));
   const stayTo = iso(new Date(Date.now() + 22 * 86_400_000));
-  await owner.getByLabel("From").fill(stayFrom);
-  await owner.getByLabel("To (exclusive)").fill(stayTo);
+  await fillDate(owner, "dateFrom", stayFrom);
+  await fillDate(owner, "dateTo", stayTo);
   await owner.getByTestId("block-owner-stay").click();
   await expect(owner.locator('[data-testid="owner-block"][data-reason="owner_stay"]')).toHaveCount(
     1,

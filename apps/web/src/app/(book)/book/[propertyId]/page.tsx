@@ -4,7 +4,7 @@ import { asSystem, DrizzleBookingEngineRepository } from "@pms/db";
 import { searchProperty, type PropertySearch } from "@pms/jobs";
 import { container } from "@/server/container";
 import { money, orgForProperty } from "@/server/booking-engine";
-import { Button } from "@/components/ui";
+import { Button, Chip, Label } from "@/components/ui";
 import { holdAction } from "../book.actions";
 import { SearchForm, type SearchParams } from "../search-form";
 import { EmbedResizer } from "./embed-resizer";
@@ -76,7 +76,7 @@ export default async function PropertyBookingPage({
         }}
       />
       {search?.promoProblem ? (
-        <p className="text-sm text-rose" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {search.promoProblem}
         </p>
       ) : null}
@@ -90,7 +90,7 @@ export default async function PropertyBookingPage({
         {search?.offers.map((o) => (
           <li
             key={`${o.roomTypeId}:${o.ratePlanId}`}
-            className="rounded-lg border border-line p-3"
+            className="rounded-lg border border-border p-3"
             data-testid="offer"
           >
             <form action={holdAction} className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -107,9 +107,9 @@ export default async function PropertyBookingPage({
                 <h2 className="font-semibold">
                   {o.roomTypeTitle} · {o.ratePlanTitle}
                   {o.directOnly ? (
-                    <span className="ms-2 rounded bg-mint-soft px-1.5 text-[10px] text-mint-deep">
+                    <Chip color="success" size="sm" className="ms-2">
                       {t("directOnly")}
-                    </span>
+                    </Chip>
                   ) : null}
                 </h2>
                 <p className="text-sm">
@@ -125,10 +125,10 @@ export default async function PropertyBookingPage({
                     <legend className="text-xs text-muted">{t("extras")}</legend>
                     <div className="flex flex-wrap gap-3 text-sm">
                       {extras.map((e) => (
-                        <label key={e.id} className="flex items-center gap-1">
+                        <Label key={e.id}>
                           <input type="checkbox" name="extra" value={e.id} />
                           {e.name} ({money(e.priceMinor, o.currency)}/{e.per})
-                        </label>
+                        </Label>
                       ))}
                     </div>
                   </fieldset>

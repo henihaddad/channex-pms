@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Button, Label, Textarea } from "@/components/ui";
 
 type Progress = { key: string; done: boolean; photoRef?: string };
 interface Task {
@@ -233,10 +234,10 @@ export function CleanerApp({ today }: { today: string }) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-8 rounded border border-line-strong px-1"
+            className="h-8 rounded border border-border-secondary px-1"
           />
           <span
-            className={`rounded px-2 py-0.5 text-xs ${online ? "bg-mint-soft text-mint-deep" : "bg-amber-soft text-amber-deep"}`}
+            className={`rounded px-2 py-0.5 text-xs ${online ? "bg-success-soft text-success-soft-foreground" : "bg-warning-soft text-warning-soft-foreground"}`}
             data-testid="online-state"
           >
             {online ? "online" : "offline"}
@@ -244,7 +245,10 @@ export function CleanerApp({ today }: { today: string }) {
         </div>
       </header>
       {queue.length > 0 ? (
-        <p className="rounded bg-amber-soft p-2 text-xs text-amber-deep" data-testid="pending-sync">
+        <p
+          className="rounded bg-warning-soft p-2 text-xs text-warning-soft-foreground"
+          data-testid="pending-sync"
+        >
           {queue.length} update(s) waiting to sync{online ? "…" : " (will send when back online)"}
         </p>
       ) : null}
@@ -257,7 +261,7 @@ export function CleanerApp({ today }: { today: string }) {
       {tasks.map((t) => (
         <section
           key={t.id}
-          className={`rounded-lg border p-3 ${t.isSameDay ? "border-amber/50" : "border-line"}`}
+          className={`rounded-lg border p-3 ${t.isSameDay ? "border-warning/50" : "border-border"}`}
           data-testid="cleaner-task"
           data-state={t.state}
         >
@@ -265,7 +269,7 @@ export function CleanerApp({ today }: { today: string }) {
             <h2 className="font-semibold">
               {t.propertyTitle} · {t.unitName}
             </h2>
-            <span className="rounded bg-canvas px-1.5 text-[10px]">{t.state}</span>
+            <span className="rounded bg-background px-1.5 text-xs">{t.state}</span>
           </div>
           <p className="text-xs text-muted">
             {t.type}
@@ -282,29 +286,29 @@ export function CleanerApp({ today }: { today: string }) {
           ) : null}
           {t.notes ? <p className="mt-1 text-xs">{t.notes}</p> : null}
           {t.state === "assigned" ? (
-            <button
-              className="mt-2 w-full rounded bg-mint-deep py-2 text-white"
+            <Button
+              className="mt-2 w-full bg-success text-white"
               onClick={() => void send(t.id, { state: "accepted" })}
               data-testid="accept"
             >
               Accept
-            </button>
+            </Button>
           ) : null}
           {t.state === "accepted" ? (
-            <button
-              className="mt-2 w-full rounded bg-sky py-2 text-white"
+            <Button
+              className="mt-2 w-full bg-accent text-white"
               onClick={() => void send(t.id, { state: "on_site" })}
               data-testid="on-site"
             >
               I&apos;m on site
-            </button>
+            </Button>
           ) : null}
           {t.state === "on_site" ? (
             <div className="mt-2 space-y-1">
               {t.checklist.map((c) => {
                 const p = t.progress.find((x) => x.key === c.key);
                 return (
-                  <label key={c.key} className="flex items-center gap-2 text-sm">
+                  <Label key={c.key}>
                     <input
                       type="checkbox"
                       checked={p?.done ?? false}
@@ -317,7 +321,7 @@ export function CleanerApp({ today }: { today: string }) {
                     </span>
                     {c.requiresPhoto ? (
                       p?.photoRef ? (
-                        <span className="text-xs text-mint-deep">photo ✓</span>
+                        <span className="text-xs text-success-soft-foreground">photo ✓</span>
                       ) : (
                         <input
                           type="file"
@@ -329,11 +333,11 @@ export function CleanerApp({ today }: { today: string }) {
                         />
                       )
                     ) : null}
-                  </label>
+                  </Label>
                 );
               })}
-              <button
-                className="mt-2 w-full rounded bg-mint-deep py-2 text-white"
+              <Button
+                className="mt-2 w-full bg-success text-white"
                 onClick={() =>
                   void send(t.id, {
                     state: "done",
@@ -346,13 +350,14 @@ export function CleanerApp({ today }: { today: string }) {
                 data-testid="done"
               >
                 Done
-              </button>
-              <button
-                className="w-full rounded border border-rose/40 py-2 text-rose"
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full border-danger/40 text-danger"
                 onClick={() => setIssueFor(t.id)}
               >
                 Report issue
-              </button>
+              </Button>
             </div>
           ) : null}
           {issueFor === t.id ? (
@@ -384,17 +389,17 @@ function IssueForm({ taskId, onDone }: { taskId: string; onDone: () => void }) {
           .then(onDone);
       }}
     >
-      <textarea
-        className="w-full rounded border border-line-strong p-1 text-sm"
+      <Textarea
+        className="w-full rounded border border-border-secondary p-1 text-sm"
         rows={2}
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="What is wrong? (photos in 3 taps: attach above)"
         required
       />
-      <button className="w-full rounded bg-rose py-1 text-white" data-testid="report-issue">
+      <Button variant="danger" className="w-full bg-danger text-white" data-testid="report-issue">
         Send issue
-      </button>
+      </Button>
     </form>
   );
 }

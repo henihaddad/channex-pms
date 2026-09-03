@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle, Select, Textarea } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import { announceAction, endAnnouncementAction } from "../ops.actions";
@@ -37,8 +37,7 @@ export default async function AnnouncementsPage() {
         <form action={announceAction} className="grid gap-2 sm:grid-cols-2">
           <Field label={t("announceTitle")} name="title" />
           <div>
-            <Label htmlFor="level">{t("level")}</Label>
-            <Select id="level" name="level" defaultValue="info">
+            <Select label={t("level")} name="level" defaultValue="info">
               <option value="info">info</option>
               <option value="warning">warning</option>
               <option value="incident">incident</option>
@@ -46,11 +45,11 @@ export default async function AnnouncementsPage() {
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="body">{t("announceBody")}</Label>
-            <textarea
+            <Textarea
               id="body"
               name="body"
               rows={2}
-              className="w-full rounded border border-line-strong p-2 text-sm"
+              className="w-full rounded border border-border-secondary p-2 text-sm"
               required
             />
           </div>

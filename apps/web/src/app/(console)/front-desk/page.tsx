@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle } from "@/components/ui";
+import {
+  Button,
+  Card,
+  DateInput,
+  PageTitle,
+  Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listProperties } from "../properties/properties.actions";
 import { loadFrontDesk } from "../operations/operations.actions";
@@ -35,32 +47,27 @@ export default async function FrontDeskPage({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <PageTitle>{t("frontDesk")}</PageTitle>
-        <form method="get" className="text-sm">
-          <select
+        <form method="get" className="flex flex-wrap items-end gap-2">
+          <Select
             name="propertyId"
             defaultValue={propertyId}
-            className="h-8 rounded border border-line-strong"
+
+            size="sm"
           >
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
               </option>
             ))}
-          </select>{" "}
-          <input
-            type="date"
-            name="date"
-            defaultValue={date}
-            className="h-8 rounded border border-line-strong"
-          />{" "}
-          <button className="underline">Go</button>
+          </Select>{" "}
+          <DateInput name="date" defaultValue={date} className="w-44" />
+          <Button type="submit" variant="secondary" size="sm">
+            Go
+          </Button>
         </form>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <h2 className="font-semibold">
-            {t("arrivals")} ({fd.today.arrivals.length})
-          </h2>
+        <Card title={`${t("arrivals")} (${fd.today.arrivals.length})`}>
           <ul className="text-sm">
             {fd.today.arrivals.map((a) => (
               <li key={a.bookingId}>
@@ -72,10 +79,7 @@ export default async function FrontDeskPage({
             ))}
           </ul>
         </Card>
-        <Card>
-          <h2 className="font-semibold">
-            {t("departures")} ({fd.today.departures.length})
-          </h2>
+        <Card title={`${t("departures")} (${fd.today.departures.length})`}>
           <ul className="text-sm">
             {fd.today.departures.map((a) => (
               <li key={a.bookingId}>
@@ -87,61 +91,59 @@ export default async function FrontDeskPage({
             ))}
           </ul>
         </Card>
-        <Card>
-          <h2 className="font-semibold">{t("inHouse")}</h2>
+        <Card title={t("inHouse")}>
           <p className="text-3xl font-bold">{fd.today.inHouse}</p>
         </Card>
       </div>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("roomRack")}</h2>
+      <Card title={t("roomRack")}>
         <div className="overflow-x-auto">
-          <table className="text-xs" data-testid="room-rack">
-            <thead>
-              <tr>
-                <th className="pe-2 text-start">Room</th>
+          <Table data-testid="room-rack">
+            <THead>
+              <Tr>
+                <Th>Room</Th>
                 {days.map((d) => (
-                  <th key={d} className="px-1 font-normal text-muted">
+                  <Th key={d} className="font-normal">
                     {d.slice(5)}
-                  </th>
+                  </Th>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </Tr>
+            </THead>
+            <TBody>
               {fd.rack.map((u) => (
-                <tr key={u.unitId} className="border-t border-line">
-                  <td className="pe-2 py-1 font-medium">
-                    {u.unitName} <span className="text-[10px] text-faint">{u.status}</span>
-                  </td>
+                <Tr key={u.unitId}>
+                  <Td>
+                    {u.unitName} <span className="text-xs text-muted">{u.status}</span>
+                  </Td>
                   {days.map((d) => {
                     const stay = u.stays.find((s) => s.from <= d && d < s.to);
                     const block = u.blocks.find((b) => b.from <= d && d < b.to);
                     const cls = block
-                      ? "bg-line-strong"
+                      ? "bg-separator-tertiary"
                       : stay
                         ? stay.from === d
-                          ? "bg-sky/30"
+                          ? "bg-accent/30"
                           : stay.to === shiftDay(d)
-                            ? "bg-mint/30"
-                            : "bg-mint-soft"
+                            ? "bg-success/30"
+                            : "bg-success-soft"
                         : u.status === "dirty"
-                          ? "bg-amber-soft"
+                          ? "bg-warning-soft"
                           : "";
                     return (
-                      <td
+                      <Td
                         key={d}
-                        className={`h-6 w-10 border border-line text-center ${cls}`}
+                        className={`h-6 w-10 border text-center ${cls}`}
                         title={stay ? `${stay.guest} ${stay.state}` : (block?.reason ?? "")}
                       >
                         {stay ? stay.guest.slice(0, 3) : block ? "✕" : ""}
-                      </td>
+                      </Td>
                     );
                   })}
-                </tr>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
-        <p className="mt-1 text-[11px] text-muted">
+        <p className="mt-1 text-xs text-muted">
           blue arriving · green in house · light green departing · grey blocked · amber dirty
         </p>
       </Card>

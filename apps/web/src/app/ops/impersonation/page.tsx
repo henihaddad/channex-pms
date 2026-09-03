@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle } from "@/components/ui";
+import { Button, Card, Field, Label, PageTitle } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
 import {
@@ -30,9 +30,9 @@ export default async function ImpersonationPage({
         <form action={requestImpersonationAction} className="grid gap-2 sm:grid-cols-3">
           <Field label={t("tenant")} name="orgId" defaultValue={sp.orgId ?? ""} />
           <Field label={t("reason")} name="reason" />
-          <label className="flex items-center gap-2 text-xs sm:col-span-3">
+          <Label>
             <input type="checkbox" name="breakGlass" /> {t("breakGlass")}
-          </label>
+          </Label>
           <div>
             <Button type="submit" data-testid="request-impersonation">
               {t("request")}
@@ -45,7 +45,7 @@ export default async function ImpersonationPage({
           {rows.map((r) => (
             <li
               key={r.id}
-              className="rounded border border-line p-2"
+              className="rounded border border-border p-2"
               data-testid="impersonation-row"
               data-state={r.state}
             >
@@ -61,7 +61,7 @@ export default async function ImpersonationPage({
                 {r.state === "approved" && r.operatorId === me ? (
                   <form action={enterImpersonationAction}>
                     <input type="hidden" name="id" value={r.id} />
-                    <Button type="submit" className="h-7 text-xs" data-testid="enter-impersonation">
+                    <Button type="submit" data-testid="enter-impersonation" size="sm">
                       {t("enter")}
                     </Button>
                   </form>
@@ -74,7 +74,7 @@ export default async function ImpersonationPage({
                 {r.state === "requested" && r.breakGlass && r.operatorId !== me ? (
                   <form action={authoriseBreakGlassAction}>
                     <input type="hidden" name="id" value={r.id} />
-                    <Button type="submit" variant="secondary" className="h-7 text-xs">
+                    <Button type="submit" variant="secondary" size="sm">
                       {t("authorise")}
                     </Button>
                   </form>

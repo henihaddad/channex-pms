@@ -7,14 +7,14 @@ export default async function LoginPage() {
   const t = await getTranslations("auth");
   return (
     <Card>
-      <h1 className="mb-5 font-display text-2xl font-bold tracking-tight text-ink">
+      <h1 className="mb-5 font-display text-2xl font-bold tracking-tight text-foreground">
         {t("signIn")}
       </h1>
       <LoginForm labels={{ email: t("email"), password: t("password"), submit: t("signIn") }} />
       <p className="mt-5 text-sm text-muted">
         {t("noAccount")}{" "}
         <Link
-          className="font-medium text-ink underline decoration-sky underline-offset-4"
+          className="font-medium text-foreground underline decoration-accent underline-offset-4"
           href="/signup"
         >
           {t("signUp")}

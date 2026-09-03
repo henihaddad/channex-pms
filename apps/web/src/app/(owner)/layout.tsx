@@ -22,27 +22,29 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     ["/owner/documents", t("documents")],
   ] as const;
   return (
-    <div className="mx-auto max-w-3xl p-4" data-testid="owner-portal">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
-        <Logo size={26} suffix={t("portal")} />
-        <nav className="flex flex-wrap gap-1 text-sm">
+    <div className="mx-auto flex max-w-3xl flex-col gap-5 p-4 sm:p-6" data-testid="owner-portal">
+      <header className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <Logo size={26} suffix={t("portal")} />
+          <form action={logoutAction}>
+            <Button type="submit" variant="secondary" size="sm">
+              {t("signOut")}
+            </Button>
+          </form>
+        </div>
+        <nav className="scrollbar-none flex gap-1 overflow-x-auto rounded-2xl bg-default p-1 text-sm">
           {links.map(([href, label]) => (
             <Link
               key={href}
               href={href}
-              className="rounded-md px-2 py-1 text-text hover:bg-surface"
+              className="shrink-0 rounded-xl px-3 py-1.5 font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
             >
               {label}
             </Link>
           ))}
-          <form action={logoutAction}>
-            <Button type="submit" variant="secondary" className="h-7 text-xs">
-              {t("signOut")}
-            </Button>
-          </form>
         </nav>
       </header>
-      <main>{children}</main>
+      <main className="flex flex-col gap-4">{children}</main>
     </div>
   );
 }

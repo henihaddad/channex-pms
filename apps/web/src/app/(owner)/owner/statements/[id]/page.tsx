@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle } from "@/components/ui";
+import { Button, Card, PageTitle, TBody, Table, Td, Textarea, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/server/owners";
 import { disputeStatementAction, loadPortalStatement } from "../../portal.actions";
@@ -33,36 +33,36 @@ export default async function OwnerStatement({ params }: { params: Promise<{ id:
         ) : null}
       </p>
       <Card>
-        <table className="w-full text-xs" data-testid="owner-lines">
-          <tbody>
+        <Table data-testid="owner-lines">
+          <TBody>
             {st.lines.map((l) => (
-              <tr key={l.id} className="border-t border-line">
-                <td className="py-0.5 text-muted">{l.date}</td>
-                <td>{l.description}</td>
-                <td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</td>
-              </tr>
+              <Tr key={l.id}>
+                <Td>{l.date}</Td>
+                <Td>{l.description}</Td>
+                <Td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
       <Card className="text-sm">
         {st.disputeState === "open" ? (
-          <p className="text-rose" data-testid="dispute-open">
+          <p className="text-danger" data-testid="dispute-open">
             {t("disputeOpen")}
           </p>
         ) : st.disputeState === "resolved" ? (
-          <p className="text-mint-deep">{t("disputeResolved")}</p>
+          <p className="text-success-soft-foreground">{t("disputeResolved")}</p>
         ) : (
           <form action={disputeStatementAction} className="space-y-2">
             <input type="hidden" name="id" value={st.id} />
             <p className="font-medium">{t("dispute")}</p>
             <p className="text-xs text-muted">{t("disputeHint")}</p>
-            <textarea
+            <Textarea
               name="reason"
               rows={3}
               required
               placeholder={t("disputeReason")}
-              className="w-full rounded border border-line-strong p-2 text-sm"
+              className="w-full rounded border border-border-secondary p-2 text-sm"
               data-testid="dispute-reason"
             />
             <Button type="submit" variant="danger" data-testid="send-dispute">

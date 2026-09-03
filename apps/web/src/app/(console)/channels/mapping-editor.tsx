@@ -7,7 +7,7 @@ import {
   type Suggestion,
   type TheirRoom,
 } from "@pms/core";
-import { Select } from "@/components/ui";
+import { Select, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 
 /** The mapping screen (spec 07 §7.3): two panes, one row per rate plan, suggestions with confidence, coverage warnings live. */
 export function MappingEditor({
@@ -41,31 +41,31 @@ export function MappingEditor({
   };
   return (
     <div className="space-y-3" data-testid="mapping-editor">
-      <table className="w-full text-sm">
-        <thead className="text-xs uppercase text-muted">
-          <tr>
-            <th className="text-start">Our rate plan</th>
-            <th className="text-start">Channel room / rate</th>
-            <th className="text-start">Suggestion</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <THead className="uppercase">
+          <Tr>
+            <Th>Our rate plan</Th>
+            <Th>Channel room / rate</Th>
+            <Th>Suggestion</Th>
+          </Tr>
+        </THead>
+        <TBody>
           {ours.map((rp) => {
             const row = rows.find((r) => r.ratePlanId === rp.id);
             const s = suggestions.find((x) => x.ratePlanId === rp.id);
             return (
-              <tr key={rp.id} className="border-t border-line">
-                <td className="py-1">
+              <Tr key={rp.id}>
+                <Td>
                   {rp.roomTypeTitle} · {rp.title}{" "}
-                  <span className="text-xs text-faint">
+                  <span className="text-xs text-muted">
                     occ {rp.occupancy}
                     {rp.isDerived ? " · derived" : ""}
                   </span>
-                </td>
-                <td>
+                </Td>
+                <Td>
                   <Select
                     value={row ? `${row.roomCode}::${row.rateCode}` : ""}
-                    onChange={(e) => set(rp.id, e.target.value)}
+                    onChange={(v) => set(rp.id, v)}
                     data-testid={`map-${rp.id}`}
                   >
                     <option value="">— not mapped —</option>
@@ -81,20 +81,20 @@ export function MappingEditor({
                       )),
                     )}
                   </Select>
-                </td>
-                <td className="text-xs text-muted">
+                </Td>
+                <Td>
                   {s
                     ? `${Math.round(s.confidence * 100)}% · ${s.reasons.join(", ") || "name similarity"}`
                     : "—"}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             );
           })}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
       {warnings.length > 0 ? (
         <div
-          className="rounded-md border border-amber/50 bg-amber-soft p-2 text-xs text-amber-deep"
+          className="rounded-md border border-warning/50 bg-warning-soft p-2 text-xs text-warning-soft-foreground"
           data-testid="coverage-warnings"
         >
           {warnings.map((w) => (
@@ -102,7 +102,7 @@ export function MappingEditor({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-mint-deep">
+        <p className="text-xs text-success-soft-foreground">
           Full coverage: every room type, rate plan and channel room is mapped.
         </p>
       )}

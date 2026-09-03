@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { DrizzleBookingEngineRepository, rawRows, sql } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
-import { Button, Card, Field, Input, Label, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Input, Label, PageTitle, Select, Textarea } from "@/components/ui";
 import {
   saveEngineSettingsAction,
   saveExtraAction,
@@ -68,7 +68,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
         </PageTitle>
         <div className="flex items-center gap-3 text-sm">
           <span
-            className={`rounded px-2 py-0.5 text-xs ${s.enabled ? "bg-mint-soft text-mint-deep" : "bg-canvas"}`}
+            className={`rounded px-2 py-0.5 text-xs ${s.enabled ? "bg-success-soft text-success-soft-foreground" : "bg-background"}`}
             data-testid="engine-state"
             data-enabled={s.enabled ? "1" : "0"}
           >
@@ -77,12 +77,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           <form action={toggleEngineAction}>
             <input type="hidden" name="propertyId" value={id} />
             <input type="hidden" name="enabled" value={s.enabled ? "0" : "1"} />
-            <Button
-              type="submit"
-              variant="secondary"
-              className="h-7 text-xs"
-              data-testid="toggle-engine"
-            >
+            <Button type="submit" variant="secondary" data-testid="toggle-engine" size="sm">
               {s.enabled ? t("toggleOff") : t("toggleOn")}
             </Button>
           </form>
@@ -98,13 +93,11 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           ) : null}
         </div>
       </div>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("settings")}</h2>
+      <Card title={t("settings")}>
         <form action={saveEngineSettingsAction} className="grid gap-3 sm:grid-cols-3">
           <input type="hidden" name="propertyId" value={id} />
           <div>
-            <Label htmlFor="guarantee">{t("guarantee")}</Label>
-            <Select id="guarantee" name="guarantee" defaultValue={g.kind}>
+            <Select label={t("guarantee")} name="guarantee" defaultValue={g.kind}>
               {[
                 "pay_at_property",
                 "card_on_file",
@@ -179,28 +172,28 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           </div>
           <div className="sm:col-span-3">
             <Label htmlFor="description">{t("description")}</Label>
-            <textarea
+            <Textarea
               id="description"
               name="description"
               rows={2}
-              className="w-full rounded border border-line-strong p-2 text-sm"
+              className="w-full rounded border border-border-secondary p-2 text-sm"
               defaultValue={s.description ?? ""}
             />
           </div>
           <div className="sm:col-span-3">
             <Label htmlFor="houseManual">{t("houseManual")}</Label>
-            <textarea
+            <Textarea
               id="houseManual"
               name="houseManual"
               rows={3}
-              className="w-full rounded border border-line-strong p-2 text-sm"
+              className="w-full rounded border border-border-secondary p-2 text-sm"
               defaultValue={s.houseManual ?? ""}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm sm:col-span-3">
+          <Label>
             <input type="checkbox" name="abandonment" defaultChecked={s.abandonmentEmails} />{" "}
             {t("abandonment")}
-          </label>
+          </Label>
           <div>
             <Button type="submit" data-testid="save-engine-settings">
               {t("save")}
@@ -209,8 +202,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
         </form>
       </Card>
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("promoCodes")}</h2>
+        <Card title={t("promoCodes")}>
           <ul className="mb-3 space-y-1 text-sm" data-testid="promo-list">
             {d.promos.map((p) => (
               <li key={p.id} data-testid="promo-row">
@@ -225,8 +217,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             <input type="hidden" name="propertyId" value={id} />
             <Field label={t("code")} name="code" />
             <div>
-              <Label htmlFor="kind">{t("kind")}</Label>
-              <Select id="kind" name="kind" defaultValue="percent">
+              <Select label={t("kind")} name="kind" defaultValue="percent">
                 <option value="percent">{t("percent")}</option>
                 <option value="amount">{t("amount")}</option>
               </Select>
@@ -235,9 +226,9 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             <Field label={t("validFrom")} name="validFrom" type="date" required={false} />
             <Field label={t("validTo")} name="validTo" type="date" required={false} />
             <Field label={t("maxUses")} name="maxUses" type="number" required={false} />
-            <label className="flex items-center gap-2 text-sm">
+            <Label>
               <input type="checkbox" name="singleUse" /> {t("singleUse")}
-            </label>
+            </Label>
             <div>
               <Button type="submit" data-testid="add-promo">
                 {t("addPromo")}
@@ -245,8 +236,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             </div>
           </form>
         </Card>
-        <Card>
-          <h2 className="mb-2 font-semibold">{t("extras")}</h2>
+        <Card title={t("extras")}>
           <ul className="mb-3 space-y-1 text-sm" data-testid="extra-list">
             {d.extras.map((e) => (
               <li key={e.id} data-testid="extra-row">
@@ -259,8 +249,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             <Field label={t("extraName")} name="name" />
             <Field label={t("price")} name="priceMinor" type="number" />
             <div>
-              <Label htmlFor="per">{t("per")}</Label>
-              <Select id="per" name="per" defaultValue="stay">
+              <Select label={t("per")} name="per" defaultValue="stay">
                 <option value="stay">{t("perStay")}</option>
                 <option value="night">{t("perNight")}</option>
                 <option value="person">{t("perPerson")}</option>
@@ -274,8 +263,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           </form>
         </Card>
       </div>
-      <Card>
-        <h2 className="mb-2 font-semibold">{t("ratePlans")}</h2>
+      <Card title={t("ratePlans")}>
         <ul className="space-y-1 text-sm" data-testid="rate-plan-list">
           {d.ratePlans.map((rp) => (
             <li
@@ -293,8 +281,8 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
                 <Button
                   type="submit"
                   variant="secondary"
-                  className="h-7 text-xs"
                   data-testid="toggle-direct-only"
+                  size="sm"
                 >
                   {rp.direct_only ? t("makeShared") : t("makeDirectOnly")}
                 </Button>
@@ -303,11 +291,10 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           ))}
         </ul>
       </Card>
-      <Card>
-        <h2 className="mb-1 font-semibold">{t("embedTitle")}</h2>
+      <Card title={t("embedTitle")}>
         <p className="mb-2 text-xs text-muted">{t("embedHint")}</p>
         <pre
-          className="overflow-x-auto rounded bg-ink p-3 text-xs text-white/80"
+          className="overflow-x-auto rounded bg-foreground p-3 text-xs text-white/80"
           data-testid="embed-snippet"
         >
           {`<div id="book"></div>\n<script src="${d.appUrl}/widget.js" data-property="${id}" data-target="#book"></script>`}

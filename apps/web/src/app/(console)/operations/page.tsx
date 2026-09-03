@@ -58,7 +58,7 @@ export default async function OperationsPage({
           </Link>
           <form action={suggestRouteAction}>
             <input type="hidden" name="date" value={date} />
-            <Button type="submit" variant="secondary" className="h-8">
+            <Button type="submit" variant="secondary" size="sm">
               {t("suggestRouting")}
             </Button>
           </form>
@@ -66,7 +66,7 @@ export default async function OperationsPage({
       </div>
       {board.escalations.length > 0 ? (
         <div
-          className="rounded-md border border-rose/40 bg-rose-soft p-3 text-sm text-rose"
+          className="rounded-md border border-danger/40 bg-danger-soft p-3 text-sm text-danger"
           data-testid="escalations"
         >
           {board.escalations.map((e) => (
@@ -83,11 +83,11 @@ export default async function OperationsPage({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("departures")} <span className="text-xs text-faint">{board.departures.length}</span>
+            {t("departures")} <span className="text-xs text-muted">{board.departures.length}</span>
           </h2>
           <ul className="text-sm">
             {board.departures.map((d) => (
-              <li key={d.bookingId} className="border-t border-line py-1">
+              <li key={d.bookingId} className="border-t border-border py-1">
                 <Link href={`/reservations/${d.bookingId}`} className="hover:underline">
                   {d.propertyTitle}
                 </Link>{" "}
@@ -100,7 +100,7 @@ export default async function OperationsPage({
         </Card>
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("turnovers")} <span className="text-xs text-faint">{board.tasks.length}</span>
+            {t("turnovers")} <span className="text-xs text-muted">{board.tasks.length}</span>
           </h2>
           <ul className="space-y-2 text-sm" data-testid="turnover-lane">
             {board.tasks.map((x) => {
@@ -109,7 +109,7 @@ export default async function OperationsPage({
               return (
                 <li
                   key={x.id}
-                  className={`rounded-md border p-2 ${x.isSameDay ? "border-amber/50 bg-amber-soft" : "border-line"}`}
+                  className={`rounded-md border p-2 ${x.isSameDay ? "border-warning/50 bg-warning-soft" : "border-border"}`}
                   data-task={x.id}
                   data-state={x.state}
                 >
@@ -117,7 +117,7 @@ export default async function OperationsPage({
                     <span className="font-medium">
                       {x.propertyTitle} · {x.unitName}
                     </span>
-                    <span className="rounded bg-canvas px-1.5 text-[10px]">{x.state}</span>
+                    <span className="rounded bg-background px-1.5 text-xs">{x.state}</span>
                   </div>
                   <p className="text-xs text-muted">
                     {x.type}
@@ -128,16 +128,14 @@ export default async function OperationsPage({
                     {x.sequence ? ` · #${x.sequence}` : ""}
                     {x.escalatedLevel ? ` · ⚠ ${x.escalatedLevel}` : ""}
                   </p>
-                  {x.lastChange ? (
-                    <p className="text-[11px] text-sky-deep">↻ {x.lastChange}</p>
-                  ) : null}
+                  {x.lastChange ? <p className="text-xs text-accent">↻ {x.lastChange}</p> : null}
                   <form action={assignTaskAction} className="mt-1 flex items-center gap-1">
                     <input type="hidden" name="taskId" value={x.id} />
                     <Select
                       name="assigneeId"
                       defaultValue={x.assigneeId ?? ""}
-                      className="h-7 text-xs"
                       data-testid="assignee"
+                      size="sm"
                     >
                       <option value="">{t("unassigned")}</option>
                       {session ? <option value={session.userId}>{t("me")}</option> : null}
@@ -147,7 +145,7 @@ export default async function OperationsPage({
                         </option>
                       ))}
                     </Select>
-                    <Button type="submit" variant="secondary" className="h-7 px-2 text-xs">
+                    <Button type="submit" variant="secondary" size="sm">
                       {t("assign")}
                     </Button>
                     {x.state === "done" ? (
@@ -168,11 +166,11 @@ export default async function OperationsPage({
         </Card>
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("arrivals")} <span className="text-xs text-faint">{board.arrivals.length}</span>
+            {t("arrivals")} <span className="text-xs text-muted">{board.arrivals.length}</span>
           </h2>
           <ul className="text-sm">
             {board.arrivals.map((a) => (
-              <li key={a.bookingId} className="border-t border-line py-1">
+              <li key={a.bookingId} className="border-t border-border py-1">
                 <Link href={`/reservations/${a.bookingId}`} className="hover:underline">
                   {a.propertyTitle}
                 </Link>{" "}

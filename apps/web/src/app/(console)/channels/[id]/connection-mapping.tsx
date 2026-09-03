@@ -34,7 +34,7 @@ export function ConnectionMapping({ view }: { view: ConnectionView }) {
       {saved ? <Alert tone="success">{saved}</Alert> : null}
       {changed && view.connection.state === "active" && !confirm ? (
         <div
-          className="rounded-md border border-amber/50 bg-amber-soft p-3 text-sm"
+          className="rounded-md border border-warning/50 bg-warning-soft p-3 text-sm"
           data-testid="mapping-diff"
         >
           <p className="font-medium">This connection is live. Saving will:</p>
@@ -58,7 +58,7 @@ export function ConnectionMapping({ view }: { view: ConnectionView }) {
               </li>
             ))}
           </ul>
-          <Button className="mt-2 h-8" onClick={() => setConfirm(true)}>
+          <Button size="sm" className="mt-2" onClick={() => setConfirm(true)}>
             I understand, continue
           </Button>
         </div>

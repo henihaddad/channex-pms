@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle, Select } from "@/components/ui";
+import { Button, Card, PageTitle, Select, Textarea } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadPortalIssues, raiseIssueAction } from "../portal.actions";
 
@@ -13,7 +13,7 @@ export default async function OwnerMaintenance() {
       <Card className="text-sm">
         {v.issues.length === 0 ? <p className="text-xs text-muted">{t("noIssues")}</p> : null}
         {v.issues.map((i) => (
-          <p key={i.id} className="border-t border-line py-1 text-xs" data-testid="owner-issue">
+          <p key={i.id} className="border-t border-border py-1 text-xs" data-testid="owner-issue">
             {i.createdAt.slice(0, 10)} · {i.propertyTitle} · {i.severity} · {i.description} ·{" "}
             {i.state}
             {i.rebilled ? " · billed to you" : ""}
@@ -30,12 +30,12 @@ export default async function OwnerMaintenance() {
               </option>
             ))}
           </Select>
-          <textarea
+          <Textarea
             name="description"
             rows={3}
             required
             placeholder={t("describe")}
-            className="w-full rounded border border-line-strong p-2 text-sm"
+            className="w-full rounded border border-border-secondary p-2 text-sm"
             data-testid="issue-description"
           />
           <Button type="submit" data-testid="raise-issue">

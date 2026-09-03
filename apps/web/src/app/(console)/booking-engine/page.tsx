@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { rawRows, sql } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
-import { Card, PageTitle } from "@/components/ui";
+import { Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 
 interface Row {
   id: string;
@@ -37,34 +37,34 @@ export default async function BookingEngineIndexPage() {
     <div className="space-y-4">
       <PageTitle>{t("index")}</PageTitle>
       <Card>
-        <table className="w-full text-sm" data-testid="engine-index">
-          <thead className="text-start text-xs text-muted">
-            <tr>
-              <th className="text-start">{t("property")}</th>
-              <th className="text-start">{t("state")}</th>
-              <th className="text-end">{t("holdsLive")}</th>
-              <th className="text-end">{t("directBookings")}</th>
-              <th className="text-end">{t("commissionSaved")}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table data-testid="engine-index">
+          <THead>
+            <Tr>
+              <Th>{t("property")}</Th>
+              <Th>{t("state")}</Th>
+              <Th className="text-end">{t("holdsLive")}</Th>
+              <Th className="text-end">{t("directBookings")}</Th>
+              <Th className="text-end">{t("commissionSaved")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {rows.map((r) => (
-              <tr key={r.id} data-testid="engine-row" data-enabled={r.enabled ? "1" : "0"}>
-                <td>
+              <Tr key={r.id} data-testid="engine-row" data-enabled={r.enabled ? "1" : "0"}>
+                <Td>
                   <Link href={`/properties/${r.id}/booking-engine`} className="underline">
                     {r.title}
                   </Link>
-                </td>
-                <td>{r.enabled ? t("enabled") : t("disabled")}</td>
-                <td className="text-end">{r.holds}</td>
-                <td className="text-end">{r.direct}</td>
-                <td className="text-end">
+                </Td>
+                <Td>{r.enabled ? t("enabled") : t("disabled")}</Td>
+                <Td className="text-end">{r.holds}</Td>
+                <Td className="text-end">{r.direct}</Td>
+                <Td className="text-end">
                   {(Number(r.saved) / 100).toFixed(2)} {r.currency}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
         <p className="mt-2 text-xs text-muted">
           Commission saved assumes a 15 % OTA rate on the same revenue.
         </p>

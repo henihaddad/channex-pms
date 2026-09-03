@@ -1,6 +1,20 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import {
+  AnchorButton,
+  Button,
+  Card,
+  DataTable,
+  DateInput,
+  EmptyState,
+  Field,
+  FormRow,
+  Input,
+  Label,
+  PageHeader,
+  Select,
+  cn,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   deleteScheduleAction,
@@ -13,6 +27,8 @@ import {
 
 const monthAgo = () => new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const numeric = (v: unknown) =>
+  typeof v === "number" || (typeof v === "string" && /^-?\d+([.,]\d+)?%?$/.test(v));
 
 /** The report catalogue (spec 11 §11.3): run with filters, export CSV/PDF, schedule by email; budgets for "vs budget". */
 export default async function ReportsPage({
@@ -38,71 +54,64 @@ export default async function ReportsPage({
       )
     : null;
   const qs = `from=${from}&to=${to}${sp.property ? `&property=${sp.property}` : ""}${sp.date ? `&date=${sp.date}` : ""}`;
+  const name = (key: string, fallback: string) =>
+    t.has(`catalogue.${key}.name`) ? t(`catalogue.${key}.name`) : fallback;
+  const describe = (key: string, fallback: string) =>
+    t.has(`catalogue.${key}.description`) ? t(`catalogue.${key}.description`) : fallback;
+  const groups = ["commercial", "operational", "financial", "guest"] as const;
+  const numericCols = result
+    ? result.columns.map(
+        (_, j) => result.rows.length > 0 && result.rows.every((r) => numeric(r[j])),
+      )
+    : [];
   return (
-    <div className="space-y-4">
-      <PageTitle>{t("title")}</PageTitle>
-      <div className="grid grid-cols-[260px_1fr] gap-4">
-        <div className="space-y-4">
-          {(["commercial", "operational", "financial", "guest"] as const).map((g) => (
-            <Card key={g} className="p-3 text-sm">
-              <p className="mb-1 font-medium">{t(`groups.${g}`)}</p>
-              {v.catalogue
-                .filter((r) => r.group === g)
-                .map((r) => (
-                  <Link
-                    key={r.key}
-                    href={`/reports?key=${r.key}&${qs}`}
-                    className={`block rounded px-2 py-0.5 text-xs hover:bg-canvas ${sp.key === r.key ? "bg-line font-semibold" : ""}`}
-                    title={r.description}
-                    data-testid={`report-${r.key}`}
-                  >
-                    {r.name}
-                  </Link>
-                ))}
-            </Card>
+    <div className="flex flex-col gap-5">
+      <PageHeader title={t("title")} description={t("description")} />
+      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <Card className="h-fit" contentClassName="flex flex-col gap-4">
+          {groups.map((g) => (
+            <div key={g}>
+              <p className="mb-1 px-2 text-[0.7rem] font-semibold tracking-[0.12em] text-muted uppercase">
+                {t(`groups.${g}`)}
+              </p>
+              <ul className="flex flex-col gap-0.5">
+                {v.catalogue
+                  .filter((r) => r.group === g)
+                  .map((r) => (
+                    <li key={r.key}>
+                      <Link
+                        href={`/reports?key=${r.key}&${qs}`}
+                        className={cn(
+                          "block rounded-xl px-2 py-1.5 text-sm transition-colors",
+                          sp.key === r.key
+                            ? "bg-accent-soft font-medium text-accent-soft-foreground"
+                            : "text-foreground hover:bg-default",
+                        )}
+                        title={describe(r.key, r.description)}
+                        data-testid={`report-${r.key}`}
+                      >
+                        {name(r.key, r.name)}
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            </div>
           ))}
-        </div>
-        <div className="space-y-4">
-          <Card className="p-3">
-            <form className="flex flex-wrap items-end gap-2 text-xs">
+        </Card>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          <Card title={t("filters")}>
+            <form>
               <input type="hidden" name="key" value={sp.key ?? ""} />
-              <div>
-                <label htmlFor="from">{t("from")}</label>
-                <input
-                  id="from"
-                  type="date"
-                  name="from"
-                  defaultValue={from}
-                  className="block h-8 rounded border border-line-strong px-1"
-                />
-              </div>
-              <div>
-                <label htmlFor="to">{t("to")}</label>
-                <input
-                  id="to"
-                  type="date"
-                  name="to"
-                  defaultValue={to}
-                  className="block h-8 rounded border border-line-strong px-1"
-                />
-              </div>
-              <div>
-                <label htmlFor="date">{t("date")}</label>
-                <input
-                  id="date"
-                  type="date"
-                  name="date"
-                  defaultValue={sp.date ?? ""}
-                  className="block h-8 rounded border border-line-strong px-1"
-                />
-              </div>
-              <div>
-                <label htmlFor="property">{t("property")}</label>
+              <FormRow>
+                <DateInput name="from" label={t("from")} defaultValue={from} className="w-44" />
+                <DateInput name="to" label={t("to")} defaultValue={to} className="w-44" />
+                <DateInput name="date" label={t("date")} defaultValue={sp.date} className="w-44" />
                 <Select
-                  id="property"
                   name="property"
+                  label={t("property")}
                   defaultValue={sp.property ?? ""}
-                  className="h-8"
+                  className="w-56"
                 >
                   <option value="">{t("allProperties")}</option>
                   {v.properties.map((p) => (
@@ -111,161 +120,159 @@ export default async function ReportsPage({
                     </option>
                   ))}
                 </Select>
-              </div>
-              <Button
-                type="submit"
-                variant="secondary"
-                className="h-8 text-xs"
-                data-testid="run-report"
-              >
-                {t("run")}
-              </Button>
-              {def ? (
-                <>
-                  <a
-                    className="rounded border border-line-strong px-2 leading-8"
-                    href={`/api/v1/reports/${def.key}.csv?${qs}`}
-                    data-testid="export-csv"
-                  >
-                    CSV
-                  </a>
-                  <a
-                    className="rounded border border-line-strong px-2 leading-8"
-                    href={`/api/v1/reports/${def.key}.pdf?${qs}`}
-                    data-testid="export-pdf"
-                  >
-                    PDF
-                  </a>
-                </>
-              ) : null}
+                <Button type="submit" data-testid="run-report">
+                  {t("run")}
+                </Button>
+                {def ? (
+                  <>
+                    <AnchorButton
+                      href={`/api/v1/reports/${def.key}.csv?${qs}`}
+                      data-testid="export-csv"
+                    >
+                      {t("exportCsv")}
+                    </AnchorButton>
+                    <AnchorButton
+                      href={`/api/v1/reports/${def.key}.pdf?${qs}`}
+                      data-testid="export-pdf"
+                    >
+                      {t("exportPdf")}
+                    </AnchorButton>
+                  </>
+                ) : null}
+              </FormRow>
             </form>
           </Card>
-          {result ? (
-            <Card className="overflow-x-auto p-3" data-testid="report-result">
-              <p className="text-sm font-medium">{result.name}</p>
-              <p className="mb-2 text-xs text-muted">
-                {t("basis")}: {result.basis} · {result.rows.length} {t("rows")}
-              </p>
-              <table className="w-full text-xs">
-                <thead className="text-muted">
-                  <tr>
-                    {result.columns.map((c) => (
-                      <th key={c} className="text-start">
-                        {c}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.rows.map((row, i) => (
-                    <tr key={i} className="border-t border-line">
-                      {row.map((c, j) => (
-                        <td key={j} className="py-0.5 tabular-nums">
-                          {c === null ? "" : String(c)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <form
-                action={saveScheduleAction}
-                className="mt-3 flex flex-wrap items-end gap-2 text-xs"
-                data-testid="schedule-form"
-              >
-                <input type="hidden" name="reportKey" value={result.key} />
-                <input type="hidden" name="propertyId" value={sp.property ?? ""} />
-                <div>
-                  <label htmlFor="sname">{t("scheduleName")}</label>
-                  <input
-                    id="sname"
-                    name="name"
-                    defaultValue={result.name}
-                    className="block h-8 rounded border border-line-strong px-1"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="recipients">{t("recipients")}</label>
-                  <input
-                    id="recipients"
-                    name="recipients"
-                    placeholder="a@example.com, b@example.com"
-                    className="block h-8 w-64 rounded border border-line-strong px-1"
-                  />
-                </div>
-                <Select name="cadence" defaultValue="weekly" className="h-8 w-28">
-                  <option value="daily">daily</option>
-                  <option value="weekly">weekly</option>
-                  <option value="monthly">monthly</option>
-                </Select>
-                <Select name="format" defaultValue="csv" className="h-8 w-20">
-                  <option value="csv">CSV</option>
-                  <option value="pdf">PDF</option>
-                </Select>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  className="h-8 text-xs"
-                  data-testid="save-schedule"
-                >
-                  {t("schedule")}
-                </Button>
-              </form>
+
+          {result && def ? (
+            <Card
+              title={name(def.key, result.name)}
+              description={`${t("basis")}: ${result.basis} · ${result.rows.length} ${t("rows")}`}
+              data-testid="report-result"
+            >
+              <DataTable
+                columns={result.columns.map((c, j) => ({
+                  label: c.replace(/_/g, " "),
+                  align: numericCols[j] ? "end" : "start",
+                  className: "capitalize",
+                }))}
+                rows={result.rows.map((row) =>
+                  row.map((c) => (c === null || c === undefined ? "" : String(c))),
+                )}
+                empty={t("noSchedules") === "" ? "" : "—"}
+                dense
+              />
             </Card>
           ) : (
-            <Card className="text-sm text-muted">{t("pick")}</Card>
+            <Card>
+              <EmptyState title={t("noReport")} description={t("pick")} />
+            </Card>
           )}
-          <Card className="p-3 text-sm">
-            <p className="font-medium">{t("schedules")}</p>
-            {v.schedules.length === 0 ? (
-              <p className="text-xs text-muted">{t("noSchedules")}</p>
-            ) : null}
-            {v.schedules.map((s) => (
-              <form
-                key={s.id}
-                action={deleteScheduleAction}
-                className="flex items-center justify-between border-t border-line py-1 text-xs"
-                data-testid="schedule-row"
-              >
-                <span>
-                  {s.name} · {s.reportKey} · {s.cadence} · {s.format.toUpperCase()} ·{" "}
-                  {s.recipients.join(", ")}{" "}
-                  {s.lastSentAt ? `· ${t("lastSent")} ${s.lastSentAt.slice(0, 10)}` : ""}
-                </span>
-                <input type="hidden" name="id" value={s.id} />
-                <Button type="submit" variant="secondary" className="h-6 text-xs">
-                  {t("remove")}
-                </Button>
+
+          {result && def ? (
+            <Card title={t("schedule")} description={t("scheduleHint")}>
+              <form action={saveScheduleAction} data-testid="schedule-form">
+                <input type="hidden" name="reportKey" value={result.key} />
+                <input type="hidden" name="propertyId" value={sp.property ?? ""} />
+                <FormRow>
+                  <Field
+                    label={t("scheduleName")}
+                    name="name"
+                    defaultValue={name(def.key, result.name)}
+                    className="w-56"
+                  />
+                  <Field
+                    label={t("recipientsLabel")}
+                    name="recipients"
+                    placeholder="a@example.com, b@example.com"
+                    className="w-80"
+                  />
+                  <Select
+                    name="cadence"
+                    label={t("cadenceLabel")}
+                    defaultValue="weekly"
+                    className="w-40"
+                  >
+                    <option value="daily">{t("cadence.daily")}</option>
+                    <option value="weekly">{t("cadence.weekly")}</option>
+                    <option value="monthly">{t("cadence.monthly")}</option>
+                  </Select>
+                  <Select name="format" label={t("format")} defaultValue="csv" className="w-28">
+                    <option value="csv">CSV</option>
+                    <option value="pdf">PDF</option>
+                  </Select>
+                  <Button type="submit" variant="secondary" data-testid="save-schedule">
+                    {t("schedule")}
+                  </Button>
+                </FormRow>
               </form>
-            ))}
+            </Card>
+          ) : null}
+
+          <Card title={t("schedules")}>
+            {v.schedules.length === 0 ? (
+              <EmptyState title={t("noSchedules")} />
+            ) : (
+              <DataTable
+                columns={[
+                  t("report"),
+                  t("cadenceLabel"),
+                  t("format"),
+                  t("recipientsLabel"),
+                  t("lastSent"),
+                  { label: "", align: "end" },
+                ]}
+                rows={v.schedules.map((s) => [
+                  <span key="n" data-testid="schedule-row">
+                    <span className="font-medium text-foreground">{s.name}</span>
+                    <span className="text-muted"> · {s.reportKey}</span>
+                  </span>,
+                  t.has(`cadence.${s.cadence}`) ? t(`cadence.${s.cadence}`) : s.cadence,
+                  s.format.toUpperCase(),
+                  s.recipients.join(", "),
+                  s.lastSentAt ? s.lastSentAt.slice(0, 10) : "—",
+                  <form key="d" action={deleteScheduleAction}>
+                    <input type="hidden" name="id" value={s.id} />
+                    <Button type="submit" variant="ghost" size="sm">
+                      {t("remove")}
+                    </Button>
+                  </form>,
+                ])}
+                dense
+              />
+            )}
           </Card>
-          <Card className="p-3 text-sm">
-            <p className="font-medium">{t("budgets")}</p>
-            <form action={saveBudgetAction} className="flex flex-wrap items-end gap-2 text-xs">
-              <div>
-                <label htmlFor="bprop">{t("property")}</label>
-                <Select id="bprop" name="propertyId" className="h-8">
+
+          <Card title={t("budgets")}>
+            <form action={saveBudgetAction}>
+              <FormRow>
+                <Select name="propertyId" label={t("property")} className="w-56">
                   {v.properties.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.title}
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div>
-                <label htmlFor="bmonth">{t("month")}</label>
-                <input
-                  id="bmonth"
-                  type="month"
-                  name="month"
-                  className="block h-8 rounded border border-line-strong px-1"
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="bmonth">{t("month")}</Label>
+                  <Input id="bmonth" type="month" name="month" className="w-44" />
+                </div>
+                <Field
+                  label={t("budgetRevenue")}
+                  name="roomRevenue"
+                  type="number"
+                  className="w-44"
                 />
-              </div>
-              <Field label={t("budgetRevenue")} name="roomRevenue" type="number" />
-              <Field label={t("budgetOccupancy")} name="occupancy" type="number" required={false} />
-              <Button type="submit" variant="secondary" className="h-8 text-xs">
-                {t("saveBudget")}
-              </Button>
+                <Field
+                  label={t("budgetOccupancy")}
+                  name="occupancy"
+                  type="number"
+                  required={false}
+                  className="w-44"
+                />
+                <Button type="submit" variant="secondary">
+                  {t("saveBudget")}
+                </Button>
+              </FormRow>
             </form>
           </Card>
         </div>

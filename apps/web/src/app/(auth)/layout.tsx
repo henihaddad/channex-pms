@@ -10,7 +10,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const t = await getTranslations("app");
   return (
     <div className="flex min-h-screen">
-      <aside className="relative hidden w-[42%] max-w-xl flex-col justify-between overflow-hidden bg-ink p-10 text-white lg:flex">
+      <aside className="relative hidden w-[42%] max-w-xl flex-col justify-between overflow-hidden bg-foreground p-10 text-white lg:flex">
         <div className="bridge-rail absolute inset-x-0 top-0 h-[3px]" aria-hidden="true" />
         <Logo size={34} />
         <div>

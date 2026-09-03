@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Chip, PageTitle, Select, TBody, Table, Td, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/server/owners";
 import { listStatements } from "../owners.actions";
@@ -18,7 +18,7 @@ export default async function StatementsPage({
     <div className="space-y-4">
       <PageTitle>{t("statements")}</PageTitle>
       <form className="flex gap-2 text-xs">
-        <Select name="state" defaultValue={sp.state ?? ""} className="h-8 w-40">
+        <Select name="state" defaultValue={sp.state ?? ""} className="w-40" size="sm">
           <option value="">{t("anyState")}</option>
           {["draft", "approved", "sent", "paid"].map((s) => (
             <option key={s} value={s}>
@@ -26,47 +26,42 @@ export default async function StatementsPage({
             </option>
           ))}
         </Select>
-        <Button type="submit" variant="secondary" className="h-8 text-xs">
+        <Button type="submit" variant="secondary" size="sm">
           {t("filter")}
         </Button>
       </form>
       <Card>
         {rows.length === 0 ? <p className="text-sm text-muted">{t("noStatements")}</p> : null}
-        <table className="w-full text-sm">
-          <tbody>
+        <Table>
+          <TBody>
             {rows.map((s) => (
-              <tr
-                key={s.id}
-                className="border-t border-line"
-                data-testid="statement-row"
-                data-state={s.state}
-              >
-                <td className="py-1">
+              <Tr key={s.id} data-testid="statement-row" data-state={s.state}>
+                <Td>
                   <Link className="underline" href={`/owners/statements/${s.id}`}>
                     {s.periodFrom.slice(0, 7)}
                   </Link>
-                </td>
-                <td>{s.ownerName}</td>
-                <td>{s.propertyTitle}</td>
-                <td>{money(Number(s.totals.grossRevenue ?? 0), s.currency)}</td>
-                <td className="font-medium">{money(Number(s.totals.netDue ?? 0), s.currency)}</td>
-                <td>
-                  <span className="rounded bg-canvas px-1 text-xs">{s.state}</span>
+                </Td>
+                <Td>{s.ownerName}</Td>
+                <Td>{s.propertyTitle}</Td>
+                <Td>{money(Number(s.totals.grossRevenue ?? 0), s.currency)}</Td>
+                <Td>{money(Number(s.totals.netDue ?? 0), s.currency)}</Td>
+                <Td>
+                  <span className="rounded bg-background px-1 text-xs">{s.state}</span>
                   {s.disputeState === "open" ? (
-                    <span className="ms-1 rounded bg-rose-soft px-1 text-xs text-rose">
+                    <Chip color="danger" size="sm" className="ms-1">
                       {t("disputed")}
-                    </span>
+                    </Chip>
                   ) : null}
                   {s.anomalies.length ? (
-                    <span className="ms-1 rounded bg-amber-soft px-1 text-xs text-amber-deep">
+                    <Chip color="warning" size="sm" className="ms-1">
                       {s.anomalies.length} ⚠
-                    </span>
+                    </Chip>
                   ) : null}
-                </td>
-              </tr>
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
+          </TBody>
+        </Table>
       </Card>
     </div>
   );

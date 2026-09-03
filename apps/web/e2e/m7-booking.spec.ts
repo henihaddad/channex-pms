@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { pickOption, fillDate } from "./ui";
 
 /**
  * M7 exit (spec 15, spec 10): a commission-free booking flows end to end. The
@@ -50,12 +51,12 @@ test("direct booking → OTA availability → door code → portal → owner sta
   await expect(page.getByTestId("engine-state")).toHaveAttribute("data-enabled", "0");
   await page.getByTestId("toggle-engine").click();
   await expect(page.getByTestId("engine-state")).toHaveAttribute("data-enabled", "1");
-  await page.getByLabel("Guarantee").selectOption("prepay");
+  await pickOption(page, { label: "Guarantee" }, { value: "prepay" });
   await page.locator('input[name="cityTax"]').fill("200");
   await page.locator('input[name="colour"]').fill("#0f766e");
   await page.locator('textarea[name="houseManual"]').fill("Keys are in the lockbox by the door.");
   await page.getByTestId("save-engine-settings").click();
-  await expect(page.getByLabel("Guarantee")).toHaveValue("prepay");
+  await expect(page.locator('select[name="guarantee"]')).toHaveValue("prepay");
   await page.locator('input[name="code"]').fill(`direct10`);
   await page.locator('input[name="value"]').fill("10");
   await page.getByTestId("add-promo").click();
@@ -95,8 +96,8 @@ test("direct booking → OTA availability → door code → portal → owner sta
   );
   expect(lcp).toBeLessThan(2000);
   // dates by fill (Chromium's date input keyboard format is locale-bound), everything else by keyboard
-  await guest.getByLabel("Arrival").fill(arrival);
-  await guest.getByLabel("Departure").fill(departure);
+  await fillDate(guest, "arrival", arrival);
+  await fillDate(guest, "departure", departure);
   // Tab inside a Chromium date input walks its segments, so the promo field is focused directly
   await guest.getByLabel("Promo code").focus();
   await guest.keyboard.type("direct10");
@@ -206,7 +207,7 @@ test("direct booking → OTA availability → door code → portal → owner sta
   await page.getByLabel("Email").fill(`rui-${stamp}@example.com`);
   await page.getByTestId("create-owner").click();
   await page.getByTestId("owner-row").getByRole("link", { name: "Rui Owner" }).click();
-  await page.locator('input[name="effectiveFrom"]').fill(`${month}-01`);
+  await fillDate(page, "effectiveFrom", `${month}-01`);
   await page.getByTestId("save-agreement").click();
   await expect(page.getByTestId("agreement-row")).toBeVisible();
   await page.getByTestId("period-month").fill(month);

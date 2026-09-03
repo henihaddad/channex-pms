@@ -1,5 +1,19 @@
 import { getTranslations } from "next-intl/server";
-import { Alert, Button, Card, Field, Label, PageTitle, Select } from "@/components/ui";
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Label,
+  PageTitle,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/server/booking-engine";
 import {
@@ -33,7 +47,7 @@ export default async function BillingPage() {
         </Alert>
       ) : null}
       {v.quota.warnings.map((w) => (
-        <p key={w} className="text-xs text-amber-deep">
+        <p key={w} className="text-xs text-warning-soft-foreground">
           {t("quotaWarning", { what: w })}
         </p>
       ))}
@@ -41,7 +55,10 @@ export default async function BillingPage() {
         <Card data-testid="billing-plan" data-state={v.state}>
           <h2 className="font-semibold">
             {t("currentPlan")}: {sub ? sub.plan.name : t("noPlan")}{" "}
-            <span className="ms-2 rounded bg-canvas px-2 py-0.5 text-xs" data-testid="tenant-state">
+            <span
+              className="ms-2 rounded bg-background px-2 py-0.5 text-xs"
+              data-testid="tenant-state"
+            >
               {v.state}
             </span>
           </h2>
@@ -49,17 +66,12 @@ export default async function BillingPage() {
             <p className="text-xs text-muted">{t("trialEnds", { date: sub.trialEndsOn })}</p>
           ) : null}
           {sub?.cancelAtPeriodEnd ? (
-            <p className="text-xs text-rose">{t("cancelled", { date: sub.periodTo })}</p>
+            <p className="text-xs text-danger">{t("cancelled", { date: sub.periodTo })}</p>
           ) : null}
           <form action={choosePlanAction} className="mt-3 space-y-3" data-testid="plan-form">
             <div className="grid gap-3 sm:grid-cols-3">
               {v.plans.map((p) => (
-                <label
-                  key={p.key}
-                  className="block cursor-pointer rounded border border-line p-3 text-sm has-[:checked]:border-mint"
-                  data-testid="plan-card"
-                  data-plan={p.key}
-                >
+                <Label key={p.key} data-testid="plan-card" data-plan={p.key}>
                   <input
                     type="radio"
                     name="planKey"
@@ -84,7 +96,7 @@ export default async function BillingPage() {
                       .map((a) => `${a.name} ${money(a.monthlyMinor, p.currency)}`)
                       .join(", ")}
                   </p>
-                </label>
+                </Label>
               ))}
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
@@ -107,11 +119,11 @@ export default async function BillingPage() {
               />
             </div>
             <div className="flex flex-wrap gap-4 text-xs">
-              <label className="flex items-center gap-1">
+              <Label>
                 <input type="checkbox" name="annual" defaultChecked={sub?.annual} />{" "}
                 {t("annual", { pct: 15 })}
-              </label>
-              <label className="flex items-center gap-1">
+              </Label>
+              <Label>
                 <input
                   type="checkbox"
                   name="addOn"
@@ -119,7 +131,7 @@ export default async function BillingPage() {
                   defaultChecked={sub?.addOns.includes("priority_support")}
                 />{" "}
                 {t("prioritySupport")}
-              </label>
+              </Label>
             </div>
             <Button type="submit" data-testid="choose-plan">
               {sub ? t("changePlan") : t("subscribe")}
@@ -128,8 +140,7 @@ export default async function BillingPage() {
         </Card>
       ) : null}
       {v.hosted && sub ? (
-        <Card>
-          <h2 className="font-semibold">{t("paymentMethod")}</h2>
+        <Card title={t("paymentMethod")}>
           <p className="text-sm" data-testid="payment-method">
             {sub.paymentMethod
               ? `${sub.paymentMethod.brand} •••• ${sub.paymentMethod.last4}`
@@ -138,10 +149,10 @@ export default async function BillingPage() {
           <form action={attachCardAction} className="mt-2 flex items-end gap-2">
             <div data-payment-mount>
               <Label htmlFor="cardToken">{t("cardToken")}</Label>
-              <input
+              <Input
                 id="cardToken"
                 name="cardToken"
-                className="h-9 rounded border border-line-strong px-2 text-sm"
+
                 placeholder="tok_visa_4242"
                 required
               />
@@ -154,8 +165,7 @@ export default async function BillingPage() {
         </Card>
       ) : null}
       {v.hosted ? (
-        <Card>
-          <h2 className="font-semibold">{t("usage")}</h2>
+        <Card title={t("usage")}>
           <dl className="mt-1 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
             <dt>{t("today")}</dt>
             <dd data-testid="usage-units">{v.usage.activeUnits}</dd>
@@ -169,26 +179,25 @@ export default async function BillingPage() {
         </Card>
       ) : null}
       {v.hosted ? (
-        <Card>
-          <h2 className="font-semibold">{t("invoices")}</h2>
-          <table className="mt-1 w-full text-sm" data-testid="invoices">
-            <thead className="text-xs text-muted">
-              <tr>
-                <th className="text-start">{t("period")}</th>
-                <th className="text-end">{t("total")}</th>
-                <th className="text-start">{t("status")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
+        <Card title={t("invoices")}>
+          <Table className="mt-1" data-testid="invoices">
+            <THead>
+              <Tr>
+                <Th>{t("period")}</Th>
+                <Th className="text-end">{t("total")}</Th>
+                <Th>{t("status")}</Th>
+                <Th />
+              </Tr>
+            </THead>
+            <TBody>
               {v.invoices.map((i) => (
-                <tr key={i.id} data-testid="invoice-row" data-state={i.state}>
-                  <td>
+                <Tr key={i.id} data-testid="invoice-row" data-state={i.state}>
+                  <Td>
                     {i.periodFrom} → {i.periodTo}
-                  </td>
-                  <td className="text-end">{money(i.totalMinor, i.currency)}</td>
-                  <td>{i.state}</td>
-                  <td className="text-end">
+                  </Td>
+                  <Td className="text-end">{money(i.totalMinor, i.currency)}</Td>
+                  <Td>{i.state}</Td>
+                  <Td className="text-end">
                     <details>
                       <summary className="cursor-pointer text-xs underline">{t("explain")}</summary>
                       <p className="text-xs">
@@ -223,15 +232,14 @@ export default async function BillingPage() {
                         </a>
                       ) : null}
                     </details>
-                  </td>
-                </tr>
+                  </Td>
+                </Tr>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </Card>
       ) : null}
-      <Card>
-        <h2 className="font-semibold">{t("export")}</h2>
+      <Card title={t("export")}>
         <p className="text-xs text-muted">{v.hosted ? t("exportHint") : t("selfHostedExport")}</p>
         <form action={requestExportAction} className="mt-2">
           <Button type="submit" variant="secondary" data-testid="request-export">
@@ -257,8 +265,7 @@ export default async function BillingPage() {
         </ul>
       </Card>
       {v.hosted && sub && !sub.cancelAtPeriodEnd ? (
-        <Card>
-          <h2 className="font-semibold">{t("cancel")}</h2>
+        <Card title={t("cancel")}>
           <p className="text-xs text-muted">{t("cancelHint")}</p>
           <form action={cancelSubscriptionAction} className="mt-2">
             <Button type="submit" variant="secondary" data-testid="cancel-subscription">
@@ -268,8 +275,7 @@ export default async function BillingPage() {
         </Card>
       ) : null}
       {v.state !== "offboarding" ? (
-        <Card>
-          <h2 className="font-semibold">{t("leave")}</h2>
+        <Card title={t("leave")}>
           <p className="text-xs text-muted">{t("leaveHint")}</p>
           <form action={leavePlatformAction} className="mt-2">
             <Button type="submit" variant="secondary" data-testid="leave-platform">
