@@ -83,6 +83,15 @@ export function ConnectionWizard({
         ))}
       </ol>
       {error ? <Alert>{error}</Alert> : null}
+      {step === 1 && adapterCode === "AirBNB" ? (
+        <Alert tone="info" data-testid="airbnb-via-channex">
+          Airbnb is authorised inside Channex.{" "}
+          <a className="font-medium underline" href={`/channels/connect?propertyId=${propertyId}`}>
+            Connect through Channex
+          </a>{" "}
+          for this property instead of the settings wizard.
+        </Alert>
+      ) : null}
       {step === 1 ? (
         <div className="grid grid-cols-3 gap-4">
           <div>

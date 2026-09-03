@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel IFrame: a one-time token exchanged by the embedded channel screen; lives 15 minutes, single use."
+  },
+  "request": { "method": "POST", "path": "/api/v1/auth/one_time_token" },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": { "token": "94feab9f-60e6-411b-d854-8f12004d8bc8" },
+      "meta": {
+        "message": "You are successfully received one-time token! Use it for exchange to JWT"
+      }
+    }
+  }
+}

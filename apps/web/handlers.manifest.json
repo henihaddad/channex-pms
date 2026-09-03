@@ -80,6 +80,13 @@
   },
   {
     "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "channexScreenAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "createConnectionAction",
     "kind": "action",
     "wrapper": "withPermission",
@@ -163,6 +170,14 @@
     "wrapper": "withPermission",
     "permission": "channel:update_mapping",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "syncConnectionsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/channels/channels.actions.ts",
@@ -1492,6 +1507,13 @@
     "wrapper": "withPermission.route",
     "permission": "org:read",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/test/channex-screen/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
   },
   {
     "file": "src/app/api/v1/test/drain/route.ts",

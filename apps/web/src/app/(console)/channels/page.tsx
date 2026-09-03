@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { AnchorButton, Button, Card, LinkButton, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
+import { testHooksEnabled } from "@/server/test-hooks";
 import {
   acknowledgeEventAction,
   loadHealthBoard,
@@ -28,13 +29,22 @@ export default async function ChannelsPage() {
       <div className="flex items-center justify-between">
         <PageTitle>{t("title")}</PageTitle>
         <div className="flex gap-2">
-          <AnchorButton
-            href="/api/v1/channels/oauth/airbnb/start"
+          {process.env.AIRBNB_CLIENT_ID || testHooksEnabled() ? (
+            <AnchorButton
+              href="/api/v1/channels/oauth/airbnb/start"
+              variant="secondary"
+              data-testid="connect-airbnb"
+            >
+              {t("connectAirbnb")}
+            </AnchorButton>
+          ) : null}
+          <LinkButton
+            href="/channels/connect"
             variant="secondary"
-            data-testid="connect-airbnb"
+            data-testid="connect-via-channex"
           >
-            {t("connectAirbnb")}
-          </AnchorButton>
+            {t("connectViaChannex")}
+          </LinkButton>
           <LinkButton href="/channels/new" data-testid="connect-channel">
             {t("connect")}
           </LinkButton>

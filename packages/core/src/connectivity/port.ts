@@ -202,6 +202,17 @@ export interface Readiness {
   issues: string[];
 }
 
+/** A channel connection as the provider holds it, for mirroring connections made in the provider's own UI. */
+export interface RemoteChannel {
+  id: string;
+  adapterCode: string;
+  title: string;
+  isActive: boolean;
+  status: "active" | "pending" | "temporal_error" | "permanent_error" | "unknown";
+  /** Provider-side rate plan ids the connection maps, with the channel's codes where known. */
+  mappings: Array<{ ratePlanId: string; roomCode?: string; rateCode?: string; occupancy?: number }>;
+}
+
 export interface ThreadQuery {
   propertyId: string;
   updatedSince?: string;
@@ -285,6 +296,13 @@ export interface ConnectivityProvider {
   createChannel(c: ChannelSpec, meta: CallMeta): Promise<ProviderRef>;
   checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness>;
   setChannelActive(ref: ProviderRef, active: boolean, meta: CallMeta): Promise<void>;
+  /**
+   * A short-lived session for the provider's own channel screen, embedded for
+   * the channels only the provider can connect (Airbnb's OAuth lives there).
+   */
+  createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }>;
+  /** The connections the provider holds for a property, to mirror those made in its own UI. */
+  listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]>;
   // reservations
   listBookingRevisions(
     propertyId: string,

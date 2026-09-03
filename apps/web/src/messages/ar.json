@@ -187,7 +187,18 @@
     "pause": "إيقاف مؤقت",
     "resume": "استئناف",
     "remove": "إزالة",
-    "importListings": "استيراد إعلانات Airbnb"
+    "importListings": "استيراد إعلانات Airbnb",
+    "connectViaChannex": "الربط عبر Channex",
+    "connectScreenTitle": "ربط قناة عبر Channex",
+    "connectScreenHint": "يتم تفويض Airbnb وBooking.com وبقية القنوات داخل شاشة Channex أدناه. عندما تظهر القناة متصلة هناك، اسحبها لتظهر في لوحة الصحة.",
+    "syncConnections": "سحب الاتصالات من Channex",
+    "mirrored": "الاتصالات التي يحتفظ بها Channex لهذا العقار",
+    "noMirrored": "لم يُسحب شيء بعد. اربط قناة في الشاشة أدناه ثم اسحب.",
+    "property": "العقار",
+    "openInChannex": "فتح في تبويب جديد",
+    "directOauthOnly": "تفويض Airbnb المباشر متاح فقط ببيانات شريك Airbnb الخاصة بك.",
+    "airbnbViaChannex": "يتم تفويض Airbnb داخل Channex. استخدم \"الربط عبر Channex\" لهذا العقار.",
+    "pulled": "تم سحب {count} اتصال/اتصالات."
   },
   "reservations": {
     "title": "الحجوزات",

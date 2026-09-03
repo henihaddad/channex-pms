@@ -99,6 +99,18 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByTestId("wizard-done").click();
   await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(1);
 
+  // channels the provider alone can authorise are connected inside Channex's embedded screen (CH-5);
+  // pulling mirrors what Channex holds, so the connection just activated shows up once, not twice
+  await page.goto("/channels");
+  await page.getByTestId("connect-via-channex").click();
+  await expect(page).toHaveURL(/\/channels\/connect/);
+  await page.goto(`/channels/connect?propertyId=${propertyId}`);
+  const frame = page.frameLocator('[data-testid="channex-screen"]');
+  await expect(frame.getByTestId("fake-channex-screen")).toBeVisible();
+  await page.getByTestId("sync-connections").click();
+  await expect(page.getByTestId("mirrored-connection")).toHaveCount(1);
+  await expect(page.getByTestId("mirrored-connection").first()).toContainText("BookingCom");
+
   // edit a rate on the calendar: optimistic pending → synced over SSE after the push
   await page.goto(`/calendar?propertyId=${propertyId}&days=14`);
   await expect(page.getByTestId("grid-stats")).toContainText("loaded in");

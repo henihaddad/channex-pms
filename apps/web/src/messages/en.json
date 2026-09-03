@@ -187,7 +187,18 @@
     "pause": "Pause",
     "resume": "Resume",
     "remove": "Remove",
-    "importListings": "Import Airbnb listings"
+    "importListings": "Import Airbnb listings",
+    "connectViaChannex": "Connect through Channex",
+    "connectScreenTitle": "Connect a channel through Channex",
+    "connectScreenHint": "Airbnb, Booking.com and the other OTAs are authorised inside Channex's own screen below. When the channel shows as connected there, pull it in and it appears on the health board.",
+    "syncConnections": "Pull connections from Channex",
+    "mirrored": "Connections held by Channex for this property",
+    "noMirrored": "Nothing pulled in yet. Connect a channel in the screen below, then pull.",
+    "property": "Property",
+    "openInChannex": "Open in a new tab",
+    "directOauthOnly": "Direct Airbnb authorisation is only available with your own Airbnb partner credentials.",
+    "airbnbViaChannex": "Airbnb is authorised inside Channex. Use \"Connect through Channex\" for this property.",
+    "pulled": "{count} connection(s) pulled in."
   },
   "reservations": {
     "title": "Reservations",

@@ -187,7 +187,18 @@
     "pause": "Suspendre",
     "resume": "Reprendre",
     "remove": "Supprimer",
-    "importListings": "Importer les annonces Airbnb"
+    "importListings": "Importer les annonces Airbnb",
+    "connectViaChannex": "Connecter via Channex",
+    "connectScreenTitle": "Connecter un canal via Channex",
+    "connectScreenHint": "Airbnb, Booking.com et les autres OTA s'autorisent dans l'écran Channex ci-dessous. Quand le canal y apparaît connecté, importez-le : il rejoint le tableau de santé.",
+    "syncConnections": "Importer les connexions depuis Channex",
+    "mirrored": "Connexions détenues par Channex pour cet hébergement",
+    "noMirrored": "Rien d'importé pour l'instant. Connectez un canal dans l'écran ci-dessous, puis importez.",
+    "property": "Hébergement",
+    "openInChannex": "Ouvrir dans un nouvel onglet",
+    "directOauthOnly": "L'autorisation Airbnb directe n'est possible qu'avec vos propres identifiants partenaire Airbnb.",
+    "airbnbViaChannex": "Airbnb s'autorise dans Channex. Utilisez « Connecter via Channex » pour cet hébergement.",
+    "pulled": "{count} connexion(s) importée(s)."
   },
   "reservations": {
     "title": "Réservations",

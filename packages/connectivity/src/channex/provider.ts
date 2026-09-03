@@ -35,11 +35,33 @@ import {
   type ThreadQuery,
   type WebhookSpec,
   type ImportedProperty,
+  type RemoteChannel,
 } from "@pms/core";
 import type { HttpRequest, HttpResponse, HttpTransport } from "../transport/http.js";
 
 export const CHANNEX_PRODUCTION = "https://app.channex.io";
 export const CHANNEX_STAGING = "https://staging.channex.io";
+
+/**
+ * The URL of Channex's embedded channel screen for a one-time token
+ * (docs: Channel IFrame). Headless mode shows only that property's channels.
+ */
+export function channexChannelScreenUrl(
+  base: string,
+  token: string,
+  propertyId: string,
+  opts: { language?: string; channels?: string[] } = {},
+): string {
+  const q = new URLSearchParams({
+    oauth_session_key: token,
+    app_mode: "headless",
+    redirect_to: "/channels",
+    property_id: propertyId,
+  });
+  if (opts.language) q.set("lng", opts.language);
+  if (opts.channels?.length) q.set("channels", opts.channels.join(","));
+  return `${base}/auth/exchange?${q.toString()}`;
+}
 
 /** The pipeline learns about throttling and outages from these (adaptive limiter, circuit breaker). */
 export interface ProviderObserver {
@@ -538,6 +560,49 @@ export class ChannexProvider implements ConnectivityProvider {
       { method: "POST", path: `/api/v1/channels/${ref.id}/${active ? "activate" : "deactivate"}` },
       meta,
     );
+  }
+  async createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
+    const body = await this.call(
+      "auth.one_time_token",
+      {
+        method: "POST",
+        path: "/api/v1/auth/one_time_token",
+        body: { one_time_token: { property_id: propertyId } },
+      },
+      meta,
+    );
+    const token = obj(obj(body).data).token;
+    if (typeof token !== "string")
+      throw new ContractError("one_time_token without a token", { body });
+    return { token };
+  }
+
+  async listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]> {
+    const rows = await this.listAll("channels.list", "/api/v1/channels", propertyId, meta);
+    return rows.map((raw) => {
+      const r = obj(raw);
+      const a = obj(r.attributes);
+      const status = String(a.status ?? "unknown");
+      return {
+        id: String(r.id),
+        adapterCode: String(a.channel ?? ""),
+        title: String(a.title ?? a.channel ?? ""),
+        isActive: a.is_active === true,
+        status: (["active", "pending", "temporal_error", "permanent_error"].includes(status)
+          ? status
+          : "unknown") as RemoteChannel["status"],
+        mappings: (Array.isArray(a.rate_plans) ? a.rate_plans : []).map((m) => {
+          const mm = obj(m);
+          const st = obj(mm.settings);
+          return {
+            ratePlanId: String(mm.rate_plan_id ?? ""),
+            ...(typeof st.room_type_code === "string" ? { roomCode: st.room_type_code } : {}),
+            ...(typeof st.rate_plan_code === "string" ? { rateCode: st.rate_plan_code } : {}),
+            ...(typeof st.occupancy === "number" ? { occupancy: st.occupancy } : {}),
+          };
+        }),
+      };
+    });
   }
 
   // ---- reservations ------------------------------------------------------------------

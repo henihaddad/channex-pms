@@ -234,3 +234,33 @@ describe("ChannexProvider contract: provisioning and adoption", () => {
     ).toBe(true);
   });
 });
+
+describe("ChannexProvider channel screen (docs fixtures)", () => {
+  it("asks for a one-time token for the property and returns it", async () => {
+    const { p, http } = provider();
+    const r = await p.createChannelSession(PROPERTY, meta);
+    expect(r).toEqual({ token: "94feab9f-60e6-411b-d854-8f12004d8bc8" });
+    expect(http.calls[0]).toMatchObject({
+      method: "POST",
+      path: "/api/v1/auth/one_time_token",
+      body: { one_time_token: { property_id: PROPERTY } },
+    });
+  });
+
+  it("lists the property's channel connections with their mappings", async () => {
+    const { p } = provider();
+    const rows = await p.listChannels(PROPERTY, meta);
+    expect(rows).toEqual([
+      {
+        id: "3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90",
+        adapterCode: "AirBNB",
+        title: "Airbnb · Ribeira Loft",
+        isActive: true,
+        status: "active",
+        mappings: [
+          { ratePlanId: "rp-remote-1", roomCode: "12345", rateCode: "12345-STD", occupancy: 2 },
+        ],
+      },
+    ]);
+  });
+});

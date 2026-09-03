@@ -9,6 +9,7 @@ import type {
   ProviderRef,
   PushResult,
   RestrictionBatch,
+  RemoteChannel,
 } from "@pms/core";
 
 /** Local id ↔ provider id for one property (property.channex_property_id, room_type.channex_room_type_id, rate_plan.channex_rate_plan_id). */
@@ -77,6 +78,16 @@ export function withIdMap(inner: ConnectivityProvider, map: IdMap): Connectivity
     },
     async getBooking(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
       return backRevision(await inner.getBooking(ref, meta));
+    },
+    createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
+      return inner.createChannelSession(out(propertyId), meta);
+    },
+    async listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]> {
+      const rows = await inner.listChannels(out(propertyId), meta);
+      return rows.map((c) => ({
+        ...c,
+        mappings: c.mappings.map((m) => ({ ...m, ratePlanId: back(m.ratePlanId) })),
+      }));
     },
   };
   return new Proxy(inner, {

@@ -27,6 +27,7 @@ import {
   type ConnectionRow,
 } from "@pms/db";
 import { activateConnection, pauseConnection, queueAriPush } from "@pms/jobs";
+import { CHANNEX_PRODUCTION, CHANNEX_STAGING, channexChannelScreenUrl } from "@pms/connectivity";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -560,5 +561,88 @@ export const importListingsAction = withPermission<
     revalidatePath("/channels");
     revalidatePath("/properties");
     return { created, connected };
+  },
+);
+
+// ---- connections made inside Channex (spec 07 CH-5: the channel iframe) -------------
+
+const propertyOnly = z.object({ propertyId: z.string().uuid() });
+
+/**
+ * A one-time session for Channex's embedded channel screen, where Airbnb and
+ * the OTAs that need the provider's own authorisation are connected. Without a
+ * Channex key (development, tests) the screen is the in-app stand-in.
+ */
+export const channexScreenAction = withPermission<[{ propertyId: string }], { url: string }>(
+  "channel:create",
+  { ...byProperty, schema: propertyOnly, audit: false },
+  async (ctx, input) => {
+    const c = await container();
+    const idMap = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).idMap(input.propertyId);
+    const { token } = await c.provider.createChannelSession(
+      idMap.property.remote,
+      meta(ctx, "channel.session"),
+    );
+    if (!process.env.CHANNEX_API_KEY)
+      return {
+        url: `/api/v1/test/channex-screen?oauth_session_key=${token}&property_id=${idMap.property.remote}`,
+      };
+    const base = process.env.CHANNEX_ENV === "production" ? CHANNEX_PRODUCTION : CHANNEX_STAGING;
+    const url = channexChannelScreenUrl(base, token, idMap.property.remote, {
+      language: ctx.locale,
+    });
+    return { url };
+  },
+);
+
+/** Mirror the connections Channex holds for a property into ChannelConnection rows so the health board and sync see them. */
+export const syncConnectionsAction = withPermission<[FormData], void>(
+  "channel:create",
+  {
+    scope: "property",
+    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+    subject: (fd) => ({ kind: "channel_connection", id: `sync:${String(fd.get("propertyId"))}` }),
+  },
+  async (ctx, fd) => {
+    const propertyId = String(fd.get("propertyId"));
+    const c = await container();
+    const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
+    const idMap = await repo.idMap(propertyId);
+    const toLocal = new Map(idMap.ratePlans.map((r) => [r.remote, r.local]));
+    const remote = await c.provider.listChannels(idMap.property.remote, meta(ctx, "channel.list"));
+    const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
+    const existing = await ch.listConnections(propertyId);
+    for (const r of remote) {
+      let rowId = existing.find((e) => e.channexChannelId === r.id)?.id;
+      if (!rowId) {
+        rowId = Id.next();
+        await ch.insertConnection({
+          id: rowId,
+          propertyId,
+          adapterCode: r.adapterCode,
+          settings: { managedIn: "channex", title: r.title },
+        });
+      }
+      const mappings = r.mappings
+        .filter((m) => toLocal.has(m.ratePlanId))
+        .map((m) => ({
+          ratePlanId: toLocal.get(m.ratePlanId)!,
+          roomCode: m.roomCode ?? "",
+          rateCode: m.rateCode ?? "",
+          ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
+        }));
+      await ch.updateConnection(rowId, {
+        channexChannelId: r.id,
+        state: r.isActive ? "active" : r.status === "permanent_error" ? "error" : "mapped",
+        isActive: r.isActive,
+        readiness: {
+          ready: r.status === "active",
+          issues: r.status === "active" ? [] : [`Channex reports ${r.status}`],
+        },
+      });
+      if (mappings.length > 0) await ch.replaceMappings(rowId, mappings, () => Id.next());
+    }
+    revalidatePath("/channels");
+    revalidatePath("/channels/connect");
   },
 );

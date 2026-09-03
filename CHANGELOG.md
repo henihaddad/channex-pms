@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Channel connections through Channex (spec 07 CH-5): `/channels/connect` embeds Channex's own
+  channel screen for one property through a one-time token (`POST /auth/one_time_token`), where
+  Airbnb and the OTAs that need the provider's authorisation are connected; "Pull connections
+  from Channex" mirrors what Channex holds (`GET /channels?filter[property_id]`) into
+  `ChannelConnection` rows with their rate plan mappings. `ConnectivityProvider` gains
+  `createChannelSession` and `listChannels` (Channex, Fake, id-map). The direct Airbnb OAuth
+  button only appears when `AIRBNB_CLIENT_ID` is configured, since Airbnb issues those
+  credentials to approved partners such as Channex, not to individual operators.
 - Cloudflare deployment target (ADR-0008): `apps/web` builds for Workers with
   `@opennextjs/cloudflare` (`build:cf`, `deploy:cf`); `apps/worker-cf` runs the job runtime on
   Cloudflare Queues, a one-minute Cron Trigger scheduler and a Durable Object lease per property;

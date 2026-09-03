@@ -13,6 +13,7 @@ import {
   type BookingRevisionPayload,
   type CallMeta,
   type ChannelSpec,
+  type RemoteChannel,
   type CloseReason,
   type ConnectionSettings,
   type ConnectivityProvider,
@@ -448,6 +449,34 @@ export class FakeProvider implements ConnectivityProvider {
   }
   async setChannelActive(_ref: ProviderRef, _active: boolean, meta: CallMeta): Promise<void> {
     this.guard("channels.activate", meta);
+  }
+  async createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
+    this.guard("channels.session", meta);
+    return { token: `fake-session-${propertyId.slice(0, 8)}` };
+  }
+  /** The channels created through `createChannel` for the property, as the provider's UI would list them. */
+  async listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]> {
+    this.guard("channels.list", meta);
+    const out: RemoteChannel[] = [];
+    for (const [key, id] of this.created.entries()) {
+      if (!key.startsWith("channel:") || typeof id !== "string") continue;
+      const spec = JSON.parse(key.slice("channel:".length)) as ChannelSpec;
+      if (spec.propertyId !== propertyId) continue;
+      out.push({
+        id,
+        adapterCode: spec.adapterCode,
+        title: spec.adapterCode,
+        isActive: true,
+        status: "active",
+        mappings: spec.mappings.map((m) => ({
+          ratePlanId: m.ratePlanId,
+          roomCode: m.roomCode,
+          rateCode: m.rateCode,
+          ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
+        })),
+      });
+    }
+    return out;
   }
 
   // ---- reservations ------------------------------------------------------------------

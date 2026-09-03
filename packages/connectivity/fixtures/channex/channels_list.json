@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API: connections of one property, with the rate plan mappings the channel holds."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[limit]": "100",
+      "pagination[page]": "1"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "type": "channel",
+          "id": "3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90",
+          "attributes": {
+            "channel": "AirBNB",
+            "title": "Airbnb · Ribeira Loft",
+            "is_active": true,
+            "status": "active",
+            "properties": ["716305c4-561a-4561-a187-7f5b8aeb5920"],
+            "settings": {},
+            "rate_plans": [
+              {
+                "id": "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e",
+                "rate_plan_id": "rp-remote-1",
+                "settings": {
+                  "room_type_code": "12345",
+                  "rate_plan_code": "12345-STD",
+                  "occupancy": 2
+                }
+              }
+            ],
+            "inserted_at": "2026-09-03T18:00:00.000000",
+            "updated_at": "2026-09-03T18:00:00.000000"
+          }
+        }
+      ],
+      "meta": { "total": 1, "limit": 100, "page": 1 }
+    }
+  }
+}
