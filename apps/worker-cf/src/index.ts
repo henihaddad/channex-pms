@@ -6,6 +6,13 @@ import { runtime, type Env } from "./wiring.js";
 
 export { PropertyLease } from "./lease.js";
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 const QUEUE_BY_RESOURCE = new Map<string, QueueName>(
   ALL_QUEUES.map((q) => [queueResourceName(q), q]),
 );
@@ -25,10 +32,22 @@ async function drainAll(env: Env, rounds = 20): Promise<number> {
 
 export default {
   /** Health only; the product surface is apps/web. */
-  async fetch(req: Request): Promise<Response> {
+  /** Health, and the drain endpoint a web app hosted elsewhere pokes after a write (ADR-0008). */
+  async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/health")
       return Response.json({ ok: true, service: "otabridge-jobs", at: new Date().toISOString() });
+    if (url.pathname === "/outbox/drain" && req.method === "POST") {
+      const expected = env.OUTBOX_KICK_SECRET;
+      if (
+        typeof expected !== "string" ||
+        expected === "" ||
+        !timingSafeEqual(req.headers.get("x-outbox-secret") ?? "", expected)
+      )
+        return new Response("forbidden", { status: 403 });
+      ctx.waitUntil(drainAll(env).catch(() => undefined));
+      return Response.json({ ok: true });
+    }
     return new Response("not found", { status: 404 });
   },
 

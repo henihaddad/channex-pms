@@ -1,0 +1,14 @@
+# Vercel hosts apps/web (rootDirectory) from a fresh install and build; nothing generated is uploaded.
+node_modules
+.git
+.next
+.open-next
+.wrangler
+.turbo
+dist
+website
+test-results
+playwright-report
+data
+*.log
+*.tsbuildinfo

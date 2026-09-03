@@ -35,3 +35,4 @@ data/
 .wrangler/
 .dev.vars
 .dev.vars.*
+.vercel

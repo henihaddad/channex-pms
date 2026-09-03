@@ -60,8 +60,11 @@ All notable changes to this project are documented here. The format follows
   the last use. `withTenant` applies the role switch and all settings in one statement. Together
   these cut a console page from 6 to 7 connections and 36 to 58 statements to 1 connection and
   roughly half the statements.
-- The web Worker runs with Cloudflare Smart Placement (near the database, not the visitor), and
-  the jobs Worker's minute tick keeps one web isolate warm.
+- The hosted web app moved to Vercel as the plain Node build, pinned to Neon's region
+  (ADR-0009); the jobs Worker, Queues, the fallback copy of the web app and the landing page stay
+  on Cloudflare. After a write, a web app hosted off Cloudflare pokes the jobs Worker's new
+  `POST /outbox/drain` (shared secret) through Next's `after()`. Smart Placement was tried and
+  reverted; the jobs Worker's minute tick keeps one web instance warm.
 
 ### Fixed
 

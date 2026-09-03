@@ -39,6 +39,29 @@ console tracks the five steps to the first pushed rate.
 | `PMS_MODE`                       | `hosted` turns on plans, quotas and billing; unset means self-hosted with everything included       |
 | `PMS_SELLER_COUNTRY`             | Hosted mode: the operator's VAT country                                                             |
 
+## Hosted service: web app on Vercel, jobs on Cloudflare (ADR-0009)
+
+The web app runs on Vercel as the plain Node build, pinned to the region of the Neon database;
+the job worker, its queues and the landing page stay on Cloudflare (next section). Nothing here
+changes self-hosting.
+
+1. Vercel project `otabridge-app` with root directory `apps/web`, Node 22, functions region
+   `cle1` (Ohio, next to Neon); `apps/web/vercel.json` carries the install and build commands
+   (`pnpm turbo run build --filter=@pms/web` from the repository root) and `.vercelignore` keeps
+   generated output out of the upload.
+2. Environment variables (production and preview): `DATABASE_URL` (the Neon **pooled**
+   endpoint), `PMS_ENV=production`, `PMS_MODE=hosted`, `PMS_MASTER_KEY` and `PMS_SESSION_KEY`
+   (the same values as the Cloudflare Workers, so sessions and sealed data stay valid),
+   `CHANNEX_API_KEY`, `CHANNEX_ENV`, `NEXT_PUBLIC_APP_URL`, `MAIL_TRANSPORT` (`resend` with
+   `RESEND_API_KEY`, or `console`), `OUTBOX_KICK_URL` (the jobs Worker's `/outbox/drain`) and
+   `OUTBOX_KICK_SECRET` (the same value as the Worker secret), `PMS_SELLER_COUNTRY`.
+3. Deploy: `vercel deploy --prod` from the repository root (the project is linked in `.vercel/`,
+   which is git-ignored), or connect the GitHub repository in the Vercel dashboard so pushes to
+   `main` deploy after CI.
+4. Domain: `app.otabridge.com` is a DNS-only CNAME to `cname.vercel-dns.com` in the Cloudflare
+   zone and is attached to the Vercel project; Vercel issues the certificate.
+5. Migrations still run from a machine that reaches Neon (`db:migrate:neon`), never on boot.
+
 ## Hosted on Cloudflare (ADR-0008)
 
 The hosted service runs the same code on Cloudflare Workers: `apps/web` through

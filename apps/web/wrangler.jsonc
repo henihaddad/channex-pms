@@ -7,8 +7,6 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "binding": "ASSETS", "directory": ".open-next/assets" },
   "observability": { "enabled": true },
-  // ADR-0008: run next to Hyperdrive and Neon rather than next to the visitor; every request makes many database round trips
-  "placement": { "mode": "smart" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "otabridge-app" }],
   "hyperdrive": [
     {
@@ -31,7 +29,8 @@
       { "binding": "Q_SYSTEM", "queue": "otabridge-system" },
     ],
   },
-  "routes": [{ "pattern": "app.otabridge.com", "custom_domain": true }],
+  // app.otabridge.com is served by Vercel (ADR-0009); this Worker stays reachable on workers.dev as the fallback
+  "workers_dev": true,
   "vars": {
     "PMS_ENV": "production",
     "PMS_MODE": "hosted",

@@ -102,9 +102,10 @@ pnpm check             # lint, typecheck, test, build
 Self-hosting is one command with Docker Compose (`compose.selfhost.yml`: web, worker, one-shot
 migrate, Postgres, Redis, MinIO, Caddy); [docs/install.md](./docs/install.md) has the full path:
 
-The hosted service runs the same code on Cloudflare Workers (Next.js through OpenNext, the job
-worker on Queues and a Cron Trigger, Postgres on Neon behind Hyperdrive); see
-[ADR-0008](docs/adr/0008-cloudflare-deployment-target.md) and the Cloudflare section of
+The hosted service runs the same code with the web app on Vercel next to its Neon Postgres and
+the job worker on Cloudflare (Queues and a Cron Trigger); see
+[ADR-0009](docs/adr/0009-web-app-on-vercel-next-to-the-database.md),
+[ADR-0008](docs/adr/0008-cloudflare-deployment-target.md) and the hosting sections of
 [docs/install.md](docs/install.md).
 
 ```sh
