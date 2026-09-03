@@ -76,7 +76,7 @@ export function ConnectionWizard({
         ].map((s, i) => (
           <li
             key={s}
-            className={`rounded px-2 py-0.5 ${i + 1 === step ? "bg-emerald-600 text-white" : i + 1 < step ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}
+            className={`rounded px-2 py-0.5 ${i + 1 === step ? "bg-mint-deep text-white" : i + 1 < step ? "bg-mint-soft text-mint-deep" : "bg-canvas text-muted"}`}
           >
             {i + 1}. {s}
           </li>
@@ -149,7 +149,7 @@ export function ConnectionWizard({
                 {f.label}
                 {f.required ? " *" : ""}
                 {!["string", "text", "password", "select", "number"].includes(f.type) ? (
-                  <span className="ms-2 text-xs text-amber-700">
+                  <span className="ms-2 text-xs text-amber-deep">
                     unknown field type &quot;{f.type}&quot;, shown as text
                   </span>
                 ) : null}
@@ -180,7 +180,7 @@ export function ConnectionWizard({
                   data-testid={`field-${f.name}`}
                 />
               )}
-              {f.help ? <p className="text-xs text-slate-500">{f.help}</p> : null}
+              {f.help ? <p className="text-xs text-muted">{f.help}</p> : null}
             </div>
           ))}
           <Button
@@ -261,7 +261,7 @@ export function ConnectionWizard({
         <div className="space-y-3">
           <Alert tone="success">Connection created inactive (CH-4).</Alert>
           {created.warnings.map((w) => (
-            <p key={w.ref + w.code} className="text-xs text-amber-700">
+            <p key={w.ref + w.code} className="text-xs text-amber-deep">
               {w.message}
             </p>
           ))}

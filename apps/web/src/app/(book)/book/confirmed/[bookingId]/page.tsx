@@ -19,7 +19,7 @@ export default async function ConfirmedPage({
         {t("reference")}:{" "}
         <strong data-testid="booking-reference">{sp.ref ?? bookingId.slice(0, 8)}</strong>
       </p>
-      <p className="mt-2 text-sm text-slate-600">{t("confirmedHint", { email: sp.email ?? "" })}</p>
+      <p className="mt-2 text-sm text-muted">{t("confirmedHint", { email: sp.email ?? "" })}</p>
     </Card>
   );
 }

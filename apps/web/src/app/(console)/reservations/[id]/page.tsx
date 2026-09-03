@@ -38,14 +38,14 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
               ? `${d.rooms[0].guestNames[0].name} ${d.rooms[0].guestNames[0].surname}`
               : d.otaReservationCode}
           </PageTitle>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted">
             {d.propertyTitle} · {d.otaName ?? "—"} {d.otaReservationCode} · {d.arrivalDate} →{" "}
             {d.departureDate} · {money(d.totalAmountMinor, d.currency)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span
-            className={`rounded px-2 py-0.5 text-xs ${d.status === "cancelled" ? "bg-slate-100" : "bg-emerald-100 text-emerald-800"}`}
+            className={`rounded px-2 py-0.5 text-xs ${d.status === "cancelled" ? "bg-canvas" : "bg-mint-soft text-mint-deep"}`}
           >
             {d.status}
           </span>
@@ -68,7 +68,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
               </Button>
             </form>
           ) : (
-            <span className="text-xs text-slate-500" title="OTA bookings are modified at the OTA">
+            <span className="text-xs text-muted" title="OTA bookings are modified at the OTA">
               {t("modifiedAtOta")}
             </span>
           )}
@@ -79,17 +79,13 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
         <Card>
           <h2 className="mb-2 font-semibold">{t("stay")}</h2>
           {d.rooms.map((r) => (
-            <div
-              key={r.id}
-              className="border-t border-slate-100 py-2 text-sm"
-              data-testid="stay-room"
-            >
+            <div key={r.id} className="border-t border-line py-2 text-sm" data-testid="stay-room">
               <p>
-                {r.roomTypeTitle ?? <span className="text-rose-700">unmapped room</span>} ·{" "}
+                {r.roomTypeTitle ?? <span className="text-rose">unmapped room</span>} ·{" "}
                 {r.ratePlanTitle ?? "—"} · {r.occupancy.adults} adults, {r.occupancy.children}{" "}
                 children{r.occupancy.ages?.length ? ` (ages ${r.occupancy.ages.join(", ")})` : ""}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted">
                 {r.days
                   .map((x) => `${x.date.slice(5)} ${money(x.amountMinor, d.currency)}`)
                   .join(" · ")}
@@ -118,10 +114,10 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                   </Button>
                 </form>
               ) : (
-                <p className="text-xs text-slate-500">{t("singleUnitNoAssign")}</p>
+                <p className="text-xs text-muted">{t("singleUnitNoAssign")}</p>
               )}
               <div className="mt-1 flex items-center gap-2 text-xs">
-                <span className="rounded bg-slate-100 px-1.5">{r.stayState}</span>
+                <span className="rounded bg-canvas px-1.5">{r.stayState}</span>
                 {r.stayState === "expected" ? (
                   <>
                     <form action={stayStateAction}>
@@ -139,7 +135,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                       <input type="hidden" name="bookingRoomId" value={r.id} />
                       <input type="hidden" name="state" value="no_show" />
                       <input type="hidden" name="reason" value="did not arrive" />
-                      <button className="underline text-rose-700">{t("noShow")}</button>
+                      <button className="underline text-rose">{t("noShow")}</button>
                     </form>
                   </>
                 ) : null}
@@ -176,7 +172,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             status={d.status}
             labels={{ issue: t("issueCode"), reveal: t("reveal"), revoke: t("revoke") }}
           />
-          <ul className="mt-2 text-xs text-slate-600">
+          <ul className="mt-2 text-xs text-muted">
             {v.credentials.map((c) => (
               <li key={c.id} className="flex items-center gap-2">
                 <span className="font-mono">{c.valueMasked}</span> · {c.type} ·{" "}
@@ -185,7 +181,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                   <input type="hidden" name="bookingId" value={d.id} />
                   <input type="hidden" name="propertyId" value={d.propertyId} />
                   <input type="hidden" name="credentialId" value={c.id} />
-                  <button className="text-rose-700 underline">{t("revoke")}</button>
+                  <button className="text-rose underline">{t("revoke")}</button>
                 </form>
               </li>
             ))}
@@ -232,16 +228,12 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
       <Card>
         <h2 className="mb-2 font-semibold">{t("folios")}</h2>
         {v.folios.map((f) => (
-          <div
-            key={f.id}
-            className="mb-4 border-t border-slate-100 pt-2 text-sm"
-            data-testid="folio"
-          >
+          <div key={f.id} className="mb-4 border-t border-line pt-2 text-sm" data-testid="folio">
             <div className="flex items-center justify-between">
               <p className="font-medium">
                 {f.label} · {f.currency}
               </p>
-              <p className={f.balance.balanceMinor > 0 ? "text-rose-700" : "text-emerald-700"}>
+              <p className={f.balance.balanceMinor > 0 ? "text-rose" : "text-mint-deep"}>
                 {t("balance")} {money(f.balance.balanceMinor, f.currency)}
                 {f.balance.heldMinor ? ` · held ${money(f.balance.heldMinor, f.currency)}` : ""}
               </p>
@@ -249,16 +241,16 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             <table className="mt-1 w-full text-xs">
               <tbody>
                 {f.lines.map((l) => (
-                  <tr key={l.id} className="border-t border-slate-50">
+                  <tr key={l.id} className="border-t border-line">
                     <td className="py-0.5">{l.date}</td>
                     <td>{l.kind}</td>
                     <td>{l.description}</td>
                     <td className="text-end">{money(l.amountMinor, f.currency)}</td>
-                    <td className="text-end text-slate-400">{l.invoiceId ? "invoiced" : ""}</td>
+                    <td className="text-end text-faint">{l.invoiceId ? "invoiced" : ""}</td>
                   </tr>
                 ))}
                 {f.payments.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-50 text-emerald-800">
+                  <tr key={p.id} className="border-t border-line text-mint-deep">
                     <td className="py-0.5">{p.receivedAt.slice(0, 10)}</td>
                     <td>{p.method}</td>
                     <td>
@@ -286,7 +278,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                           <input type="hidden" name="propertyId" value={d.propertyId} />
                           <input type="hidden" name="paymentId" value={p.id} />
                           <Input name="reason" placeholder="reason" className="h-6 w-28 text-xs" />
-                          <button name="state" value="refunded" className="underline text-rose-700">
+                          <button name="state" value="refunded" className="underline text-rose">
                             refund
                           </button>
                         </form>
@@ -296,7 +288,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 ))}
               </tbody>
             </table>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted">
               {f.invoices
                 .map((i) => `${i.kind} ${i.number} ${money(i.totalMinor, f.currency)}`)
                 .join(" · ")}
@@ -389,15 +381,15 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <h2 className="mb-2 font-semibold">{t("operations")}</h2>
-          {v.tasks.length === 0 ? <p className="text-sm text-slate-500">—</p> : null}
+          {v.tasks.length === 0 ? <p className="text-sm text-muted">—</p> : null}
           <ul className="text-sm">
             {v.tasks.map((x) => (
-              <li key={x.id} className="border-t border-slate-100 py-1">
+              <li key={x.id} className="border-t border-line py-1">
                 <Link href={`/operations?date=${x.date}`} className="hover:underline">
                   {x.date} · {x.type}
                   {x.isSameDay ? " · same-day" : ""}
                 </Link>{" "}
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted">
                   {x.windowFrom}–{x.windowTo} · {x.state} · {x.assigneeName ?? t("unassigned")}
                 </span>
               </li>
@@ -408,14 +400,14 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
           <h2 className="mb-2 font-semibold">{t("timeline")}</h2>
           <ol className="text-sm" data-testid="timeline">
             {d.revisions.map((r) => (
-              <li key={r.id} className="border-t border-slate-100 py-1">
-                <span className="text-xs text-slate-500">
+              <li key={r.id} className="border-t border-line py-1">
+                <span className="text-xs text-muted">
                   {r.insertedAt.slice(0, 16)} · {r.revisionType} · {r.systemId.slice(0, 12)}
                 </span>
                 <br />
                 {r.timelineText}
                 {!r.acknowledged && r.revisionType === "modified" ? (
-                  <span className="ms-2 rounded bg-amber-100 px-1.5 text-[10px] text-amber-800">
+                  <span className="ms-2 rounded bg-amber-soft px-1.5 text-[10px] text-amber-deep">
                     {t("unacknowledged")}
                   </span>
                 ) : null}
@@ -429,9 +421,9 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
         <h2 className="mb-2 font-semibold">{t("notes")}</h2>
         <ul className="mb-2 text-sm">
           {v.notes.map((n) => (
-            <li key={n.id} className="border-t border-slate-100 py-1">
+            <li key={n.id} className="border-t border-line py-1">
               {n.pinned ? "📌 " : ""}
-              {n.body} <span className="text-xs text-slate-400">{n.createdAt.slice(0, 16)}</span>
+              {n.body} <span className="text-xs text-faint">{n.createdAt.slice(0, 16)}</span>
             </li>
           ))}
         </ul>

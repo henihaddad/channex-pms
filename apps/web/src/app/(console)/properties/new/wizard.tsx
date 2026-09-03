@@ -43,7 +43,7 @@ export function PropertyWizard({
         {(["single_unit", "multi_unit", "hotel"] as const).map((k) => (
           <label
             key={k}
-            className={`cursor-pointer rounded-lg border p-3 text-sm ${kind === k ? "border-emerald-500 bg-emerald-50" : "border-slate-200"}`}
+            className={`cursor-pointer rounded-lg border p-3 text-sm ${kind === k ? "border-mint bg-mint-soft" : "border-line"}`}
           >
             <input
               type="radio"
@@ -54,7 +54,7 @@ export function PropertyWizard({
               className="me-2"
             />
             <span className="font-medium">{k.replace("_", " ")}</span>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted">
               {k === "single_unit"
                 ? "One listing, one unit. Rooms are managed for you."
                 : k === "multi_unit"

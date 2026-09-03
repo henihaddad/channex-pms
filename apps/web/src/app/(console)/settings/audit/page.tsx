@@ -13,7 +13,7 @@ export default async function AuditPage() {
       <PageTitle>{t("title")}</PageTitle>
       <Card>
         <h2 className="mb-1 font-semibold">{t("verify")}</h2>
-        <p className={verification.ok ? "text-emerald-700" : "text-rose-700"}>
+        <p className={verification.ok ? "text-mint-deep" : "text-rose"}>
           {verification.ok
             ? t("ok", { checked: verification.checked })
             : t("broken", { seq: verification.brokenAtSeq ?? 0 })}
@@ -21,7 +21,7 @@ export default async function AuditPage() {
       </Card>
       <Card>
         <table className="w-full text-sm">
-          <thead className="text-start text-xs uppercase text-slate-500">
+          <thead className="text-start text-xs uppercase text-muted">
             <tr>
               <th className="py-1 text-start">{t("seq")}</th>
               <th className="text-start">{t("action")}</th>
@@ -32,18 +32,18 @@ export default async function AuditPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.seq} className="border-t border-slate-100">
+              <tr key={r.seq} className="border-t border-line">
                 <td className="py-1 font-mono text-xs">{r.seq}</td>
                 <td>
                   <code className="text-xs">{r.action}</code>
                 </td>
-                <td className="text-xs text-slate-500">
+                <td className="text-xs text-muted">
                   {r.actor.type}:{r.actor.id.slice(0, 8)}
                 </td>
-                <td className="text-xs text-slate-500">
+                <td className="text-xs text-muted">
                   {r.subject.kind}:{String(r.subject.id).slice(0, 8)}
                 </td>
-                <td className="text-xs text-slate-500">{new Date(r.occurredAt).toISOString()}</td>
+                <td className="text-xs text-muted">{new Date(r.occurredAt).toISOString()}</td>
               </tr>
             ))}
           </tbody>

@@ -62,7 +62,7 @@ export function SearchForm({
       </div>
       {attributes && attributes.length > 0 ? (
         <fieldset className="sm:col-span-4">
-          <legend className="text-xs text-slate-600">{labels.attributes}</legend>
+          <legend className="text-xs text-muted">{labels.attributes}</legend>
           <div className="flex flex-wrap gap-3 text-sm">
             {attributes.map((a) => (
               <label key={a} className="flex items-center gap-1">

@@ -1,7 +1,13 @@
 {
   "app": {
-    "name": "Channex PMS",
-    "tagline": "Property management for people who manage properties for other people."
+    "name": "OTAbridge",
+    "tagline": "Property management for people who manage properties for other people.",
+    "claim": "Every night, on every channel, from one desk.",
+    "claimBody": "Rates, availability and bookings stay right across Airbnb, Booking.com and your own site, and the people who clean, host and own the places see exactly what they need.",
+    "fact1": "Local rates and availability are the truth; the channels mirror them",
+    "fact2": "Owner statements that add up to the cent, every month",
+    "fact3": "Direct bookings with no commission, on your own domain",
+    "footer": "Fair-code software. Self-host it or let us run it."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -24,7 +30,13 @@
     "bookingEngine": "Direct bookings",
     "billing": "Billing",
     "plugins": "Plugins",
-    "support": "Support"
+    "support": "Support",
+    "groups": {
+      "today": "Today",
+      "portfolio": "Portfolio",
+      "insight": "Insight",
+      "settings": "Settings"
+    }
   },
   "auth": {
     "signIn": "Sign in",
@@ -524,7 +536,8 @@
       "maintenance": "Maintenance",
       "reviews": "Reviews",
       "documents": "Documents",
-      "signOut": "Sign out"
+      "signOut": "Sign out",
+      "portal": "Owner"
     },
     "welcome": "Hello, {name}",
     "thisMonth": "This month",
@@ -663,7 +676,7 @@
     "reference": "Reference",
     "confirmedHint": "A confirmation with a calendar file and your guest portal link is on its way to {email}.",
     "portal": "Open the guest portal",
-    "poweredBy": "Booking engine by Channex PMS",
+    "poweredBy": "Booking engine by OTAbridge",
     "chargeCurrency": "You will be charged in {currency}.",
     "embed": "Embed",
     "policy": "Cancellation policy",

@@ -33,7 +33,7 @@ export default async function BillingPage() {
         </Alert>
       ) : null}
       {v.quota.warnings.map((w) => (
-        <p key={w} className="text-xs text-amber-700">
+        <p key={w} className="text-xs text-amber-deep">
           {t("quotaWarning", { what: w })}
         </p>
       ))}
@@ -41,25 +41,22 @@ export default async function BillingPage() {
         <Card data-testid="billing-plan" data-state={v.state}>
           <h2 className="font-semibold">
             {t("currentPlan")}: {sub ? sub.plan.name : t("noPlan")}{" "}
-            <span
-              className="ms-2 rounded bg-slate-100 px-2 py-0.5 text-xs"
-              data-testid="tenant-state"
-            >
+            <span className="ms-2 rounded bg-canvas px-2 py-0.5 text-xs" data-testid="tenant-state">
               {v.state}
             </span>
           </h2>
           {sub?.trialEndsOn && v.state === "trial" ? (
-            <p className="text-xs text-slate-500">{t("trialEnds", { date: sub.trialEndsOn })}</p>
+            <p className="text-xs text-muted">{t("trialEnds", { date: sub.trialEndsOn })}</p>
           ) : null}
           {sub?.cancelAtPeriodEnd ? (
-            <p className="text-xs text-rose-700">{t("cancelled", { date: sub.periodTo })}</p>
+            <p className="text-xs text-rose">{t("cancelled", { date: sub.periodTo })}</p>
           ) : null}
           <form action={choosePlanAction} className="mt-3 space-y-3" data-testid="plan-form">
             <div className="grid gap-3 sm:grid-cols-3">
               {v.plans.map((p) => (
                 <label
                   key={p.key}
-                  className="block cursor-pointer rounded border border-slate-200 p-3 text-sm has-[:checked]:border-emerald-500"
+                  className="block cursor-pointer rounded border border-line p-3 text-sm has-[:checked]:border-mint"
                   data-testid="plan-card"
                   data-plan={p.key}
                 >
@@ -71,17 +68,17 @@ export default async function BillingPage() {
                     data-testid={`plan-radio-${p.key}`}
                   />{" "}
                   <strong>{p.name}</strong>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted">
                     {money(p.tiers[0]!.unitMinor, p.currency)} {t("perUnit")}
                   </p>
-                  <ul className="mt-1 text-xs text-slate-500">
+                  <ul className="mt-1 text-xs text-muted">
                     {p.tiers.map((tier) => (
                       <li key={tier.fromUnits}>
                         {t("from", { n: tier.fromUnits })}: {money(tier.unitMinor, p.currency)}
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted">
                     {t("annual", { pct: p.annualDiscountBps / 100 })} ·{" "}
                     {p.addOns
                       .map((a) => `${a.name} ${money(a.monthlyMinor, p.currency)}`)
@@ -144,7 +141,7 @@ export default async function BillingPage() {
               <input
                 id="cardToken"
                 name="cardToken"
-                className="h-9 rounded border border-slate-300 px-2 text-sm"
+                className="h-9 rounded border border-line-strong px-2 text-sm"
                 placeholder="tok_visa_4242"
                 required
               />
@@ -153,7 +150,7 @@ export default async function BillingPage() {
               {t("attachCard")}
             </Button>
           </form>
-          <p className="mt-1 text-xs text-slate-500">{t("cardHint")}</p>
+          <p className="mt-1 text-xs text-muted">{t("cardHint")}</p>
         </Card>
       ) : null}
       {v.hosted ? (
@@ -175,7 +172,7 @@ export default async function BillingPage() {
         <Card>
           <h2 className="font-semibold">{t("invoices")}</h2>
           <table className="mt-1 w-full text-sm" data-testid="invoices">
-            <thead className="text-xs text-slate-500">
+            <thead className="text-xs text-muted">
               <tr>
                 <th className="text-start">{t("period")}</th>
                 <th className="text-end">{t("total")}</th>
@@ -235,9 +232,7 @@ export default async function BillingPage() {
       ) : null}
       <Card>
         <h2 className="font-semibold">{t("export")}</h2>
-        <p className="text-xs text-slate-600">
-          {v.hosted ? t("exportHint") : t("selfHostedExport")}
-        </p>
+        <p className="text-xs text-muted">{v.hosted ? t("exportHint") : t("selfHostedExport")}</p>
         <form action={requestExportAction} className="mt-2">
           <Button type="submit" variant="secondary" data-testid="request-export">
             {t("requestExport")}
@@ -264,7 +259,7 @@ export default async function BillingPage() {
       {v.hosted && sub && !sub.cancelAtPeriodEnd ? (
         <Card>
           <h2 className="font-semibold">{t("cancel")}</h2>
-          <p className="text-xs text-slate-600">{t("cancelHint")}</p>
+          <p className="text-xs text-muted">{t("cancelHint")}</p>
           <form action={cancelSubscriptionAction} className="mt-2">
             <Button type="submit" variant="secondary" data-testid="cancel-subscription">
               {t("cancel")}
@@ -275,7 +270,7 @@ export default async function BillingPage() {
       {v.state !== "offboarding" ? (
         <Card>
           <h2 className="font-semibold">{t("leave")}</h2>
-          <p className="text-xs text-slate-600">{t("leaveHint")}</p>
+          <p className="text-xs text-muted">{t("leaveHint")}</p>
           <form action={leavePlatformAction} className="mt-2">
             <Button type="submit" variant="secondary" data-testid="leave-platform">
               {t("leaveConfirm")}

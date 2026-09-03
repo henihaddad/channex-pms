@@ -40,7 +40,7 @@ export default async function WebhooksPage({
       </form>
       <Card>
         <table className="w-full text-xs" data-testid="webhook-explorer">
-          <thead className="text-slate-500">
+          <thead className="text-muted">
             <tr>
               <th className="text-start">{t("event")}</th>
               <th className="text-start">{t("state")}</th>

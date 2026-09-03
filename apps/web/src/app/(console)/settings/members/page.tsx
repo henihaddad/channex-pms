@@ -18,20 +18,20 @@ export default async function MembersPage() {
         <InviteForm roles={[...SYSTEM_ROLES]} labels={{ role: t("role"), submit: t("invite") }} />
       </Card>
       <Card>
-        {members.length === 0 ? <p className="text-sm text-slate-500">{t("empty")}</p> : null}
+        {members.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
         <table className="w-full text-sm">
           <tbody>
             {members.map((m) => (
-              <tr key={m.grantId} className="border-t border-slate-100">
+              <tr key={m.grantId} className="border-t border-line">
                 <td className="py-2 font-medium">{m.name}</td>
-                <td className="py-2 text-slate-500">{m.email}</td>
+                <td className="py-2 text-muted">{m.email}</td>
                 <td className="py-2">
-                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{m.roleKey}</code>
+                  <code className="rounded bg-canvas px-1.5 py-0.5 text-xs">{m.roleKey}</code>
                 </td>
                 <td className="py-2 text-end">
                   <form action={revokeMember}>
                     <input type="hidden" name="grantId" value={m.grantId} />
-                    <button type="submit" className="text-xs text-rose-700 underline">
+                    <button type="submit" className="text-xs text-rose underline">
                       {t("revoke")}
                     </button>
                   </form>
@@ -44,7 +44,7 @@ export default async function MembersPage() {
       {pending.length > 0 ? (
         <Card>
           <h2 className="mb-2 font-semibold">{t("pending")}</h2>
-          <ul className="text-sm text-slate-700">
+          <ul className="text-sm text-text">
             {pending.map((p) => (
               <li key={p.id}>
                 {p.email} · <code className="text-xs">{p.roleKey}</code>

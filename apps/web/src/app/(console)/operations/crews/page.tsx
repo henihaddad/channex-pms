@@ -26,7 +26,7 @@ export default async function CrewsPage() {
       {crews.map((c) => (
         <Card key={c.id}>
           <h2 className="font-semibold">
-            {c.name} <span className="text-xs text-slate-500">{c.serviceArea ?? ""}</span>
+            {c.name} <span className="text-xs text-muted">{c.serviceArea ?? ""}</span>
           </h2>
           <ul className="my-2 text-sm">
             {c.members.map((m) => (
@@ -80,7 +80,7 @@ export default async function CrewsPage() {
             <textarea
               name="items"
               rows={4}
-              className="w-full rounded-md border border-slate-300 p-2 text-sm"
+              className="w-full rounded-md border border-line-strong p-2 text-sm"
               defaultValue={"Beds made*\nBathroom cleaned*\nBins emptied\nKeys in lockbox"}
             />
           </div>

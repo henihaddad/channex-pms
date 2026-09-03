@@ -1,13 +1,76 @@
 @import "tailwindcss";
 
-body {
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
+/*
+ * OTAbridge design tokens. The palette is the landing site's world: ink for
+ * chrome, a cool canvas for work, and the mint-to-sky gradient of the mark as
+ * the one accent, which doubles as the sync-state language (mint synced, sky in
+ * flight, amber attention, rose failed).
+ */
+@theme {
+  --color-ink: #0b1020;
+  --color-ink-2: #141b33;
+  --color-ink-3: #1f2848;
+  --color-canvas: #f2f4f8;
+  --color-surface: #ffffff;
+  --color-line: #dde3ec;
+  --color-line-strong: #c3ccd9;
+  --color-text: #1a2033;
+  --color-muted: #5b6478;
+  --color-faint: #8b93a7;
+  --color-mint: #2fbf94;
+  --color-mint-deep: #1f9c78;
+  --color-mint-soft: #e3f7f0;
+  --color-sky: #22b8d4;
+  --color-sky-deep: #0f7f95;
+  --color-sky-soft: #e2f6fa;
+  --color-amber: #e79a12;
+  --color-amber-deep: #8f5a05;
+  --color-amber-soft: #fdf1d8;
+  --color-rose: #d9485f;
+  --color-rose-soft: #fbe6ea;
+  --font-sans:
+    var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-display), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --radius-card: 0.75rem;
+  --shadow-card: 0 1px 2px rgba(11, 16, 32, 0.04), 0 8px 24px -16px rgba(11, 16, 32, 0.18);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum", "cv11";
+    background-color: var(--color-canvas);
+    color: var(--color-text);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-sky);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-mint-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility bridge-rail {
+  background: linear-gradient(90deg, var(--color-mint), var(--color-sky));
+}
+
+@utility bridge-text {
+  background: linear-gradient(90deg, var(--color-mint), var(--color-sky));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

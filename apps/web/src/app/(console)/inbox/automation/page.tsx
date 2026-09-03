@@ -29,28 +29,26 @@ export default async function AutomationPage({
   return (
     <div className="space-y-4">
       <PageTitle>{t("automation")}</PageTitle>
-      <p className="text-sm text-slate-600">{t("automationHint")}</p>
+      <p className="text-sm text-muted">{t("automationHint")}</p>
       <div className="grid grid-cols-2 gap-4">
         <Card className="space-y-3">
-          {view.rules.length === 0 ? (
-            <p className="text-sm text-slate-500">{t("noRules")}</p>
-          ) : null}
+          {view.rules.length === 0 ? <p className="text-sm text-muted">{t("noRules")}</p> : null}
           {view.rules.map((r) => (
             <div
               key={r.id}
-              className="border-t border-slate-100 py-2 text-sm"
+              className="border-t border-line py-2 text-sm"
               data-testid="rule-row"
               data-enabled={r.enabled ? "1" : "0"}
             >
               <p className="font-medium">
-                {r.name} <span className="text-xs text-slate-500">v{r.version}</span>{" "}
+                {r.name} <span className="text-xs text-muted">v{r.version}</span>{" "}
                 <span
-                  className={`rounded px-1 text-[10px] ${r.enabled ? "bg-emerald-100 text-emerald-800" : "bg-slate-100"}`}
+                  className={`rounded px-1 text-[10px] ${r.enabled ? "bg-mint-soft text-mint-deep" : "bg-canvas"}`}
                 >
                   {r.enabled ? t("enabled") : t("disabled")}
                 </span>
               </p>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted">
                 {t(`triggers.${r.trigger}`)}
                 {r.offsetDays !== undefined ? ` · ${String(r.offsetDays)}d` : ""}
                 {r.atLocalTime ? ` · ${r.atLocalTime}` : ""} · {r.templateName}
@@ -74,7 +72,7 @@ export default async function AutomationPage({
                 </form>
                 <a
                   href={`/inbox/automation?test=${r.id}`}
-                  className="rounded border border-slate-300 px-2 text-xs leading-6"
+                  className="rounded border border-line-strong px-2 text-xs leading-6"
                   data-testid="test-send"
                 >
                   {t("testSend")}
@@ -84,7 +82,7 @@ export default async function AutomationPage({
           ))}
           {preview ? (
             <div
-              className="rounded border border-sky-200 bg-sky-50 p-2 text-xs"
+              className="rounded border border-sky/40 bg-sky-soft p-2 text-xs"
               data-testid="test-preview"
             >
               <p className="font-semibold">
@@ -92,13 +90,11 @@ export default async function AutomationPage({
               </p>
               <p className="whitespace-pre-wrap">{preview.text}</p>
               {preview.missing.length ? (
-                <p className="text-rose-700">
+                <p className="text-rose">
                   {t("missing")}: {preview.missing.join(", ")}
                 </p>
               ) : null}
-              {!preview.bookingId ? (
-                <p className="text-slate-500">{t("noUpcomingBooking")}</p>
-              ) : null}
+              {!preview.bookingId ? <p className="text-muted">{t("noUpcomingBooking")}</p> : null}
             </div>
           ) : null}
           <div>
@@ -114,7 +110,7 @@ export default async function AutomationPage({
                 <span>
                   {p.title}{" "}
                   {p.killSwitch ? (
-                    <span className="rounded bg-rose-100 px-1 text-rose-800">{t("stopped")}</span>
+                    <span className="rounded bg-rose-soft px-1 text-rose">{t("stopped")}</span>
                   ) : null}
                 </span>
                 <input type="hidden" name="propertyId" value={p.id} />
@@ -141,7 +137,7 @@ export default async function AutomationPage({
                 <select
                   id="trigger"
                   name="trigger"
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  className="h-9 w-full rounded border border-line-strong px-2 text-sm"
                 >
                   {TRIGGERS.map((tr) => (
                     <option key={tr} value={tr}>
@@ -158,7 +154,7 @@ export default async function AutomationPage({
                   id="templateId"
                   name="templateId"
                   required
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  className="h-9 w-full rounded border border-line-strong px-2 text-sm"
                 >
                   {view.templates.map((tpl) => (
                     <option key={tpl.id} value={tpl.id}>
@@ -204,7 +200,7 @@ export default async function AutomationPage({
                 {view.runs.map((r) => (
                   <tr
                     key={r.id}
-                    className="border-t border-slate-100"
+                    className="border-t border-line"
                     data-testid="run-row"
                     data-state={r.state}
                   >
@@ -213,8 +209,8 @@ export default async function AutomationPage({
                     </td>
                     <td>{r.propertyTitle}</td>
                     <td>{r.state}</td>
-                    <td className="text-slate-500">{r.reason ?? ""}</td>
-                    <td className="text-slate-500">{r.executedAt.slice(0, 16)}</td>
+                    <td className="text-muted">{r.reason ?? ""}</td>
+                    <td className="text-muted">{r.executedAt.slice(0, 16)}</td>
                   </tr>
                 ))}
               </tbody>

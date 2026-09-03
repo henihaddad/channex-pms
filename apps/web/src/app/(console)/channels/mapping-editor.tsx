@@ -42,7 +42,7 @@ export function MappingEditor({
   return (
     <div className="space-y-3" data-testid="mapping-editor">
       <table className="w-full text-sm">
-        <thead className="text-xs uppercase text-slate-500">
+        <thead className="text-xs uppercase text-muted">
           <tr>
             <th className="text-start">Our rate plan</th>
             <th className="text-start">Channel room / rate</th>
@@ -54,10 +54,10 @@ export function MappingEditor({
             const row = rows.find((r) => r.ratePlanId === rp.id);
             const s = suggestions.find((x) => x.ratePlanId === rp.id);
             return (
-              <tr key={rp.id} className="border-t border-slate-100">
+              <tr key={rp.id} className="border-t border-line">
                 <td className="py-1">
                   {rp.roomTypeTitle} · {rp.title}{" "}
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-faint">
                     occ {rp.occupancy}
                     {rp.isDerived ? " · derived" : ""}
                   </span>
@@ -82,7 +82,7 @@ export function MappingEditor({
                     )}
                   </Select>
                 </td>
-                <td className="text-xs text-slate-500">
+                <td className="text-xs text-muted">
                   {s
                     ? `${Math.round(s.confidence * 100)}% · ${s.reasons.join(", ") || "name similarity"}`
                     : "—"}
@@ -94,7 +94,7 @@ export function MappingEditor({
       </table>
       {warnings.length > 0 ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800"
+          className="rounded-md border border-amber/50 bg-amber-soft p-2 text-xs text-amber-deep"
           data-testid="coverage-warnings"
         >
           {warnings.map((w) => (
@@ -102,7 +102,7 @@ export function MappingEditor({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-emerald-700">
+        <p className="text-xs text-mint-deep">
           Full coverage: every room type, rate plan and channel room is mapped.
         </p>
       )}

@@ -12,14 +12,14 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
         {v.connection.propertyTitle} · {v.connection.adapterCode}
       </PageTitle>
       <Card>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           State {v.connection.state} ·{" "}
           {v.connection.readiness.ready
             ? "ready"
             : `not ready: ${v.connection.readiness.issues.join("; ")}`}{" "}
           · Channex channel {v.connection.channexChannelId ?? "—"}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           Settings:{" "}
           {Object.entries(v.connection.settings)
             .map(([k, val]) => `${k}=${val}`)
@@ -34,8 +34,8 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
         <h2 className="mb-2 font-semibold">Events</h2>
         <ul className="text-sm">
           {v.events.map((e) => (
-            <li key={e.id} className="border-t border-slate-100 py-1">
-              <span className="me-2 text-[10px] uppercase text-slate-500">{e.severity}</span>
+            <li key={e.id} className="border-t border-line py-1">
+              <span className="me-2 text-[10px] uppercase text-muted">{e.severity}</span>
               {e.message}
             </li>
           ))}

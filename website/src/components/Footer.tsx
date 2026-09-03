@@ -48,7 +48,7 @@ export function Footer() {
     <footer className="border-t border-line bg-ink-2/60">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
-          <p className="text-lg font-bold text-white">Channex PMS</p>
+          <p className="text-lg font-bold text-white">OTAbridge</p>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-muted">
             Property management and channel manager for people who manage properties for other
             people. Fair-code, self-hostable, built on the Channex.io API.
@@ -71,8 +71,8 @@ export function Footer() {
       </div>
       <div className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-6 text-xs text-fg-muted sm:flex-row sm:items-center sm:justify-between">
-          <p>Copyright 2026 Heni Haddad and the Channex PMS contributors.</p>
-          <p>Channex PMS is a working title. Not affiliated with or endorsed by Channex.io.</p>
+          <p>Copyright 2026 Heni Haddad and the OTAbridge contributors.</p>
+          <p>Built on the Channex.io API. Not affiliated with or endorsed by Channex.io.</p>
         </div>
       </div>
     </footer>

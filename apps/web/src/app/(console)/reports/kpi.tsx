@@ -35,17 +35,17 @@ export function Kpi({
       : null;
   const body = (
     <div title={hint} data-testid={testId}>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xs text-muted">{label}</p>
       <p className="text-lg font-semibold tabular-nums">{value}</p>
       {change !== null ? (
-        <p className={`text-[10px] ${change >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+        <p className={`text-[10px] ${change >= 0 ? "text-mint-deep" : "text-rose"}`}>
           {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs previous
         </p>
       ) : null}
     </div>
   );
   return href ? (
-    <Link href={href} className="hover:bg-slate-50">
+    <Link href={href} className="hover:bg-canvas">
       {body}
     </Link>
   ) : (

@@ -65,7 +65,7 @@ export function HowItWorks() {
             │ REST + webhooks, behind a provider port
           </div>
           <div className="rounded-xl border border-mint/50 bg-mint/10 p-4 text-center">
-            <p className="font-bold text-white">Channex PMS</p>
+            <p className="font-bold text-white">OTAbridge</p>
             <p className="mt-1 text-xs text-fg-muted">
               calendar · rates · roles · turnovers · inbox · owners · booking engine · dashboards
             </p>

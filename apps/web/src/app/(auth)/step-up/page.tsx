@@ -13,7 +13,7 @@ export default async function StepUpPage({
   return (
     <Card>
       <h1 className="mb-1 text-xl font-bold">{t("stepUpTitle")}</h1>
-      <p className="mb-4 text-sm text-slate-600">{t("stepUpHint")}</p>
+      <p className="mb-4 text-sm text-muted">{t("stepUpHint")}</p>
       <StepUpForm
         next={next ?? "/"}
         labels={{ password: t("password"), submit: t("stepUpSubmit") }}

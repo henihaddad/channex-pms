@@ -49,6 +49,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- OTAbridge design system: the console, auth, owner portal, booking engine and guest surfaces
+  carry the OTAbridge name and logo mark, Bricolage Grotesque display and Manrope body type
+  (self-hosted), an ink sidebar with grouped navigation, and one palette (ink, mint, sky, amber,
+  rose) defined as Tailwind tokens in `globals.css`; every page title reads `… · OTAbridge`.
 - The queue processors, the `system` job table and the schedule moved from `apps/worker` into
   `packages/jobs/src/worker` (`handleQueueJob`, `runSystemJob`, `SCHEDULE`, `dueJobs`);
   `apps/worker` is now a BullMQ adapter around them. Processors take a `JobControl` instead of a

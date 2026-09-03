@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { currentSession } from "@/server/session";
 import { logoutAction } from "../(auth)/auth.actions";
 import { Button } from "@/components/ui";
+import { Logo } from "@/components/logo";
 
 /** The owner portal shell (spec 17 §17.5): mobile-first, the owner's own things only. */
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
@@ -22,11 +23,15 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
   ] as const;
   return (
     <div className="mx-auto max-w-3xl p-4" data-testid="owner-portal">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
-        <p className="text-sm font-bold text-emerald-700">Channex PMS · Owner</p>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+        <Logo size={26} suffix={t("portal")} />
         <nav className="flex flex-wrap gap-1 text-sm">
           {links.map(([href, label]) => (
-            <Link key={href} href={href} className="rounded px-2 py-1 hover:bg-slate-100">
+            <Link
+              key={href}
+              href={href}
+              className="rounded-md px-2 py-1 text-text hover:bg-surface"
+            >
               {label}
             </Link>
           ))}

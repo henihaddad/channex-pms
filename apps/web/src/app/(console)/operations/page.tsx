@@ -66,7 +66,7 @@ export default async function OperationsPage({
       </div>
       {board.escalations.length > 0 ? (
         <div
-          className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800"
+          className="rounded-md border border-rose/40 bg-rose-soft p-3 text-sm text-rose"
           data-testid="escalations"
         >
           {board.escalations.map((e) => (
@@ -83,16 +83,15 @@ export default async function OperationsPage({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("departures")}{" "}
-            <span className="text-xs text-slate-400">{board.departures.length}</span>
+            {t("departures")} <span className="text-xs text-faint">{board.departures.length}</span>
           </h2>
           <ul className="text-sm">
             {board.departures.map((d) => (
-              <li key={d.bookingId} className="border-t border-slate-100 py-1">
+              <li key={d.bookingId} className="border-t border-line py-1">
                 <Link href={`/reservations/${d.bookingId}`} className="hover:underline">
                   {d.propertyTitle}
                 </Link>{" "}
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted">
                   {d.unitName ?? ""} · {d.guest} · out {d.checkOutTime}
                 </span>
               </li>
@@ -101,7 +100,7 @@ export default async function OperationsPage({
         </Card>
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("turnovers")} <span className="text-xs text-slate-400">{board.tasks.length}</span>
+            {t("turnovers")} <span className="text-xs text-faint">{board.tasks.length}</span>
           </h2>
           <ul className="space-y-2 text-sm" data-testid="turnover-lane">
             {board.tasks.map((x) => {
@@ -110,7 +109,7 @@ export default async function OperationsPage({
               return (
                 <li
                   key={x.id}
-                  className={`rounded-md border p-2 ${x.isSameDay ? "border-amber-300 bg-amber-50" : "border-slate-200"}`}
+                  className={`rounded-md border p-2 ${x.isSameDay ? "border-amber/50 bg-amber-soft" : "border-line"}`}
                   data-task={x.id}
                   data-state={x.state}
                 >
@@ -118,9 +117,9 @@ export default async function OperationsPage({
                     <span className="font-medium">
                       {x.propertyTitle} · {x.unitName}
                     </span>
-                    <span className="rounded bg-slate-100 px-1.5 text-[10px]">{x.state}</span>
+                    <span className="rounded bg-canvas px-1.5 text-[10px]">{x.state}</span>
                   </div>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-muted">
                     {x.type}
                     {x.isSameDay
                       ? ` · ${t("sameDay")} · ${date === new Date().toISOString().slice(0, 10) ? (left > 0 ? t("countdown", { minutes: left }) : t("overdue")) : ""}`
@@ -130,7 +129,7 @@ export default async function OperationsPage({
                     {x.escalatedLevel ? ` · ⚠ ${x.escalatedLevel}` : ""}
                   </p>
                   {x.lastChange ? (
-                    <p className="text-[11px] text-sky-700">↻ {x.lastChange}</p>
+                    <p className="text-[11px] text-sky-deep">↻ {x.lastChange}</p>
                   ) : null}
                   <form action={assignTaskAction} className="mt-1 flex items-center gap-1">
                     <input type="hidden" name="taskId" value={x.id} />
@@ -169,15 +168,15 @@ export default async function OperationsPage({
         </Card>
         <Card>
           <h2 className="mb-2 font-semibold">
-            {t("arrivals")} <span className="text-xs text-slate-400">{board.arrivals.length}</span>
+            {t("arrivals")} <span className="text-xs text-faint">{board.arrivals.length}</span>
           </h2>
           <ul className="text-sm">
             {board.arrivals.map((a) => (
-              <li key={a.bookingId} className="border-t border-slate-100 py-1">
+              <li key={a.bookingId} className="border-t border-line py-1">
                 <Link href={`/reservations/${a.bookingId}`} className="hover:underline">
                   {a.propertyTitle}
                 </Link>{" "}
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted">
                   {a.unitName ?? ""} · {a.guest} · in {a.checkInTime} ·{" "}
                   {a.credentials > 0 ? "🔑 code issued" : "no code"} · unit {a.unitStatus ?? "?"}
                 </span>

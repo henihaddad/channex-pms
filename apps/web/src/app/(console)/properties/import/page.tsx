@@ -11,7 +11,7 @@ export default async function ImportPage() {
     <div className="space-y-6">
       <PageTitle>{t("import")}</PageTitle>
       <Card>
-        <p className="mb-3 text-sm text-slate-600">{t("importHint")}</p>
+        <p className="mb-3 text-sm text-muted">{t("importHint")}</p>
         <ImportForm templates={templates.map((x) => ({ id: x.id, name: x.name }))} />
       </Card>
     </div>

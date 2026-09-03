@@ -20,7 +20,7 @@ export const configSchema = z.object({
   SMTP_URL: z.string().optional(),
   /** HTTPS mail API (the transport Cloudflare Workers can use). */
   RESEND_API_KEY: z.string().optional(),
-  MAIL_FROM: z.string().default("Channex PMS <no-reply@otabridge.com>"),
+  MAIL_FROM: z.string().default("OTAbridge <no-reply@otabridge.com>"),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
 });
 

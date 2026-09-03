@@ -15,7 +15,7 @@ export default async function OrganizationPage() {
           org={org}
           labels={{ name: t("name"), locale: t("locale"), save: t("save"), saved: t("saved") }}
         />
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-muted">
           /{org.slug} · {org.country} · {org.defaultCurrency} · {org.state}
         </p>
       </Card>

@@ -50,7 +50,7 @@ export default async function AnnouncementsPage() {
               id="body"
               name="body"
               rows={2}
-              className="w-full rounded border border-slate-300 p-2 text-sm"
+              className="w-full rounded border border-line-strong p-2 text-sm"
               required
             />
           </div>

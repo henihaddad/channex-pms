@@ -14,28 +14,25 @@ export default async function TemplatesPage() {
       <PageTitle>{t("templates")}</PageTitle>
       <div className="grid grid-cols-2 gap-4">
         <Card>
-          {templates.length === 0 ? (
-            <p className="text-sm text-slate-500">{t("noTemplates")}</p>
-          ) : null}
+          {templates.length === 0 ? <p className="text-sm text-muted">{t("noTemplates")}</p> : null}
           {templates.map((tpl) => (
             <div
               key={tpl.id}
-              className="border-t border-slate-100 py-2 text-sm"
+              className="border-t border-line py-2 text-sm"
               data-testid="template-row"
             >
               <p className="font-medium">
-                {tpl.name}{" "}
-                <span className="rounded bg-slate-100 px-1 text-[10px]">{tpl.locale}</span>{" "}
-                <span className="text-xs text-slate-500">{tpl.category}</span>
+                {tpl.name} <span className="rounded bg-canvas px-1 text-[10px]">{tpl.locale}</span>{" "}
+                <span className="text-xs text-muted">{tpl.category}</span>
                 {tpl.channelScope ? (
-                  <span className="ms-1 text-xs text-slate-500">
+                  <span className="ms-1 text-xs text-muted">
                     ({tpl.channelScope.map((c) => PROVIDER_LABELS[c] ?? c).join(", ")})
                   </span>
                 ) : null}
               </p>
-              <p className="whitespace-pre-wrap text-xs text-slate-600">{tpl.body}</p>
+              <p className="whitespace-pre-wrap text-xs text-muted">{tpl.body}</p>
               {tpl.warnings.length ? (
-                <p className="text-xs text-amber-800" data-testid="promo-warning">
+                <p className="text-xs text-amber-deep" data-testid="promo-warning">
                   ⚠ {tpl.warnings.join("; ")}
                 </p>
               ) : null}
@@ -70,10 +67,10 @@ export default async function TemplatesPage() {
                 name="body"
                 rows={6}
                 required
-                className="w-full rounded border border-slate-300 p-2 text-sm"
+                className="w-full rounded border border-line-strong p-2 text-sm"
               />
             </div>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-muted">
               {t("variables")}: {TEMPLATE_VARIABLES.map((v) => `{{${v}}}`).join(" ")}
             </p>
             <Button type="submit" data-testid="save-template">

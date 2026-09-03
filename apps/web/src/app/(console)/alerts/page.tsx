@@ -23,18 +23,18 @@ export default async function AlertsPage({
           <Link
             key={s}
             href={`/alerts?state=${s}`}
-            className={`rounded px-2 py-1 ${(sp.state ?? "open") === s ? "bg-slate-200 font-semibold" : "hover:bg-slate-100"}`}
+            className={`rounded px-2 py-1 ${(sp.state ?? "open") === s ? "bg-line font-semibold" : "hover:bg-canvas"}`}
           >
             {t(`states.${s}`)}
           </Link>
         ))}
       </div>
       <Card>
-        {v.rows.length === 0 ? <p className="text-sm text-slate-500">{t("empty")}</p> : null}
+        {v.rows.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
         {v.rows.map((a) => (
           <div
             key={a.id}
-            className="flex items-start justify-between gap-2 border-t border-slate-100 py-2 text-sm"
+            className="flex items-start justify-between gap-2 border-t border-line py-2 text-sm"
             data-testid="alert-item"
             data-type={a.type}
             data-state={a.state}
@@ -42,19 +42,19 @@ export default async function AlertsPage({
             <div>
               <p>
                 <span
-                  className={`me-1 rounded px-1 text-xs ${a.severity === "critical" ? "bg-rose-100 text-rose-800" : a.severity === "warning" ? "bg-amber-100 text-amber-800" : "bg-slate-100"}`}
+                  className={`me-1 rounded px-1 text-xs ${a.severity === "critical" ? "bg-rose-soft text-rose" : a.severity === "warning" ? "bg-amber-soft text-amber-deep" : "bg-canvas"}`}
                 >
                   {a.severity}
                 </span>
                 <Link className="underline" href={a.link}>
                   {a.title}
                 </Link>
-                <span className="ms-2 text-xs text-slate-500">
+                <span className="ms-2 text-xs text-muted">
                   {a.raisedOn} · {a.type}
                   {noisy.has(a.type as AlertType) ? ` · ${t("noisy")}` : ""}
                 </span>
               </p>
-              <p className="text-xs text-slate-600">{a.detail}</p>
+              <p className="text-xs text-muted">{a.detail}</p>
             </div>
             {a.state === "open" || a.state === "acknowledged" ? (
               <div className="flex gap-1">

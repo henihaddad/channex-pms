@@ -27,8 +27,8 @@ const faqs = [
     a: "TypeScript throughout. A full-stack Next.js app for the console, booking engine, portals and API, a plain Node worker on BullMQ for the sync engine, PostgreSQL and Redis. All domain logic lives in a framework-free core package shared by both.",
   },
   {
-    q: "Why the name Channex PMS?",
-    a: "It is a working title, and it borrows a trademark, so it will change before the public launch. This project is not affiliated with or endorsed by Channex.io.",
+    q: "Why the name OTAbridge?",
+    a: "It is the bridge between your properties and the online travel agencies: your calendar and rates on one side, Airbnb, Booking.com, Expedia and your own site on the other. Connectivity runs on the Channex.io API; this project is not affiliated with or endorsed by Channex.io.",
   },
 ];
 

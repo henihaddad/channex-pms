@@ -38,7 +38,7 @@ export default async function BookingEngineIndexPage() {
       <PageTitle>{t("index")}</PageTitle>
       <Card>
         <table className="w-full text-sm" data-testid="engine-index">
-          <thead className="text-start text-xs text-slate-500">
+          <thead className="text-start text-xs text-muted">
             <tr>
               <th className="text-start">{t("property")}</th>
               <th className="text-start">{t("state")}</th>
@@ -65,7 +65,7 @@ export default async function BookingEngineIndexPage() {
             ))}
           </tbody>
         </table>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-muted">
           Commission saved assumes a 15 % OTA rate on the same revenue.
         </p>
       </Card>

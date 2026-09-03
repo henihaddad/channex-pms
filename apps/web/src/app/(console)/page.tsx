@@ -39,15 +39,15 @@ export default async function DashboardPage({
     <div className="space-y-4" data-testid="dashboard" data-role={d.role}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm text-slate-500">{t("welcome", { name: orgs[0]?.name ?? "" })}</h2>
+          <h2 className="text-sm text-muted">{t("welcome", { name: orgs[0]?.name ?? "" })}</h2>
           <PageTitle>{t(`titles.${d.role}`)}</PageTitle>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-muted">
           <form className="flex items-center gap-1">
             <select
               name="property"
               defaultValue={sp.property ?? ""}
-              className="h-7 rounded border border-slate-300 px-1"
+              className="h-7 rounded border border-line-strong px-1"
             >
               <option value="">{t("allProperties")}</option>
               {d.properties.map((p) => (
@@ -187,7 +187,7 @@ export default async function DashboardPage({
           <Card className="text-sm" data-testid="action-queue">
             <p className="mb-1 font-medium">{t("actionQueue")}</p>
             {queue.filter(([, n]) => n > 0).length === 0 ? (
-              <p className="text-xs text-slate-500">{t("queueEmpty")}</p>
+              <p className="text-xs text-muted">{t("queueEmpty")}</p>
             ) : null}
             {queue
               .filter(([, n]) => n > 0)
@@ -195,19 +195,21 @@ export default async function DashboardPage({
                 <Link
                   key={k}
                   href={href}
-                  className="flex justify-between border-t border-slate-100 py-1 text-xs hover:bg-slate-50"
+                  className="flex justify-between border-t border-line py-1 text-xs hover:bg-canvas"
                 >
                   <span>{t(`queue.${k}`)}</span>
-                  <span className="rounded bg-rose-100 px-1.5 text-rose-800">{n}</span>
+                  <span className="rounded bg-rose-soft px-1.5 text-rose">{n}</span>
                 </Link>
               ))}
             {d.inbox.needsReply > 0 ? (
               <Link
                 href="/inbox"
-                className="flex justify-between border-t border-slate-100 py-1 text-xs hover:bg-slate-50"
+                className="flex justify-between border-t border-line py-1 text-xs hover:bg-canvas"
               >
                 <span>{t("queue.needsReply")}</span>
-                <span className="rounded bg-sky-100 px-1.5 text-sky-800">{d.inbox.needsReply}</span>
+                <span className="rounded bg-sky-soft px-1.5 text-sky-deep">
+                  {d.inbox.needsReply}
+                </span>
               </Link>
             ) : null}
           </Card>
@@ -218,7 +220,7 @@ export default async function DashboardPage({
             {d.next7.map((n) => (
               <div key={n.date} className="flex-1 text-center text-[10px]">
                 <div
-                  className={`mx-auto h-16 w-full rounded ${n.occupancyBps === null ? "bg-slate-100" : (n.occupancyBps ?? 0) < 4000 ? "bg-rose-200" : (n.occupancyBps ?? 0) < 7000 ? "bg-amber-200" : "bg-emerald-300"}`}
+                  className={`mx-auto h-16 w-full rounded ${n.occupancyBps === null ? "bg-canvas" : (n.occupancyBps ?? 0) < 4000 ? "bg-rose/30" : (n.occupancyBps ?? 0) < 7000 ? "bg-amber/40" : "bg-mint/50"}`}
                   style={{ opacity: 0.4 + ((n.occupancyBps ?? 0) / 10000) * 0.6 }}
                   title={`${n.date}: ${pct(n.occupancyBps)}`}
                 />
@@ -227,7 +229,7 @@ export default async function DashboardPage({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-muted">
             {t("channelMix")}:{" "}
             {d.month.channels
               .map((c) => `${c.channel} ${pct(c.nightShareBps)}${c.commissionEstimated ? "*" : ""}`)
@@ -240,16 +242,16 @@ export default async function DashboardPage({
               {t("alerts")}
             </Link>
           </p>
-          {d.alerts.length === 0 ? <p className="text-xs text-slate-500">{t("noAlerts")}</p> : null}
+          {d.alerts.length === 0 ? <p className="text-xs text-muted">{t("noAlerts")}</p> : null}
           {d.alerts.map((a) => (
             <Link
               key={a.id}
               href={a.link}
-              className="block border-t border-slate-100 py-1 text-xs hover:bg-slate-50"
+              className="block border-t border-line py-1 text-xs hover:bg-canvas"
               data-testid="alert-row"
             >
               <span
-                className={`me-1 rounded px-1 ${a.severity === "critical" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}
+                className={`me-1 rounded px-1 ${a.severity === "critical" ? "bg-rose-soft text-rose" : "bg-amber-soft text-amber-deep"}`}
               >
                 {a.severity}
               </span>
@@ -263,7 +265,7 @@ export default async function DashboardPage({
         <Card>
           <p className="mb-1 text-sm font-medium">{t("league")}</p>
           <table className="w-full text-xs" data-testid="league-table">
-            <thead className="text-slate-500">
+            <thead className="text-muted">
               <tr>
                 <th className="text-start">{t("property")}</th>
                 <th className="text-end">{d.dictionary.occupancy.name}</th>
@@ -277,7 +279,7 @@ export default async function DashboardPage({
               {d.league.map((p) => (
                 <tr
                   key={p.propertyId}
-                  className="border-t border-slate-100"
+                  className="border-t border-line"
                   data-testid="league-row"
                   data-outlier={p.outlier ? "1" : "0"}
                 >
@@ -286,7 +288,7 @@ export default async function DashboardPage({
                       {p.title}
                     </Link>
                     {p.outlier ? (
-                      <span className="ms-1 rounded bg-rose-100 px-1 text-rose-800">
+                      <span className="ms-1 rounded bg-rose-soft px-1 text-rose">
                         {t("outlier")}
                       </span>
                     ) : null}
@@ -297,7 +299,7 @@ export default async function DashboardPage({
                   <td className="text-end tabular-nums">
                     {money(p.kpi.roomRevenueMinor, p.currency)}
                   </td>
-                  <td className="text-end tabular-nums text-slate-500">
+                  <td className="text-end tabular-nums text-muted">
                     {p.budgetRoomRevenueMinor === null
                       ? "—"
                       : money(p.budgetRoomRevenueMinor, p.currency)}
@@ -321,13 +323,13 @@ export default async function DashboardPage({
         <Card className="text-sm">
           <p className="mb-1 font-medium">{t("recentBookings")}</p>
           {d.board.recentBookings.length === 0 ? (
-            <p className="text-xs text-slate-500">{t("noRecent")}</p>
+            <p className="text-xs text-muted">{t("noRecent")}</p>
           ) : null}
           {d.board.recentBookings.map((b) => (
             <Link
               key={b.id}
               href={`/reservations/${b.id}`}
-              className="block border-t border-slate-100 py-1 text-xs hover:bg-slate-50"
+              className="block border-t border-line py-1 text-xs hover:bg-canvas"
             >
               {b.createdAt.slice(11, 16)} · {b.propertyTitle} · {b.channel} · {b.arrivalDate} →{" "}
               {b.departureDate} · {money(b.totalMinor, b.currency)}

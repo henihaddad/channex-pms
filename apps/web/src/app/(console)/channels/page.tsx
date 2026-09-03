@@ -12,12 +12,12 @@ import {
 import { AirbnbImport } from "./airbnb-import";
 
 const tone: Record<string, string> = {
-  active: "bg-emerald-100 text-emerald-800",
-  paused: "bg-slate-100 text-slate-700",
-  error: "bg-rose-100 text-rose-800",
-  mapped: "bg-sky-100 text-sky-800",
-  testing: "bg-sky-100 text-sky-800",
-  draft: "bg-slate-100 text-slate-600",
+  active: "bg-mint-soft text-mint-deep",
+  paused: "bg-canvas text-text",
+  error: "bg-rose-soft text-rose",
+  mapped: "bg-sky-soft text-sky-deep",
+  testing: "bg-sky-soft text-sky-deep",
+  draft: "bg-canvas text-muted",
 };
 
 export default async function ChannelsPage() {
@@ -40,14 +40,12 @@ export default async function ChannelsPage() {
       </div>
       <Card>
         <h2 className="mb-2 font-semibold">{t("health")}</h2>
-        {board.connections.length === 0 ? (
-          <p className="text-sm text-slate-500">{t("empty")}</p>
-        ) : null}
+        {board.connections.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
         <div className="grid gap-3 md:grid-cols-2" data-testid="health-board">
           {board.connections.map((c) => (
             <div
               key={c.id}
-              className={`rounded-lg border p-3 text-sm ${c.state === "error" || c.openP1 > 0 ? "border-rose-300" : !c.ready ? "border-amber-300" : "border-slate-200"}`}
+              className={`rounded-lg border p-3 text-sm ${c.state === "error" || c.openP1 > 0 ? "border-rose/40" : !c.ready ? "border-amber/50" : "border-line"}`}
               data-state={c.state}
             >
               <div className="flex items-center justify-between">
@@ -58,11 +56,11 @@ export default async function ChannelsPage() {
                   {c.state}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs text-muted">
                 {c.ready ? "Ready" : `Not ready: ${c.readiness.issues.join("; ") || "unknown"}`}
                 {c.lastError ? ` · ${c.lastError}` : ""}
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted">
                 Pending {c.pendingCells} · failed {c.failedCells} · last push{" "}
                 {c.lastPushAt ?? "never"} · bookings 7d/30d {c.bookings7d}/{c.bookings30d} ·
                 unmapped {c.unmappedBookings} · open P1/P2 {c.openP1}/{c.openP2}
@@ -97,16 +95,16 @@ export default async function ChannelsPage() {
       </Card>
       <Card>
         <h2 className="mb-2 font-semibold">{t("events")}</h2>
-        {board.events.length === 0 ? <p className="text-sm text-slate-500">—</p> : null}
+        {board.events.length === 0 ? <p className="text-sm text-muted">—</p> : null}
         <ul className="space-y-1 text-sm">
           {board.events.map((e) => (
             <li
               key={e.id}
-              className="flex items-start justify-between gap-2 border-t border-slate-100 py-1"
+              className="flex items-start justify-between gap-2 border-t border-line py-1"
             >
               <span>
                 <span
-                  className={`me-2 rounded px-1.5 text-[10px] uppercase ${e.severity === "p1" ? "bg-rose-100 text-rose-800" : e.severity === "p2" ? "bg-amber-100 text-amber-800" : "bg-slate-100"}`}
+                  className={`me-2 rounded px-1.5 text-[10px] uppercase ${e.severity === "p1" ? "bg-rose-soft text-rose" : e.severity === "p2" ? "bg-amber-soft text-amber-deep" : "bg-canvas"}`}
                 >
                   {e.severity}
                 </span>
@@ -122,12 +120,12 @@ export default async function ChannelsPage() {
       </Card>
       <Card>
         <h2 className="mb-2 font-semibold">{t("accounts")}</h2>
-        {board.accounts.length === 0 ? <p className="text-sm text-slate-500">—</p> : null}
+        {board.accounts.length === 0 ? <p className="text-sm text-muted">—</p> : null}
         <ul className="space-y-2 text-sm" data-testid="accounts">
           {board.accounts.map((a) => (
-            <li key={a.id} className="border-t border-slate-100 py-2">
+            <li key={a.id} className="border-t border-line py-2">
               <span className="font-medium">{a.label}</span>{" "}
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted">
                 · {a.adapterCode} · {a.state} · token{" "}
                 {a.oauthExpiresAt ? `expires ${a.oauthExpiresAt.slice(0, 10)}` : "n/a"}
               </span>

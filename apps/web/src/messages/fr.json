@@ -1,7 +1,13 @@
 {
   "app": {
-    "name": "Channex PMS",
-    "tagline": "La gestion locative pour ceux qui gèrent les biens des autres."
+    "name": "OTAbridge",
+    "tagline": "La gestion locative pour ceux qui gèrent les biens des autres.",
+    "claim": "Chaque nuit, sur chaque canal, depuis un seul bureau.",
+    "claimBody": "Tarifs, disponibilités et réservations restent justes sur Airbnb, Booking.com et votre propre site, et les personnes qui nettoient, accueillent et possèdent les logements voient exactement ce dont elles ont besoin.",
+    "fact1": "Les tarifs et disponibilités locaux font foi ; les canaux les reflètent",
+    "fact2": "Des relevés propriétaires justes au centime, chaque mois",
+    "fact3": "Des réservations directes sans commission, sur votre domaine",
+    "footer": "Logiciel fair-code. Hébergez-le vous-même ou laissez-nous le faire."
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -24,7 +30,13 @@
     "bookingEngine": "Réservations directes",
     "billing": "Facturation",
     "plugins": "Extensions",
-    "support": "Support"
+    "support": "Support",
+    "groups": {
+      "today": "Aujourd'hui",
+      "portfolio": "Portefeuille",
+      "insight": "Analyse",
+      "settings": "Paramètres"
+    }
   },
   "auth": {
     "signIn": "Se connecter",
@@ -524,7 +536,8 @@
       "maintenance": "Maintenance",
       "reviews": "Avis",
       "documents": "Documents",
-      "signOut": "Déconnexion"
+      "signOut": "Déconnexion",
+      "portal": "Propriétaire"
     },
     "welcome": "Bonjour, {name}",
     "thisMonth": "This month",
@@ -663,7 +676,7 @@
     "reference": "Référence",
     "confirmedHint": "Une confirmation avec un fichier calendrier et le lien de votre espace client est en route vers {email}.",
     "portal": "Ouvrir l'espace client",
-    "poweredBy": "Moteur de réservation Channex PMS",
+    "poweredBy": "Moteur de réservation OTAbridge",
     "chargeCurrency": "Vous serez débité en {currency}.",
     "embed": "Intégrer",
     "policy": "Conditions d'annulation",

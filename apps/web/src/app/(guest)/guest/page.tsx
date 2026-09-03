@@ -27,7 +27,7 @@ export default async function GuestPortalPage({
     return (
       <Card>
         <h1 className="text-xl font-bold">{t("title")}</h1>
-        <p className="mt-2 text-sm text-slate-600" data-testid="guest-link-required">
+        <p className="mt-2 text-sm text-muted" data-testid="guest-link-required">
           {sp.error ? t("linkInvalid") : t("linkRequired")}
         </p>
       </Card>
@@ -42,11 +42,11 @@ export default async function GuestPortalPage({
     <div className="space-y-4" data-testid="guest-stay" data-status={p.status}>
       <header>
         <h1 className="text-2xl font-bold">{p.property.title}</h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           {p.arrivalDate} → {p.departureDate} · {t("nights", { count: p.nights })} ·{" "}
           {t("reference")} <strong>{p.reference}</strong> · {t("status")}: {p.status}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted">
           {Object.values(p.property.address).filter(Boolean).join(", ")} · {p.property.checkInTime}{" "}
           / {p.property.checkOutTime}
         </p>
@@ -61,15 +61,15 @@ export default async function GuestPortalPage({
         {p.access.state === "revealed" ? (
           <p className="mt-1 text-sm">
             {t("accessCode")}:{" "}
-            <code className="rounded bg-slate-100 px-2 py-0.5 text-lg" data-testid="door-code">
+            <code className="rounded bg-canvas px-2 py-0.5 text-lg" data-testid="door-code">
               {p.access.code}
             </code>
-            <span className="ms-2 text-xs text-slate-500">
+            <span className="ms-2 text-xs text-muted">
               {t("accessValid", { from: p.access.validFrom, to: p.access.validTo })}
             </span>
           </p>
         ) : p.access.state === "hidden" ? (
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-muted">
             {t("accessHidden", { time: p.access.opensAt.slice(0, 16).replace("T", " ") + " UTC" })}
           </p>
         ) : null}
@@ -84,7 +84,7 @@ export default async function GuestPortalPage({
         <Card>
           <h2 className="font-semibold">{t("preCheckin")}</h2>
           {p.preCheckin.completedAt ? (
-            <p className="text-xs text-emerald-700" data-testid="precheckin-done">
+            <p className="text-xs text-mint-deep" data-testid="precheckin-done">
               {t("preCheckinDone", { time: p.preCheckin.completedAt.slice(0, 16) })}
             </p>
           ) : null}
@@ -112,7 +112,7 @@ export default async function GuestPortalPage({
                 id="guests"
                 name="guests"
                 rows={2}
-                className="w-full rounded border border-slate-300 p-2 text-sm"
+                className="w-full rounded border border-line-strong p-2 text-sm"
                 defaultValue={p.preCheckin.guests.map((g) => `${g.name} ${g.surname}`).join("\n")}
               />
             </div>
@@ -136,7 +136,7 @@ export default async function GuestPortalPage({
                 <td className="text-end">{money(l.amountMinor, cur)}</td>
               </tr>
             ))}
-            <tr className="border-t border-slate-200 font-semibold">
+            <tr className="border-t border-line font-semibold">
               <td>{t("balance")}</td>
               <td className="text-end" data-testid="guest-balance">
                 {money(p.folio.balanceMinor, cur)}
@@ -180,7 +180,7 @@ export default async function GuestPortalPage({
               data-direction={m.direction}
               className={m.direction === "inbound" ? "text-end" : ""}
             >
-              <span className="rounded bg-slate-100 px-2 py-1">{m.body}</span>
+              <span className="rounded bg-canvas px-2 py-1">{m.body}</span>
             </li>
           ))}
         </ul>
@@ -216,7 +216,7 @@ export default async function GuestPortalPage({
               </Button>
             </form>
           ) : (
-            <p className="mt-1 text-sm text-slate-600">{t("cancelNotAllowed")}</p>
+            <p className="mt-1 text-sm text-muted">{t("cancelNotAllowed")}</p>
           )}
         </Card>
       ) : null}

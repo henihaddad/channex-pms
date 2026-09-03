@@ -55,11 +55,11 @@ const COL_W = 72;
 const ROW_H = 30;
 const LABEL_W = 240;
 const DOT: Record<SyncState, string> = {
-  pending: "bg-slate-400",
-  in_flight: "bg-sky-500",
-  synced: "bg-emerald-500",
-  failed: "bg-rose-500",
-  conflicted: "bg-amber-500",
+  pending: "bg-faint",
+  in_flight: "bg-sky",
+  synced: "bg-mint",
+  failed: "bg-rose",
+  conflicted: "bg-amber",
 };
 
 function addDays(iso: string, n: number): string {
@@ -494,7 +494,7 @@ export function CalendarGrid({
           </Button>
         ))}
         <select
-          className="h-8 rounded-md border border-slate-300 px-2"
+          className="h-8 rounded-md border border-line-strong px-2"
           value={groupId}
           onChange={(e) => setGroupId(e.target.value)}
         >
@@ -515,10 +515,10 @@ export function CalendarGrid({
         </Button>
         {selection && selectedPlans.length > 0 ? (
           <div
-            className="flex flex-wrap items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1"
+            className="flex flex-wrap items-center gap-1 rounded-md border border-line bg-white px-2 py-1"
             data-testid="range-toolbar"
           >
-            <span className="text-xs text-slate-500">{rangeCells(selection).length} cells</span>
+            <span className="text-xs text-muted">{rangeCells(selection).length} cells</span>
             <Button
               variant="secondary"
               className="h-7 px-2 text-xs"
@@ -589,19 +589,19 @@ export function CalendarGrid({
             </Button>
           </div>
         ) : null}
-        <span className="ms-auto text-xs text-slate-500" data-testid="grid-stats">
+        <span className="ms-auto text-xs text-muted" data-testid="grid-stats">
           {rows.length} rows · {dates.length} days
           {loadMs !== null ? ` · loaded in ${loadMs} ms` : ""}
         </span>
       </div>
       {message ? (
-        <p className="text-xs text-slate-600" role="status">
+        <p className="text-xs text-muted" role="status">
           {message}
         </p>
       ) : null}
       {conflict ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"
+          className="rounded-md border border-amber/50 bg-amber-soft p-3 text-sm"
           role="alertdialog"
           data-testid="conflict"
         >
@@ -643,17 +643,17 @@ export function CalendarGrid({
       ) : null}
       {bulk.open && bulk.preview ? (
         <div
-          className="rounded-md border border-slate-300 bg-white p-3 text-sm"
+          className="rounded-md border border-line-strong bg-white p-3 text-sm"
           data-testid="bulk-preview"
         >
           <p className="font-medium">Dry run: {bulk.preview.cellCount} cells would change.</p>
           {bulk.preview.warnings.map((w) => (
-            <p key={w} className="text-xs text-amber-700">
+            <p key={w} className="text-xs text-amber-deep">
               {w}
             </p>
           ))}
           {bulk.preview.blocked.map((w) => (
-            <p key={w} className="text-xs text-rose-700">
+            <p key={w} className="text-xs text-rose">
               Blocked: {w}
             </p>
           ))}
@@ -665,7 +665,7 @@ export function CalendarGrid({
             >
               Close
             </Button>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted">
               Re-run the operation from the toolbar to apply; the preview is mandatory (BULK-1).
             </span>
           </div>
@@ -673,7 +673,7 @@ export function CalendarGrid({
       ) : null}
       <div
         ref={parentRef}
-        className="relative h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white outline-none"
+        className="relative h-[70vh] overflow-auto rounded-lg border border-line bg-white outline-none"
         tabIndex={0}
         onKeyDown={(e) => void onKeyDown(e)}
         data-testid="grid-scroller"
@@ -685,9 +685,9 @@ export function CalendarGrid({
             position: "relative",
           }}
         >
-          <div className="sticky top-0 z-20 flex bg-slate-50" style={{ height: ROW_H }}>
+          <div className="sticky top-0 z-20 flex bg-canvas" style={{ height: ROW_H }}>
             <div
-              className="sticky start-0 z-30 border-e border-slate-200 bg-slate-50"
+              className="sticky start-0 z-30 border-e border-line bg-canvas"
               style={{ width: LABEL_W }}
             />
             {colVirtualizer.getVirtualItems().map((col) => {
@@ -696,12 +696,10 @@ export function CalendarGrid({
               return (
                 <div
                   key={col.key}
-                  className={`absolute top-0 border-e border-slate-100 px-1 text-center text-[10px] leading-tight ${wd === 0 || wd === 6 ? "bg-slate-100" : ""}`}
+                  className={`absolute top-0 border-e border-line px-1 text-center text-[10px] leading-tight ${wd === 0 || wd === 6 ? "bg-canvas" : ""}`}
                   style={{ left: LABEL_W + col.start, width: COL_W, height: ROW_H }}
                 >
-                  <div className="text-slate-400">
-                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][wd]}
-                  </div>
+                  <div className="text-faint">{["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][wd]}</div>
                   <div>{d.slice(5)}</div>
                 </div>
               );
@@ -717,12 +715,12 @@ export function CalendarGrid({
                 data-row-kind={row.kind}
               >
                 <div
-                  className={`sticky start-0 z-10 flex items-center gap-1 truncate border-e border-b border-slate-100 bg-white px-2 text-xs ${row.kind === "property" ? "font-semibold" : row.kind === "room_type" ? "ps-4 text-slate-700" : "ps-7 text-slate-600"}`}
+                  className={`sticky start-0 z-10 flex items-center gap-1 truncate border-e border-b border-line bg-white px-2 text-xs ${row.kind === "property" ? "font-semibold" : row.kind === "room_type" ? "ps-4 text-text" : "ps-7 text-muted"}`}
                   style={{ width: LABEL_W }}
                 >
                   {row.kind !== "rate_plan" ? (
                     <button
-                      className="w-4 text-slate-400"
+                      className="w-4 text-faint"
                       onClick={() =>
                         setCollapsed((s) => {
                           const n = new Set(s);
@@ -746,10 +744,10 @@ export function CalendarGrid({
                         : row.ratePlan.title}
                   </span>
                   {row.kind === "rate_plan" && row.derived ? (
-                    <span className="rounded bg-slate-100 px-1 text-[10px]">derived</span>
+                    <span className="rounded bg-canvas px-1 text-[10px]">derived</span>
                   ) : null}
                   {row.kind === "property" ? (
-                    <span className="ms-auto text-[10px] text-slate-400">{row.property.state}</span>
+                    <span className="ms-auto text-[10px] text-faint">{row.property.state}</span>
                   ) : null}
                 </div>
                 {colVirtualizer.getVirtualItems().map((col) => {
@@ -763,7 +761,7 @@ export function CalendarGrid({
                     c >= selection.c1 &&
                     c <= selection.c2;
                   const focused = focus?.r === r && focus.c === c;
-                  const common = `absolute border-e border-b border-slate-100 text-[11px] ${selected ? "bg-emerald-50" : ""} ${focused ? "ring-2 ring-inset ring-emerald-500" : ""}`;
+                  const common = `absolute border-e border-b border-line text-[11px] ${selected ? "bg-mint-soft" : ""} ${focused ? "ring-2 ring-inset ring-mint" : ""}`;
                   const style = { left: LABEL_W + col.start, width: COL_W, height: ROW_H };
                   const click = (e: React.MouseEvent) => {
                     setFocus({ r, c });
@@ -778,7 +776,7 @@ export function CalendarGrid({
                     return (
                       <div
                         key={col.key}
-                        className={`${common} flex items-center justify-center bg-slate-50/60 ${av && av[1] <= 0 ? "text-rose-600" : "text-slate-500"}`}
+                        className={`${common} flex items-center justify-center bg-canvas/60 ${av && av[1] <= 0 ? "text-rose" : "text-muted"}`}
                         style={style}
                         onClick={click}
                       >
@@ -791,7 +789,7 @@ export function CalendarGrid({
                     return (
                       <div
                         key={col.key}
-                        className={`${common} flex items-center justify-between px-1 ${av && av[1] < 0 ? "bg-rose-50 text-rose-700" : ""}`}
+                        className={`${common} flex items-center justify-between px-1 ${av && av[1] < 0 ? "bg-rose-soft text-rose" : ""}`}
                         style={style}
                         onClick={click}
                       >
@@ -811,7 +809,7 @@ export function CalendarGrid({
                   return (
                     <div
                       key={col.key}
-                      className={`${common} flex flex-col justify-center px-1 ${cell?.[1].stopSell ? "bg-rose-50" : ""} ${row.derived ? "text-slate-400" : ""}`}
+                      className={`${common} flex flex-col justify-center px-1 ${cell?.[1].stopSell ? "bg-rose-soft" : ""} ${row.derived ? "text-faint" : ""}`}
                       style={style}
                       onClick={click}
                       onDoubleClick={() => {
@@ -845,7 +843,7 @@ export function CalendarGrid({
                             ) : null}
                           </div>
                           {cell && badges(cell[1]).length > 0 ? (
-                            <div className="truncate text-[9px] text-slate-500">
+                            <div className="truncate text-[9px] text-muted">
                               {badges(cell[1]).join(" ")}
                             </div>
                           ) : null}
@@ -859,7 +857,7 @@ export function CalendarGrid({
           })}
         </div>
       </div>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-faint">
         Arrows move · type a number then Enter to set the rate · Shift+arrows select a range ·
         Ctrl/Cmd+Z undo · dot: grey pending, blue in flight, green synced, red failed, amber drift
       </p>

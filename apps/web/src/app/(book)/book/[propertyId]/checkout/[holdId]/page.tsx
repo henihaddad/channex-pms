@@ -38,7 +38,7 @@ export default async function CheckoutPage({
     <div className="space-y-6">
       {sp.embed ? <EmbedResizer /> : null}
       <h1 className="text-2xl font-bold">{t("checkoutTitle")}</h1>
-      <p className="text-sm text-slate-600" data-testid="hold-until">
+      <p className="text-sm text-muted" data-testid="hold-until">
         {expired
           ? t("holdExpired")
           : t("holdUntil", { time: new Date(hold.expiresAt).toUTCString().slice(17, 22) + " UTC" })}
@@ -46,7 +46,7 @@ export default async function CheckoutPage({
         {hold.arrivalDate} → {hold.departureDate} · {q.nights}{" "}
         {q.nights === 1 ? t("night") : t("nights")}
       </p>
-      <section aria-labelledby="quote-title" className="rounded-lg border border-slate-200 p-3">
+      <section aria-labelledby="quote-title" className="rounded-lg border border-line p-3">
         <h2 id="quote-title" className="mb-2 font-semibold">
           {t("quote")}
         </h2>
@@ -58,7 +58,7 @@ export default async function CheckoutPage({
                 <td className="text-end">{money(minor, cur)}</td>
               </tr>
             ))}
-            <tr className="border-t border-slate-200 font-semibold">
+            <tr className="border-t border-line font-semibold">
               <td>{t("total")}</td>
               <td className="text-end" data-testid="quote-total">
                 {money(q.totalMinor, cur)}
@@ -74,7 +74,7 @@ export default async function CheckoutPage({
             </tr>
           </tbody>
         </table>
-        <p className="mt-1 text-xs text-slate-500">{t("chargeCurrency", { currency: cur })}</p>
+        <p className="mt-1 text-xs text-muted">{t("chargeCurrency", { currency: cur })}</p>
       </section>
       {!expired ? (
         <CheckoutForm

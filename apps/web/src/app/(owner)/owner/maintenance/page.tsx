@@ -9,15 +9,11 @@ export default async function OwnerMaintenance() {
   return (
     <div className="space-y-4">
       <PageTitle>{t("nav.maintenance")}</PageTitle>
-      <p className="text-sm text-slate-600">{t("maintenanceHint")}</p>
+      <p className="text-sm text-muted">{t("maintenanceHint")}</p>
       <Card className="text-sm">
-        {v.issues.length === 0 ? <p className="text-xs text-slate-500">{t("noIssues")}</p> : null}
+        {v.issues.length === 0 ? <p className="text-xs text-muted">{t("noIssues")}</p> : null}
         {v.issues.map((i) => (
-          <p
-            key={i.id}
-            className="border-t border-slate-100 py-1 text-xs"
-            data-testid="owner-issue"
-          >
+          <p key={i.id} className="border-t border-line py-1 text-xs" data-testid="owner-issue">
             {i.createdAt.slice(0, 10)} · {i.propertyTitle} · {i.severity} · {i.description} ·{" "}
             {i.state}
             {i.rebilled ? " · billed to you" : ""}
@@ -39,7 +35,7 @@ export default async function OwnerMaintenance() {
             rows={3}
             required
             placeholder={t("describe")}
-            className="w-full rounded border border-slate-300 p-2 text-sm"
+            className="w-full rounded border border-line-strong p-2 text-sm"
             data-testid="issue-description"
           />
           <Button type="submit" data-testid="raise-issue">

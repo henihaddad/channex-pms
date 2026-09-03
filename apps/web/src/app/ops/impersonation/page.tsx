@@ -45,7 +45,7 @@ export default async function ImpersonationPage({
           {rows.map((r) => (
             <li
               key={r.id}
-              className="rounded border border-slate-200 p-2"
+              className="rounded border border-line p-2"
               data-testid="impersonation-row"
               data-state={r.state}
             >

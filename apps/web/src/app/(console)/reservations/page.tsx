@@ -52,7 +52,7 @@ export default async function ReservationsPage({
           <Link
             key={v}
             href={`/reservations?view=${v}`}
-            className={`rounded-full border px-3 py-1 ${sp.view === v ? "border-emerald-600 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white"}`}
+            className={`rounded-full border px-3 py-1 ${sp.view === v ? "border-mint bg-mint-soft text-mint-deep" : "border-line bg-white"}`}
           >
             {t(`views.${v}`)}
           </Link>
@@ -61,7 +61,7 @@ export default async function ReservationsPage({
           <Link
             key={v.id}
             href={`/reservations?${new URLSearchParams(v.filters as Record<string, string>).toString()}`}
-            className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sky-800"
+            className="rounded-full border border-sky/40 bg-sky-soft px-3 py-1 text-sky-deep"
           >
             ★ {v.name}
           </Link>
@@ -103,11 +103,11 @@ export default async function ReservationsPage({
         </form>
       </Card>
       <Card>
-        <p className="mb-2 text-xs text-slate-500">
+        <p className="mb-2 text-xs text-muted">
           {total} {t("results")}
         </p>
         <table className="w-full text-sm" data-testid="reservations-table">
-          <thead className="text-xs uppercase text-slate-500">
+          <thead className="text-xs uppercase text-muted">
             <tr>
               <th className="py-1 text-start">{t("guest")}</th>
               <th className="text-start">{t("property")}</th>
@@ -121,45 +121,43 @@ export default async function ReservationsPage({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-t border-slate-100" data-booking={r.id}>
+              <tr key={r.id} className="border-t border-line" data-booking={r.id}>
                 <td className="py-2">
                   <Link href={`/reservations/${r.id}`} className="font-medium hover:underline">
                     {r.guestName}
                   </Link>
                   {r.unacknowledged ? (
-                    <span className="ms-2 rounded bg-amber-100 px-1.5 text-[10px] text-amber-800">
+                    <span className="ms-2 rounded bg-amber-soft px-1.5 text-[10px] text-amber-deep">
                       {t("modified")}
                     </span>
                   ) : null}
                   {r.mappingState !== "mapped" ? (
-                    <span className="ms-2 rounded bg-rose-100 px-1.5 text-[10px] text-rose-800">
+                    <span className="ms-2 rounded bg-rose-soft px-1.5 text-[10px] text-rose">
                       {t("unmapped")}
                     </span>
                   ) : null}
                 </td>
-                <td className="text-slate-600">{r.propertyTitle}</td>
-                <td className="text-slate-600">
+                <td className="text-muted">{r.propertyTitle}</td>
+                <td className="text-muted">
                   {r.arrivalDate} → {r.departureDate} · {r.nights}n
                 </td>
-                <td className="text-slate-600">
+                <td className="text-muted">
                   {r.otaName ?? "—"}{" "}
-                  <span className="text-xs text-slate-400">{r.otaReservationCode}</span>
+                  <span className="text-xs text-faint">{r.otaReservationCode}</span>
                 </td>
                 <td>
                   <span
-                    className={`rounded px-1.5 py-0.5 text-xs ${r.status === "cancelled" ? "bg-slate-100 text-slate-600" : "bg-emerald-100 text-emerald-800"}`}
+                    className={`rounded px-1.5 py-0.5 text-xs ${r.status === "cancelled" ? "bg-canvas text-muted" : "bg-mint-soft text-mint-deep"}`}
                   >
                     {r.status}
                   </span>
                 </td>
-                <td className="text-xs text-slate-600">
+                <td className="text-xs text-muted">
                   {r.unitNames ?? (r.unassignedRooms > 0 ? t("unassigned") : "—")}
                   {r.credentials > 0 ? " · 🔑" : ""}
                 </td>
                 <td className="text-end">{money(r.totalAmountMinor, r.currency)}</td>
-                <td
-                  className={`text-end ${r.balanceMinor > 0 ? "text-rose-700" : "text-slate-600"}`}
-                >
+                <td className={`text-end ${r.balanceMinor > 0 ? "text-rose" : "text-muted"}`}>
                   {money(r.balanceMinor, r.currency)}
                 </td>
               </tr>

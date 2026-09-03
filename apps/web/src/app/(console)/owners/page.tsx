@@ -26,27 +26,25 @@ export default async function OwnersPage() {
       </div>
       <div className="grid grid-cols-[2fr_1fr] gap-4">
         <Card>
-          {rows.length === 0 ? <p className="text-sm text-slate-500">{t("empty")}</p> : null}
+          {rows.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
           {rows.map((o) => (
             <div
               key={o.id}
-              className="flex items-center justify-between border-t border-slate-100 py-2 text-sm"
+              className="flex items-center justify-between border-t border-line py-2 text-sm"
               data-testid="owner-row"
             >
               <div>
                 <Link className="font-medium underline" href={`/owners/${o.id}`}>
                   {o.name}
                 </Link>
-                <span className="ms-2 text-xs text-slate-500">
+                <span className="ms-2 text-xs text-muted">
                   {o.type} · {o.email ?? "—"} · {o.agreements} {t("agreementsCount")} ·{" "}
                   {o.properties.join(", ")}
                 </span>
               </div>
               <span className="text-xs">
                 {o.userId ? (
-                  <span className="rounded bg-emerald-100 px-1 text-emerald-800">
-                    {t("portalOn")}
-                  </span>
+                  <span className="rounded bg-mint-soft px-1 text-mint-deep">{t("portalOn")}</span>
                 ) : null}
               </span>
             </div>

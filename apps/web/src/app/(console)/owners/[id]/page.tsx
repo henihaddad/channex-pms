@@ -52,7 +52,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             <input
               name="payoutDetails"
               placeholder={t("payoutPlaceholder")}
-              className="h-8 flex-1 rounded border border-slate-300 px-2 text-xs"
+              className="h-8 flex-1 rounded border border-line-strong px-2 text-xs"
             />
             <Button
               type="submit"
@@ -66,7 +66,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-2">
             {v.owner.userId ? (
               <span
-                className="rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800"
+                className="rounded bg-mint-soft px-2 py-0.5 text-xs text-mint-deep"
                 data-testid="portal-granted"
               >
                 {t("portalOn")}
@@ -84,7 +84,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
                 </Button>
               </form>
             )}
-            <span className="text-xs text-slate-500">{t("portalHint")}</span>
+            <span className="text-xs text-muted">{t("portalHint")}</span>
           </div>
           <div>
             <p className="font-medium">{t("documents")}</p>
@@ -92,7 +92,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               <p key={d.id} className="text-xs">
                 {d.kind}: {d.filename} {d.expiresAt ? `· ${t("expires")} ${d.expiresAt}` : ""}{" "}
                 {d.expiringSoon ? (
-                  <span className="text-amber-700">⚠ {t("expiringSoon")}</span>
+                  <span className="text-amber-deep">⚠ {t("expiringSoon")}</span>
                 ) : null}
               </p>
             ))}
@@ -111,7 +111,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               <input
                 type="date"
                 name="expiresAt"
-                className="h-7 rounded border border-slate-300 px-1"
+                className="h-7 rounded border border-line-strong px-1"
               />
               <Button type="submit" variant="secondary" className="h-7 text-xs">
                 {t("addDocument")}
@@ -122,12 +122,12 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
         <Card className="space-y-2 text-sm">
           <p className="font-medium">{t("agreements")}</p>
           {v.agreements.length === 0 ? (
-            <p className="text-xs text-slate-500">{t("noAgreements")}</p>
+            <p className="text-xs text-muted">{t("noAgreements")}</p>
           ) : null}
           {v.agreements.map((a) => (
             <div
               key={a.id}
-              className="rounded border border-slate-200 p-2 text-xs"
+              className="rounded border border-line p-2 text-xs"
               data-testid="agreement-row"
             >
               <p className="font-medium">
@@ -152,7 +152,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
                   type="month"
                   name="periodMonth"
                   defaultValue={defaultPeriod.slice(0, 7)}
-                  className="h-7 rounded border border-slate-300 px-1"
+                  className="h-7 rounded border border-line-strong px-1"
                   data-testid="period-month"
                 />
                 <Button
@@ -267,7 +267,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
                   name={`markup_${c}`}
                   type="number"
                   placeholder="markup %"
-                  className="mt-1 h-7 w-full rounded border border-slate-300 px-1"
+                  className="mt-1 h-7 w-full rounded border border-line-strong px-1"
                 />
               </div>
             ))}
@@ -285,7 +285,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               name="cleaningOwnerPct"
               type="number"
               placeholder="owner %"
-              className="mt-1 h-7 w-full rounded border border-slate-300 px-1 text-xs"
+              className="mt-1 h-7 w-full rounded border border-line-strong px-1 text-xs"
             />
           </div>
           <div>
@@ -301,7 +301,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               name="ownerStayNightly"
               type="number"
               placeholder="per night"
-              className="mt-1 h-7 w-full rounded border border-slate-300 px-1 text-xs"
+              className="mt-1 h-7 w-full rounded border border-line-strong px-1 text-xs"
             />
           </div>
           <Field
@@ -348,7 +348,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               name="vatRate"
               type="number"
               placeholder="VAT %"
-              className="h-7 w-20 rounded border border-slate-300 px-1"
+              className="h-7 w-20 rounded border border-line-strong px-1"
             />
           </div>
           <fieldset className="col-span-3 text-xs">

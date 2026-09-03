@@ -17,7 +17,7 @@ export default async function SupportPage() {
       <PageTitle>{t("title")}</PageTitle>
       <Card>
         <h2 className="font-semibold">{t("accessTitle")}</h2>
-        <p className="text-xs text-slate-600">{t("accessHint")}</p>
+        <p className="text-xs text-muted">{t("accessHint")}</p>
         {v.access ? (
           <div className="mt-2 flex items-center gap-3 text-sm">
             <span data-testid="support-access-active">
@@ -48,14 +48,12 @@ export default async function SupportPage() {
       </Card>
       <Card>
         <h2 className="font-semibold">{t("requests")}</h2>
-        {v.requests.length === 0 ? (
-          <p className="text-sm text-slate-500">{t("noRequests")}</p>
-        ) : null}
+        {v.requests.length === 0 ? <p className="text-sm text-muted">{t("noRequests")}</p> : null}
         <ul className="mt-1 space-y-2 text-sm" data-testid="impersonation-requests">
           {v.requests.map((r) => (
             <li
               key={r.id}
-              className="rounded border border-slate-200 p-2"
+              className="rounded border border-line p-2"
               data-testid="impersonation-request"
               data-state={r.state}
             >
@@ -104,7 +102,7 @@ export default async function SupportPage() {
       </Card>
       <Card>
         <h2 className="font-semibold">{t("diagnostics")}</h2>
-        <p className="text-xs text-slate-600">{t("diagnosticsHint")}</p>
+        <p className="text-xs text-muted">{t("diagnosticsHint")}</p>
         <a
           className="mt-2 inline-block text-sm underline"
           href="/api/v1/support/diagnostics"
@@ -112,7 +110,7 @@ export default async function SupportPage() {
         >
           {t("downloadDiagnostics")}
         </a>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-muted">
           {t("version")}: {v.version}
         </p>
       </Card>

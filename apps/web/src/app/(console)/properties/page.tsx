@@ -6,10 +6,10 @@ import { listProperties, listTemplates } from "./properties.actions";
 import { AdoptForm } from "./adopt-form";
 
 const stateTone: Record<string, string> = {
-  live: "bg-emerald-100 text-emerald-800",
-  syncing: "bg-sky-100 text-sky-800",
-  draft: "bg-slate-100 text-slate-700",
-  suspended: "bg-amber-100 text-amber-800",
+  live: "bg-mint-soft text-mint-deep",
+  syncing: "bg-sky-soft text-sky-deep",
+  draft: "bg-canvas text-text",
+  suspended: "bg-amber-soft text-amber-deep",
 };
 
 export default async function PropertiesPage() {
@@ -29,9 +29,9 @@ export default async function PropertiesPage() {
         </div>
       </div>
       <Card>
-        {rows.length === 0 ? <p className="text-sm text-slate-500">{t("empty")}</p> : null}
+        {rows.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
         <table className="w-full text-sm" data-testid="properties-table">
-          <thead className="text-xs uppercase text-slate-500">
+          <thead className="text-xs uppercase text-muted">
             <tr>
               <th className="py-1 text-start">{t("name")}</th>
               <th className="text-start">{t("kind")}</th>
@@ -42,23 +42,23 @@ export default async function PropertiesPage() {
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id} className="border-t border-slate-100" data-state={p.state}>
+              <tr key={p.id} className="border-t border-line" data-state={p.state}>
                 <td className="py-2 font-medium">
                   <Link href={`/properties/${p.id}`} className="hover:underline">
                     {p.title}
                   </Link>
                 </td>
-                <td className="text-slate-600">{p.kind}</td>
+                <td className="text-muted">{p.kind}</td>
                 <td>
                   <span className={`rounded px-2 py-0.5 text-xs ${stateTone[p.state] ?? ""}`}>
                     {p.state}
                   </span>
                 </td>
-                <td className="text-xs text-slate-500">
+                <td className="text-xs text-muted">
                   {p.provisioningStep ?? "—"}
                   {p.provisioningError ? ` · ${p.provisioningError}` : ""}
                 </td>
-                <td className="text-end text-xs text-slate-500">
+                <td className="text-end text-xs text-muted">
                   {p.roomTypes} / {p.ratePlans} / {p.units}
                 </td>
               </tr>
@@ -69,13 +69,13 @@ export default async function PropertiesPage() {
       <Card>
         <h2 className="mb-1 font-semibold">{t("templates")}</h2>
         {templates.length === 0 ? (
-          <p className="text-sm text-slate-500">{t("noTemplates")}</p>
+          <p className="text-sm text-muted">{t("noTemplates")}</p>
         ) : (
-          <ul className="text-sm text-slate-700">
+          <ul className="text-sm text-text">
             {templates.map((x) => (
               <li key={x.id}>
                 {x.name}{" "}
-                <span className="text-slate-400">
+                <span className="text-faint">
                   · {x.payload.kind} · {x.payload.currency}
                 </span>
               </li>
@@ -85,7 +85,7 @@ export default async function PropertiesPage() {
       </Card>
       <Card>
         <h2 className="mb-1 font-semibold">{t("adopt")}</h2>
-        <p className="mb-3 text-sm text-slate-500">{t("adoptHint")}</p>
+        <p className="mb-3 text-sm text-muted">{t("adoptHint")}</p>
         <AdoptForm label={t("adoptSubmit")} />
       </Card>
     </div>

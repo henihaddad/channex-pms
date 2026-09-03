@@ -36,8 +36,8 @@ export default async function OwnerStatement({ params }: { params: Promise<{ id:
         <table className="w-full text-xs" data-testid="owner-lines">
           <tbody>
             {st.lines.map((l) => (
-              <tr key={l.id} className="border-t border-slate-100">
-                <td className="py-0.5 text-slate-500">{l.date}</td>
+              <tr key={l.id} className="border-t border-line">
+                <td className="py-0.5 text-muted">{l.date}</td>
                 <td>{l.description}</td>
                 <td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</td>
               </tr>
@@ -47,22 +47,22 @@ export default async function OwnerStatement({ params }: { params: Promise<{ id:
       </Card>
       <Card className="text-sm">
         {st.disputeState === "open" ? (
-          <p className="text-rose-700" data-testid="dispute-open">
+          <p className="text-rose" data-testid="dispute-open">
             {t("disputeOpen")}
           </p>
         ) : st.disputeState === "resolved" ? (
-          <p className="text-emerald-700">{t("disputeResolved")}</p>
+          <p className="text-mint-deep">{t("disputeResolved")}</p>
         ) : (
           <form action={disputeStatementAction} className="space-y-2">
             <input type="hidden" name="id" value={st.id} />
             <p className="font-medium">{t("dispute")}</p>
-            <p className="text-xs text-slate-500">{t("disputeHint")}</p>
+            <p className="text-xs text-muted">{t("disputeHint")}</p>
             <textarea
               name="reason"
               rows={3}
               required
               placeholder={t("disputeReason")}
-              className="w-full rounded border border-slate-300 p-2 text-sm"
+              className="w-full rounded border border-line-strong p-2 text-sm"
               data-testid="dispute-reason"
             />
             <Button type="submit" variant="danger" data-testid="send-dispute">

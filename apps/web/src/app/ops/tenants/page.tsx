@@ -35,7 +35,7 @@ export default async function TenantsPage({
       </form>
       <Card>
         <table className="w-full text-sm" data-testid="tenants">
-          <thead className="text-xs text-slate-500">
+          <thead className="text-xs text-muted">
             <tr>
               <th className="text-start">{t("tenants")}</th>
               <th className="text-start">{t("state")}</th>
@@ -53,7 +53,7 @@ export default async function TenantsPage({
               <tr key={r.id} data-testid="tenant-row" data-state={r.state}>
                 <td>
                   {r.name}{" "}
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted">
                     /{r.slug} · {r.country}
                   </span>
                 </td>

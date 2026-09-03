@@ -45,14 +45,14 @@ export default async function BlocksPage() {
           <Button type="submit">{t("addBlock")}</Button>
           <input type="hidden" name="propertyId" value={units[0]?.propertyId ?? ""} />
           <input type="hidden" name="roomTypeId" value={units[0]?.roomTypeId ?? ""} />
-          <p className="col-span-6 text-xs text-slate-500">{t("blockHint")}</p>
+          <p className="col-span-6 text-xs text-muted">{t("blockHint")}</p>
         </form>
       </Card>
       <Card>
         <table className="w-full text-sm">
           <tbody>
             {blocks.map((b) => (
-              <tr key={b.id} className="border-t border-slate-100">
+              <tr key={b.id} className="border-t border-line">
                 <td className="py-1">
                   {b.propertyTitle} · {b.unitName ?? "room type"}
                 </td>
@@ -66,7 +66,7 @@ export default async function BlocksPage() {
                 <td className="text-end">
                   <form action={cancelBlockAction}>
                     <input type="hidden" name="blockId" value={b.id} />
-                    <button className="text-xs text-rose-700 underline">{t("remove")}</button>
+                    <button className="text-xs text-rose underline">{t("remove")}</button>
                   </form>
                 </td>
               </tr>
@@ -78,10 +78,7 @@ export default async function BlocksPage() {
         <h2 className="mb-2 font-semibold">{t("unitStatus")}</h2>
         <ul className="text-sm">
           {units.map((u) => (
-            <li
-              key={u.id}
-              className="flex items-center justify-between border-t border-slate-100 py-1"
-            >
+            <li key={u.id} className="flex items-center justify-between border-t border-line py-1">
               <span>
                 {u.propertyTitle} · {u.name}
               </span>

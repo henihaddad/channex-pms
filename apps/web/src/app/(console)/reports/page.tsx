@@ -52,7 +52,7 @@ export default async function ReportsPage({
                   <Link
                     key={r.key}
                     href={`/reports?key=${r.key}&${qs}`}
-                    className={`block rounded px-2 py-0.5 text-xs hover:bg-slate-100 ${sp.key === r.key ? "bg-slate-200 font-semibold" : ""}`}
+                    className={`block rounded px-2 py-0.5 text-xs hover:bg-canvas ${sp.key === r.key ? "bg-line font-semibold" : ""}`}
                     title={r.description}
                     data-testid={`report-${r.key}`}
                   >
@@ -73,7 +73,7 @@ export default async function ReportsPage({
                   type="date"
                   name="from"
                   defaultValue={from}
-                  className="block h-8 rounded border border-slate-300 px-1"
+                  className="block h-8 rounded border border-line-strong px-1"
                 />
               </div>
               <div>
@@ -83,7 +83,7 @@ export default async function ReportsPage({
                   type="date"
                   name="to"
                   defaultValue={to}
-                  className="block h-8 rounded border border-slate-300 px-1"
+                  className="block h-8 rounded border border-line-strong px-1"
                 />
               </div>
               <div>
@@ -93,7 +93,7 @@ export default async function ReportsPage({
                   type="date"
                   name="date"
                   defaultValue={sp.date ?? ""}
-                  className="block h-8 rounded border border-slate-300 px-1"
+                  className="block h-8 rounded border border-line-strong px-1"
                 />
               </div>
               <div>
@@ -123,14 +123,14 @@ export default async function ReportsPage({
               {def ? (
                 <>
                   <a
-                    className="rounded border border-slate-300 px-2 leading-8"
+                    className="rounded border border-line-strong px-2 leading-8"
                     href={`/api/v1/reports/${def.key}.csv?${qs}`}
                     data-testid="export-csv"
                   >
                     CSV
                   </a>
                   <a
-                    className="rounded border border-slate-300 px-2 leading-8"
+                    className="rounded border border-line-strong px-2 leading-8"
                     href={`/api/v1/reports/${def.key}.pdf?${qs}`}
                     data-testid="export-pdf"
                   >
@@ -143,11 +143,11 @@ export default async function ReportsPage({
           {result ? (
             <Card className="overflow-x-auto p-3" data-testid="report-result">
               <p className="text-sm font-medium">{result.name}</p>
-              <p className="mb-2 text-xs text-slate-500">
+              <p className="mb-2 text-xs text-muted">
                 {t("basis")}: {result.basis} · {result.rows.length} {t("rows")}
               </p>
               <table className="w-full text-xs">
-                <thead className="text-slate-500">
+                <thead className="text-muted">
                   <tr>
                     {result.columns.map((c) => (
                       <th key={c} className="text-start">
@@ -158,7 +158,7 @@ export default async function ReportsPage({
                 </thead>
                 <tbody>
                   {result.rows.map((row, i) => (
-                    <tr key={i} className="border-t border-slate-100">
+                    <tr key={i} className="border-t border-line">
                       {row.map((c, j) => (
                         <td key={j} className="py-0.5 tabular-nums">
                           {c === null ? "" : String(c)}
@@ -181,7 +181,7 @@ export default async function ReportsPage({
                     id="sname"
                     name="name"
                     defaultValue={result.name}
-                    className="block h-8 rounded border border-slate-300 px-1"
+                    className="block h-8 rounded border border-line-strong px-1"
                   />
                 </div>
                 <div>
@@ -190,7 +190,7 @@ export default async function ReportsPage({
                     id="recipients"
                     name="recipients"
                     placeholder="a@example.com, b@example.com"
-                    className="block h-8 w-64 rounded border border-slate-300 px-1"
+                    className="block h-8 w-64 rounded border border-line-strong px-1"
                   />
                 </div>
                 <Select name="cadence" defaultValue="weekly" className="h-8 w-28">
@@ -213,18 +213,18 @@ export default async function ReportsPage({
               </form>
             </Card>
           ) : (
-            <Card className="text-sm text-slate-500">{t("pick")}</Card>
+            <Card className="text-sm text-muted">{t("pick")}</Card>
           )}
           <Card className="p-3 text-sm">
             <p className="font-medium">{t("schedules")}</p>
             {v.schedules.length === 0 ? (
-              <p className="text-xs text-slate-500">{t("noSchedules")}</p>
+              <p className="text-xs text-muted">{t("noSchedules")}</p>
             ) : null}
             {v.schedules.map((s) => (
               <form
                 key={s.id}
                 action={deleteScheduleAction}
-                className="flex items-center justify-between border-t border-slate-100 py-1 text-xs"
+                className="flex items-center justify-between border-t border-line py-1 text-xs"
                 data-testid="schedule-row"
               >
                 <span>
@@ -258,7 +258,7 @@ export default async function ReportsPage({
                   id="bmonth"
                   type="month"
                   name="month"
-                  className="block h-8 rounded border border-slate-300 px-1"
+                  className="block h-8 rounded border border-line-strong px-1"
                 />
               </div>
               <Field label={t("budgetRevenue")} name="roomRevenue" type="number" />

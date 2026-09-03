@@ -1,7 +1,13 @@
 {
   "app": {
-    "name": "Channex PMS",
-    "tagline": "El sistema de gestión para quienes gestionan propiedades de otros."
+    "name": "OTAbridge",
+    "tagline": "El sistema de gestión para quienes gestionan propiedades de otros.",
+    "claim": "Cada noche, en cada canal, desde un solo escritorio.",
+    "claimBody": "Tarifas, disponibilidad y reservas se mantienen correctas en Airbnb, Booking.com y tu propio sitio, y quienes limpian, reciben y son dueños de los alojamientos ven exactamente lo que necesitan.",
+    "fact1": "Las tarifas y la disponibilidad locales son la verdad; los canales las reflejan",
+    "fact2": "Liquidaciones de propietarios que cuadran al céntimo, cada mes",
+    "fact3": "Reservas directas sin comisión, en tu propio dominio",
+    "footer": "Software fair-code. Alójalo tú mismo o déjanos operarlo."
   },
   "nav": {
     "dashboard": "Panel",
@@ -24,7 +30,13 @@
     "bookingEngine": "Reservas directas",
     "billing": "Facturación",
     "plugins": "Extensiones",
-    "support": "Soporte"
+    "support": "Soporte",
+    "groups": {
+      "today": "Hoy",
+      "portfolio": "Cartera",
+      "insight": "Análisis",
+      "settings": "Ajustes"
+    }
   },
   "auth": {
     "name": "Tu nombre",
@@ -93,7 +105,7 @@
     "reference": "Referencia",
     "confirmedHint": "Una confirmación con archivo de calendario y el enlace a tu portal va de camino a {email}.",
     "portal": "Abrir el portal del huésped",
-    "poweredBy": "Motor de reservas de Channex PMS",
+    "poweredBy": "Motor de reservas de OTAbridge",
     "chargeCurrency": "Se te cobrará en {currency}.",
     "embed": "Integrar",
     "policy": "Política de cancelación",
@@ -148,7 +160,8 @@
       "maintenance": "Mantenimiento",
       "reviews": "Reseñas",
       "documents": "Documentos",
-      "signOut": "Cerrar sesión"
+      "signOut": "Cerrar sesión",
+      "portal": "Propietario"
     }
   },
   "onboarding": {

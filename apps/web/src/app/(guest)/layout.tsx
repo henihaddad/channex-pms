@@ -7,7 +7,7 @@ export default async function GuestLayout({ children }: { children: React.ReactN
   return (
     <div className="mx-auto min-h-screen max-w-2xl p-4" data-testid="guest-portal">
       <main>{children}</main>
-      <footer className="mt-10 border-t border-slate-200 pt-3 text-xs text-slate-500">
+      <footer className="mt-10 border-t border-line pt-3 text-xs text-muted">
         {t("poweredBy")}
       </footer>
     </div>

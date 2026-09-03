@@ -101,7 +101,7 @@ export function StaffBookingForm({
         <Button type="submit" disabled={pending} data-testid="create-booking">
           Create booking
         </Button>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-muted">
           Side effects: availability decremented and pushed to every channel, turnover task planned,
           confirmation prepared.
         </p>

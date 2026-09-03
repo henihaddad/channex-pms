@@ -8,14 +8,15 @@ export function Button({
   ...props
 }: ComponentProps<"button"> & { variant?: "primary" | "secondary" | "danger" }) {
   const styles = {
-    primary: "bg-emerald-600 text-white hover:bg-emerald-700",
-    secondary: "border border-slate-300 bg-white text-slate-800 hover:bg-slate-100",
-    danger: "border border-rose-300 bg-white text-rose-700 hover:bg-rose-50",
+    primary:
+      "bg-ink text-white hover:bg-ink-3 active:bg-ink shadow-[inset_0_-1px_0_rgba(255,255,255,0.08)]",
+    secondary: "border border-line-strong bg-surface text-text hover:border-ink-3 hover:bg-canvas",
+    danger: "border border-rose/40 bg-surface text-rose hover:bg-rose-soft",
   }[variant];
   return (
     <button
       className={cx(
-        "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold transition disabled:opacity-50",
+        "inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         styles,
         className,
       )}
@@ -28,7 +29,7 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
   return (
     <input
       className={cx(
-        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200",
+        "h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text placeholder:text-faint outline-none transition-colors focus:border-sky focus:ring-2 focus:ring-sky/25",
         className,
       )}
       {...props}
@@ -40,7 +41,7 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
   return (
     <select
       className={cx(
-        "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-500",
+        "h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm text-text outline-none transition-colors focus:border-sky focus:ring-2 focus:ring-sky/25",
         className,
       )}
       {...props}
@@ -50,7 +51,7 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
 
 export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-700">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-text">
       {children}
     </label>
   );
@@ -92,7 +93,7 @@ export function Field({
 export function Card({ children, className, ...rest }: ComponentProps<"div">) {
   return (
     <div
-      className={cx("rounded-xl border border-slate-200 bg-white p-6 shadow-sm", className)}
+      className={cx("rounded-card border border-line bg-surface p-6 shadow-card", className)}
       {...rest}
     >
       {children}
@@ -109,15 +110,19 @@ export function Alert({
 }) {
   const styles =
     tone === "error"
-      ? "border-rose-200 bg-rose-50 text-rose-800"
-      : "border-emerald-200 bg-emerald-50 text-emerald-800";
+      ? "border-rose/30 bg-rose-soft text-rose"
+      : "border-mint/40 bg-mint-soft text-mint-deep";
   return (
-    <p role="alert" className={cx("rounded-md border px-3 py-2 text-sm", styles)}>
+    <p role="alert" className={cx("rounded-lg border px-3 py-2 text-sm", styles)}>
       {children}
     </p>
   );
 }
 
 export function PageTitle({ children }: { children: ReactNode }) {
-  return <h1 className="text-2xl font-bold tracking-tight">{children}</h1>;
+  return (
+    <h1 className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-ink">
+      {children}
+    </h1>
+  );
 }

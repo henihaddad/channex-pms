@@ -66,7 +66,7 @@ export function Composer(p: Props) {
           <button
             type="button"
             onClick={() => switchTo("guest")}
-            className={`rounded-t px-3 py-1 ${mode === "guest" ? "bg-sky-100 font-semibold text-sky-900" : "bg-slate-100"}`}
+            className={`rounded-t px-3 py-1 ${mode === "guest" ? "bg-sky-soft font-semibold text-sky-deep" : "bg-canvas"}`}
             data-testid="mode-guest"
           >
             {p.labels.replyMode}
@@ -75,7 +75,7 @@ export function Composer(p: Props) {
         <button
           type="button"
           onClick={() => switchTo("note")}
-          className={`rounded-t px-3 py-1 ${mode === "note" ? "bg-amber-100 font-semibold text-amber-900" : "bg-slate-100"}`}
+          className={`rounded-t px-3 py-1 ${mode === "note" ? "bg-amber-soft font-semibold text-amber-deep" : "bg-canvas"}`}
           data-testid="mode-note"
         >
           {p.labels.noteMode}
@@ -84,7 +84,7 @@ export function Composer(p: Props) {
       {mode === "guest" ? (
         <form
           action={sendReplyAction}
-          className="space-y-2 rounded-b-lg rounded-tr-lg border border-sky-200 bg-sky-50 p-3"
+          className="space-y-2 rounded-b-lg rounded-tr-lg border border-sky/40 bg-sky-soft p-3"
           data-testid="guest-composer"
           onSubmit={() => setText("")}
         >
@@ -97,7 +97,7 @@ export function Composer(p: Props) {
               id="template"
               value={templateId}
               onChange={(e) => pick(e.target.value)}
-              className="h-7 rounded border border-slate-300 bg-white px-1"
+              className="h-7 rounded border border-line-strong bg-white px-1"
               data-testid="template-select"
             >
               <option value="">—</option>
@@ -107,9 +107,9 @@ export function Composer(p: Props) {
                 </option>
               ))}
             </select>
-            {pending ? <span className="text-slate-500">{p.labels.preview}</span> : null}
+            {pending ? <span className="text-muted">{p.labels.preview}</span> : null}
             {missing.length ? (
-              <span className="text-rose-700" data-testid="missing-vars">
+              <span className="text-rose" data-testid="missing-vars">
                 {p.labels.missing}: {missing.join(", ")}
               </span>
             ) : null}
@@ -120,7 +120,7 @@ export function Composer(p: Props) {
             onChange={(e) => setText(e.target.value)}
             rows={4}
             required
-            className="w-full rounded border border-sky-300 bg-white p-2 text-sm"
+            className="w-full rounded border border-sky/40 bg-white p-2 text-sm"
             data-testid="guest-body"
             placeholder={`${p.labels.sendTo} ${p.guestFirstName}…`}
           />
@@ -131,20 +131,20 @@ export function Composer(p: Props) {
       ) : (
         <form
           action={addNoteAction}
-          className="space-y-2 rounded-b-lg rounded-tr-lg border border-amber-300 bg-amber-50 p-3"
+          className="space-y-2 rounded-b-lg rounded-tr-lg border border-amber/50 bg-amber-soft p-3"
           data-testid="note-composer"
           onSubmit={() => setText("")}
         >
           <input type="hidden" name="threadId" value={p.threadId} />
           <input type="hidden" name="propertyId" value={p.propertyId} />
-          <p className="text-xs text-amber-900">{p.labels.noteHint}</p>
+          <p className="text-xs text-amber-deep">{p.labels.noteHint}</p>
           <textarea
             name="body"
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={3}
             required
-            className="w-full rounded border border-amber-300 bg-white p-2 text-sm"
+            className="w-full rounded border border-amber/50 bg-white p-2 text-sm"
             data-testid="note-body"
           />
           <Button type="submit" variant="secondary" data-testid="save-note">

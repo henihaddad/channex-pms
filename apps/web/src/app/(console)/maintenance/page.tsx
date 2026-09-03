@@ -57,10 +57,10 @@ export default async function MaintenancePage() {
       <Card>
         <ul className="text-sm" data-testid="issues">
           {issues.map((i) => (
-            <li key={i.id} className="border-t border-slate-100 py-2" data-state={i.state}>
+            <li key={i.id} className="border-t border-line py-2" data-state={i.state}>
               <p>
                 <span
-                  className={`me-2 rounded px-1.5 text-[10px] uppercase ${i.severity === "urgent" ? "bg-rose-100 text-rose-800" : i.severity === "high" ? "bg-amber-100 text-amber-800" : "bg-slate-100"}`}
+                  className={`me-2 rounded px-1.5 text-[10px] uppercase ${i.severity === "urgent" ? "bg-rose-soft text-rose" : i.severity === "high" ? "bg-amber-soft text-amber-deep" : "bg-canvas"}`}
                 >
                   {i.severity}
                 </span>
@@ -68,7 +68,7 @@ export default async function MaintenancePage() {
                   {i.propertyTitle} · {i.unitName ?? "property"}
                 </span>{" "}
                 · {i.description}{" "}
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted">
                   via {i.reportedVia} · {i.state}
                   {i.blocksAvailability ? " · blocks availability" : ""}
                   {i.costMinor !== null ? ` · cost ${(i.costMinor / 100).toFixed(2)}` : ""}

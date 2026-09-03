@@ -16,7 +16,7 @@ export function ImportForm({ templates }: { templates: Array<{ id: string; name:
         </Alert>
       ) : null}
       {state.errors?.map((e) => (
-        <p key={e} className="text-xs text-rose-700">
+        <p key={e} className="text-xs text-rose">
           {e}
         </p>
       ))}
@@ -40,7 +40,7 @@ export function ImportForm({ templates }: { templates: Array<{ id: string; name:
           id="csv"
           name="csv"
           rows={12}
-          className="w-full rounded-md border border-slate-300 p-2 font-mono text-xs"
+          className="w-full rounded-md border border-line-strong p-2 font-mono text-xs"
           defaultValue={
             "title,kind,currency,city,country,base_rate,min_stay\nAlfama Loft,single_unit,EUR,Lisbon,PT,120,2\n"
           }

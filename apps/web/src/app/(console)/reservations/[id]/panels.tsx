@@ -58,10 +58,7 @@ export function CredentialPanel({
         </div>
       ) : null}
       {issued ? (
-        <p
-          className="rounded bg-emerald-50 p-2 font-mono text-emerald-800"
-          data-testid="issued-code"
-        >
+        <p className="rounded bg-mint-soft p-2 font-mono text-mint-deep" data-testid="issued-code">
           {issued}
         </p>
       ) : null}
@@ -112,10 +109,10 @@ export function GuestPanel({
     phone: string | null;
   } | null>(null);
   const [pending, start] = useTransition();
-  if (!guest) return <p className="text-sm text-slate-500">—</p>;
+  if (!guest) return <p className="text-sm text-muted">—</p>;
   return (
     <div className="text-sm">
-      <p className="text-slate-600">
+      <p className="text-muted">
         {guest.country ?? "—"} · {guest.language ?? "—"} ·{" "}
         {guest.hasEmail ? "email on file" : "no email"} ·{" "}
         {guest.hasPhone ? "phone on file" : "no phone"}
@@ -190,7 +187,7 @@ export function InstrumentPanel({
           {label} ({count})
         </Button>
       )}
-      {error ? <p className="text-xs text-rose-700">{error}</p> : null}
+      {error ? <p className="text-xs text-rose">{error}</p> : null}
     </div>
   );
 }

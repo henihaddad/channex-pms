@@ -28,7 +28,7 @@ export function InstallForm({ labels }: { labels: Record<string, string> }) {
           id="manifest"
           name="manifest"
           rows={4}
-          className="w-full rounded border border-slate-300 p-2 font-mono text-xs"
+          className="w-full rounded border border-line-strong p-2 font-mono text-xs"
         />
       </div>
       <Button type="submit" disabled={pending} data-testid="install-plugin">

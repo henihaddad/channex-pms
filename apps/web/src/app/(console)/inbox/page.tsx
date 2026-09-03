@@ -73,16 +73,16 @@ export default async function InboxPage({
             <Link
               key={v}
               href={qs(v)}
-              className={`block rounded px-2 py-1 ${listing.view === v ? "bg-slate-200 font-semibold" : "hover:bg-slate-100"}`}
+              className={`block rounded px-2 py-1 ${listing.view === v ? "bg-line font-semibold" : "hover:bg-canvas"}`}
             >
               {t(`views.${v}`)}
               {v === "needs_reply" && listing.counts.needsReply ? (
-                <span className="ms-1 rounded bg-sky-100 px-1 text-xs">
+                <span className="ms-1 rounded bg-sky-soft px-1 text-xs">
                   {listing.counts.needsReply}
                 </span>
               ) : null}
               {v === "breaching_sla" && listing.counts.breaching ? (
-                <span className="ms-1 rounded bg-rose-100 px-1 text-xs">
+                <span className="ms-1 rounded bg-rose-soft px-1 text-xs">
                   {listing.counts.breaching}
                 </span>
               ) : null}
@@ -93,7 +93,7 @@ export default async function InboxPage({
             <select
               name="property"
               defaultValue={sp.property ?? ""}
-              className="h-8 w-full rounded border border-slate-300 px-1 text-xs"
+              className="h-8 w-full rounded border border-line-strong px-1 text-xs"
             >
               <option value="">{t("allProperties")}</option>
               {listing.properties.map((p) => (
@@ -106,7 +106,7 @@ export default async function InboxPage({
               name="q"
               defaultValue={sp.q ?? ""}
               placeholder={t("search")}
-              className="mt-1 h-8 w-full rounded border border-slate-300 px-2 text-xs"
+              className="mt-1 h-8 w-full rounded border border-line-strong px-2 text-xs"
             />
             <Button type="submit" variant="secondary" className="mt-1 h-7 w-full text-xs">
               {t("filter")}
@@ -115,13 +115,13 @@ export default async function InboxPage({
         </nav>
         <Card className="max-h-[80vh] overflow-y-auto p-2">
           {listing.rows.length === 0 ? (
-            <p className="p-2 text-sm text-slate-500">{t("empty")}</p>
+            <p className="p-2 text-sm text-muted">{t("empty")}</p>
           ) : null}
           {listing.rows.map((r) => (
             <Link
               key={r.id}
               href={`/inbox?view=${listing.view}&thread=${r.id}${sp.property ? `&property=${sp.property}` : ""}`}
-              className={`block border-b border-slate-100 p-2 text-sm hover:bg-slate-50 ${sp.thread === r.id ? "bg-slate-100" : ""}`}
+              className={`block border-b border-line p-2 text-sm hover:bg-canvas ${sp.thread === r.id ? "bg-canvas" : ""}`}
               data-testid="thread-row"
               data-unread={r.unreadCount}
             >
@@ -130,19 +130,19 @@ export default async function InboxPage({
                   {r.guestName}
                   {r.unreadCount > 0 ? (
                     <span
-                      className="ms-1 rounded-full bg-sky-600 px-1.5 text-[10px] text-white"
+                      className="ms-1 rounded-full bg-sky px-1.5 text-[10px] text-white"
                       data-testid="unread"
                     >
                       {r.unreadCount}
                     </span>
                   ) : null}
                 </span>
-                <span className="rounded bg-slate-100 px-1 text-[10px]">
+                <span className="rounded bg-canvas px-1 text-[10px]">
                   {providerLabel(r.provider)}
                 </span>
               </div>
-              <p className="truncate text-xs text-slate-600">{r.preview}</p>
-              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+              <p className="truncate text-xs text-muted">{r.preview}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-muted">
                 <span>{r.propertyTitle}</span>
                 {r.arrivalDate ? (
                   <span>
@@ -153,7 +153,7 @@ export default async function InboxPage({
                 )}
                 {r.sla.needsReply ? (
                   <span
-                    className={`rounded px-1 ${r.sla.breached ? "bg-rose-100 text-rose-800" : (r.sla.remainingMinutes ?? 99) <= 30 ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}
+                    className={`rounded px-1 ${r.sla.breached ? "bg-rose-soft text-rose" : (r.sla.remainingMinutes ?? 99) <= 30 ? "bg-amber-soft text-amber-deep" : "bg-mint-soft text-mint-deep"}`}
                     data-testid="sla-chip"
                   >
                     {r.sla.breached
@@ -177,7 +177,7 @@ export default async function InboxPage({
             <Card className="space-y-3 p-4">
               <h2 className="text-lg font-semibold">
                 {open.detail.guestName}{" "}
-                <span className="text-xs font-normal text-slate-500">
+                <span className="text-xs font-normal text-muted">
                   via {providerLabel(open.detail.provider)} · {open.detail.propertyTitle}
                 </span>
               </h2>
@@ -192,7 +192,7 @@ export default async function InboxPage({
                     {open.inquiry.guests ?? "?"} {t("guests")}
                     {open.inquiry.priceText ? ` · ${open.inquiry.priceText}` : ""}
                   </p>
-                  <p className="text-rose-700">
+                  <p className="text-rose">
                     {t("respondBy")} {fmt(open.inquiry.deadline)}
                   </p>
                 </div>
@@ -203,16 +203,16 @@ export default async function InboxPage({
                     key={m.id}
                     className={`rounded-lg p-2 text-sm ${
                       m.kind === "note"
-                        ? "border border-amber-300 bg-amber-50"
+                        ? "border border-amber/50 bg-amber-soft"
                         : m.direction === "inbound"
-                          ? "bg-slate-100"
-                          : "ms-8 bg-sky-50"
+                          ? "bg-canvas"
+                          : "ms-8 bg-sky-soft"
                     }`}
                     data-testid="message"
                     data-kind={m.kind}
                     data-delivery={m.deliveryState ?? ""}
                   >
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-muted">
                       {m.kind === "note"
                         ? `${t("note")} · ${m.authorName ?? ""}`
                         : m.authorType === "automation"
@@ -225,7 +225,7 @@ export default async function InboxPage({
                       · {fmt(m.sentAt)}
                       {m.kind === "guest_message" && m.direction === "outbound" ? (
                         <span
-                          className={`ms-2 rounded px-1 ${m.deliveryState === "sent" ? "bg-emerald-100 text-emerald-800" : m.deliveryState === "failed" ? "bg-rose-100 text-rose-800" : "bg-slate-200"}`}
+                          className={`ms-2 rounded px-1 ${m.deliveryState === "sent" ? "bg-mint-soft text-mint-deep" : m.deliveryState === "failed" ? "bg-rose-soft text-rose" : "bg-line"}`}
                         >
                           {t(`delivery.${m.deliveryState ?? "queued"}`)}
                         </span>
@@ -246,7 +246,7 @@ export default async function InboxPage({
                           {t("retry")}
                         </Button>
                         {m.deliveryError ? (
-                          <span className="ms-2 text-xs text-rose-700">{m.deliveryError}</span>
+                          <span className="ms-2 text-xs text-rose">{m.deliveryError}</span>
                         ) : null}
                       </form>
                     ) : null}
@@ -313,7 +313,7 @@ export default async function InboxPage({
                   <select
                     name="assigneeId"
                     defaultValue={open.detail.assigneeId ?? ""}
-                    className="h-7 flex-1 rounded border border-slate-300"
+                    className="h-7 flex-1 rounded border border-line-strong"
                     data-testid="assignee"
                   >
                     <option value="">{t("unassigned")}</option>
@@ -334,7 +334,7 @@ export default async function InboxPage({
                   <input
                     type="datetime-local"
                     name="until"
-                    className="h-7 flex-1 rounded border border-slate-300 px-1"
+                    className="h-7 min-w-0 flex-1 rounded border border-line-strong px-1"
                   />
                   <Button type="submit" variant="secondary" className="h-7 text-xs">
                     {t("snooze")}
@@ -347,7 +347,7 @@ export default async function InboxPage({
                     name="tags"
                     defaultValue={open.detail.tags.join(", ")}
                     placeholder={t("tags")}
-                    className="h-7 flex-1 rounded border border-slate-300 px-1"
+                    className="h-7 min-w-0 flex-1 rounded border border-line-strong px-1"
                   />
                   <Button type="submit" variant="secondary" className="h-7 text-xs">
                     {t("tag")}
@@ -398,7 +398,7 @@ export default async function InboxPage({
                   )}
                 </div>
                 {open.detail.automationHandover ? (
-                  <p className="text-amber-800" data-testid="handover">
+                  <p className="text-amber-deep" data-testid="handover">
                     {t("handover")}
                   </p>
                 ) : null}
@@ -406,7 +406,7 @@ export default async function InboxPage({
             </aside>
           </div>
         ) : (
-          <Card className="text-sm text-slate-500">{t("pickThread")}</Card>
+          <Card className="text-sm text-muted">{t("pickThread")}</Card>
         )}
       </div>
     </div>

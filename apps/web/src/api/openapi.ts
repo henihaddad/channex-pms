@@ -22,7 +22,7 @@ export function openApiDocument(baseUrl: string) {
   return {
     openapi: "3.1.0",
     info: {
-      title: "Channex PMS API",
+      title: "OTAbridge API",
       version: "0.1.0",
       description:
         "Public API v1. Authenticate with the session cookie or `Authorization: Bearer <access token>` from POST /api/v1/auth/login; select the organization with `x-pms-org`.",

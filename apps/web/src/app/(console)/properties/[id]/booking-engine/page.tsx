@@ -68,7 +68,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
         </PageTitle>
         <div className="flex items-center gap-3 text-sm">
           <span
-            className={`rounded px-2 py-0.5 text-xs ${s.enabled ? "bg-emerald-100 text-emerald-800" : "bg-slate-100"}`}
+            className={`rounded px-2 py-0.5 text-xs ${s.enabled ? "bg-mint-soft text-mint-deep" : "bg-canvas"}`}
             data-testid="engine-state"
             data-enabled={s.enabled ? "1" : "0"}
           >
@@ -183,7 +183,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
               id="description"
               name="description"
               rows={2}
-              className="w-full rounded border border-slate-300 p-2 text-sm"
+              className="w-full rounded border border-line-strong p-2 text-sm"
               defaultValue={s.description ?? ""}
             />
           </div>
@@ -193,7 +193,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
               id="houseManual"
               name="houseManual"
               rows={3}
-              className="w-full rounded border border-slate-300 p-2 text-sm"
+              className="w-full rounded border border-line-strong p-2 text-sm"
               defaultValue={s.houseManual ?? ""}
             />
           </div>
@@ -305,14 +305,14 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
       </Card>
       <Card>
         <h2 className="mb-1 font-semibold">{t("embedTitle")}</h2>
-        <p className="mb-2 text-xs text-slate-600">{t("embedHint")}</p>
+        <p className="mb-2 text-xs text-muted">{t("embedHint")}</p>
         <pre
-          className="overflow-x-auto rounded bg-slate-900 p-3 text-xs text-slate-100"
+          className="overflow-x-auto rounded bg-ink p-3 text-xs text-white/80"
           data-testid="embed-snippet"
         >
           {`<div id="book"></div>\n<script src="${d.appUrl}/widget.js" data-property="${id}" data-target="#book"></script>`}
         </pre>
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-muted">
           <Input readOnly value={`${d.appUrl}/book/${id}`} aria-label="storefront url" />
         </p>
       </Card>

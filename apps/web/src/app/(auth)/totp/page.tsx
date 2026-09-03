@@ -7,7 +7,7 @@ export default async function TotpPage() {
   return (
     <Card>
       <h1 className="mb-1 text-xl font-bold">{t("totpTitle")}</h1>
-      <p className="mb-4 text-sm text-slate-600">{t("totpHint")}</p>
+      <p className="mb-4 text-sm text-muted">{t("totpHint")}</p>
       <TotpForm labels={{ code: t("code"), submit: t("continue") }} />
     </Card>
   );

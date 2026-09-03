@@ -49,14 +49,14 @@ export default async function PropertyBookingPage({
         <h1 className="text-2xl font-bold" style={theme.colour ? { color: theme.colour } : {}}>
           {property.title}
         </h1>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted">
           {Object.values(property.address).filter(Boolean).join(", ")}
         </p>
         {property.settings.description ? (
           <p className="mt-2 text-sm">{property.settings.description}</p>
         ) : null}
         {property.policy ? (
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted">
             {t("checkIn")} {property.policy.checkInTime} · {t("checkOut")}{" "}
             {property.policy.checkOutTime} · {t("policy")}:{" "}
             {String(property.policy.cancellation.type ?? "flexible")}
@@ -76,13 +76,13 @@ export default async function PropertyBookingPage({
         }}
       />
       {search?.promoProblem ? (
-        <p className="text-sm text-rose-700" role="alert">
+        <p className="text-sm text-rose" role="alert">
           {search.promoProblem}
         </p>
       ) : null}
-      {!search ? <p className="text-sm text-slate-600">{t("chooseDates")}</p> : null}
+      {!search ? <p className="text-sm text-muted">{t("chooseDates")}</p> : null}
       {search && search.offers.length === 0 ? (
-        <p className="text-sm text-slate-600" data-testid="no-offers">
+        <p className="text-sm text-muted" data-testid="no-offers">
           {t("noResults")}
         </p>
       ) : null}
@@ -90,7 +90,7 @@ export default async function PropertyBookingPage({
         {search?.offers.map((o) => (
           <li
             key={`${o.roomTypeId}:${o.ratePlanId}`}
-            className="rounded-lg border border-slate-200 p-3"
+            className="rounded-lg border border-line p-3"
             data-testid="offer"
           >
             <form action={holdAction} className="grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -107,7 +107,7 @@ export default async function PropertyBookingPage({
                 <h2 className="font-semibold">
                   {o.roomTypeTitle} · {o.ratePlanTitle}
                   {o.directOnly ? (
-                    <span className="ms-2 rounded bg-emerald-100 px-1.5 text-[10px] text-emerald-800">
+                    <span className="ms-2 rounded bg-mint-soft px-1.5 text-[10px] text-mint-deep">
                       {t("directOnly")}
                     </span>
                   ) : null}
@@ -116,13 +116,13 @@ export default async function PropertyBookingPage({
                   <strong data-testid="offer-total">{money(o.roomMinor, o.currency)}</strong>{" "}
                   {t("perStay")} · {o.nights} {o.nights === 1 ? t("night") : t("nights")}
                   {o.mealPlan ? ` · ${o.mealPlan}` : ""}
-                  <span className="ms-2 text-xs text-slate-500">
+                  <span className="ms-2 text-xs text-muted">
                     {t("roomsLeft", { count: o.available })}
                   </span>
                 </p>
                 {extras.length ? (
                   <fieldset className="mt-2">
-                    <legend className="text-xs text-slate-600">{t("extras")}</legend>
+                    <legend className="text-xs text-muted">{t("extras")}</legend>
                     <div className="flex flex-wrap gap-3 text-sm">
                       {extras.map((e) => (
                         <label key={e.id} className="flex items-center gap-1">

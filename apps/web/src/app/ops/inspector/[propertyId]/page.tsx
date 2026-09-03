@@ -27,7 +27,7 @@ export default async function InspectorPage({
       <PageTitle>
         {t("inspector")} · {d.property.title}
       </PageTitle>
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted">
         {d.property.orgName} · {t("propertyId")} {d.property.id} · {d.property.state} ·{" "}
         {t("pendingCells")}: {d.pendingCells} · {t("unacked")}: {d.unacked.length}
       </p>
@@ -51,7 +51,7 @@ export default async function InspectorPage({
       <Card>
         <h2 className="mb-2 font-semibold">{t("operations")}</h2>
         <table className="w-full text-xs" data-testid="operations">
-          <thead className="text-slate-500">
+          <thead className="text-muted">
             <tr>
               <th className="text-start">{t("kind")}</th>
               <th className="text-start">{t("state")}</th>

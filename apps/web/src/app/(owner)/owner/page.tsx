@@ -14,19 +14,19 @@ export default async function OwnerHome() {
       <PageTitle>{t("welcome", { name: v.ownerName })}</PageTitle>
       <Card className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4" data-testid="owner-dashboard">
         <div>
-          <p className="text-xs text-slate-500">{t("nightsSold")}</p>
+          <p className="text-xs text-muted">{t("nightsSold")}</p>
           <p className="text-xl font-semibold">{d.nightsSold}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500">{t("occupancy")}</p>
+          <p className="text-xs text-muted">{t("occupancy")}</p>
           <p className="text-xl font-semibold">{occupancy}%</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500">{t("grossRevenue")}</p>
+          <p className="text-xs text-muted">{t("grossRevenue")}</p>
           <p className="text-xl font-semibold">{money(d.grossMinor, d.currency)}</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500">{t("projectedNet")}</p>
+          <p className="text-xs text-muted">{t("projectedNet")}</p>
           <p className="text-xl font-semibold">
             {d.projectedNetMinor === null
               ? t("noDraftYet")

@@ -13,8 +13,8 @@ export default async function OwnerLoginPage({
   return (
     <Card>
       <h1 className="mb-2 text-xl font-bold">{t("loginTitle")}</h1>
-      <p className="mb-4 text-sm text-slate-600">{t("loginHint")}</p>
-      {sp.error ? <p className="mb-2 text-sm text-rose-700">{t("linkInvalid")}</p> : null}
+      <p className="mb-4 text-sm text-muted">{t("loginHint")}</p>
+      {sp.error ? <p className="mb-2 text-sm text-rose">{t("linkInvalid")}</p> : null}
       <OwnerLoginForm labels={{ email: t("email"), submit: t("sendLink") }} />
     </Card>
   );

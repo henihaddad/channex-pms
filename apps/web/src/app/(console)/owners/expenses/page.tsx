@@ -32,7 +32,7 @@ export default async function ExpensesPage({
           {v.rows.map((e) => (
             <div
               key={e.id}
-              className="flex items-center justify-between border-t border-slate-100 py-2 text-sm"
+              className="flex items-center justify-between border-t border-line py-2 text-sm"
               data-testid="expense-row"
               data-state={e.state}
             >
@@ -41,7 +41,7 @@ export default async function ExpensesPage({
                   {e.date} · {e.propertyTitle} · {e.category} · {e.description}{" "}
                   {e.vendor ? `(${e.vendor})` : ""}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted">
                   {money(e.amountMinor, e.currency)} ·{" "}
                   {e.rebillable ? t("rebillable") : t("absorbed")}
                   {e.rebillReason ? ` · ${e.rebillReason}` : ""} ·{" "}
@@ -124,7 +124,7 @@ export default async function ExpensesPage({
             <Button type="submit" data-testid="create-expense">
               {t("submitExpense")}
             </Button>
-            {v.fourEyes ? <p className="text-xs text-slate-500">{t("fourEyesOn")}</p> : null}
+            {v.fourEyes ? <p className="text-xs text-muted">{t("fourEyesOn")}</p> : null}
           </form>
         </Card>
       </div>

@@ -11,21 +11,17 @@ export default async function UnmappedPage() {
     <div className="space-y-4">
       <PageTitle>{t("unmappedQueue")}</PageTitle>
       <Card>
-        {queue.length === 0 ? <p className="text-sm text-slate-500">{t("queueEmpty")}</p> : null}
+        {queue.length === 0 ? <p className="text-sm text-muted">{t("queueEmpty")}</p> : null}
         {queue.map((b) => (
-          <div
-            key={b.id}
-            className="border-t border-slate-100 py-2 text-sm"
-            data-testid="unmapped-row"
-          >
+          <div key={b.id} className="border-t border-line py-2 text-sm" data-testid="unmapped-row">
             <p className="font-medium">
               {b.propertyTitle} · {b.otaName} {b.otaReservationCode} · {b.arrivalDate} →{" "}
               {b.departureDate}{" "}
-              <span className="rounded bg-rose-100 px-1.5 text-[10px] text-rose-800">
+              <span className="rounded bg-rose-soft px-1.5 text-[10px] text-rose">
                 {b.mappingState}
               </span>
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted">
               OTA codes: room {b.rooms[0]?.otaRoomCode ?? "?"} · rate{" "}
               {b.rooms[0]?.otaRateCode ?? "?"}
             </p>
@@ -52,7 +48,7 @@ export default async function UnmappedPage() {
               <Button type="submit" className="h-8" data-testid="resolve">
                 {t("resolve")}
               </Button>
-              <span className="text-xs text-slate-500">{t("thenFixMapping")}</span>
+              <span className="text-xs text-muted">{t("thenFixMapping")}</span>
             </form>
           </div>
         ))}

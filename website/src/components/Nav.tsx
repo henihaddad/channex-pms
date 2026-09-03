@@ -29,7 +29,12 @@ export function Nav() {
               <rect x="16" y="17" width="5" height="5" rx="1.2" opacity=".45" />
             </svg>
           </span>
-          Channex PMS
+          <span>
+            <span className="bg-linear-to-r from-mint to-sky bg-clip-text text-transparent">
+              OTA
+            </span>
+            bridge
+          </span>
         </a>
         <ul className="hidden items-center gap-7 text-sm text-fg-muted lg:flex">
           {links.map((l) => (

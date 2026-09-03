@@ -52,7 +52,7 @@ export default async function StorefrontPage({
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-sm text-slate-600">{t("subtitle")}</p>
+        <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
       <SearchForm
         action="/book"
@@ -74,13 +74,13 @@ export default async function StorefrontPage({
           {t("properties")}
         </h2>
         {results.length === 0 ? (
-          <p className="text-sm text-slate-600">{q ? t("noResults") : t("chooseDates")}</p>
+          <p className="text-sm text-muted">{q ? t("noResults") : t("chooseDates")}</p>
         ) : null}
         <ul className="grid gap-3 sm:grid-cols-2" data-testid="storefront-results">
           {results.map((r) => (
             <li
               key={r.property.id}
-              className="rounded-lg border border-slate-200 p-3"
+              className="rounded-lg border border-line p-3"
               data-testid="storefront-card"
             >
               <h3 className="font-semibold">
@@ -91,11 +91,11 @@ export default async function StorefrontPage({
                   {r.property.title}
                 </Link>
               </h3>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted">
                 {Object.values(r.property.address).filter(Boolean).join(", ")}
               </p>
               {r.property.settings.attributes.length ? (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted">
                   {r.property.settings.attributes.join(" · ")}
                 </p>
               ) : null}
@@ -122,7 +122,7 @@ function Map({ results, label }: { results: StorefrontResult[]; label: string })
   const x = (lng: number) => 20 + ((lng - Math.min(...lngs)) / span(lngs)) * 560;
   const y = (lat: number) => 280 - ((lat - Math.min(...lats)) / span(lats)) * 240;
   return (
-    <figure className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+    <figure className="rounded-lg border border-line bg-canvas p-2">
       <svg viewBox="0 0 600 300" role="img" aria-label={label} className="h-48 w-full">
         {results.map((r, i) => (
           <g key={r.property.id}>
@@ -133,7 +133,7 @@ function Map({ results, label }: { results: StorefrontResult[]; label: string })
           </g>
         ))}
       </svg>
-      <figcaption className="text-xs text-slate-500">{label}</figcaption>
+      <figcaption className="text-xs text-muted">{label}</figcaption>
     </figure>
   );
 }

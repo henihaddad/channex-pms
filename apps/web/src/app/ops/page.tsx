@@ -31,7 +31,7 @@ export default async function FleetPage() {
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4" data-testid="fleet-health">
         {rows.map(([label, value, id]) => (
           <Card key={id} data-testid={`fleet-${id}`}>
-            <p className="text-xs text-slate-500">{label}</p>
+            <p className="text-xs text-muted">{label}</p>
             <p className="text-2xl font-bold">{value}</p>
           </Card>
         ))}

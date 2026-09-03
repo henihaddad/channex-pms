@@ -11,12 +11,12 @@ export default async function OwnerStatements() {
   return (
     <div className="space-y-4">
       <PageTitle>{t("nav.statements")}</PageTitle>
-      <p className="text-sm text-slate-600">{t("statementsHint")}</p>
+      <p className="text-sm text-muted">{t("statementsHint")}</p>
       <Card className="text-sm">
         {rows.map((s) => (
           <p
             key={s.id}
-            className="flex justify-between border-t border-slate-100 py-1"
+            className="flex justify-between border-t border-line py-1"
             data-testid="owner-statement"
           >
             <Link className="underline" href={`/owner/statements/${s.id}`}>

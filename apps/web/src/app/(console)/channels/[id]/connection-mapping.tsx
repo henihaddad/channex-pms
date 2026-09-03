@@ -34,7 +34,7 @@ export function ConnectionMapping({ view }: { view: ConnectionView }) {
       {saved ? <Alert tone="success">{saved}</Alert> : null}
       {changed && view.connection.state === "active" && !confirm ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"
+          className="rounded-md border border-amber/50 bg-amber-soft p-3 text-sm"
           data-testid="mapping-diff"
         >
           <p className="font-medium">This connection is live. Saving will:</p>

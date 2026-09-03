@@ -40,7 +40,7 @@ export function CheckoutForm({
         </Alert>
       ) : null}
       {state.requiresAction ? (
-        <fieldset className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+        <fieldset className="rounded border border-amber/50 bg-amber-soft p-3 text-sm">
           <legend>{labels.payment}</legend>
           <p data-testid="requires-action">{labels.requiresAction}</p>
           <Button type="submit" disabled={pending} className="mt-2" data-testid="complete-3ds">
@@ -84,7 +84,7 @@ export function CheckoutForm({
                 id="requests"
                 name="requests"
                 rows={2}
-                className="w-full rounded border border-slate-300 p-2 text-sm"
+                className="w-full rounded border border-line-strong p-2 text-sm"
               />
             </div>
             <label className="flex items-center gap-2 text-sm sm:col-span-2">
@@ -102,7 +102,7 @@ export function CheckoutForm({
                   placeholder="tok_visa"
                 />
               </div>
-              <p className="text-xs text-slate-500">{labels.paymentHint}</p>
+              <p className="text-xs text-muted">{labels.paymentHint}</p>
             </fieldset>
           ) : null}
           <Button type="submit" disabled={pending} className="w-full" data-testid="confirm-booking">

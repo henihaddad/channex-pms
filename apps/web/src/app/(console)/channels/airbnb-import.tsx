@@ -29,7 +29,7 @@ export function AirbnbImport({ accountId, label }: { accountId: string; label: s
           {rows.map((r) => (
             <p key={r.code}>
               {r.title}{" "}
-              <span className="text-slate-500">
+              <span className="text-muted">
                 →{" "}
                 {r.match
                   ? `${r.match.title} (${Math.round(r.match.confidence * 100)}%)`
@@ -60,7 +60,7 @@ export function AirbnbImport({ accountId, label }: { accountId: string; label: s
         </div>
       ) : null}
       {result ? (
-        <p className="mt-1 text-xs text-emerald-700" data-testid="import-result">
+        <p className="mt-1 text-xs text-mint-deep" data-testid="import-result">
           {result}
         </p>
       ) : null}

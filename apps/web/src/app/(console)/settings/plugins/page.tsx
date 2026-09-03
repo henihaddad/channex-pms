@@ -11,22 +11,22 @@ export default async function PluginsPage() {
   return (
     <div className="space-y-6">
       <PageTitle>{t("title")}</PageTitle>
-      <p className="text-sm text-slate-600">{t("hint")}</p>
+      <p className="text-sm text-muted">{t("hint")}</p>
       <Card>
         <h2 className="mb-2 font-semibold">{t("installed")}</h2>
-        {plugins.length === 0 ? <p className="text-sm text-slate-500">{t("none")}</p> : null}
+        {plugins.length === 0 ? <p className="text-sm text-muted">{t("none")}</p> : null}
         <ul className="space-y-2 text-sm" data-testid="plugin-list">
           {plugins.map((p) => (
             <li
               key={p.id}
-              className="rounded border border-slate-200 p-2"
+              className="rounded border border-line p-2"
               data-testid="plugin-row"
               data-enabled={p.enabled ? "1" : "0"}
             >
               <div className="flex items-center justify-between">
                 <strong>
                   {p.manifest.name}{" "}
-                  <span className="text-xs text-slate-500">v{p.manifest.version}</span>
+                  <span className="text-xs text-muted">v{p.manifest.version}</span>
                 </strong>
                 <span className="text-xs">
                   {p.enabled ? t("enabled") : t("disabled")}
@@ -35,11 +35,11 @@ export default async function PluginsPage() {
                     : ""}
                 </span>
               </div>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted">
                 {t("events")}: {p.manifest.events.join(", ")} · {t("extensionPoints")}:{" "}
                 {p.manifest.extensionPoints.join(", ")}
               </p>
-              <p className="text-xs text-slate-600">
+              <p className="text-xs text-muted">
                 {t("permissions")}:{" "}
                 {p.manifest.permissions.length ? p.manifest.permissions.join(", ") : "—"} ·{" "}
                 {p.endpointUrl}
@@ -78,12 +78,12 @@ export default async function PluginsPage() {
             secret: t("secret", { secret: "{secret}" }),
           }}
         />
-        <p className="mt-2 text-xs text-slate-500">{t("reference")}</p>
+        <p className="mt-2 text-xs text-muted">{t("reference")}</p>
       </Card>
       <Card>
         <h2 className="mb-2 font-semibold">{t("deliveries")}</h2>
         <table className="w-full text-xs" data-testid="deliveries">
-          <thead className="text-slate-500">
+          <thead className="text-muted">
             <tr>
               <th className="text-start">{t("delivery")}</th>
               <th className="text-start">{t("events")}</th>

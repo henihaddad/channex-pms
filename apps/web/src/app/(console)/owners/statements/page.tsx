@@ -31,13 +31,13 @@ export default async function StatementsPage({
         </Button>
       </form>
       <Card>
-        {rows.length === 0 ? <p className="text-sm text-slate-500">{t("noStatements")}</p> : null}
+        {rows.length === 0 ? <p className="text-sm text-muted">{t("noStatements")}</p> : null}
         <table className="w-full text-sm">
           <tbody>
             {rows.map((s) => (
               <tr
                 key={s.id}
-                className="border-t border-slate-100"
+                className="border-t border-line"
                 data-testid="statement-row"
                 data-state={s.state}
               >
@@ -51,14 +51,14 @@ export default async function StatementsPage({
                 <td>{money(Number(s.totals.grossRevenue ?? 0), s.currency)}</td>
                 <td className="font-medium">{money(Number(s.totals.netDue ?? 0), s.currency)}</td>
                 <td>
-                  <span className="rounded bg-slate-100 px-1 text-xs">{s.state}</span>
+                  <span className="rounded bg-canvas px-1 text-xs">{s.state}</span>
                   {s.disputeState === "open" ? (
-                    <span className="ms-1 rounded bg-rose-100 px-1 text-xs text-rose-800">
+                    <span className="ms-1 rounded bg-rose-soft px-1 text-xs text-rose">
                       {t("disputed")}
                     </span>
                   ) : null}
                   {s.anomalies.length ? (
-                    <span className="ms-1 rounded bg-amber-100 px-1 text-xs text-amber-800">
+                    <span className="ms-1 rounded bg-amber-soft px-1 text-xs text-amber-deep">
                       {s.anomalies.length} ⚠
                     </span>
                   ) : null}

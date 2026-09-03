@@ -44,13 +44,13 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         {t("statement")} {st.periodFrom.slice(0, 7)} · {st.ownerName} · {st.propertyTitle}
       </PageTitle>
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded bg-slate-100 px-2 py-0.5" data-testid="statement-state">
+        <span className="rounded bg-canvas px-2 py-0.5" data-testid="statement-state">
           {st.state}
         </span>
         {st.disputeState === "open" ? (
           <form action={resolveDisputeAction} className="flex items-center gap-1">
             <input type="hidden" name="id" value={st.id} />
-            <span className="rounded bg-rose-100 px-2 py-0.5 text-rose-800">{t("disputed")}</span>
+            <span className="rounded bg-rose-soft px-2 py-0.5 text-rose">{t("disputed")}</span>
             {st.disputeThreadId ? (
               <Link className="underline" href={`/inbox?view=all&thread=${st.disputeThreadId}`}>
                 {t("openThread")}
@@ -92,7 +92,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
             <input type="hidden" name="statementId" value={st.id} />
             <select
               name="method"
-              className="h-8 rounded border border-slate-300 px-1 text-xs"
+              className="h-8 rounded border border-line-strong px-1 text-xs"
               defaultValue="manual"
             >
               <option value="manual">{t("manualTransfer")}</option>
@@ -101,7 +101,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
             <input
               name="reference"
               placeholder={t("bankReference")}
-              className="h-8 rounded border border-slate-300 px-2 text-xs"
+              className="h-8 rounded border border-line-strong px-2 text-xs"
             />
             <Button
               type="submit"
@@ -111,14 +111,14 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
             >
               {t("recordPayout")} {money(Number(st.totals.payable ?? 0), st.currency)}
             </Button>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted">
               {t("fourEyesAbove", { amount: money(v.fourEyesThreshold, st.currency) })}
             </span>
           </form>
         ) : null}
       </div>
       {st.anomalies.length ? (
-        <Card className="border-amber-200 bg-amber-50 text-sm">
+        <Card className="border-amber/50 bg-amber-soft text-sm">
           <p className="font-medium">{t("reviewFlags")}</p>
           <ul className="list-disc ps-5 text-xs" data-testid="anomalies">
             {st.anomalies.map((a) => (
@@ -129,7 +129,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
       ) : null}
       <div className="grid grid-cols-[2fr_1fr] gap-4">
         <Card>
-          <p className="mb-1 text-xs text-slate-500">
+          <p className="mb-1 text-xs text-muted">
             {(
               st.segments as Array<{
                 version: number;
@@ -147,8 +147,8 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           <table className="w-full text-xs" data-testid="statement-lines">
             <tbody>
               {st.lines.map((l) => (
-                <tr key={l.id} className="border-t border-slate-100" data-kind={l.kind}>
-                  <td className="py-0.5 text-slate-500">{l.date}</td>
+                <tr key={l.id} className="border-t border-line" data-kind={l.kind}>
+                  <td className="py-0.5 text-muted">{l.date}</td>
                   <td>{l.kind.replace(/_/g, " ")}</td>
                   <td>
                     {l.bookingId ? (
@@ -168,13 +168,13 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                     ) : null}
                   </td>
                   <td className="text-end tabular-nums">{money(l.amountMinor, st.currency)}</td>
-                  <td className="text-slate-400">v{l.agreementVersion}</td>
+                  <td className="text-faint">v{l.agreementVersion}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {st.warnings.map((w) => (
-            <p key={w} className="text-xs text-amber-800">
+            <p key={w} className="text-xs text-amber-deep">
               {w}
             </p>
           ))}
@@ -189,7 +189,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                     <td className="text-end tabular-nums" data-total={k}>
                       {money(Number(st.totals[k] ?? 0), st.currency)}
                     </td>
-                    <td className="text-end text-slate-400 tabular-nums">
+                    <td className="text-end text-faint tabular-nums">
                       {prev ? money(Number(prev.totals[k] ?? 0), st.currency) : ""}
                     </td>
                   </tr>
@@ -197,27 +197,25 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
               </tbody>
             </table>
             {prev ? (
-              <p className="mt-1 text-slate-500">
+              <p className="mt-1 text-muted">
                 {t("previousColumn", { period: prev.periodFrom.slice(0, 7) })}
               </p>
             ) : null}
           </Card>
           <Card className="text-xs">
             <p className="font-medium">{t("payouts")}</p>
-            {st.payouts.length === 0 ? <p className="text-slate-500">{t("noPayouts")}</p> : null}
+            {st.payouts.length === 0 ? <p className="text-muted">{t("noPayouts")}</p> : null}
             {st.payouts.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between border-t border-slate-100 py-1"
+                className="flex items-center justify-between border-t border-line py-1"
                 data-testid="payout-row"
                 data-state={p.state}
               >
                 <span>
                   {money(p.amountMinor, p.currency)} · {p.method} · {p.state}
                   {p.providerRef ? ` · ${p.providerRef}` : ""}
-                  {p.failureReason ? (
-                    <span className="text-rose-700"> · {p.failureReason}</span>
-                  ) : null}
+                  {p.failureReason ? <span className="text-rose"> · {p.failureReason}</span> : null}
                 </span>
                 {p.state === "awaiting_approval" ? (
                   <form action={approvePayoutAction}>

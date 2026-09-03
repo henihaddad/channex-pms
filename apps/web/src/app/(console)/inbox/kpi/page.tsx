@@ -27,10 +27,10 @@ export default async function KpiPage({
           <table>
             <tbody>
               {kpi.byProperty.map((r) => (
-                <tr key={r.propertyId} className="border-t border-slate-100">
+                <tr key={r.propertyId} className="border-t border-line">
                   <td className="py-1">{r.title}</td>
                   <td>{min(r.median)}</td>
-                  <td className="text-slate-500">n={r.n}</td>
+                  <td className="text-muted">n={r.n}</td>
                 </tr>
               ))}
             </tbody>
@@ -38,10 +38,10 @@ export default async function KpiPage({
           <table>
             <tbody>
               {kpi.byChannel.map((r) => (
-                <tr key={r.provider} className="border-t border-slate-100">
+                <tr key={r.provider} className="border-t border-line">
                   <td className="py-1">{providerLabel(r.provider)}</td>
                   <td>{min(r.median)}</td>
-                  <td className="text-slate-500">n={r.n}</td>
+                  <td className="text-muted">n={r.n}</td>
                 </tr>
               ))}
             </tbody>
@@ -49,10 +49,10 @@ export default async function KpiPage({
           <table>
             <tbody>
               {kpi.byAgent.map((r) => (
-                <tr key={r.agentId ?? "none"} className="border-t border-slate-100">
+                <tr key={r.agentId ?? "none"} className="border-t border-line">
                   <td className="py-1">{r.agentId ?? t("staff")}</td>
                   <td>{min(r.median)}</td>
-                  <td className="text-slate-500">n={r.n}</td>
+                  <td className="text-muted">n={r.n}</td>
                 </tr>
               ))}
             </tbody>

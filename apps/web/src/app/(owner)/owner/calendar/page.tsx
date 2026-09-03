@@ -18,18 +18,12 @@ export default async function OwnerCalendar() {
   return (
     <div className="space-y-4">
       <PageTitle>{t("nav.calendar")}</PageTitle>
-      <p className="text-sm text-slate-600">{t("calendarHint")}</p>
+      <p className="text-sm text-muted">{t("calendarHint")}</p>
       <Card className="text-sm">
         <p className="font-medium">{t("bookings")}</p>
-        {v.bookings.length === 0 ? (
-          <p className="text-xs text-slate-500">{t("noBookings")}</p>
-        ) : null}
+        {v.bookings.length === 0 ? <p className="text-xs text-muted">{t("noBookings")}</p> : null}
         {v.bookings.map((b) => (
-          <p
-            key={b.id}
-            className="border-t border-slate-100 py-1 text-xs"
-            data-testid="owner-booking"
-          >
+          <p key={b.id} className="border-t border-line py-1 text-xs" data-testid="owner-booking">
             {b.arrivalDate} → {b.departureDate} · {b.guestFirstName} · {b.channel} ·{" "}
             {b.propertyTitle} {b.unit ? `· ${b.unit}` : ""} · {b.status}
           </p>
@@ -38,7 +32,7 @@ export default async function OwnerCalendar() {
         {v.blocks.map((b) => (
           <p
             key={b.id}
-            className="border-t border-slate-100 py-1 text-xs"
+            className="border-t border-line py-1 text-xs"
             data-testid="owner-block"
             data-reason={b.reason}
           >

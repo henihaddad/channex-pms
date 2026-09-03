@@ -36,29 +36,29 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   ] as const;
   return (
     <div className="flex min-h-screen" data-testid="ops-console">
-      <aside className="w-56 shrink-0 border-e border-slate-200 bg-slate-900 p-4 text-slate-100">
+      <aside className="w-56 shrink-0 border-e border-line bg-ink p-4 text-white/80">
         <p className="mb-6 text-sm font-bold">{t("title")}</p>
         <nav className="space-y-1">
           {links.map(([href, label]) => (
             <Link
               key={href}
               href={href}
-              className="block rounded-md px-3 py-2 text-sm hover:bg-slate-800"
+              className="block rounded-md px-3 py-2 text-sm hover:bg-ink-3"
             >
               {label}
             </Link>
           ))}
-          <Link href="/" className="mt-4 block px-3 text-xs text-slate-400 underline">
+          <Link href="/" className="mt-4 block px-3 text-xs text-faint underline">
             console →
           </Link>
         </nav>
-        <p className="mt-8 text-[11px] text-slate-400">{t("noPii")}</p>
+        <p className="mt-8 text-[11px] text-faint">{t("noPii")}</p>
       </aside>
       <main className="flex-1 p-8">
         {imp ? (
           <form
             action={leaveImpersonationAction}
-            className="mb-4 rounded bg-amber-100 p-2 text-sm text-amber-900"
+            className="mb-4 rounded bg-amber-soft p-2 text-sm text-amber-deep"
           >
             {t("banner", { org: imp.orgName, time: imp.expiresAt.slice(11, 16) })}{" "}
             <button className="underline" type="submit">
