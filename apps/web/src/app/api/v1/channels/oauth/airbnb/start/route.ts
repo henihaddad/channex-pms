@@ -24,12 +24,19 @@ export const GET = withPermission.route(
     const chosen = all.filter(
       (p) => p.state === "live" && (!input.propertyId || p.id === input.propertyId),
     );
-    if (chosen.length === 0)
+    if (chosen.length === 0) {
+      // a person clicking the button gets sent back with the reason; an API client gets the problem
+      if (req.headers.get("accept")?.includes("text/html"))
+        return Response.redirect(
+          new URL("/channels?problem=no_live_property", req.nextUrl.origin),
+          302,
+        );
       throw new HttpProblem(
         409,
         "no_live_property",
         "Take a property live before connecting Airbnb",
       );
+    }
     const maps = await Promise.all(chosen.map((p) => repo.idMap(p.id)));
     const token = c.crypto.randomToken(16);
     (await cookies()).set(

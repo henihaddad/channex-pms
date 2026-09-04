@@ -180,6 +180,8 @@
     "health": "Tableau de santé",
     "connect": "Connecter un canal",
     "accounts": "Comptes de canal",
+    "noLiveProperty": "Airbnb se connecte aux biens déjà en ligne sur le gestionnaire de canaux. Les vôtres sont encore en cours de configuration ou en brouillon : ouvrez un bien, attendez que son état indique en ligne, puis revenez ici.",
+    "goToProperties": "Voir les biens",
     "connectAirbnb": "Connecter Airbnb",
     "empty": "Aucun canal connecté.",
     "events": "Événements récents",

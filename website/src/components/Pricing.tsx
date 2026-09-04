@@ -138,7 +138,9 @@ export function Pricing() {
             <article
               key={p.key}
               className={`relative flex flex-col rounded-3xl border p-7 ${
-                p.featured ? "border-mint/60 bg-mint/5 shadow-2xl shadow-mint/10" : "border-line bg-panel"
+                p.featured
+                  ? "border-mint/60 bg-mint/5 shadow-2xl shadow-mint/10"
+                  : "border-line bg-panel"
               }`}
             >
               {p.featured ? (
@@ -223,16 +225,16 @@ export function Pricing() {
             </h2>
             <p className="mt-4 leading-relaxed text-fg-muted">
               Plans differ in volume price and limits, never in features. A five-unit Starter
-              account runs the same channel manager, inbox and owner statements as a
-              thousand-unit Scale account.
+              account runs the same channel manager, inbox and owner statements as a thousand-unit
+              Scale account.
             </p>
             <div className="mt-8 rounded-2xl border border-line bg-panel p-5 text-sm">
               <p className="font-semibold text-white">Worked example</p>
               <p className="mt-2 leading-relaxed text-fg-muted">
                 A manager with 80 apartments on Growth: 50 units at €8 and 30 units at €6.50 is{" "}
                 <span className="font-semibold text-white">€595 a month</span>, or{" "}
-                <span className="font-semibold text-white">€505.75</span> paid yearly. Add ten
-                units in July and July is billed at 90.
+                <span className="font-semibold text-white">€505.75</span> paid yearly. Add ten units
+                in July and July is billed at 90.
               </p>
             </div>
           </div>
@@ -267,7 +269,10 @@ export function Pricing() {
                 <summary className="cursor-pointer list-none text-base font-bold text-white marker:hidden">
                   <span className="flex items-center justify-between gap-4">
                     {f.q}
-                    <span className="text-fg-muted transition group-open:rotate-45" aria-hidden="true">
+                    <span
+                      className="text-fg-muted transition group-open:rotate-45"
+                      aria-hidden="true"
+                    >
                       +
                     </span>
                   </span>

@@ -49,7 +49,8 @@ export interface PushSummary {
  * Push every pending ARI cell of one property (spec 05 §5.4.1). Availability
  * goes first (money-losing lane), restrictions after. Throttling and outages
  * surface as RetryLater; validation failures mark cells `failed` with the reason
- * and never retry until edited (CX-4: local edits are already persisted as pending).
+ * and never retry until edited (CX-4: local edits are already persisted as pending),
+ * except a rejection for a property or plan the provider does not know yet, which retries.
  */
 export async function pushProperty(ctx: PushContext): Promise<PushSummary> {
   const summary: PushSummary = {
@@ -113,6 +114,17 @@ export async function pushProperty(ctx: PushContext): Promise<PushSummary> {
 
 type Entry = AvailabilityEntry | RestrictionEntry;
 
+const REFERENCE_RETRY_MS = 15_000;
+
+/**
+ * A rejection that names a missing property, rate plan or room type is a timing or mapping
+ * problem, not a bad cell: Channex answers this way for a push that lands right after
+ * provisioning created the objects. Such cells are retried; every other rejection is final.
+ */
+export function isReferenceMiss(reason: string): boolean {
+  return /not found/i.test(reason) && /(property|rate.?plan|room.?type)/i.test(reason);
+}
+
 async function run(
   ctx: PushContext,
   kind: "availability" | "restrictions",
@@ -140,6 +152,12 @@ async function run(
       await revertToPending(ctx, entries, versionOf);
       throw new RetryLater(5_000, e.message);
     }
+    if (e instanceof ValidationError && isReferenceMiss(e.message)) {
+      // the provider does not know the property or plan yet (a push racing provisioning): try again shortly
+      ctx.breaker.onSuccess(ctx.orgId);
+      await revertToPending(ctx, entries, versionOf);
+      throw new RetryLater(REFERENCE_RETRY_MS, e.message);
+    }
     if (e instanceof ValidationError) {
       // the whole batch was rejected: every cell fails with the reason (no retry until edited)
       await ctx.store.applyOutcomes(
@@ -164,17 +182,24 @@ async function run(
   summary.rejected += result.rejected.length;
   const rejectedByIndex = new Map(result.rejected.map((r) => [r.index, r.reason]));
   const outcomes: CellOutcome[] = [];
+  let referenceMiss: string | null = null;
   entries.forEach((entry, index) => {
     const reason = rejectedByIndex.get(index);
+    // "Not found property/rate plan": the provider has not registered the references yet, so the
+    // cells go back to pending for a retry instead of failing until someone edits them
+    if (reason !== undefined && isReferenceMiss(reason)) referenceMiss = reason;
     for (const c of cellsOf([entry], versionOf))
       outcomes.push(
-        reason === undefined ? { ...c, status: "synced" } : { ...c, status: "failed", reason },
+        reason === undefined
+          ? { ...c, status: "synced" }
+          : { ...c, status: "failed", reason: isReferenceMiss(reason) ? "retry" : reason },
       );
   });
   // FIFO: a later entry may cover a cell an earlier one already touched; the last outcome wins
   const last = new Map<string, CellOutcome>();
   for (const o of outcomes) last.set(keyOf(o), o);
   await ctx.store.applyOutcomes(ctx.propertyId, [...last.values()]);
+  if (referenceMiss !== null) throw new RetryLater(REFERENCE_RETRY_MS, referenceMiss);
   ctx.log?.info(
     {
       propertyId: ctx.propertyId,

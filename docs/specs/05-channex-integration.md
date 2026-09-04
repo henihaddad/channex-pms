@@ -377,7 +377,7 @@ Every provider failure is classified, because the right response differs wildly:
 |---|---|---|
 | **Auth** | 401 invalid key, revoked key | Pause org queue, P1 tenant alert, reconnect CTA. Do not retry blindly. |
 | **Authorization** | 403 insufficient permission | Surface required Channex permission; no retry. |
-| **Validation** | 422 bad rate plan, invalid date, unknown restriction | Mark cells failed with a human-readable reason; no retry until edited. |
+| **Validation** | 422 bad rate plan, invalid date, unknown restriction | Mark cells failed with a human-readable reason; no retry until edited. Exception: a rejection naming a property, rate plan or room type the provider does not know yet (a push racing provisioning) puts the cells back to pending and retries after 15 s. A force resync re-enters failed cells too. |
 | **Partial** | 200 with per-entry warnings | Split: valid entries `synced`, invalid ones `failed` with reasons. Channex validates partially by design — we must not treat a 200 as blanket success. |
 | **Throttle** | 429 | Adaptive backoff, requeue, reduce token rate. Not an error to the user. |
 | **Transient** | 5xx, timeout, connection reset | Retry with jitter; circuit breaker; degraded-mode banner. |

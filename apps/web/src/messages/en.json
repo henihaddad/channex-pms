@@ -180,6 +180,8 @@
     "health": "Health board",
     "connect": "Connect a channel",
     "accounts": "Channel accounts",
+    "noLiveProperty": "Airbnb connects to properties that are live on the channel manager. Yours are still being set up or are drafts: open a property and wait for its state to read live, then come back.",
+    "goToProperties": "Go to properties",
     "connectAirbnb": "Connect Airbnb",
     "empty": "No channels connected yet.",
     "events": "Recent events",

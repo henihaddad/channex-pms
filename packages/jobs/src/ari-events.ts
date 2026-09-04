@@ -19,13 +19,17 @@ export async function queueAriPush(
   });
 }
 
-/** CH-6 / provisioning: every cell back to pending so the next push covers the whole horizon. */
+/**
+ * CH-6 / provisioning / force resync: every cell back to pending so the next push covers the
+ * whole horizon. Cells that failed validation are included: the person asking for a resync
+ * has fixed or accepted them, and a cell kept out of the pipeline forever helps nobody.
+ */
 export async function markAllPending(tx: Tx, propertyId: string): Promise<number> {
   const a = await tx.execute(
-    sql`update rate_day set sync_state = 'pending', version = version + 1, updated_at = now() where property_id = ${propertyId} and sync_state <> 'pending'`,
+    sql`update rate_day set sync_state = 'pending', last_error = null, version = version + 1, updated_at = now() where property_id = ${propertyId} and (sync_state <> 'pending' or last_error is not null)`,
   );
   const b = await tx.execute(
-    sql`update availability_day set sync_state = 'pending', version = version + 1, updated_at = now() where property_id = ${propertyId} and sync_state <> 'pending'`,
+    sql`update availability_day set sync_state = 'pending', last_error = null, version = version + 1, updated_at = now() where property_id = ${propertyId} and (sync_state <> 'pending' or last_error is not null)`,
   );
   return (
     Number((a as { rowCount?: number }).rowCount ?? 0) +

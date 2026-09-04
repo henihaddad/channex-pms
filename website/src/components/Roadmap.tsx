@@ -48,10 +48,7 @@ export function Roadmap() {
     >
       <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {milestones.map((m) => (
-          <li
-            key={m.id}
-            className="rounded-2xl border border-line bg-panel p-5"
-          >
+          <li key={m.id} className="rounded-2xl border border-line bg-panel p-5">
             <div className="flex items-center gap-3">
               <span className="font-mono text-sm font-bold text-mint">{m.id}</span>
               <h3 className="font-bold text-white">{m.title}</h3>

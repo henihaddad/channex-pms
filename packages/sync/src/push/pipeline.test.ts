@@ -94,6 +94,37 @@ describe("pushProperty", () => {
     expect((await pushProperty(ctx)).accepted).toBe(1);
   });
 
+  it("a rejection naming a property the provider does not know yet retries instead of failing", async () => {
+    // Channex answers this way to a push that lands right after provisioning created the objects
+    let calls = 0;
+    const { store, ctx } = harness({
+      pushAvailability: okPush,
+      pushRatesAndRestrictions: async (b) => {
+        calls += 1;
+        if (calls === 1)
+          return {
+            accepted: 0,
+            rejected: b.entries.map((_, index) => ({
+              index,
+              reason: "property_id: Not found property for this change",
+              field: "property_id",
+            })),
+            warnings: [],
+            taskIds: [],
+          };
+        return okPush(b);
+      },
+    });
+    store.setRate("rp", "2026-10-01", { rate: 100 });
+    store.setRate("rp", "2026-10-02", { rate: 100 });
+    await expect(pushProperty(ctx)).rejects.toBeInstanceOf(RetryLater);
+    expect(store.states().pending).toBe(2);
+    expect(store.rate.get("rate|rp|2026-10-01")?.lastError).toBeUndefined();
+    // the two days compress into one range entry; both cells end up synced
+    expect((await pushProperty(ctx)).rejected).toBe(0);
+    expect(store.states().synced).toBe(2);
+  });
+
   it("on 429 halves the rate, reverts cells to pending and asks for a retry", async () => {
     let n = 0;
     const { store, ctx, limiter } = harness({

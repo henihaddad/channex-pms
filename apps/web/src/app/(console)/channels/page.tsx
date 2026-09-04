@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { AnchorButton, Button, Card, LinkButton, PageTitle } from "@/components/ui";
+import { Alert, AnchorButton, Button, Card, LinkButton, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   acknowledgeEventAction,
@@ -20,11 +20,24 @@ const tone: Record<string, string> = {
   draft: "bg-background text-muted",
 };
 
-export default async function ChannelsPage() {
+export default async function ChannelsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ problem?: string }>;
+}) {
   const t = await getTranslations("channels");
+  const { problem } = await searchParams;
   const board = await guard(() => loadHealthBoard());
   return (
     <div className="space-y-6">
+      {problem === "no_live_property" ? (
+        <Alert tone="warning" data-testid="no-live-property">
+          {t("noLiveProperty")}{" "}
+          <Link href="/properties" className="font-semibold underline underline-offset-2">
+            {t("goToProperties")}
+          </Link>
+        </Alert>
+      ) : null}
       <div className="flex items-center justify-between">
         <PageTitle>{t("title")}</PageTitle>
         <div className="flex gap-2">

@@ -91,6 +91,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- ARI push: Channex's "Not found property for this change", answered to a push that lands right
+  after provisioning created the objects, no longer burns every cell of the horizon as a
+  permanent validation failure; those cells return to pending and the push retries (spec 05
+  §5.10). A force resync now re-enters cells that failed validation, and the Airbnb button sends
+  a person without a live property back to Channels with an explanation instead of raw JSON.
+
 - The console proxy no longer redirects the Channex webhook receiver (`/webhooks/*`) to the login
   page; the receiver authenticates by path token and secret.
 - The cleaner app keeps not-yet-synced local updates when a day refresh lands, and syncs one queue

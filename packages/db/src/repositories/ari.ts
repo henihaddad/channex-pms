@@ -136,11 +136,11 @@ export class DrizzleAriStore implements AriCellStore {
       } else if (o.reason === "retry") {
         if (o.kind === "rate")
           await this.tx.execute(
-            sql`update rate_day set sync_state = 'pending' where rate_plan_id = ${o.ratePlanId} and date = ${o.date} and version = ${o.version}`,
+            sql`update rate_day set sync_state = 'pending', last_error = null where rate_plan_id = ${o.ratePlanId} and date = ${o.date} and version = ${o.version}`,
           );
         else
           await this.tx.execute(
-            sql`update availability_day set sync_state = 'pending' where room_type_id = ${o.roomTypeId} and date = ${o.date} and version = ${o.version}`,
+            sql`update availability_day set sync_state = 'pending', last_error = null where room_type_id = ${o.roomTypeId} and date = ${o.date} and version = ${o.version}`,
           );
       } else {
         if (o.kind === "rate")
