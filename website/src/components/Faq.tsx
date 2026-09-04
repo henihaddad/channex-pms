@@ -4,11 +4,11 @@ import { Section } from "./Section";
 const faqs = [
   {
     q: "Is there something I can run today?",
-    a: "Not as an operator. The specification is complete enough to build against and milestone M0 is under way: the monorepo, the framework-free domain layer with its first value objects and tests, Docker Compose and CI are in place. Contributors can run it today; a property cannot. The best thing you can do now is read the spec and tell us where a real property would break it.",
+    a: "Yes. v1.0 is live: create an organisation at app.otabridge.com, add your properties, connect Airbnb and Booking.com through Channex, and run reservations, turnovers, the inbox, owner statements and your own booking engine. The first fourteen days are free and need no card. Self-hosters run the same release from the repository with Docker Compose.",
   },
   {
     q: "Do I need a Channex.io account?",
-    a: "Yes for self-hosting: Channex provides the certified OTA connectivity and you bring your own account. For the hosted service we are working out with Channex whether tenants can share one master account. Channex sits behind a provider interface, so other connectivity providers can be added later.",
+    a: "Only when you self-host: Channex provides the certified OTA connectivity and you bring your own account. On the hosted service connectivity is part of the plan and you connect your channels from inside OTAbridge. Channex sits behind a provider interface, so other connectivity providers can be added later.",
   },
   {
     q: "Is this open source?",

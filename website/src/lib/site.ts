@@ -8,3 +8,9 @@ export const CONTRIBUTING = `${GITHUB}/blob/main/CONTRIBUTING.md`;
 export const DISCUSSIONS = `${GITHUB}/discussions`;
 export const DESIGN_PARTNER = `${GITHUB}/issues/new?title=Design%20partner%3A%20%3Cyour%20region%3E&labels=design-partner`;
 export const SECURITY = `${GITHUB}/blob/main/SECURITY.md`;
+export const SELF_HOST = `${GITHUB}/blob/main/docs/install.md`;
+
+/** The hosted service. */
+export const APP = "https://app.otabridge.com";
+export const SIGN_IN = `${APP}/login`;
+export const SIGN_UP = `${APP}/signup`;

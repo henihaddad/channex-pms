@@ -1,4 +1,5 @@
 import {
+  APP,
   CONTRIBUTING,
   DISCUSSIONS,
   GITHUB,
@@ -7,10 +8,23 @@ import {
   OPEN_QUESTIONS,
   ROADMAP,
   SECURITY,
+  SELF_HOST,
+  SIGN_IN,
+  SIGN_UP,
   SPEC,
 } from "@/lib/site";
 
 const columns = [
+  {
+    title: "Product",
+    links: [
+      { href: "/pricing", label: "Pricing" },
+      { href: SIGN_UP, label: "Start free" },
+      { href: SIGN_IN, label: "Sign in" },
+      { href: SELF_HOST, label: "Self-host guide" },
+      { href: APP, label: "app.otabridge.com" },
+    ],
+  },
   {
     title: "Project",
     links: [
@@ -46,7 +60,7 @@ const columns = [
 export function Footer() {
   return (
     <footer className="border-t border-line bg-ink-2/60">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-[1.4fr_repeat(4,1fr)]">
         <div>
           <p className="text-lg font-bold text-white">OTAbridge</p>
           <p className="mt-2 max-w-xs text-sm leading-relaxed text-fg-muted">

@@ -7,7 +7,6 @@ const milestones = [
     id: "M0",
     title: "Foundations",
     body: "Monorepo, CI, Compose, domain value objects, generated permission matrix.",
-    state: "next",
   },
   {
     id: "M1",
@@ -44,23 +43,21 @@ export function Roadmap() {
     <Section
       id="roadmap"
       eyebrow="Roadmap"
-      title="Nine milestones to v1.0. Each one usable on its own."
-      lead="Design partners ride the early releases on real portfolios while later milestones are built. The full plan, including what each milestone deliberately leaves out, is public."
+      title="Nine milestones, all shipped in v1.0."
+      lead="The product was built in the order the risk demanded: connectivity first, billing last. The full plan, including what each milestone deliberately left out and what comes after v1.0, is public."
     >
       <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {milestones.map((m) => (
           <li
             key={m.id}
-            className={`rounded-2xl border p-5 ${m.state === "next" ? "border-mint/50 bg-mint/5" : "border-line bg-panel"}`}
+            className="rounded-2xl border border-line bg-panel p-5"
           >
             <div className="flex items-center gap-3">
               <span className="font-mono text-sm font-bold text-mint">{m.id}</span>
               <h3 className="font-bold text-white">{m.title}</h3>
-              {m.state === "next" ? (
-                <span className="ml-auto rounded-full bg-amber/20 px-2 py-0.5 text-[11px] font-semibold text-amber">
-                  next
-                </span>
-              ) : null}
+              <span className="ml-auto rounded-full bg-mint/15 px-2 py-0.5 text-[11px] font-semibold text-mint">
+                shipped
+              </span>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-fg-muted">{m.body}</p>
           </li>
