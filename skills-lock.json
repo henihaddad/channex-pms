@@ -43,6 +43,12 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
     },
+    "information-architecture": {
+      "source": "owl-listener/designer-skills",
+      "sourceType": "github",
+      "skillPath": "ux-strategy/skills/information-architecture/SKILL.md",
+      "computedHash": "0ff58c8128b6c278d7fa6d8f9a202a338b089bd70c6afb32b61d520ca24fdeee"
+    },
     "landing-page-copywriter": {
       "source": "onewave-ai/claude-skills",
       "sourceType": "github",
@@ -90,6 +96,12 @@
       "sourceType": "github",
       "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
       "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
+    },
+    "ux-heuristics": {
+      "source": "wondelai/skills",
+      "sourceType": "github",
+      "skillPath": "ux-heuristics/SKILL.md",
+      "computedHash": "078959463a4d191d3ff17fd7a0b036697c79da3e86102251c98f76ffa9e66a28"
     },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
