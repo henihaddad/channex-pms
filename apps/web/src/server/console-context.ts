@@ -34,17 +34,15 @@ export async function consoleContext(orgId: string): Promise<ConsoleContext> {
     ),
   );
   const providerConfigured = Boolean(process.env.CHANNEX_API_KEY) || c.fake !== undefined;
+  // Three steps a manager can act on, in the order they happen; the provider step only
+  // appears on a self-hosted install that has no connectivity key yet.
   const list = [
-    { key: "organization", done: true, href: "/settings/organization" },
-    { key: "provider", done: providerConfigured, href: "/sync-health" },
+    ...(providerConfigured ? [] : [{ key: "provider", done: false, href: "/sync-health" }]),
     { key: "property", done: Number(steps?.properties ?? 0) > 0, href: "/properties/new" },
-    { key: "channel", done: Number(steps?.channels ?? 0) > 0, href: "/channels/new" },
-    {
-      key: "push",
-      done: Number(steps?.pushed ?? 0) > 0 || Number(steps?.live ?? 0) > 0,
-      href: "/sync-health",
-    },
+    { key: "live", done: Number(steps?.live ?? 0) > 0, href: "/properties" },
+    { key: "channel", done: Number(steps?.channels ?? 0) > 0, href: "/channels" },
   ];
+  void steps?.pushed;
   const imp = await currentImpersonation();
   return {
     state,

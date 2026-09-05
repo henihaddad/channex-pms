@@ -41,6 +41,9 @@ export default async function ChannelsPage({
       <div className="flex items-center justify-between">
         <PageTitle>{t("title")}</PageTitle>
         <div className="flex gap-2">
+          <LinkButton href="/channels/new" variant="secondary" data-testid="connect-channel">
+            {t("connect")}
+          </LinkButton>
           <AnchorButton
             href="/api/v1/channels/oauth/airbnb/start"
             variant="primary"
@@ -48,19 +51,16 @@ export default async function ChannelsPage({
           >
             {t("connectAirbnb")}
           </AnchorButton>
-          <LinkButton
-            href="/channels/connect"
-            variant="secondary"
-            data-testid="connect-via-channex"
-          >
-            {t("connectViaChannex")}
-          </LinkButton>
-          <LinkButton href="/channels/new" data-testid="connect-channel">
-            {t("connect")}
-          </LinkButton>
         </div>
       </div>
-      <Card title={t("health")}>
+      <Card
+        title={t("health")}
+        description={
+          <Link href="/channels/connect" className="underline" data-testid="connect-via-channex">
+            {t("connectViaChannex")}
+          </Link>
+        }
+      >
         {board.connections.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
         <div className="grid gap-3 md:grid-cols-2" data-testid="health-board">
           {board.connections.map((c) => (

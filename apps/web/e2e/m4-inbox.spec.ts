@@ -79,7 +79,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   expect(emitted.status()).toBe(201);
   await request.post("/api/v1/test/drain", { data: { orgId } });
   await page.goto("/inbox");
-  await expect(page.getByTestId("nav-inbox")).toContainText("(1");
+  await expect(page.getByTestId("nav-inbox")).toContainText(/[1-9]/);
   const row = page.getByTestId("thread-row").first();
   await expect(row).toContainText("Ana Silva");
   await expect(row.getByTestId("unread")).toHaveText("1");

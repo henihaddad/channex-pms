@@ -36,7 +36,12 @@
       "portfolio": "Portefeuille",
       "insight": "Analyse",
       "settings": "Paramètres"
-    }
+    },
+    "more": "Plus",
+    "settings": "Paramètres",
+    "search": "Rechercher des réservations",
+    "searchPlaceholder": "Rechercher un client ou une réservation",
+    "maintenance": "Maintenance"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -170,7 +175,92 @@
     "noChannels": "Aucun canal connecté.",
     "policies": "Politiques",
     "recentOps": "Opérations récentes",
-    "bookingEngine": "Moteur de réservation"
+    "bookingEngine": "Moteur de réservation",
+    "wizard": {
+      "step1": "Que mettez-vous en location ?",
+      "step2": "Nom et lieu",
+      "step3": "Tarifs",
+      "kinds": {
+        "single_unit": {
+          "title": "Un logement",
+          "hint": "Une maison ou un appartement loué en entier. Les chambres sont gérées pour vous."
+        },
+        "multi_unit": {
+          "title": "Plusieurs unités",
+          "hint": "Appartements ou chambres d'un ou plusieurs types, réservables séparément."
+        },
+        "hotel": {
+          "title": "Hôtel",
+          "hint": "Des types de chambres avec leur nombre, et une réception."
+        }
+      },
+      "title": "Titre",
+      "titlePlaceholder": "Loft Alfama",
+      "city": "Ville",
+      "country": "Pays",
+      "currency": "Devise",
+      "timezone": "Fuseau horaire",
+      "optional": "(facultatif)",
+      "roomTypes": "Types de chambres",
+      "roomName": "Nom",
+      "rooms": "Chambres",
+      "adults": "Adultes",
+      "children": "Enfants",
+      "addRoomType": "Ajouter un type de chambre",
+      "ratePlans": "Plans tarifaires",
+      "ratePlansHint": "Un seul plan suffit pour démarrer. Vous pourrez ajouter des plans non remboursables ou à la semaine plus tard.",
+      "planName": "Nom",
+      "roomType": "Type de chambre",
+      "nightlyPrice": "Prix par nuit",
+      "minNights": "Nuits min.",
+      "addRatePlan": "Ajouter un plan tarifaire",
+      "advanced": "Avancé : modèles et groupes",
+      "template": "Modèle",
+      "none": "Aucun",
+      "groups": "Groupes",
+      "templateName": "Nom du modèle",
+      "saveTemplate": "Enregistrer comme modèle",
+      "create": "Créer le bien",
+      "afterCreate": "Ensuite : votre calendrier est envoyé au gestionnaire de canaux, puis vous connectez Airbnb ou Booking.com."
+    },
+    "states": {
+      "draft": "Brouillon",
+      "syncing": "En cours de mise en place",
+      "live": "En ligne",
+      "suspended": "Suspendu",
+      "archived": "Archivé"
+    },
+    "whatsNext": "Et ensuite",
+    "nextSyncing": "Votre calendrier est envoyé au gestionnaire de canaux. Cela prend quelques minutes et se termine tout seul.",
+    "nextDraft": "Mise en place sur le gestionnaire de canaux. Au-delà de dix minutes, utilisez Relancer la mise en place ci-dessous.",
+    "nextLive": "Votre bien est en ligne. Connectez un canal pour recevoir des réservations.",
+    "nextLiveAction": "Connecter un canal",
+    "retry": "Relancer la mise en place",
+    "technical": "Détails techniques",
+    "channexId": "Bien Channex",
+    "webhook": "Webhook",
+    "registered": "enregistré",
+    "cells": "Cellules du calendrier",
+    "setupStep": "Étape de mise en place",
+    "derivedTitle": "Ajouter un plan dérivé",
+    "derivedHint": "Un plan calculé à partir d'un autre, par exemple non remboursable à 10 % de moins.",
+    "derivedName": "Nom",
+    "parent": "Basé sur",
+    "direction": "Sens",
+    "decrease": "moins cher",
+    "increase": "plus cher",
+    "by": "De",
+    "percent": "Pourcentage",
+    "amount": "Montant",
+    "value": "Valeur",
+    "add": "Ajouter le plan",
+    "policyTitle": "Ajouter une politique",
+    "policyName": "Nom",
+    "checkIn": "Arrivée",
+    "checkOut": "Départ",
+    "addPolicy": "Ajouter la politique",
+    "setCount": "Mettre à jour",
+    "recentOpsHint": "Modifications en masse faites sur ce bien."
   },
   "calendar": {
     "title": "Calendrier"
@@ -1086,11 +1176,14 @@
     "noPii": "Aucun nom de client ni corps de message ici (OPCON-1) : diagnostiquez à partir des états, identifiants et codes."
   },
   "onboarding": {
-    "title": "Jusqu'à votre première réservation OTA",
-    "organization": "Organisation créée",
-    "provider": "Connectivité configurée",
-    "property": "Premier hébergement",
-    "channel": "Premier canal connecté",
-    "push": "Premiers tarifs envoyés"
+    "title": "Vers votre première réservation OTA",
+    "progress": "Configuration {done}/{total}",
+    "provider": "Connecter le gestionnaire de canaux",
+    "property": "Ajouter votre premier bien",
+    "live": "Bien en ligne sur le gestionnaire de canaux",
+    "channel": "Connecter un canal",
+    "lead": "Trois étapes, et les réservations arrivent.",
+    "waitingLive": "Votre calendrier est envoyé au gestionnaire de canaux. Cela prend quelques minutes ; cette page se rafraîchit seule.",
+    "done": "Terminé"
   }
 }

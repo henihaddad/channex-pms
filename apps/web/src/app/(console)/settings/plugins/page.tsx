@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import { Button, Card, SectionTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { InstallForm } from "./install-form";
 import { loadPlugins, retryDeliveriesAction, setPluginEnabledAction } from "./plugins.actions";
@@ -10,7 +10,7 @@ export default async function PluginsPage() {
   const { plugins, deliveries } = await guard(() => loadPlugins());
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       <p className="text-sm text-muted">{t("hint")}</p>
       <Card title={t("installed")}>
         {plugins.length === 0 ? <p className="text-sm text-muted">{t("none")}</p> : null}

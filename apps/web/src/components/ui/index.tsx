@@ -468,6 +468,40 @@ export function PageHeader({
   );
 }
 
+/** Where this page sits: every crumb but the last is a link back up (Krug's trunk test). */
+export function Breadcrumbs({
+  items,
+  className,
+}: {
+  items: Array<{ href?: string; label: ReactNode }>;
+  className?: string;
+}) {
+  return (
+    <nav aria-label="Breadcrumb" className={cn("text-sm text-muted", className)}>
+      <ol className="flex flex-wrap items-center gap-1.5">
+        {items.map((it, i) => (
+          <li key={i} className="flex items-center gap-1.5">
+            {i > 0 ? (
+              <span aria-hidden="true" className="text-muted/60">
+                /
+              </span>
+            ) : null}
+            {it.href ? (
+              <NextLink href={it.href} className="hover:text-foreground hover:underline">
+                {it.label}
+              </NextLink>
+            ) : (
+              <span className="text-foreground" aria-current="page">
+                {it.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 export function SectionTitle({ children, className }: { children: ReactNode; className?: string }) {
   return <h2 className={cn("text-base font-semibold text-foreground", className)}>{children}</h2>;
 }
@@ -732,3 +766,5 @@ export function Stat({
     </div>
   );
 }
+
+export { SectionTabs } from "./section-tabs";

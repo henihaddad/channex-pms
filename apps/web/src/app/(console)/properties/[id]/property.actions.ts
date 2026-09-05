@@ -51,7 +51,7 @@ const derivedSchema = z.object({
   title: z.string().min(1),
   kind: z.enum(["percent", "amount"]),
   direction: z.enum(["increase", "decrease"]),
-  value: z.coerce.number().int().min(0),
+  value: z.coerce.number().min(0),
 });
 
 /** Derived rate plan (spec 06 §6.1, INV-6): seeded from the parent for the whole horizon, then follows every parent edit. */
@@ -72,7 +72,12 @@ export const addDerivedPlanAction = withPermission<[FormData], void>(
         propertyId: p.data.propertyId,
         parentRatePlanId: p.data.parentRatePlanId,
         title: p.data.title,
-        option: { kind: p.data.kind, direction: p.data.direction, value: p.data.value },
+        // typed as a percentage or an amount in the property's currency; stored in basis points or minor units
+        option: {
+          kind: p.data.kind,
+          direction: p.data.direction,
+          value: Math.round(p.data.value * 100),
+        },
       });
     } catch (e) {
       if (e instanceof RangeError) throw new HttpProblem(422, "derivation", e.message);

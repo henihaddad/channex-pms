@@ -42,7 +42,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   // onboarding checklist (spec 12 §12.3): organization done, property not yet
   await expect(page.getByTestId("onboarding-checklist")).toBeVisible();
   await expect(
-    page.locator('[data-testid="onboarding-checklist"] li[data-step="property"]'),
+    page.locator('[data-testid="onboarding-checklist"] [data-step="property"]'),
   ).toHaveAttribute("data-done", "0");
   await page.goto("/properties/new");
   await page.getByLabel("Title").fill("Platform Flat");
@@ -52,7 +52,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await request.post("/api/v1/test/drain", { data: { orgId } });
   await page.goto("/");
   await expect(
-    page.locator('[data-testid="onboarding-checklist"] li[data-step="property"]'),
+    page.locator('[data-testid="onboarding-checklist"] [data-step="property"]'),
   ).toHaveAttribute("data-done", "1");
 
   // billing (spec 12 §12.5): trial → plan chosen → active; a card; usage and the invoice explainer

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle } from "@/components/ui";
+import { Card, SectionTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadOrganization } from "./organization.actions";
 import { OrganizationForm } from "./organization-form";
@@ -9,7 +9,7 @@ export default async function OrganizationPage() {
   const org = await guard(() => loadOrganization());
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       <Card>
         <OrganizationForm
           org={org}

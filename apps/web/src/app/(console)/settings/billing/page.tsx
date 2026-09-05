@@ -6,7 +6,7 @@ import {
   Field,
   Input,
   Label,
-  PageTitle,
+  SectionTitle,
   TBody,
   THead,
   Table,
@@ -32,7 +32,7 @@ export default async function BillingPage() {
   const sub = v.subscription;
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       {!v.hosted ? <Alert tone="success">{t("selfHosted")}</Alert> : null}
       {v.state === "suspended" ? <Alert>{t("suspended")}</Alert> : null}
       {v.state === "expired" ? <Alert>{t("expired")}</Alert> : null}

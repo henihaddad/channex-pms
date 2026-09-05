@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle, TBody, Table, Td, Tr } from "@/components/ui";
+import { Card, SectionTitle, TBody, Table, Td, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listMembers, listPendingInvitations, revokeMember } from "./members.actions";
 import { InviteForm } from "./invite-form";
@@ -12,7 +12,7 @@ export default async function MembersPage() {
   );
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       <Card title={t("invite")}>
         <InviteForm roles={[...SYSTEM_ROLES]} labels={{ role: t("role"), submit: t("invite") }} />
       </Card>

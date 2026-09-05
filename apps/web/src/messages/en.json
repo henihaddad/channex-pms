@@ -36,7 +36,12 @@
       "portfolio": "Portfolio",
       "insight": "Insight",
       "settings": "Settings"
-    }
+    },
+    "more": "More",
+    "settings": "Settings",
+    "search": "Search reservations",
+    "searchPlaceholder": "Search guests and reservations",
+    "maintenance": "Maintenance"
   },
   "auth": {
     "signIn": "Sign in",
@@ -170,7 +175,92 @@
     "noChannels": "No channels connected.",
     "policies": "Policies",
     "recentOps": "Recent operations",
-    "bookingEngine": "Booking engine"
+    "bookingEngine": "Booking engine",
+    "wizard": {
+      "step1": "What are you listing?",
+      "step2": "Name and place",
+      "step3": "Prices",
+      "kinds": {
+        "single_unit": {
+          "title": "One rental",
+          "hint": "A house or apartment rented as a whole. Rooms are handled for you."
+        },
+        "multi_unit": {
+          "title": "Several units",
+          "hint": "Apartments or rooms of one or more types, each bookable on its own."
+        },
+        "hotel": {
+          "title": "Hotel",
+          "hint": "Room types with counts, and a front desk."
+        }
+      },
+      "title": "Title",
+      "titlePlaceholder": "Alfama Loft",
+      "city": "City",
+      "country": "Country",
+      "currency": "Currency",
+      "timezone": "Time zone",
+      "optional": "(optional)",
+      "roomTypes": "Room types",
+      "roomName": "Name",
+      "rooms": "Rooms",
+      "adults": "Adults",
+      "children": "Children",
+      "addRoomType": "Add a room type",
+      "ratePlans": "Rate plans",
+      "ratePlansHint": "One plan is enough to start. You can add non-refundable or weekly plans later.",
+      "planName": "Name",
+      "roomType": "Room type",
+      "nightlyPrice": "Price per night",
+      "minNights": "Min. nights",
+      "addRatePlan": "Add a rate plan",
+      "advanced": "Advanced: templates and groups",
+      "template": "Template",
+      "none": "None",
+      "groups": "Groups",
+      "templateName": "Template name",
+      "saveTemplate": "Save as template",
+      "create": "Create property",
+      "afterCreate": "Next: your calendar is sent to the channel manager, then you connect Airbnb or Booking.com."
+    },
+    "states": {
+      "draft": "Draft",
+      "syncing": "Setting up",
+      "live": "Live",
+      "suspended": "Suspended",
+      "archived": "Archived"
+    },
+    "whatsNext": "What's next",
+    "nextSyncing": "Your calendar is being sent to the channel manager. This usually takes a few minutes and finishes on its own.",
+    "nextDraft": "Setting up on the channel manager. If this takes more than ten minutes, use Retry setup below.",
+    "nextLive": "Your property is live. Connect a channel so bookings start coming in.",
+    "nextLiveAction": "Connect a channel",
+    "retry": "Retry setup",
+    "technical": "Technical details",
+    "channexId": "Channex property",
+    "webhook": "Webhook",
+    "registered": "registered",
+    "cells": "Calendar cells",
+    "setupStep": "Setup step",
+    "derivedTitle": "Add a derived rate plan",
+    "derivedHint": "A plan priced from another one, for example non-refundable at 10% less.",
+    "derivedName": "Name",
+    "parent": "Based on",
+    "direction": "Direction",
+    "decrease": "lower",
+    "increase": "higher",
+    "by": "By",
+    "percent": "Percent",
+    "amount": "Amount",
+    "value": "Value",
+    "add": "Add plan",
+    "policyTitle": "Add a policy",
+    "policyName": "Name",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "addPolicy": "Add policy",
+    "setCount": "Update",
+    "recentOpsHint": "Bulk updates made on this property."
   },
   "calendar": {
     "title": "Calendar"
@@ -1087,10 +1177,13 @@
   },
   "onboarding": {
     "title": "Get to your first OTA booking",
-    "organization": "Organization created",
-    "provider": "Connectivity configured",
-    "property": "First property",
-    "channel": "First channel connected",
-    "push": "First rates pushed"
+    "progress": "Setup {done}/{total}",
+    "provider": "Connect the channel manager",
+    "property": "Add your first property",
+    "live": "Property live on the channel manager",
+    "channel": "Connect a channel",
+    "lead": "Three steps and bookings start flowing in.",
+    "waitingLive": "Your calendar is being sent to the channel manager. This usually takes a few minutes; this page refreshes on its own.",
+    "done": "Done"
   }
 }

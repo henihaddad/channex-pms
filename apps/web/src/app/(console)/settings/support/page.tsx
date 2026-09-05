@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, PageTitle } from "@/components/ui";
+import { Button, Card, Field, Label, SectionTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   decideImpersonationAction,
@@ -14,7 +14,7 @@ export default async function SupportPage() {
   const v = await guard(() => loadSupport());
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       <Card title={t("accessTitle")}>
         <p className="text-xs text-muted">{t("accessHint")}</p>
         {v.access ? (

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import { Card, SectionTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listAudit, verifyAudit } from "./audit.actions";
 
@@ -10,7 +10,7 @@ export default async function AuditPage() {
   );
   return (
     <div className="space-y-6">
-      <PageTitle>{t("title")}</PageTitle>
+      <SectionTitle>{t("title")}</SectionTitle>
       <Card title={t("verify")}>
         <p className={verification.ok ? "text-success-soft-foreground" : "text-danger"}>
           {verification.ok
