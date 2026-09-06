@@ -115,6 +115,10 @@ All notable changes to this project are documented here. The format follows
   plans (from the plan form and from "Retry setup"), the sweep also visits live properties whose
   setup was reopened, and a push skips plans the channel manager does not hold yet instead of
   blocking the others.
+- ARI push on the hosted worker: cell states are now written in one statement per group
+  instead of one per cell (a property's push touches thousands of cells and the worker is far
+  from the database), so a push finishes in seconds instead of dying mid-way; cells a dead job
+  left in flight re-enter the next push; the per-property lease lasts ten minutes.
 
 - The console proxy no longer redirects the Channex webhook receiver (`/webhooks/*`) to the login
   page; the receiver authenticates by path token and secret.

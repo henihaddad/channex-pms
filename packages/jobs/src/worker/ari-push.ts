@@ -38,7 +38,7 @@ export async function processAriPush(
 ): Promise<void> {
   const { orgId, propertyId } = data;
   const key = `ari:lock:${propertyId}`;
-  if (!(await deps.lease.acquire(key, 120_000))) {
+  if (!(await deps.lease.acquire(key, 600_000))) {
     await ctl.delay(2_000);
     return;
   }

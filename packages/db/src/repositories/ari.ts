@@ -11,7 +11,34 @@ import type {
 import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
 
-const PENDING_STATES = ["pending", "failed", "conflicted"] as const;
+/**
+ * Cells a push picks up. `in_flight` is included: the per-property lease keeps two pushes
+ * apart, so a cell still in flight when a push starts was left behind by a job that died.
+ */
+const PENDING_STATES = ["pending", "failed", "conflicted", "in_flight"] as const;
+
+type RateRef = Extract<CellRef, { kind: "rate" }>;
+type AvailRef = Extract<CellRef, { kind: "availability" }>;
+type RateOutcome = Extract<CellOutcome, { kind: "rate" }>;
+type AvailOutcome = Extract<CellOutcome, { kind: "availability" }>;
+
+const CHUNK = 1000;
+function chunks<T>(list: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += CHUNK) out.push(list.slice(i, i + CHUNK));
+  return out;
+}
+/** Postgres array literals for unnest(), built from bound values so every driver accepts them. */
+const list = (v: Array<string | number>) =>
+  sql`array[${sql.join(
+    v.map((x) => sql`${x}`),
+    sql`, `,
+  )}]`;
+const ids = (v: string[]) => list(v);
+const dates = (v: Array<{ date: string }>) => list(v.map((c) => c.date));
+const versions = (v: Array<{ version: number }>) => list(v.map((c) => c.version));
+const reasons = (v: CellOutcome[]) =>
+  list(v.map((c) => (c.status === "failed" && c.reason !== "retry" ? c.reason : "")));
 
 /**
  * ARI cell store over availability_day / rate_day (spec 05 §5.4.5). Versions
@@ -110,62 +137,83 @@ export class DrizzleAriStore implements AriCellStore {
     _propertyId: string,
     cells: Array<CellRef & { version: number }>,
   ): Promise<void> {
-    for (const c of cells) {
-      if (c.kind === "rate")
-        await this.tx.execute(
-          sql`update rate_day set sync_state = 'in_flight', attempts = attempts + 1 where rate_plan_id = ${c.ratePlanId} and date = ${c.date} and version = ${c.version}`,
-        );
-      else
-        await this.tx.execute(
-          sql`update availability_day set sync_state = 'in_flight', attempts = attempts + 1 where room_type_id = ${c.roomTypeId} and date = ${c.date} and version = ${c.version}`,
-        );
-    }
+    const rate = cells.filter((c): c is RateRef & { version: number } => c.kind === "rate");
+    const avail = cells.filter(
+      (c): c is AvailRef & { version: number } => c.kind === "availability",
+    );
+    for (const chunk of chunks(rate))
+      await this.tx.execute(sql`
+        update rate_day r set sync_state = 'in_flight', attempts = r.attempts + 1
+        from unnest(${ids(chunk.map((c) => c.ratePlanId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(rate_plan_id, date, version)
+        where r.rate_plan_id = v.rate_plan_id and r.date = v.date and r.version = v.version`);
+    for (const chunk of chunks(avail))
+      await this.tx.execute(sql`
+        update availability_day a set sync_state = 'in_flight', attempts = a.attempts + 1
+        from unnest(${ids(chunk.map((c) => c.roomTypeId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(room_type_id, date, version)
+        where a.room_type_id = v.room_type_id and a.date = v.date and a.version = v.version`);
   }
 
+  /**
+   * Outcomes are applied in one statement per (kind, outcome) group: a push touches
+   * thousands of cells and the worker sits far from the database, so per-cell
+   * statements took minutes and jobs died mid-way, leaving cells in flight.
+   */
   async applyOutcomes(_propertyId: string, outcomes: CellOutcome[]): Promise<void> {
-    for (const o of outcomes) {
-      if (o.status === "synced") {
-        if (o.kind === "rate")
-          await this.tx.execute(
-            sql`update rate_day set sync_state = 'synced', synced_values = values, synced_at = now(), last_error = null where rate_plan_id = ${o.ratePlanId} and date = ${o.date} and version = ${o.version}`,
-          );
-        else
-          await this.tx.execute(
-            sql`update availability_day set sync_state = 'synced', synced_available = available, synced_at = now(), last_error = null where room_type_id = ${o.roomTypeId} and date = ${o.date} and version = ${o.version}`,
-          );
-      } else if (o.reason === "retry") {
-        if (o.kind === "rate")
-          await this.tx.execute(
-            sql`update rate_day set sync_state = 'pending', last_error = null where rate_plan_id = ${o.ratePlanId} and date = ${o.date} and version = ${o.version}`,
-          );
-        else
-          await this.tx.execute(
-            sql`update availability_day set sync_state = 'pending', last_error = null where room_type_id = ${o.roomTypeId} and date = ${o.date} and version = ${o.version}`,
-          );
-      } else {
-        if (o.kind === "rate")
-          await this.tx.execute(
-            sql`update rate_day set sync_state = 'failed', last_error = 'validation', synced_values = coalesce(synced_values, '{}'::jsonb) || jsonb_build_object('_reason', ${o.reason}::text) where rate_plan_id = ${o.ratePlanId} and date = ${o.date} and version = ${o.version}`,
-          );
-        else
-          await this.tx.execute(
-            sql`update availability_day set sync_state = 'failed', last_error = 'validation' where room_type_id = ${o.roomTypeId} and date = ${o.date} and version = ${o.version}`,
-          );
-      }
-    }
+    const rate = outcomes.filter((o): o is RateOutcome => o.kind === "rate");
+    const avail = outcomes.filter((o): o is AvailOutcome => o.kind === "availability");
+    const bucket = <T extends CellOutcome>(list: T[]) => ({
+      synced: list.filter((o) => o.status === "synced"),
+      retry: list.filter((o) => o.status !== "synced" && o.reason === "retry"),
+      failed: list.filter((o) => o.status !== "synced" && o.reason !== "retry"),
+    });
+    const r = bucket(rate);
+    const a = bucket(avail);
+    for (const chunk of chunks(r.synced))
+      await this.tx.execute(sql`
+        update rate_day r set sync_state = 'synced', synced_values = r.values, synced_at = now(), last_error = null
+        from unnest(${ids(chunk.map((c) => c.ratePlanId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(rate_plan_id, date, version)
+        where r.rate_plan_id = v.rate_plan_id and r.date = v.date and r.version = v.version`);
+    for (const chunk of chunks(r.retry))
+      await this.tx.execute(sql`
+        update rate_day r set sync_state = 'pending', last_error = null
+        from unnest(${ids(chunk.map((c) => c.ratePlanId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(rate_plan_id, date, version)
+        where r.rate_plan_id = v.rate_plan_id and r.date = v.date and r.version = v.version`);
+    for (const chunk of chunks(r.failed))
+      await this.tx.execute(sql`
+        update rate_day r set sync_state = 'failed', last_error = 'validation',
+          synced_values = coalesce(r.synced_values, '{}'::jsonb) || jsonb_build_object('_reason', v.reason)
+        from unnest(${ids(chunk.map((c) => c.ratePlanId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[], ${reasons(chunk)}::text[]) as v(rate_plan_id, date, version, reason)
+        where r.rate_plan_id = v.rate_plan_id and r.date = v.date and r.version = v.version`);
+    for (const chunk of chunks(a.synced))
+      await this.tx.execute(sql`
+        update availability_day a set sync_state = 'synced', synced_available = a.available, synced_at = now(), last_error = null
+        from unnest(${ids(chunk.map((c) => c.roomTypeId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(room_type_id, date, version)
+        where a.room_type_id = v.room_type_id and a.date = v.date and a.version = v.version`);
+    for (const chunk of chunks(a.retry))
+      await this.tx.execute(sql`
+        update availability_day a set sync_state = 'pending', last_error = null
+        from unnest(${ids(chunk.map((c) => c.roomTypeId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(room_type_id, date, version)
+        where a.room_type_id = v.room_type_id and a.date = v.date and a.version = v.version`);
+    for (const chunk of chunks(a.failed))
+      await this.tx.execute(sql`
+        update availability_day a set sync_state = 'failed', last_error = 'validation'
+        from unnest(${ids(chunk.map((c) => c.roomTypeId))}::uuid[], ${dates(chunk)}::date[], ${versions(chunk)}::int[]) as v(room_type_id, date, version)
+        where a.room_type_id = v.room_type_id and a.date = v.date and a.version = v.version`);
   }
 
   async markConflicted(_propertyId: string, cells: CellRef[]): Promise<void> {
-    for (const c of cells) {
-      if (c.kind === "rate")
-        await this.tx.execute(
-          sql`update rate_day set sync_state = 'conflicted', last_error = null where rate_plan_id = ${c.ratePlanId} and date = ${c.date}`,
-        );
-      else
-        await this.tx.execute(
-          sql`update availability_day set sync_state = 'conflicted', last_error = null where room_type_id = ${c.roomTypeId} and date = ${c.date}`,
-        );
-    }
+    const rate = cells.filter((c): c is RateRef => c.kind === "rate");
+    const avail = cells.filter((c): c is AvailRef => c.kind === "availability");
+    for (const chunk of chunks(rate))
+      await this.tx.execute(sql`
+        update rate_day r set sync_state = 'conflicted', last_error = null
+        from unnest(${ids(chunk.map((c) => c.ratePlanId))}::uuid[], ${dates(chunk)}::date[]) as v(rate_plan_id, date)
+        where r.rate_plan_id = v.rate_plan_id and r.date = v.date`);
+    for (const chunk of chunks(avail))
+      await this.tx.execute(sql`
+        update availability_day a set sync_state = 'conflicted', last_error = null
+        from unnest(${ids(chunk.map((c) => c.roomTypeId))}::uuid[], ${dates(chunk)}::date[]) as v(room_type_id, date)
+        where a.room_type_id = v.room_type_id and a.date = v.date`);
   }
 
   async loadDesired(
