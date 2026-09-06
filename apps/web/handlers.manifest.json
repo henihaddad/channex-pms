@@ -118,6 +118,14 @@
   },
   {
     "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "listPropertiesBrief",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "loadBothSides",
     "kind": "action",
     "wrapper": "withPermission",
