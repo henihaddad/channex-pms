@@ -26,7 +26,7 @@ import {
   type ChannelEventRow,
   type ConnectionRow,
 } from "@pms/db";
-import { activateConnection, pauseConnection, queueAriPush } from "@pms/jobs";
+import { activateConnection, pauseConnection, queueAriPush, removeConnection } from "@pms/jobs";
 import { CHANNEX_PRODUCTION, CHANNEX_STAGING, channexChannelScreenUrl } from "@pms/connectivity";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
@@ -134,16 +134,12 @@ export const removeAction = withPermission<[FormData], void>(
   },
   async (ctx, fd) => {
     const c = await container();
-    const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
-    const conn = await ch.getConnection(String(fd.get("connectionId")));
-    if (!conn) throw new HttpProblem(404, "not_found", "Connection not found");
-    if (conn.channexChannelId)
-      await c.provider.setChannelActive(
-        { id: conn.channexChannelId },
-        false,
-        meta(ctx, "channel.remove"),
-      );
-    await ch.removeConnection(conn.id);
+    await removeConnection(
+      { provider: c.provider, clock: c.clock, log: c.log },
+      ctx.orgId,
+      String(fd.get("connectionId")),
+      (fn) => fn(ctx.tx),
+    );
     revalidatePath("/channels");
   },
 );

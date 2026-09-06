@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API examples › Airbnb: remove a rate plan mapping (un-map a listing); propagated to the channel in the background."
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/channels/3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90/mappings/8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+  },
+  "response": {
+    "status": 200,
+    "body": { "meta": { "message": "Success" } }
+  }
+}

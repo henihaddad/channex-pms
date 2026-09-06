@@ -597,10 +597,12 @@ export class ChannexProvider implements ConnectivityProvider {
           const mm = obj(m);
           const st = obj(mm.settings);
           return {
+            ...(typeof mm.id === "string" ? { id: mm.id } : {}),
             ratePlanId: String(mm.rate_plan_id ?? ""),
             ...(typeof st.room_type_code === "string" ? { roomCode: st.room_type_code } : {}),
             ...(typeof st.rate_plan_code === "string" ? { rateCode: st.rate_plan_code } : {}),
             ...(typeof st.occupancy === "number" ? { occupancy: st.occupancy } : {}),
+            ...(st.listing_id !== undefined ? { listingId: String(st.listing_id) } : {}),
           };
         }),
       };
@@ -699,13 +701,25 @@ export class ChannexProvider implements ConnectivityProvider {
     return { id: idOf(body) };
   }
 
-  async loadFutureReservations(ref: ProviderRef, meta: CallMeta): Promise<void> {
+  async removeMapping(ref: ProviderRef, mappingId: string, meta: CallMeta): Promise<void> {
+    await this.call(
+      "channels.mapping.delete",
+      { method: "DELETE", path: `/api/v1/channels/${ref.id}/mappings/${mappingId}` },
+      meta,
+    );
+  }
+
+  async loadFutureReservations(
+    ref: ProviderRef,
+    meta: CallMeta,
+    listingId?: string,
+  ): Promise<void> {
     await this.call(
       "airbnb.load_future_reservations",
       {
         method: "POST",
         path: `/api/v1/channels/${ref.id}/execute/load_future_reservations`,
-        body: {},
+        body: listingId ? { listing_id: listingId } : {},
       },
       meta,
     );

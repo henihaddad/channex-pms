@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { DrizzlePropertyRepository } from "@pms/db";
+import { DrizzleChannelRepository, DrizzlePropertyRepository } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -38,6 +38,10 @@ export const GET = withPermission.route(
       );
     }
     const maps = await Promise.all(chosen.map((p) => repo.idMap(p.id)));
+    // an Airbnb account holds one provider channel: a second authorisation re-connects it
+    const existing = (await new DrizzleChannelRepository(ctx.tx, ctx.orgId).listConnections()).find(
+      (x) => x.adapterCode === "AirBNB" && x.settings.managedIn === "channex" && x.channexChannelId,
+    );
     const token = c.crypto.randomToken(16);
     (await cookies()).set(
       "pms_airbnb_link",
@@ -53,6 +57,7 @@ export const GET = withPermission.route(
         failureRedirectUri: `${callback}?success=false`,
         token,
         title: `Airbnb · ${chosen.length === 1 ? chosen[0]!.title : `${chosen.length} properties`}`,
+        ...(existing?.channexChannelId ? { channelId: existing.channexChannelId } : {}),
       },
       { dedupeKey: `airbnb:link:${token}`, requestId: ctx.requestId },
     );

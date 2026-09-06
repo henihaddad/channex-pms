@@ -168,7 +168,7 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly created = new Map<string, unknown>();
   private readonly listingMappings = new Map<
     string,
-    Array<{ ratePlanId: string; listingId: string }>
+    Array<{ id: string; ratePlanId: string; listingId: string }>
   >();
   private readonly pendingWebhooks: WebhookPayload[] = [];
   private readonly threads = new Map<string, FakeThread>();
@@ -485,9 +485,11 @@ export class FakeProvider implements ConnectivityProvider {
             ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
           })),
           ...(this.listingMappings.get(id) ?? []).map((m) => ({
+            id: m.id,
             ratePlanId: m.ratePlanId,
             roomCode: m.listingId,
             rateCode: m.listingId,
+            listingId: m.listingId,
           })),
         ],
       });
@@ -540,11 +542,25 @@ export class FakeProvider implements ConnectivityProvider {
   ): Promise<ProviderRef> {
     this.guard("airbnb.mapping.create", meta);
     const list = this.listingMappings.get(ref.id) ?? [];
-    list.push(mapping);
+    if (list.some((m) => m.listingId === mapping.listingId))
+      throw new ValidationError("mapping the same listing twice is rejected");
+    const id = Id.next();
+    list.push({ id, ...mapping });
     this.listingMappings.set(ref.id, list);
-    return { id: Id.next() };
+    return { id };
   }
-  async loadFutureReservations(_ref: ProviderRef, meta: CallMeta): Promise<void> {
+  async removeMapping(ref: ProviderRef, mappingId: string, meta: CallMeta): Promise<void> {
+    this.guard("channels.mapping.delete", meta);
+    this.listingMappings.set(
+      ref.id,
+      (this.listingMappings.get(ref.id) ?? []).filter((m) => m.id !== mappingId),
+    );
+  }
+  async loadFutureReservations(
+    _ref: ProviderRef,
+    meta: CallMeta,
+    _listingId?: string,
+  ): Promise<void> {
     this.guard("airbnb.load_future_reservations", meta);
   }
 

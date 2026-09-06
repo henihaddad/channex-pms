@@ -236,7 +236,16 @@ export interface RemoteChannel {
   isActive: boolean;
   status: "active" | "pending" | "temporal_error" | "permanent_error" | "unknown";
   /** Provider-side rate plan ids the connection maps, with the channel's codes where known. */
-  mappings: Array<{ ratePlanId: string; roomCode?: string; rateCode?: string; occupancy?: number }>;
+  mappings: Array<{
+    /** The mapping's own id on the provider, needed to remove it. */
+    id?: string;
+    ratePlanId: string;
+    roomCode?: string;
+    rateCode?: string;
+    occupancy?: number;
+    /** Airbnb: the listing this mapping sells. */
+    listingId?: string;
+  }>;
 }
 
 export interface ThreadQuery {
@@ -342,8 +351,13 @@ export interface ConnectivityProvider {
     mapping: { ratePlanId: string; listingId: string },
     meta: CallMeta,
   ): Promise<ProviderRef>;
-  /** Import the account's future reservations after activation, without guest notifications. */
-  loadFutureReservations(ref: ProviderRef, meta: CallMeta): Promise<void>;
+  /** Remove one rate plan mapping from a connection (Airbnb: un-map a listing). */
+  removeMapping(ref: ProviderRef, mappingId: string, meta: CallMeta): Promise<void>;
+  /**
+   * Import the account's future reservations after activation, without guest notifications.
+   * Per listing when one is given (the provider's preferred form), else every mapped listing.
+   */
+  loadFutureReservations(ref: ProviderRef, meta: CallMeta, listingId?: string): Promise<void>;
   // reservations
   listBookingRevisions(
     propertyId: string,

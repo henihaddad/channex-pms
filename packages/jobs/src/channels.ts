@@ -26,6 +26,8 @@ export interface ChannelDeps {
   provider: ConnectivityProvider;
   clock: Clock;
   log: Logger;
+  /** Waiting between polls of the provider; tests inject a no-op. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 /**
@@ -86,23 +88,16 @@ export async function activateConnection(
       }),
     );
   }
-  if (conn.adapterCode === "AirBNB" && conn.settings.managedIn === "channex") {
-    // Airbnb through Channex (CH-5): listings map one by one on the provider; push what is not there yet.
-    const remote = await deps.provider.listChannels(idMap.property.remote, meta("list"));
-    const held = new Set(
-      (remote.find((r) => r.id === channexChannelId)?.mappings ?? []).map(
-        (m) => `${m.ratePlanId}:${m.roomCode ?? ""}`,
-      ),
-    );
-    for (const m of mappings) {
-      const remotePlanId = remotePlan.get(m.ratePlanId) ?? m.ratePlanId;
-      if (held.has(`${remotePlanId}:${m.roomCode}`)) continue;
-      await deps.provider.mapListing(
-        { id: channexChannelId },
-        { ratePlanId: remotePlanId, listingId: m.roomCode },
-        meta(`map:${m.ratePlanId}`),
-      );
-    }
+  if (isAirbnbViaChannex(conn)) {
+    await ensureListingMappings(deps, {
+      channexChannelId,
+      remotePropertyId: idMap.property.remote,
+      wanted: mappings.map((m) => ({
+        ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
+        listingId: m.roomCode,
+      })),
+      meta,
+    });
   }
   const readiness = await deps.provider.checkReadiness({ id: channexChannelId }, meta("readiness"));
   if (!readiness.ready) {
@@ -115,8 +110,13 @@ export async function activateConnection(
     return { activated: false, readiness };
   }
   await deps.provider.setChannelActive({ id: channexChannelId }, true, meta("activate"));
-  if (conn.adapterCode === "AirBNB" && conn.settings.managedIn === "channex")
-    await deps.provider.loadFutureReservations({ id: channexChannelId }, meta("load_reservations"));
+  if (isAirbnbViaChannex(conn))
+    for (const m of mappings)
+      await deps.provider.loadFutureReservations(
+        { id: channexChannelId },
+        meta(`load_reservations:${m.roomCode}`),
+        m.roomCode,
+      );
   const next = transition(conn.state, "activated");
   const now = deps.clock.now().epochMilliseconds;
   await run(async (tx) => {
@@ -146,11 +146,45 @@ export async function pauseConnection(
   if (!conn) throw new Error("connection not found");
   const next = transition(conn.state, paused ? "paused" : "resumed");
   if (!next.ok) throw next.error;
-  if (conn.channexChannelId)
-    await deps.provider.setChannelActive({ id: conn.channexChannelId }, !paused, {
-      dedupeKey: `channel:${connectionId}:${paused ? "pause" : "resume"}:${String(deps.clock.now().epochMilliseconds)}`,
-      requestId: connectionId,
-    });
+  const meta = (op: string) => ({
+    dedupeKey: `channel:${connectionId}:${op}:${String(deps.clock.now().epochMilliseconds)}`,
+    requestId: connectionId,
+  });
+  if (conn.channexChannelId && isAirbnbViaChannex(conn)) {
+    // one Airbnb account is one provider channel shared by the portfolio: pausing a property
+    // un-maps its listings; the channel stays active for the others (spec 07 CH-5)
+    const idMap = await run((tx) =>
+      new DrizzlePropertyRepository(tx, orgId).idMap(conn.propertyId),
+    );
+    const mappings = await run((tx) =>
+      new DrizzleChannelRepository(tx, orgId).listMappings(connectionId),
+    );
+    const remotePlan = new Map(idMap.ratePlans.map((r) => [r.local, r.remote]));
+    const wanted = mappings.map((m) => ({
+      ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
+      listingId: m.roomCode,
+    }));
+    if (paused)
+      await removeListingMappings(deps, {
+        channexChannelId: conn.channexChannelId,
+        remotePropertyId: idMap.property.remote,
+        listingIds: wanted.map((w) => w.listingId),
+        meta,
+      });
+    else
+      await ensureListingMappings(deps, {
+        channexChannelId: conn.channexChannelId,
+        remotePropertyId: idMap.property.remote,
+        wanted,
+        meta,
+      });
+  } else if (conn.channexChannelId) {
+    await deps.provider.setChannelActive(
+      { id: conn.channexChannelId },
+      !paused,
+      meta(paused ? "pause" : "resume"),
+    );
+  }
   const now = deps.clock.now().epochMilliseconds;
   await run(async (tx) => {
     await new DrizzleChannelRepository(tx, orgId).updateConnection(connectionId, {
@@ -162,6 +196,129 @@ export async function pauseConnection(
       await queueAriPush(tx, orgId, conn.propertyId, now, "channel.resume");
     }
   });
+}
+
+/** Airbnb authorised through Channex (CH-5): the provider channel belongs to the host's account. */
+function isAirbnbViaChannex(conn: { adapterCode: string; settings: Record<string, unknown> }) {
+  return conn.adapterCode === "AirBNB" && conn.settings.managedIn === "channex";
+}
+
+const MAPPING_WAIT_MS = 45_000;
+const MAPPING_POLL_MS = 3_000;
+
+/**
+ * Make the provider hold exactly the wanted listing mappings for a property: create the
+ * missing ones (Channex rejects a listing mapped twice, so the existing ones are skipped)
+ * and wait until they appear on the connection — Airbnb confirms a mapping asynchronously,
+ * in about thirty seconds, and activation refuses a connection without mappings.
+ */
+async function ensureListingMappings(
+  deps: Omit<ChannelDeps, "db">,
+  input: {
+    channexChannelId: string;
+    remotePropertyId: string;
+    wanted: Array<{ ratePlanId: string; listingId: string }>;
+    meta: (op: string) => { dedupeKey: string; requestId: string };
+  },
+): Promise<void> {
+  const current = async () => {
+    const remote = await deps.provider.listChannels(input.remotePropertyId, input.meta("list"));
+    return remote.find((r) => r.id === input.channexChannelId)?.mappings ?? [];
+  };
+  const held = new Set((await current()).map((m) => m.listingId ?? m.roomCode ?? ""));
+  let created = 0;
+  for (const w of input.wanted) {
+    if (held.has(w.listingId)) continue;
+    await deps.provider.mapListing(
+      { id: input.channexChannelId },
+      { ratePlanId: w.ratePlanId, listingId: w.listingId },
+      input.meta(`map:${w.listingId}`),
+    );
+    created++;
+  }
+  if (created === 0) return;
+  const deadline = deps.clock.now().epochMilliseconds + MAPPING_WAIT_MS;
+  for (;;) {
+    const have = new Set((await current()).map((m) => m.listingId ?? m.roomCode ?? ""));
+    if (input.wanted.every((w) => have.has(w.listingId))) return;
+    if (deps.clock.now().epochMilliseconds >= deadline) {
+      deps.log.warn(
+        { channel: input.channexChannelId, wanted: input.wanted.length, have: have.size },
+        "airbnb.mapping.pending",
+      );
+      return;
+    }
+    await (deps.sleep ?? defaultSleep)(MAPPING_POLL_MS);
+  }
+}
+
+/** Un-map the given listings from the provider channel; mappings it no longer holds are skipped. */
+async function removeListingMappings(
+  deps: Omit<ChannelDeps, "db">,
+  input: {
+    channexChannelId: string;
+    remotePropertyId: string;
+    listingIds: string[];
+    meta: (op: string) => { dedupeKey: string; requestId: string };
+  },
+): Promise<void> {
+  const remote = await deps.provider.listChannels(input.remotePropertyId, input.meta("list"));
+  const held = remote.find((r) => r.id === input.channexChannelId)?.mappings ?? [];
+  for (const m of held) {
+    const listing = m.listingId ?? m.roomCode ?? "";
+    if (!m.id || !input.listingIds.includes(listing)) continue;
+    await deps.provider.removeMapping(
+      { id: input.channexChannelId },
+      m.id,
+      input.meta(`unmap:${listing}`),
+    );
+  }
+}
+
+const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * Removal (CH-6): an ordinary channel is deactivated on the provider. An Airbnb
+ * account channel is shared by every property of the portfolio, so removing one
+ * property un-maps its listings and the channel is deactivated only when no
+ * other connection of the organisation still uses it.
+ */
+export async function removeConnection(
+  deps: Omit<ChannelDeps, "db">,
+  orgId: string,
+  connectionId: string,
+  run: TxRunner,
+): Promise<void> {
+  const conn = await run((tx) =>
+    new DrizzleChannelRepository(tx, orgId).getConnection(connectionId),
+  );
+  if (!conn) throw new Error("connection not found");
+  const meta = (op: string) => ({
+    dedupeKey: `channel:${connectionId}:${op}:${String(deps.clock.now().epochMilliseconds)}`,
+    requestId: connectionId,
+  });
+  if (conn.channexChannelId && isAirbnbViaChannex(conn)) {
+    const idMap = await run((tx) =>
+      new DrizzlePropertyRepository(tx, orgId).idMap(conn.propertyId),
+    );
+    const mappings = await run((tx) =>
+      new DrizzleChannelRepository(tx, orgId).listMappings(connectionId),
+    );
+    await removeListingMappings(deps, {
+      channexChannelId: conn.channexChannelId,
+      remotePropertyId: idMap.property.remote,
+      listingIds: mappings.map((m) => m.roomCode),
+      meta,
+    });
+    const others = (
+      await run((tx) => new DrizzleChannelRepository(tx, orgId).listConnections())
+    ).filter((c) => c.id !== connectionId && c.channexChannelId === conn.channexChannelId);
+    if (others.length === 0)
+      await deps.provider.setChannelActive({ id: conn.channexChannelId }, false, meta("remove"));
+  } else if (conn.channexChannelId) {
+    await deps.provider.setChannelActive({ id: conn.channexChannelId }, false, meta("remove"));
+  }
+  await run((tx) => new DrizzleChannelRepository(tx, orgId).removeConnection(connectionId));
 }
 
 /**

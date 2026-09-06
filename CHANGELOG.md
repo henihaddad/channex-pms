@@ -105,6 +105,11 @@ All notable changes to this project are documented here. The format follows
   permanent validation failure; those cells return to pending and the push retries (spec 05
   §5.10). A force resync now re-enters cells that failed validation, and the Airbnb button sends
   a person without a live property back to Channels with an explanation instead of raw JSON.
+- Airbnb through Channex, reconciled with Channex's Airbnb guide: a second authorisation
+  re-connects the account's existing channel instead of creating another; activation skips
+  listing mappings the connection already holds and waits for Airbnb to confirm new ones before
+  activating; future reservations load per listing; pausing or removing one property un-maps its
+  listings rather than deactivating the account channel shared by the portfolio.
 
 - The console proxy no longer redirects the Channex webhook receiver (`/webhooks/*`) to the login
   page; the receiver authenticates by path token and secret.

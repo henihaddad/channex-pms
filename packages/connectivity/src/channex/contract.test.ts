@@ -258,7 +258,13 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
         isActive: true,
         status: "active",
         mappings: [
-          { ratePlanId: "rp-remote-1", roomCode: "12345", rateCode: "12345-STD", occupancy: 2 },
+          {
+            id: "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e",
+            ratePlanId: "rp-remote-1",
+            roomCode: "12345",
+            rateCode: "12345-STD",
+            occupancy: 2,
+          },
         ],
       },
     ]);
@@ -322,10 +328,16 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
     expect(http.calls[1]?.body).toEqual({
       mapping: { rate_plan_id: "rp-remote-1", settings: { listing_id: "12345678" } },
     });
-    await p.loadFutureReservations({ id: CHANNEL }, meta);
+    await p.loadFutureReservations({ id: CHANNEL }, meta, "12345678");
     expect(http.calls[2]).toMatchObject({
       method: "POST",
       path: `/api/v1/channels/${CHANNEL}/execute/load_future_reservations`,
+      body: { listing_id: "12345678" },
+    });
+    await p.removeMapping({ id: CHANNEL }, "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e", meta);
+    expect(http.calls[3]).toMatchObject({
+      method: "DELETE",
+      path: `/api/v1/channels/${CHANNEL}/mappings/8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e`,
     });
   });
 });

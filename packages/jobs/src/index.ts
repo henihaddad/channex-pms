@@ -16,6 +16,7 @@ export { extendHorizons } from "./horizon.js";
 export {
   activateConnection,
   pauseConnection,
+  removeConnection,
   pollChannelHealth,
   systemRunner,
   type ChannelDeps,
