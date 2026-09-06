@@ -9,6 +9,7 @@ export {
   runProvisioning,
   markLiveIfSynced,
   propertiesToProvision,
+  reopenProvisioningForPlans,
   type ProvisioningDeps,
   type ProvisioningJob,
 } from "./provisioning.js";

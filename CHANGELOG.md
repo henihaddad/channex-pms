@@ -110,6 +110,11 @@ All notable changes to this project are documented here. The format follows
   listing mappings the connection already holds and waits for Airbnb to confirm new ones before
   activating; future reservations load per listing; pausing or removing one property un-maps its
   listings rather than deactivating the account channel shared by the portfolio.
+- A rate plan added after a property's setup finished was never created on Channex, and its
+  calendar days made Channex refuse every push for the property. Setup now reopens for such
+  plans (from the plan form and from "Retry setup"), the sweep also visits live properties whose
+  setup was reopened, and a push skips plans the channel manager does not hold yet instead of
+  blocking the others.
 
 - The console proxy no longer redirects the Channex webhook receiver (`/webhooks/*`) to the login
   page; the receiver authenticates by path token and secret.

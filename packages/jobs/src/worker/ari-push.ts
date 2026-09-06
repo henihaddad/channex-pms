@@ -1,5 +1,5 @@
-import type { Clock, ConnectivityProvider } from "@pms/core";
-import { AriStorePerCall, type Db } from "@pms/db";
+import type { AriCellStore, Clock, ConnectivityProvider, PendingAri } from "@pms/core";
+import { AriStorePerCall, asSystem, rawRows, sql, type Db } from "@pms/db";
 import { pushProperty, RetryLater, type CircuitBreaker, type RateLimiter } from "@pms/sync";
 import type { Logger } from "@pms/runtime";
 import type { Lease } from "./lease.js";
@@ -47,7 +47,13 @@ export async function processAriPush(
       orgId,
       propertyId,
       provider: deps.provider,
-      store: new AriStorePerCall(deps.db, orgId),
+      store: await knownPlansOnly(
+        deps.db,
+        orgId,
+        propertyId,
+        new AriStorePerCall(deps.db, orgId),
+        deps.log,
+      ),
       limiter: deps.limiter,
       breaker: deps.breaker,
       clock: deps.clock,
@@ -66,4 +72,38 @@ export async function processAriPush(
   } finally {
     await deps.lease.release(key);
   }
+}
+
+/**
+ * A rate plan added after setup finished has no provider id until the setup sweep
+ * creates it; pushing its cells would make the provider refuse the whole batch and
+ * hold every other plan hostage. Those cells stay pending and are pushed once the
+ * plan exists. Properties that were never provisioned (tests, fakes) are left alone.
+ */
+async function knownPlansOnly(
+  db: Db,
+  orgId: string,
+  propertyId: string,
+  store: AriCellStore,
+  log: Logger,
+): Promise<AriCellStore> {
+  const rows = await asSystem(db, orgId, (tx) =>
+    rawRows<{ id: string; known: boolean }>(
+      tx,
+      sql`select id, channex_rate_plan_id is not null as known from rate_plan where property_id = ${propertyId} and archived_at is null`,
+    ),
+  );
+  const known = new Set(rows.filter((r) => r.known).map((r) => r.id));
+  const unknown = rows.filter((r) => !r.known).map((r) => r.id);
+  if (known.size === 0 || unknown.length === 0) return store;
+  log.warn({ orgId, propertyId, unknown }, "ari.push.plans_not_provisioned");
+  return new Proxy(store, {
+    get(target, prop, receiver) {
+      if (prop !== "loadPending") return Reflect.get(target, prop, receiver) as unknown;
+      return async (id: string): Promise<PendingAri> => {
+        const pending = await target.loadPending(id);
+        return { ...pending, rate: pending.rate.filter((c) => known.has(c.ratePlanId)) };
+      };
+    },
+  });
 }

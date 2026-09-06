@@ -12,7 +12,7 @@ import {
   type ConnectionRow,
   type PropertyDetail,
 } from "@pms/db";
-import { markAllPending, queueAriPush } from "@pms/jobs";
+import { markAllPending, queueAriPush, reopenProvisioningForPlans } from "@pms/jobs";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -83,6 +83,8 @@ export const addDerivedPlanAction = withPermission<[FormData], void>(
       if (e instanceof RangeError) throw new HttpProblem(422, "derivation", e.message);
       throw e;
     }
+    // a plan added after setup finished needs its provider counterpart: reopen setup for it
+    await reopenProvisioningForPlans(ctx.tx, ctx.orgId, p.data.propertyId);
     await queueAriPush(ctx.tx, ctx.orgId, p.data.propertyId, Date.now(), "rate_plan.derived");
     revalidatePath(`/properties/${p.data.propertyId}`);
   },
@@ -151,6 +153,8 @@ export const forceResyncAction = withPermission<[FormData], void>(
   },
   async (ctx, fd) => {
     const propertyId = String(fd.get("propertyId"));
+    // plans the provider does not hold yet are created by the setup sweep; the push follows
+    await reopenProvisioningForPlans(ctx.tx, ctx.orgId, propertyId);
     await markAllPending(ctx.tx, propertyId);
     await queueAriPush(ctx.tx, ctx.orgId, propertyId, Date.now(), "force_resync");
     revalidatePath(`/properties/${propertyId}`);

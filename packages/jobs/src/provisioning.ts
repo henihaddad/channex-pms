@@ -8,7 +8,15 @@ import {
   type Crypto,
   type ProvisioningState,
 } from "@pms/core";
-import { asSystem, DrizzlePropertyRepository, rawRows, sql, withoutTenant, type Db } from "@pms/db";
+import {
+  asSystem,
+  DrizzlePropertyRepository,
+  rawRows,
+  sql,
+  withoutTenant,
+  type Db,
+  type Tx,
+} from "@pms/db";
 import type { Logger } from "@pms/runtime";
 import { markAllPending, pendingCellCount, queueAriPush } from "./ari-events.js";
 
@@ -201,7 +209,16 @@ export async function runProvisioning(
         case "initial_push": {
           const now = deps.clock.now().epochMilliseconds;
           await asSystem(deps.db, orgId, async (tx) => {
-            await new DrizzlePropertyRepository(tx, orgId).setPropertyState(propertyId, "syncing");
+            // a property re-provisioned after going live (a plan added later) stays live meanwhile
+            const [row] = await rawRows<{ state: string }>(
+              tx,
+              sql`select state from property where id = ${propertyId}`,
+            );
+            if (row?.state !== "live")
+              await new DrizzlePropertyRepository(tx, orgId).setPropertyState(
+                propertyId,
+                "syncing",
+              );
             await markAllPending(tx, propertyId);
             await queueAriPush(tx, orgId, propertyId, now, "provisioning");
           });
@@ -267,13 +284,44 @@ export async function markLiveIfSynced(
   });
 }
 
-/** Properties waiting for provisioning, across tenants (the scheduler's sweep). */
+/**
+ * Reopen a finished setup at the rate-plan step so the sweep creates plans the provider
+ * does not hold yet (idempotent by natural key; everything else is skipped as done).
+ * Returns whether anything was reopened.
+ */
+export async function reopenProvisioningForPlans(
+  tx: Tx,
+  orgId: string,
+  propertyId: string,
+): Promise<boolean> {
+  const [missing] = await rawRows<{ n: number }>(
+    tx,
+    sql`select count(*)::int as n from rate_plan where property_id = ${propertyId} and archived_at is null and channex_rate_plan_id is null`,
+  );
+  if (!missing || missing.n === 0) return false;
+  const repo = new DrizzlePropertyRepository(tx, orgId);
+  const st = await repo.loadProvisioning(propertyId);
+  if (!st || st.step !== "live") return false;
+  await repo.saveProvisioning(propertyId, {
+    step: "rate_plans",
+    refs: st.refs,
+    attempts: 0,
+    lastError: null,
+  });
+  return true;
+}
+
+/**
+ * Properties waiting for provisioning, across tenants (the scheduler's sweep). A live
+ * property is included when its setup was reopened, which happens when a rate plan is
+ * added after the first setup finished.
+ */
 export async function propertiesToProvision(db: Db): Promise<ProvisioningJob[]> {
   const rows = await withoutTenant(db, (tx) =>
     rawRows<{ org_id: string; id: string }>(
       tx,
       sql`select p.org_id, p.id from property p left join property_provisioning v on v.property_id = p.id
-        where p.archived_at is null and p.state in ('draft','syncing') and coalesce(v.step, 'group') <> 'live' and coalesce(v.attempts, 0) < 20`,
+        where p.archived_at is null and p.state in ('draft','syncing','live') and coalesce(v.step, 'group') <> 'live' and coalesce(v.attempts, 0) < 20`,
     ),
   );
   return rows.map((r) => ({ orgId: r.org_id, propertyId: r.id }));
