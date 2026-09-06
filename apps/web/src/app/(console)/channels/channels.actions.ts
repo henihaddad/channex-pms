@@ -18,8 +18,10 @@ import {
   type OurRatePlan,
   type Suggestion,
   type TheirRoom,
+  LocalDate,
 } from "@pms/core";
 import {
+  DrizzleAriStore,
   DrizzleChannelRepository,
   DrizzlePropertyRepository,
   type ChannelAccountRow,
@@ -485,63 +487,163 @@ export const saveMappingsAction = withPermission<
   },
 );
 
-// ---- Airbnb (CH-5): org-level account, bulk listing import, match-or-create ----------------
+// ---- Airbnb (CH-5): import the host's listings as properties, match-or-create --------------
 
 export interface ListingCandidate {
   code: string;
   title: string;
+  city?: string;
   match: { propertyId: string; title: string; confidence: number } | null;
 }
 
-export const importListingsPreview = withPermission<[{ accountId: string }], ListingCandidate[]>(
+const IMPORT_HORIZON_DAYS = 365;
+const TZ_BY_COUNTRY: Record<string, string> = {
+  DE: "Europe/Berlin",
+  FR: "Europe/Paris",
+  ES: "Europe/Madrid",
+  PT: "Europe/Lisbon",
+  IT: "Europe/Rome",
+  NL: "Europe/Amsterdam",
+  BE: "Europe/Brussels",
+  AT: "Europe/Vienna",
+  CH: "Europe/Zurich",
+  GB: "Europe/London",
+  IE: "Europe/Dublin",
+  GR: "Europe/Athens",
+  HR: "Europe/Zagreb",
+  PL: "Europe/Warsaw",
+  CZ: "Europe/Prague",
+  SE: "Europe/Stockholm",
+  NO: "Europe/Oslo",
+  DK: "Europe/Copenhagen",
+  FI: "Europe/Helsinki",
+  TR: "Europe/Istanbul",
+  MA: "Africa/Casablanca",
+  TN: "Africa/Tunis",
+  EG: "Africa/Cairo",
+  AE: "Asia/Dubai",
+  SA: "Asia/Riyadh",
+  US: "America/New_York",
+  CA: "America/Toronto",
+  MX: "America/Mexico_City",
+  BR: "America/Sao_Paulo",
+  AU: "Australia/Sydney",
+  NZ: "Pacific/Auckland",
+  JP: "Asia/Tokyo",
+  TH: "Asia/Bangkok",
+  ID: "Asia/Jakarta",
+  IN: "Asia/Kolkata",
+  ZA: "Africa/Johannesburg",
+};
+
+async function airbnbChannelOf(ctx: ActorCtx, connectionId: string) {
+  const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
+  const conn = await ch.getConnection(connectionId);
+  if (!conn || conn.adapterCode !== "AirBNB" || !conn.channexChannelId)
+    throw new HttpProblem(404, "not_found", "Airbnb connection not found");
+  const siblings = (await ch.listConnections()).filter(
+    (c) => c.channexChannelId === conn.channexChannelId,
+  );
+  const mapped = new Set<string>();
+  for (const sib of siblings) for (const m of await ch.listMappings(sib.id)) mapped.add(m.roomCode);
+  return { conn, channelId: conn.channexChannelId, mapped };
+}
+
+/** The host's listings not yet mapped to a property, each with the closest property by name. */
+export const importListingsPreview = withPermission<[{ connectionId: string }], ListingCandidate[]>(
   "channel_account:manage",
-  { scope: "organization", audit: false },
-  async (ctx, { accountId }) => {
+  { scope: "organization", audit: false, stepUp: false },
+  async (ctx, { connectionId }) => {
     const c = await container();
-    const listings = await c.provider.readChannelMappingOptions(
-      { adapterCode: "AirBNB", propertyId: "", settings: { account_id: accountId } },
+    const { channelId, mapped } = await airbnbChannelOf(ctx, connectionId);
+    const listings = await c.provider.listChannelListings(
+      { id: channelId },
       meta(ctx, "airbnb.listings"),
     );
     const properties = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list();
-    return listings.rooms.map((room) => {
-      const scored = properties
-        .map((p) => ({
-          propertyId: p.id,
-          title: p.title,
-          confidence: nameSimilarity(p.title, room.title),
-        }))
-        .sort((a, b) => b.confidence - a.confidence);
-      const best = scored[0];
-      return {
-        code: room.code,
-        title: room.title,
-        match: best && best.confidence >= 0.5 ? best : null,
-      };
-    });
+    return listings
+      .filter((l) => !mapped.has(l.id))
+      .map((l) => {
+        const scored = properties
+          .map((p) => ({
+            propertyId: p.id,
+            title: p.title,
+            confidence: nameSimilarity(p.title, l.title),
+          }))
+          .sort((a, b) => b.confidence - a.confidence);
+        const best = scored[0];
+        return {
+          code: l.id,
+          title: l.title,
+          ...(l.city ? { city: l.city } : {}),
+          match: best && best.confidence >= 0.5 ? best : null,
+        };
+      });
   },
 );
 
-/** Match-or-create: matched listings get a draft connection on the property; unmatched become single_unit properties first. */
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length === 0 ? 0 : s[Math.floor(s.length / 2)]!;
+};
+const mode = (xs: number[]) => {
+  const counts = new Map<number, number>();
+  for (const x of xs) counts.set(x, (counts.get(x) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+};
+
+/**
+ * Match-or-create (CH-5): a matched listing gets a connection on that property; an unmatched
+ * one becomes a property built from the listing itself — title, place, capacity, photos and
+ * description as Airbnb reports them, a Standard plan at the median of the host's prices for
+ * the coming year, and the host's per-day prices and minimum stays written into the calendar.
+ * Availability is not copied: Airbnb's blocks are its own bookings, imported on activation.
+ */
 export const importListingsAction = withPermission<
   [
     {
-      accountId: string;
+      connectionId: string;
       decisions: Array<{ code: string; title: string; propertyId: string | null }>;
     },
   ],
   { created: number; connected: number }
 >(
   "channel:create",
-  { scope: "organization", subject: (i) => ({ kind: "channel_account", id: i.accountId }) },
-  async (ctx, { accountId, decisions }) => {
+  {
+    scope: "organization",
+    subject: (i) => ({ kind: "channel_connection", id: i.connectionId }),
+  },
+  async (ctx, { connectionId, decisions }) => {
     const c = await container();
+    const { channelId, mapped } = await airbnbChannelOf(ctx, connectionId);
     const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
     const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
+    const store = new DrizzleAriStore(ctx.tx);
+    const today = LocalDate.today("UTC");
+    const range = { from: today.toString(), to: today.plusDays(IMPORT_HORIZON_DAYS).toString() };
     let created = 0;
     let connected = 0;
     for (const d of decisions) {
+      if (mapped.has(d.code)) continue;
       let propertyId = d.propertyId;
+      let calendar: Awaited<ReturnType<typeof c.provider.getChannelListingCalendar>> | null = null;
       if (!propertyId) {
+        const details = await c.provider.getChannelListingDetails(
+          { id: channelId },
+          d.code,
+          meta(ctx, `airbnb.listing:${d.code}`),
+        );
+        calendar = await c.provider.getChannelListingCalendar(
+          { id: channelId },
+          d.code,
+          range,
+          meta(ctx, `airbnb.calendar:${d.code}`),
+        );
+        const prices = calendar.days
+          .map((x) => x.price)
+          .filter((p): p is number => p !== null && p > 0);
+        const currency = /^[A-Z]{3}$/.test(calendar.currency) ? calendar.currency : "EUR";
+        const country = details.countryCode ?? "DE";
         const r = await createProperty(
           {
             repo,
@@ -552,7 +654,31 @@ export const importListingsAction = withPermission<
               secretSealed: await c.crypto.seal(c.crypto.randomToken(32)),
             }),
           },
-          { title: d.title, kind: "single_unit", currency: "EUR", timezone: "UTC" },
+          {
+            title: details.title || d.title,
+            kind: "single_unit",
+            currency,
+            timezone: TZ_BY_COUNTRY[country] ?? "UTC",
+            address: { city: details.city ?? "", country },
+            ratePlans: [
+              {
+                title: "Standard",
+                baseRateMinor: Math.round(median(prices) * 100) || 10000,
+                minStay: mode(calendar.days.map((x) => x.minNights ?? 1)) ?? 1,
+              },
+            ],
+            settings: {
+              content: {
+                source: "airbnb",
+                listingId: d.code,
+                summary: details.summary ?? "",
+                photos: details.photos,
+                amenities: details.amenities,
+                capacity: details.capacity ?? null,
+                bedrooms: details.bedrooms ?? null,
+              },
+            },
+          },
         );
         if (!r.ok) throw new HttpProblem(422, r.error.code, r.error.message);
         await repo.saveProvisioning(r.value.property.id, {
@@ -564,29 +690,65 @@ export const importListingsAction = withPermission<
         propertyId = r.value.property.id;
         created++;
       }
+      const detail = await repo.get(propertyId);
+      const plan = detail?.ratePlans[0];
+      if (calendar && plan) {
+        for (const day of calendar.days) {
+          if (day.price === null || day.price <= 0) continue;
+          await store.setRate(
+            propertyId,
+            ctx.orgId,
+            plan.id,
+            day.date,
+            {
+              rate: Math.round(day.price * 100),
+              ...(day.minNights !== undefined ? { minStay: day.minNights } : {}),
+              ...(day.maxNights !== undefined ? { maxStay: day.maxNights } : {}),
+              ...(day.closedToArrival !== undefined
+                ? { closedToArrival: day.closedToArrival }
+                : {}),
+              ...(day.closedToDeparture !== undefined
+                ? { closedToDeparture: day.closedToDeparture }
+                : {}),
+            },
+            "airbnb_import",
+          );
+        }
+      }
       const id = Id.next();
       await ch.insertConnection({
         id,
         propertyId,
         adapterCode: "AirBNB",
-        channelAccountId: accountId,
-        settings: { listing_id: d.code, account_id: accountId },
+        settings: { managedIn: "channex" },
       });
-      const plan = (await repo.get(propertyId))?.ratePlans[0];
+      await ch.updateConnection(id, { channexChannelId: channelId });
       if (plan) {
-        await ch.updateConnection(id, { state: "mapped", readiness: { ready: true, issues: [] } });
         await ch.replaceMappings(
           id,
-          [{ ratePlanId: plan.id, roomCode: d.code, rateCode: "RP1" }],
+          [{ ratePlanId: plan.id, roomCode: d.code, rateCode: d.code }],
           () => Id.next(),
         );
+        await ch.updateConnection(id, { state: "mapped", readiness: { ready: true, issues: [] } });
       }
+      mapped.add(d.code);
       connected++;
     }
     revalidatePath("/channels");
     revalidatePath("/properties");
     return { created, connected };
   },
+);
+
+/** Properties as import targets: id and title only. */
+export const listPropertiesBrief = withPermission<[], Array<{ id: string; title: string }>>(
+  "property:read",
+  { scope: "organization", audit: false },
+  async (ctx) =>
+    (await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list()).map((p) => ({
+      id: p.id,
+      title: p.title,
+    })),
 );
 
 // ---- connections made inside Channex (spec 07 CH-5: the channel iframe) -------------

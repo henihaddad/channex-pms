@@ -1,68 +1,112 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   importListingsAction,
   importListingsPreview,
   type ListingCandidate,
 } from "./channels.actions";
-import { Button } from "@/components/ui";
+import { Alert, Button, Select } from "@/components/ui";
 
-/** CH-5: bulk listing import with per-listing match-or-create. */
-export function AirbnbImport({ accountId, label }: { accountId: string; label: string }) {
+export interface ImportLabels {
+  load: string;
+  hint: string;
+  none: string;
+  newProperty: string;
+  target: string;
+  run: string;
+  done: string;
+}
+
+/**
+ * CH-5: the host's listings not yet in OTAbridge, each imported as a new property
+ * (content and prices from Airbnb) or attached to an existing one.
+ */
+export function AirbnbImport({
+  connectionId,
+  properties,
+  labels: L,
+}: {
+  connectionId: string;
+  properties: Array<{ id: string; title: string }>;
+  labels: ImportLabels;
+}) {
+  const router = useRouter();
   const [rows, setRows] = useState<ListingCandidate[] | null>(null);
-  const [result, setResult] = useState<string>("");
+  const [choice, setChoice] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<{ created: number; connected: number } | null>(null);
   const [pending, start] = useTransition();
+  const load = () =>
+    start(async () => {
+      const r = await importListingsPreview({ connectionId });
+      setRows(r);
+      setChoice(Object.fromEntries(r.map((x) => [x.code, x.match?.propertyId ?? ""])));
+      setResult(null);
+    });
+  const run = () =>
+    start(async () => {
+      const r = await importListingsAction({
+        connectionId,
+        decisions: (rows ?? []).map((x) => ({
+          code: x.code,
+          title: x.title,
+          propertyId: choice[x.code] || null,
+        })),
+      });
+      setResult(r);
+      setRows(null);
+      router.refresh();
+    });
   return (
-    <div className="mt-2">
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={pending}
-        onClick={() => start(async () => setRows(await importListingsPreview({ accountId })))}
-        data-testid="import-listings"
-      >
-        {label}
-      </Button>
-      {rows ? (
-        <div className="mt-2 space-y-1 text-xs">
+    <div className="space-y-3" data-testid="airbnb-import">
+      <p className="text-sm text-muted">{L.hint}</p>
+      {rows === null ? (
+        <Button variant="secondary" disabled={pending} onClick={load} data-testid="import-listings">
+          {L.load}
+        </Button>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted">{L.none}</p>
+      ) : (
+        <div className="space-y-2">
           {rows.map((r) => (
-            <p key={r.code}>
-              {r.title}{" "}
-              <span className="text-muted">
-                →{" "}
-                {r.match
-                  ? `${r.match.title} (${Math.round(r.match.confidence * 100)}%)`
-                  : "new single-unit property"}
-              </span>
-            </p>
+            <div
+              key={r.code}
+              className="grid items-center gap-2 rounded-xl border border-border p-3 text-sm sm:grid-cols-[1fr_auto]"
+              data-testid="import-row"
+            >
+              <div>
+                <p className="font-medium">{r.title}</p>
+                <p className="text-xs text-muted">
+                  {r.city ? `${r.city} · ` : ""}#{r.code}
+                </p>
+              </div>
+              <Select
+                aria-label={L.target}
+                value={choice[r.code] ?? ""}
+                onChange={(v) => setChoice({ ...choice, [r.code]: v })}
+                className="w-64"
+              >
+                <option value="">{L.newProperty}</option>
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </Select>
+            </div>
           ))}
-          <Button
-            size="sm"
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                const r = await importListingsAction({
-                  accountId,
-                  decisions: rows.map((x) => ({
-                    code: x.code,
-                    title: x.title,
-                    propertyId: x.match?.propertyId ?? null,
-                  })),
-                });
-                setResult(`${r.created} created, ${r.connected} connected`);
-                setRows(null);
-              })
-            }
-          >
-            Confirm
+          <Button disabled={pending} onClick={run} data-testid="import-run">
+            {L.run.replace("{n}", String(rows.length))}
           </Button>
         </div>
-      ) : null}
+      )}
       {result ? (
-        <p className="mt-1 text-xs text-success-soft-foreground" data-testid="import-result">
-          {result}
-        </p>
+        <Alert tone="success" data-testid="import-done">
+          {L.done
+            .replace("{created}", String(result.created))
+            .replace("{connected}", String(result.connected))}
+        </Alert>
       ) : null}
     </div>
   );

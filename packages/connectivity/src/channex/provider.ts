@@ -38,6 +38,8 @@ import {
   type RemoteChannel,
   type AirbnbConnectionLinkSpec,
   type RemoteListing,
+  type RemoteListingCalendar,
+  type RemoteListingDetails,
 } from "@pms/core";
 import type { HttpRequest, HttpResponse, HttpTransport } from "../transport/http.js";
 
@@ -677,6 +679,87 @@ export class ChannexProvider implements ConnectivityProvider {
         ...(typeof v.quality_status === "string" ? { qualityStatus: v.quality_status } : {}),
       };
     });
+  }
+
+  async getChannelListingDetails(
+    ref: ProviderRef,
+    listingId: string,
+    meta: CallMeta,
+  ): Promise<RemoteListingDetails> {
+    const body = await this.call(
+      "airbnb.listing_details",
+      {
+        method: "GET",
+        path: `/api/v1/channels/${ref.id}/action/listing_details`,
+        query: { listing_id: listingId },
+      },
+      meta,
+    );
+    const listing = obj(obj(obj(body).data).listing);
+    const descriptions = obj(listing.descriptions);
+    const photos = arr(listing.images)
+      .map((i) => {
+        const o = obj(i);
+        const u = o.url ?? o.large ?? o.xl_picture_url ?? o.picture_url ?? o.image_url;
+        return typeof u === "string" ? u : null;
+      })
+      .filter((u): u is string => u !== null);
+    const amenities = arr(listing.amenities ?? listing.amenity_categories)
+      .map((a) => (typeof a === "string" ? a : String(obj(a).name ?? obj(a).id ?? "")))
+      .filter(Boolean);
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+    const capacity = num(listing.person_capacity);
+    const bedrooms = num(listing.bedrooms);
+    return {
+      id: String(listing.id ?? listingId),
+      title: String(descriptions.name ?? listing.name ?? listing.title ?? listingId),
+      ...(typeof descriptions.summary === "string" ? { summary: descriptions.summary } : {}),
+      ...(typeof listing.city === "string" ? { city: listing.city } : {}),
+      ...(typeof listing.country_code === "string" ? { countryCode: listing.country_code } : {}),
+      ...(capacity !== undefined ? { capacity } : {}),
+      ...(bedrooms !== undefined ? { bedrooms } : {}),
+
+      photos,
+      amenities,
+    };
+  }
+
+  async getChannelListingCalendar(
+    ref: ProviderRef,
+    listingId: string,
+    range: { from: string; to: string },
+    meta: CallMeta,
+  ): Promise<RemoteListingCalendar> {
+    const body = await this.call(
+      "airbnb.listing_calendar",
+      {
+        method: "GET",
+        path: `/api/v1/channels/${ref.id}/action/get_listing_calendar`,
+        query: { listing_id: listingId, date_from: range.from, date_to: range.to },
+      },
+      meta,
+    );
+    const data = obj(obj(body).data);
+    const cal = obj(data.calendar ?? data);
+    return {
+      currency: String(cal.listing_currency ?? ""),
+      days: arr(cal.days).map((d) => {
+        const o = obj(d);
+        return {
+          date: String(o.date),
+          available: o.availability === "available" || o.availability === true,
+          price: typeof o.daily_price === "number" ? o.daily_price : null,
+          ...(typeof o.min_nights === "number" ? { minNights: o.min_nights } : {}),
+          ...(typeof o.max_nights === "number" ? { maxNights: o.max_nights } : {}),
+          ...(typeof o.closed_to_arrival === "boolean"
+            ? { closedToArrival: o.closed_to_arrival }
+            : {}),
+          ...(typeof o.closed_to_departure === "boolean"
+            ? { closedToDeparture: o.closed_to_departure }
+            : {}),
+        };
+      }),
+    };
   }
 
   async mapListing(

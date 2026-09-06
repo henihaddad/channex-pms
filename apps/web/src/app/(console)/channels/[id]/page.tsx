@@ -1,12 +1,16 @@
+import { getTranslations } from "next-intl/server";
 import { Card, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadConnection } from "../channels.actions";
 import { ConnectionMapping } from "./connection-mapping";
 import { ActivateButton } from "./activate-button";
+import { AirbnbImport } from "../airbnb-import";
+import { listPropertiesBrief } from "../channels.actions";
 
 export default async function ConnectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const v = await guard(() => loadConnection(id));
+  const t = await getTranslations("channels");
   return (
     <div className="space-y-6">
       <PageTitle>
@@ -32,6 +36,23 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
           · secrets shown as •••• (CH-2)
         </p>
       </Card>
+      {v.connection.adapterCode === "AirBNB" && v.connection.settings.managedIn === "channex" ? (
+        <Card title={t("importTitle")}>
+          <AirbnbImport
+            connectionId={v.connection.id}
+            properties={await listPropertiesBrief()}
+            labels={{
+              load: t("importLoad"),
+              hint: t("importHint"),
+              none: t("importNone"),
+              newProperty: t("importNew"),
+              target: t("importTarget"),
+              run: t("importRun"),
+              done: t("importDone"),
+            }}
+          />
+        </Card>
+      ) : null}
       <Card>
         <ConnectionMapping view={v} />
       </Card>

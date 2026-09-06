@@ -9,7 +9,6 @@ import {
   removeAction,
   resumeAction,
 } from "./channels.actions";
-import { AirbnbImport } from "./airbnb-import";
 
 const tone: Record<string, string> = {
   active: "bg-success-soft text-success-soft-foreground",
@@ -148,9 +147,6 @@ export default async function ChannelsPage({
                 · {a.adapterCode} · {a.state} · token{" "}
                 {a.oauthExpiresAt ? `expires ${a.oauthExpiresAt.slice(0, 10)}` : "n/a"}
               </span>
-              {a.adapterCode === "AirBNB" ? (
-                <AirbnbImport accountId={a.id} label={t("importListings")} />
-              ) : null}
             </li>
           ))}
         </ul>

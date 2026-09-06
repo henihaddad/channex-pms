@@ -41,7 +41,8 @@
     "settings": "Paramètres",
     "search": "Rechercher des réservations",
     "searchPlaceholder": "Rechercher un client ou une réservation",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "help": "Aide"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -290,7 +291,15 @@
     "openInChannex": "Ouvrir dans un nouvel onglet",
     "directOauthOnly": "L'autorisation Airbnb directe n'est possible qu'avec vos propres identifiants partenaire Airbnb.",
     "airbnbViaChannex": "Airbnb s'autorise dans Channex. Utilisez « Connecter via Channex » pour cet hébergement.",
-    "pulled": "{count} connexion(s) importée(s)."
+    "pulled": "{count} connexion(s) importée(s).",
+    "importTitle": "Importer les annonces depuis Airbnb",
+    "importLoad": "Afficher mes annonces Airbnb",
+    "importHint": "Chaque annonce devient un bien avec ses photos, sa description, sa capacité et les prix de l'année, ou est rattachée à un bien existant. Rien n'est envoyé à Airbnb avant l'activation.",
+    "importNone": "Toutes les annonces de ce compte sont déjà dans OTAbridge.",
+    "importNew": "Nouveau bien depuis cette annonce",
+    "importTarget": "Importer dans",
+    "importRun": "Importer {n} annonces",
+    "importDone": "Importé : {created} nouveaux biens, {connected} connexions. Les nouveaux biens se mettent en place sur le gestionnaire de canaux ; activez chaque connexion quand elle indique en ligne."
   },
   "reservations": {
     "title": "Réservations",

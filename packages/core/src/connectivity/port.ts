@@ -228,6 +228,38 @@ export interface RemoteListing {
   qualityStatus?: string;
 }
 
+/** What Airbnb reports about one listing, enough to create a property from it (spec 07 CH-5 import). */
+export interface RemoteListingDetails {
+  id: string;
+  title: string;
+  summary?: string;
+  city?: string;
+  countryCode?: string;
+  /** Maximum guests. */
+  capacity?: number;
+  bedrooms?: number;
+  /** Photo URLs in Airbnb's order. */
+  photos: string[];
+  amenities: string[];
+}
+
+/** One day of a listing's calendar as Airbnb holds it: the host's current prices and blocks. */
+export interface RemoteCalendarDay {
+  date: string;
+  available: boolean;
+  /** Price in major units of `currency`. */
+  price: number | null;
+  minNights?: number;
+  maxNights?: number;
+  closedToArrival?: boolean;
+  closedToDeparture?: boolean;
+}
+
+export interface RemoteListingCalendar {
+  currency: string;
+  days: RemoteCalendarDay[];
+}
+
 /** A channel connection as the provider holds it, for mirroring connections made in the provider's own UI. */
 export interface RemoteChannel {
   id: string;
@@ -345,6 +377,19 @@ export interface ConnectivityProvider {
   ): Promise<{ url: string }>;
   /** The listings of the Airbnb account behind a connection. */
   listChannelListings(ref: ProviderRef, meta: CallMeta): Promise<RemoteListing[]>;
+  /** One listing's content as Airbnb reports it: photos, descriptions, capacity, amenities. */
+  getChannelListingDetails(
+    ref: ProviderRef,
+    listingId: string,
+    meta: CallMeta,
+  ): Promise<RemoteListingDetails>;
+  /** The listing's calendar on Airbnb for a date range: the host's current prices and blocks. */
+  getChannelListingCalendar(
+    ref: ProviderRef,
+    listingId: string,
+    range: { from: string; to: string },
+    meta: CallMeta,
+  ): Promise<RemoteListingCalendar>;
   /** Map one listing to one rate plan on an Airbnb connection (asynchronous on the provider side). */
   mapListing(
     ref: ProviderRef,

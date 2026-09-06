@@ -80,6 +80,15 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await expect(page).toHaveURL(/\/channels\/[0-9a-f-]+$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("AirBNB");
   await expect(page.getByTestId("mapping-editor")).toBeVisible();
+  // CH-5 import: the host's listings become properties with Airbnb's content and prices
+  await page.getByTestId("import-listings").click();
+  await expect(page.getByTestId("import-row")).toHaveCount(2);
+  await page.getByTestId("import-run").click();
+  await expect(page.getByTestId("import-done")).toContainText("2 new properties");
+  await page.goto("/properties");
+  await expect(page.getByRole("link", { name: "Fake Loft by the River" })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByTestId("mapping-editor")).toBeVisible();
   const airbnbRows = page.locator('[data-testid^="map-"]');
   await expect(airbnbRows.first()).toBeVisible();
   const n = await airbnbRows.count();

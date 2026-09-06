@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io \u203a Airbnb API \u203a Listing Calendar API: the calendar of a listing for a date range (Channels.AirbnbListingCalendarResult)."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90/action/get_listing_calendar",
+    "query": {
+      "listing_id": "12345678",
+      "date_from": "2026-10-01",
+      "date_to": "2026-10-03"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "success": true,
+        "calendar": {
+          "listing_id": 12345678,
+          "listing_id_str": "12345678",
+          "host_id": 555,
+          "host_id_str": "555",
+          "listing_currency": "EUR",
+          "start_date": "2026-10-01",
+          "end_date": "2026-10-03",
+          "days": [
+            {
+              "date": "2026-10-01",
+              "availability": "available",
+              "availability_type": "available",
+              "availability_sub_type": "default",
+              "available_count": 1,
+              "closed_to_arrival": false,
+              "closed_to_departure": false,
+              "daily_price": 140,
+              "min_nights": 2,
+              "max_nights": 30,
+              "notes": null
+            },
+            {
+              "date": "2026-10-02",
+              "availability": "unavailable",
+              "availability_type": "busy",
+              "availability_sub_type": "default",
+              "available_count": 0,
+              "closed_to_arrival": false,
+              "closed_to_departure": false,
+              "daily_price": 140,
+              "min_nights": 2,
+              "max_nights": 30,
+              "notes": null
+            },
+            {
+              "date": "2026-10-03",
+              "availability": "available",
+              "availability_type": "available",
+              "availability_sub_type": "default",
+              "available_count": 1,
+              "closed_to_arrival": false,
+              "closed_to_departure": false,
+              "daily_price": 160,
+              "min_nights": 2,
+              "max_nights": 30,
+              "notes": null
+            }
+          ]
+        }
+      }
+    }
+  }
+}

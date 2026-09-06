@@ -41,7 +41,8 @@
     "settings": "Settings",
     "search": "Search reservations",
     "searchPlaceholder": "Search guests and reservations",
-    "maintenance": "Maintenance"
+    "maintenance": "Maintenance",
+    "help": "Help"
   },
   "auth": {
     "signIn": "Sign in",
@@ -290,7 +291,15 @@
     "openInChannex": "Open in a new tab",
     "directOauthOnly": "Direct Airbnb authorisation is only available with your own Airbnb partner credentials.",
     "airbnbViaChannex": "Airbnb is authorised inside Channex. Use \"Connect through Channex\" for this property.",
-    "pulled": "{count} connection(s) pulled in."
+    "pulled": "{count} connection(s) pulled in.",
+    "importTitle": "Import listings from Airbnb",
+    "importLoad": "Show my Airbnb listings",
+    "importHint": "Each listing becomes a property with its photos, description, capacity and this year's prices, or is attached to a property you already have. Nothing is sent to Airbnb until you activate.",
+    "importNone": "Every listing of this account is already in OTAbridge.",
+    "importNew": "New property from this listing",
+    "importTarget": "Import into",
+    "importRun": "Import {n} listings",
+    "importDone": "Imported: {created} new properties, {connected} connections. New properties are being set up on the channel manager; activate each connection once it reads live."
   },
   "reservations": {
     "title": "Reservations",

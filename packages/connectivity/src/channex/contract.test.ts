@@ -334,8 +334,35 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
       path: `/api/v1/channels/${CHANNEL}/execute/load_future_reservations`,
       body: { listing_id: "12345678" },
     });
+    const details = await p.getChannelListingDetails({ id: CHANNEL }, "12345678", meta);
+    expect(details).toMatchObject({
+      id: "12345678",
+      title: "Cozy Studio in Paris",
+      summary: "A quiet studio near the Canal Saint-Martin.",
+      city: "Paris",
+      countryCode: "FR",
+      capacity: 4,
+      bedrooms: 1,
+      photos: [
+        "https://a0.muscache.com/im/pictures/1.jpg",
+        "https://a0.muscache.com/im/pictures/2.jpg",
+      ],
+      amenities: ["Wifi", "Kitchen"],
+    });
+    const cal = await p.getChannelListingCalendar(
+      { id: CHANNEL },
+      "12345678",
+      { from: "2026-10-01", to: "2026-10-03" },
+      meta,
+    );
+    expect(cal.currency).toBe("EUR");
+    expect(cal.days.map((d) => [d.date, d.available, d.price, d.minNights])).toEqual([
+      ["2026-10-01", true, 140, 2],
+      ["2026-10-02", false, 140, 2],
+      ["2026-10-03", true, 160, 2],
+    ]);
     await p.removeMapping({ id: CHANNEL }, "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e", meta);
-    expect(http.calls[3]).toMatchObject({
+    expect(http.calls[5]).toMatchObject({
       method: "DELETE",
       path: `/api/v1/channels/${CHANNEL}/mappings/8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e`,
     });

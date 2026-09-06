@@ -19,8 +19,8 @@ packages/jobs    job processors shared by the worker and the test hooks (provisi
 packages/sdk     Apache-2.0 client for /api/v1, no workspace dependencies
 website/         marketing site, standalone npm project, not in the pnpm workspace
 docs/specs/      the specification
-.claude/skills/  agent skills (design, UX heuristics, information architecture, Next.js, React,
-                 Tailwind, shadcn, Postgres, Drizzle, README)
+.claude/skills/  agent skills (design, UX heuristics, information architecture, WCAG audit, Next.js,
+                 React, Tailwind, shadcn, Postgres, Drizzle, README)
 ```
 
 ## Non-negotiable rules (spec 14 §14.3, enforced by lint and CI)

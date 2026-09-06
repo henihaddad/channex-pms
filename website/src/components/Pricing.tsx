@@ -133,6 +133,28 @@ export function Pricing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6">
+        <ul className="mb-8 grid gap-3 text-sm sm:grid-cols-4" aria-label="What you will not find">
+          {[
+            [
+              "No onboarding fee",
+              "Connect Airbnb and import your listings yourself, in an afternoon.",
+            ],
+            ["No commission", "Direct bookings are yours. We never take a cut of a reservation."],
+            [
+              "Cancel any time",
+              "Monthly plans stop at the end of the month. No contract, no lock-in.",
+            ],
+            [
+              "Your data leaves with you",
+              "Export everything in one click, or self-host the same code.",
+            ],
+          ].map(([title, body]) => (
+            <li key={title} className="rounded-2xl border border-line bg-panel px-4 py-3">
+              <p className="font-semibold text-white">{title}</p>
+              <p className="mt-1 text-fg-muted">{body}</p>
+            </li>
+          ))}
+        </ul>
         <div className="grid gap-5 lg:grid-cols-3">
           {plans.map((p) => (
             <article

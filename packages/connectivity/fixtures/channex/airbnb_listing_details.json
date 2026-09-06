@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io \u203a Channel API examples \u203a Airbnb: the details of a listing as Airbnb reports them (Channels.AirbnbListingDetails)."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/3d5a8f2e-1c4b-4a0e-9f7d-2b6c8e1a5d90/action/listing_details",
+    "query": {
+      "listing_id": "12345678"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "listing": {
+          "id": 12345678,
+          "name": "Cozy Studio in Paris",
+          "city": "Paris",
+          "country_code": "FR",
+          "person_capacity": 4,
+          "bedrooms": 1,
+          "bathrooms": 1,
+          "amenities": [
+            {
+              "id": 4,
+              "name": "Wifi"
+            },
+            {
+              "id": 8,
+              "name": "Kitchen"
+            }
+          ],
+          "images": [
+            {
+              "id": 1,
+              "url": "https://a0.muscache.com/im/pictures/1.jpg",
+              "caption": "Living room"
+            },
+            {
+              "id": 2,
+              "url": "https://a0.muscache.com/im/pictures/2.jpg",
+              "caption": "Bedroom"
+            }
+          ],
+          "rooms": [
+            {
+              "room_number": 1,
+              "beds": [
+                {
+                  "type": "queen_bed",
+                  "quantity": 1
+                }
+              ]
+            }
+          ],
+          "descriptions": {
+            "name": "Cozy Studio in Paris",
+            "summary": "A quiet studio near the Canal Saint-Martin.",
+            "space": "30 m\u00b2, top floor, no lift.",
+            "access": "Whole studio."
+          },
+          "booking_settings": {
+            "instant_booking_allowed_category": "everyone",
+            "check_in_time_start": "15",
+            "check_in_time_end": "22",
+            "check_out_time": 11
+          },
+          "pricing_settings": {
+            "listing_currency": "EUR",
+            "default_daily_price": 140,
+            "weekend_price": 160,
+            "cleaning_fee": 40,
+            "guests_included": 2
+          },
+          "availability_rules": {
+            "default_min_nights": 2,
+            "default_max_nights": 30,
+            "booking_lead_time": {
+              "hours": 24
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -129,6 +129,15 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
               className="h-9 w-full rounded-full border border-border bg-background ps-10 pe-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
             />
           </form>
+          <a
+            href="https://github.com/henihaddad/channex-pms/blob/main/docs/operate.md"
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 text-sm text-muted hover:text-foreground"
+            data-testid="help-link"
+          >
+            {t("help")}
+          </a>
           {cx?.onboarding ? (
             <Link
               href="/"

@@ -41,7 +41,8 @@
     "settings": "الإعدادات",
     "search": "البحث في الحجوزات",
     "searchPlaceholder": "ابحث عن ضيف أو حجز",
-    "maintenance": "الصيانة"
+    "maintenance": "الصيانة",
+    "help": "مساعدة"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -290,7 +291,15 @@
     "openInChannex": "فتح في تبويب جديد",
     "directOauthOnly": "تفويض Airbnb المباشر متاح فقط ببيانات شريك Airbnb الخاصة بك.",
     "airbnbViaChannex": "يتم تفويض Airbnb داخل Channex. استخدم \"الربط عبر Channex\" لهذا العقار.",
-    "pulled": "تم سحب {count} اتصال/اتصالات."
+    "pulled": "تم سحب {count} اتصال/اتصالات.",
+    "importTitle": "استيراد الإعلانات من Airbnb",
+    "importLoad": "عرض إعلاناتي على Airbnb",
+    "importHint": "يصبح كل إعلان عقارًا بصوره ووصفه وسعته وأسعار هذا العام، أو يُربط بعقار لديك. لا يُرسل شيء إلى Airbnb قبل التفعيل.",
+    "importNone": "كل إعلانات هذا الحساب موجودة في OTAbridge.",
+    "importNew": "عقار جديد من هذا الإعلان",
+    "importTarget": "استيراد إلى",
+    "importRun": "استيراد {n} إعلانات",
+    "importDone": "تم الاستيراد: {created} عقارات جديدة و{connected} اتصالات. يجري إعداد العقارات الجديدة على مدير القنوات؛ فعّل كل اتصال عندما يصبح مفعّلًا."
   },
   "reservations": {
     "title": "الحجوزات",

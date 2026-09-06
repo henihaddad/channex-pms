@@ -1,5 +1,6 @@
 import {
   Id,
+  LocalDate,
   ThrottleError,
   TransientError,
   ValidationError,
@@ -16,6 +17,8 @@ import {
   type RemoteChannel,
   type AirbnbConnectionLinkSpec,
   type RemoteListing,
+  type RemoteListingCalendar,
+  type RemoteListingDetails,
   type CloseReason,
   type ConnectionSettings,
   type ConnectivityProvider,
@@ -534,6 +537,58 @@ export class FakeProvider implements ConnectivityProvider {
         occupancies: [1, 2],
       },
     ];
+  }
+  async getChannelListingDetails(
+    _ref: ProviderRef,
+    listingId: string,
+    meta: CallMeta,
+  ): Promise<RemoteListingDetails> {
+    this.guard("airbnb.listing_details", meta);
+    const known = await this.listChannelListings(_ref, meta);
+    const l = known.find((x) => x.id === listingId);
+    if (!l) throw new ValidationError(`listing ${listingId} not found`);
+    return {
+      id: l.id,
+      title: l.title,
+      summary: `${l.title}: a bright ${l.type ?? "home"} in ${l.city ?? "town"}, steps from the river.`,
+      ...(l.city ? { city: l.city } : {}),
+      ...(l.countryCode ? { countryCode: l.countryCode } : {}),
+      capacity: Math.max(...(l.occupancies ?? [2])),
+      bedrooms: 1,
+      photos: [
+        `https://fake.example/photos/${l.id}/1.jpg`,
+        `https://fake.example/photos/${l.id}/2.jpg`,
+      ],
+      amenities: ["wifi", "kitchen", "washer"],
+    };
+  }
+  async getChannelListingCalendar(
+    _ref: ProviderRef,
+    listingId: string,
+    range: { from: string; to: string },
+    meta: CallMeta,
+  ): Promise<RemoteListingCalendar> {
+    this.guard("airbnb.listing_calendar", meta);
+    const days: RemoteListingCalendar["days"] = [];
+    const base = listingId === "10000002" ? 95 : 140;
+    for (
+      let d = LocalDate.parse(range.from);
+      !d.isAfter(LocalDate.parse(range.to));
+      d = d.plusDays(1)
+    ) {
+      const iso = d.toString();
+      const weekend = new Date(`${iso}T00:00:00Z`).getUTCDay() % 6 === 0;
+      days.push({
+        date: iso,
+        available: iso.slice(8, 10) !== "15",
+        price: weekend ? base + 20 : base,
+        minNights: 2,
+        maxNights: 30,
+        closedToArrival: false,
+        closedToDeparture: false,
+      });
+    }
+    return { currency: "EUR", days };
   }
   async mapListing(
     ref: ProviderRef,

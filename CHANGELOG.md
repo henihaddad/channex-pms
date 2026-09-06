@@ -16,6 +16,12 @@ All notable changes to this project are documented here. The format follows
   night; the property page leads with its state in words and what to do next, refreshes itself
   during setup, and keeps identifiers behind "Technical details". Derived plans and amounts are
   typed as percent and money, not basis points and cents.
+- Import from Airbnb (spec 07 CH-5, from `docs/research/2026-09-competitors.md`): on an Airbnb
+  connection, "Show my Airbnb listings" lists the host's listings not yet in OTAbridge; each is
+  imported as a new property with Airbnb's title, place, capacity, photos, description and this
+  year's per-day prices and minimum stays, or attached to an existing property. The pricing page
+  states the four promises hosts check first (no onboarding fee, no commission, cancel any time,
+  data leaves with you); the console header has a Help link.
 
 - Airbnb through Channex (spec 07 CH-5): "Connect Airbnb" asks Channex, the approved Airbnb
   partner, for Airbnb's authorisation link (`POST /meta/airbnb/connection_link`) for the live
