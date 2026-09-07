@@ -15,6 +15,7 @@ import {
   Select,
   cn,
 } from "@/components/ui";
+import { ReportsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import {
   deleteScheduleAction,
@@ -164,7 +165,11 @@ export default async function ReportsPage({
             </Card>
           ) : (
             <Card>
-              <EmptyState title={t("noReport")} description={t("pick")} />
+              <EmptyState
+                title={t("emptyTitle")}
+                description={t("empty")}
+                preview={<ReportsPreview />}
+              />
             </Card>
           )}
 

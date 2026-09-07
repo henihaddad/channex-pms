@@ -22,6 +22,11 @@ All notable changes to this project are documented here. The format follows
   year's per-day prices and minimum stays, or attached to an existing property. The pricing page
   states the four promises hosts check first (no onboarding fee, no commission, cancel any time,
   data leaves with you); the console header has a Help link.
+- Empty pages now show the feature working: Properties, Channels, Inbox, Owners, Reports and
+  Operations each carry a preview sketch, a sentence saying what the page is for and the one
+  action that fills it, in English, French and Arabic. From the Guesty walkthrough recorded in
+  `docs/research/2026-09-competitors.md`, where every unconnected page sells its feature rather
+  than reporting that nothing is there.
 
 - Airbnb through Channex (spec 07 CH-5): "Connect Airbnb" asks Channex, the approved Airbnb
   partner, for Airbnb's authorisation link (`POST /meta/airbnb/connection_link`) for the live

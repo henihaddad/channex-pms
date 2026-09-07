@@ -580,18 +580,47 @@ export function StateChip({ state, children }: { state: string; children?: React
   );
 }
 
+/**
+ * A page with nothing in it yet says what the page is for and offers the one action
+ * that fills it; `preview` shows the feature working, so an empty page reads as
+ * "not started" rather than "broken".
+ */
 export function EmptyState({
   title,
   description,
   action,
+  preview,
   className,
   ...rest
 }: {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
+  preview?: ReactNode;
   className?: string;
 }) {
+  if (preview)
+    return (
+      <div
+        className={cn(
+          "grid items-center gap-8 px-1 py-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]",
+          className,
+        )}
+        {...rest}
+      >
+        <div>
+          <p className="text-lg font-semibold text-foreground">{title}</p>
+          {description ? <p className="mt-2 text-sm text-muted">{description}</p> : null}
+          {action ? <div className="mt-4">{action}</div> : null}
+        </div>
+        <div
+          className="rounded-2xl border border-border bg-surface-secondary p-4"
+          aria-hidden="true"
+        >
+          {preview}
+        </div>
+      </div>
+    );
   return (
     <HEmptyState className={cn("flex flex-col items-start gap-1 px-1 py-4", className)} {...rest}>
       <p className="text-sm font-medium text-foreground">{title}</p>

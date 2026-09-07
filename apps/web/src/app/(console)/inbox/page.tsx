@@ -144,7 +144,9 @@ export default async function InboxPage({
         </nav>
 
         <Card className="max-h-[80vh] overflow-y-auto p-2" contentClassName="flex flex-col gap-1">
-          {listing.rows.length === 0 ? <EmptyState title={t("empty")} className="px-3" /> : null}
+          {listing.rows.length === 0 ? (
+            <EmptyState title={t("emptyTitle")} description={t("empty")} className="px-3" />
+          ) : null}
           {listing.rows.map((r) => (
             <Link
               key={r.id}

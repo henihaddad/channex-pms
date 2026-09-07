@@ -77,3 +77,60 @@ Items 1 to 3 are implemented in this round. Items 4 to 7 go to the roadmap after
 - conduit.ai, "Lodgify vs Smoobu" and "Best PMS for Airbnb" (2026); boringhost.ai automation
   playbook (2026).
 - Zeevou and Hostfully migration guides; RNS, "How to switch vacation rental PMS software".
+
+---
+
+# Addendum: a walk through Guesty Lite, September 2026
+
+Twenty-three screens of a trial account, captured by the operator and read here. The account had
+no listings connected, so most screens are their empty states, which is exactly the view a new
+customer gets and the fairest comparison with our own first run.
+
+## Their navigation
+
+Ten items, in this order: Homepage, Inbox, Multi calendar, Properties overview, Reservations
+report, PriceOptimizer, Operations (Tasks, Locks manager), Financials (Payment processing, Income
+report, Payments automations, Analytics), Channels (Airbnb, Vrbo, Booking.com, Google vacation
+rentals, Booking website), Integrations (Add-ons, Marketplace), Account (Settings, Company info,
+User management, Billing). Sub-items expand in place under the parent, one level deep.
+
+Ours is seven primary plus More plus Settings. Theirs is flatter at the top and deeper inside;
+after the UX pass we are close, with two differences worth taking: **Financials as its own
+section** (we scatter folios, invoices and payouts across reservations and owners) and
+**everything about one channel under that channel's own page**.
+
+## What they do that we should copy
+
+| What                                                                                                                                                                                                                                                                                                                                    | Where it shows                                                                         | Our position                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Onboarding as a scored programme.** Three named tracks ("Set up your channels", "Optimize business and increase revenue", "Automate tasks to save time"), twelve steps, a progress bar reading 1/12, each step with an expected duration ("About 1 minute") and its own primary button. Steps beyond the current track are padlocked. | Homepage, and a floating widget that follows you onto every other page                 | We have three steps and a header progress line. Theirs sets expectations per step and keeps the guide reachable everywhere. **Take: the per-step duration, the padlock on later tracks, and the follow-me widget.** |
+| **"Book 1:1 setup", "Watch tutorial", "Help Center" as three buttons in the guide**                                                                                                                                                                                                                                                     | Homepage header                                                                        | We have one Help link. **Take: a help menu with the guide, the operate doc and a way to reach a human.**                                                                                                            |
+| **Empty states that sell the feature and give the one action that unlocks it.** Every unconnected page shows an illustration of the working feature, a sentence of value, and "Import Airbnb listings".                                                                                                                                 | Inbox, Multi calendar, Properties overview, Analytics, Tasks, PriceOptimizer, Channels | Ours say "No channels connected yet." **Take: illustration or preview, one sentence of value, one primary action, on every empty page.**                                                                            |
+| **Properties overview as photo cards** with the channel logos published on each (Airbnb, Vrbo, Booking.com, direct) and a PUBLISHED badge.                                                                                                                                                                                              | Properties overview                                                                    | We show a table with a state chip. **Take: photo cards with per-channel badges, which the Airbnb import now makes possible since we hold the photos.**                                                              |
+| **Payment automations as first-class objects**: a table of rules with Type (event-based), Advance notice, Length-of-stay, Properties, Channels, Amount. Default rule "Collect 100% at booking confirmation".                                                                                                                            | Financials → Payments automations                                                      | We have a guarantee policy per property and manual charges. **Take: named payment rules, the strongest gap on the money side.**                                                                                     |
+| **A marketplace of integrations** (Turno for cleaners, Minut for noise, locks, insurance), each a card with a Connect button.                                                                                                                                                                                                           | Integrations → Marketplace                                                             | We have a plugin interface and two reference plugins, no directory. **Take later: a directory page listing what exists, honest about what is built.**                                                               |
+| **Search in the header with a keyboard hint** ("Type / to search").                                                                                                                                                                                                                                                                     | Every page                                                                             | We added header search this week. **Take: the / shortcut and the hint.**                                                                                                                                            |
+
+## What we already do better, and should say so
+
+- **Owners.** Guesty Lite has no owner statements, no owner portal, no expenses, no payouts.
+  Their Financials is payment processing, an income report and analytics. For a manager running
+  properties for other people, this is our whole reason to exist.
+- **Pricing honesty.** Their booking website is "Subscriber-only" with a padlock inside the
+  product, and the trial counts down in the corner of every screen. Ours is in every plan.
+- **Channels.** Their Lite tier is Airbnb-only, with Vrbo, Booking.com and Google padlocked.
+  Ours is every channel Channex reaches, from the first plan.
+- **Sync visibility.** They show no cell states, no drift, no sync health. Ours is a page.
+- **Locks.** They sell a "Guesty locks manager"; we have a lock port with credentials issued
+  and revoked per booking, in the base product.
+
+## Ordered plan from this walk
+
+1. Empty states with a preview, a sentence and one action, on Inbox, Calendar, Properties,
+   Channels, Reports and Operations. Cheap, and it is the difference between a demo that sells
+   and a page that looks broken.
+2. Getting-started card with per-step durations and a widget that follows the user.
+3. Properties overview as photo cards with per-channel badges.
+4. Payment rules (collect X at booking, remainder N days before arrival, deposit hold).
+5. Financials as its own console section, gathering folios, invoices, payments and payouts.
+6. Integrations directory listing the plugin interface and what is built.

@@ -154,7 +154,7 @@
     "title": "Properties",
     "new": "New property",
     "import": "Import CSV",
-    "empty": "No properties yet. Create one or import a CSV.",
+    "empty": "Add a property, or connect Airbnb and import your listings with their photos, description and prices.",
     "name": "Name",
     "kind": "Kind",
     "state": "State",
@@ -261,7 +261,9 @@
     "checkOut": "Check-out",
     "addPolicy": "Add policy",
     "setCount": "Update",
-    "recentOpsHint": "Bulk updates made on this property."
+    "recentOpsHint": "Bulk updates made on this property.",
+    "emptyTitle": "Your properties live here",
+    "emptyAction": "Add a property"
   },
   "calendar": {
     "title": "Calendar"
@@ -274,7 +276,7 @@
     "noLiveProperty": "Airbnb connects to properties that are live on the channel manager. Yours are still being set up or are drafts: open a property and wait for its state to read live, then come back.",
     "goToProperties": "Go to properties",
     "connectAirbnb": "Connect Airbnb",
-    "empty": "No channels connected yet.",
+    "empty": "Connect Airbnb, Booking.com and the rest. One calendar pushes prices and availability to all of them, and bookings come back the same way.",
     "events": "Recent events",
     "ack": "Acknowledge",
     "pause": "Pause",
@@ -299,7 +301,9 @@
     "importNew": "New property from this listing",
     "importTarget": "Import into",
     "importRun": "Import {n} listings",
-    "importDone": "Imported: {created} new properties, {connected} connections. New properties are being set up on the channel manager; activate each connection once it reads live."
+    "importDone": "Imported: {created} new properties, {connected} connections. New properties are being set up on the channel manager; activate each connection once it reads live.",
+    "emptyTitle": "Sell on every channel from one calendar",
+    "emptyAction": "Connect Airbnb"
   },
   "reservations": {
     "title": "Reservations",
@@ -414,7 +418,10 @@
     "frontDesk": "Front desk",
     "noHotel": "No hotel-kind property. STR portfolios run on the turnover board instead.",
     "inHouse": "In house",
-    "roomRack": "Room rack"
+    "roomRack": "Room rack",
+    "emptyTitle": "Turnovers, cleaners and maintenance",
+    "empty": "Bookings create the cleaning and inspection tasks; your cleaners work from a phone, offline if they must.",
+    "emptyAction": "Add a property"
   },
   "inbox": {
     "title": "Inbox",
@@ -425,7 +432,7 @@
     "allProperties": "All properties",
     "search": "Guest, text, tag…",
     "filter": "Filter",
-    "empty": "Nothing here. Every guest has an answer.",
+    "empty": "Airbnb, Booking.com and your own site, in one thread per booking, with templates and automatic replies.",
     "inquiry": "inquiry",
     "slaBreached": "SLA breached",
     "slaLeft": "{minutes} min to reply",
@@ -548,14 +555,16 @@
     "dates": "Dates",
     "unit": "Unit",
     "thread": "Conversation",
-    "assignee": "Assignee"
+    "assignee": "Assignee",
+    "emptyTitle": "Every guest message in one place",
+    "emptyAction": "Connect a channel"
   },
   "owners": {
     "title": "Owners",
     "expenses": "Expenses",
     "statements": "Statements",
     "payouts": "Payouts",
-    "empty": "No owners yet.",
+    "empty": "Add the owners you manage for. Each month their statement is built from the bookings and expenses, ready to approve and pay.",
     "agreementsCount": "agreement(s)",
     "portalOn": "portal access",
     "newOwner": "New owner",
@@ -654,7 +663,9 @@
       "netDue": "Net due to owner",
       "payable": "Payable now"
     },
-    "generateStatement": "Generate statement for month"
+    "generateStatement": "Generate statement for month",
+    "emptyTitle": "Owners, statements and payouts",
+    "emptyAction": "Add an owner"
   },
   "owner": {
     "loginTitle": "Owner sign-in",
@@ -829,7 +840,10 @@
         "name": "Message response performance",
         "description": "First-response medians per property and channel."
       }
-    }
+    },
+    "emptyTitle": "Occupancy, ADR and RevPAR",
+    "empty": "Reports fill in as bookings arrive. Export any of them, or have one emailed on a schedule.",
+    "emptyAction": "See properties"
   },
   "alertsPage": {
     "title": "Alerts",

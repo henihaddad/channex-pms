@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle, Select } from "@/components/ui";
+import { Button, Card, EmptyState, PageTitle, Select } from "@/components/ui";
+import { OperationsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import {
   assignTaskAction,
@@ -102,6 +103,13 @@ export default async function OperationsPage({
           <h2 className="mb-2 font-semibold">
             {t("turnovers")} <span className="text-xs text-muted">{board.tasks.length}</span>
           </h2>
+          {board.tasks.length === 0 ? (
+            <EmptyState
+              title={t("emptyTitle")}
+              description={t("empty")}
+              preview={<OperationsPreview />}
+            />
+          ) : null}
           <ul className="space-y-2 text-sm" data-testid="turnover-lane">
             {board.tasks.map((x) => {
               const [h, m] = x.windowTo.split(":").map(Number);

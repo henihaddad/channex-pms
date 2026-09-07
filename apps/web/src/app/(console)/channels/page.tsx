@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Alert, AnchorButton, Button, Card, LinkButton, PageTitle } from "@/components/ui";
+import {
+  Alert,
+  AnchorButton,
+  Button,
+  Card,
+  EmptyState,
+  LinkButton,
+  PageTitle,
+} from "@/components/ui";
+import { ChannelsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import {
   acknowledgeEventAction,
@@ -60,7 +69,18 @@ export default async function ChannelsPage({
           </Link>
         }
       >
-        {board.connections.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
+        {board.connections.length === 0 ? (
+          <EmptyState
+            title={t("emptyTitle")}
+            description={t("empty")}
+            action={
+              <AnchorButton href="/api/v1/channels/oauth/airbnb/start" variant="primary">
+                {t("emptyAction")}
+              </AnchorButton>
+            }
+            preview={<ChannelsPreview />}
+          />
+        ) : null}
         <div className="grid gap-3 md:grid-cols-2" data-testid="health-board">
           {board.connections.map((c) => (
             <div

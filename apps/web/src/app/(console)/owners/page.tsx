@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Chip, Field, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Chip, EmptyState, Field, PageTitle, Select } from "@/components/ui";
+import { OwnersPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import { createOwnerAction, listOwners } from "./owners.actions";
 
@@ -26,7 +27,13 @@ export default async function OwnersPage() {
       </div>
       <div className="grid grid-cols-[2fr_1fr] gap-4">
         <Card>
-          {rows.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
+          {rows.length === 0 ? (
+            <EmptyState
+              title={t("emptyTitle")}
+              description={t("empty")}
+              preview={<OwnersPreview />}
+            />
+          ) : null}
           {rows.map((o) => (
             <div
               key={o.id}

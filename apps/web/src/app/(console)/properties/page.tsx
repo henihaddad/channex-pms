@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Card, LinkButton, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import {
+  Card,
+  EmptyState,
+  LinkButton,
+  PageTitle,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/ui";
+import { PropertiesPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import { listProperties, listTemplates } from "./properties.actions";
 import { AdoptForm } from "./adopt-form";
@@ -29,8 +41,19 @@ export default async function PropertiesPage() {
         </div>
       </div>
       <Card>
-        {rows.length === 0 ? <p className="text-sm text-muted">{t("empty")}</p> : null}
-        <Table data-testid="properties-table">
+        {rows.length === 0 ? (
+          <EmptyState
+            title={t("emptyTitle")}
+            description={t("empty")}
+            action={
+              <LinkButton href="/properties/new" variant="primary">
+                {t("emptyAction")}
+              </LinkButton>
+            }
+            preview={<PropertiesPreview />}
+          />
+        ) : null}
+        <Table data-testid="properties-table" hidden={rows.length === 0}>
           <THead className="uppercase">
             <Tr>
               <Th>{t("name")}</Th>

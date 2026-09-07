@@ -154,7 +154,7 @@
     "title": "Biens",
     "new": "Nouveau bien",
     "import": "Importer un CSV",
-    "empty": "Aucun bien. Créez-en un ou importez un CSV.",
+    "empty": "Ajoutez un bien, ou connectez Airbnb et importez vos annonces avec leurs photos, descriptions et prix.",
     "name": "Nom",
     "kind": "Type",
     "state": "État",
@@ -261,7 +261,9 @@
     "checkOut": "Départ",
     "addPolicy": "Ajouter la politique",
     "setCount": "Mettre à jour",
-    "recentOpsHint": "Modifications en masse faites sur ce bien."
+    "recentOpsHint": "Modifications en masse faites sur ce bien.",
+    "emptyTitle": "Vos biens apparaissent ici",
+    "emptyAction": "Ajouter un bien"
   },
   "calendar": {
     "title": "Calendrier"
@@ -274,7 +276,7 @@
     "noLiveProperty": "Airbnb se connecte aux biens déjà en ligne sur le gestionnaire de canaux. Les vôtres sont encore en cours de configuration ou en brouillon : ouvrez un bien, attendez que son état indique en ligne, puis revenez ici.",
     "goToProperties": "Voir les biens",
     "connectAirbnb": "Connecter Airbnb",
-    "empty": "Aucun canal connecté.",
+    "empty": "Connectez Airbnb, Booking.com et les autres. Un seul calendrier envoie prix et disponibilités partout, et les réservations reviennent par le même chemin.",
     "events": "Événements récents",
     "ack": "Acquitter",
     "pause": "Suspendre",
@@ -299,7 +301,9 @@
     "importNew": "Nouveau bien depuis cette annonce",
     "importTarget": "Importer dans",
     "importRun": "Importer {n} annonces",
-    "importDone": "Importé : {created} nouveaux biens, {connected} connexions. Les nouveaux biens se mettent en place sur le gestionnaire de canaux ; activez chaque connexion quand elle indique en ligne."
+    "importDone": "Importé : {created} nouveaux biens, {connected} connexions. Les nouveaux biens se mettent en place sur le gestionnaire de canaux ; activez chaque connexion quand elle indique en ligne.",
+    "emptyTitle": "Vendez sur tous les canaux depuis un seul calendrier",
+    "emptyAction": "Connecter Airbnb"
   },
   "reservations": {
     "title": "Réservations",
@@ -414,7 +418,10 @@
     "frontDesk": "Réception",
     "noHotel": "Aucun bien de type hôtel.",
     "inHouse": "Présents",
-    "roomRack": "Plan des chambres"
+    "roomRack": "Plan des chambres",
+    "emptyTitle": "Rotations, équipes de ménage et maintenance",
+    "empty": "Les réservations créent les tâches de ménage et d'inspection ; vos équipes travaillent depuis un téléphone, hors ligne si nécessaire.",
+    "emptyAction": "Ajouter un bien"
   },
   "inbox": {
     "title": "Boîte de réception",
@@ -425,7 +432,7 @@
     "allProperties": "Toutes les propriétés",
     "search": "Client, texte, étiquette…",
     "filter": "Filtrer",
-    "empty": "Rien ici. Chaque voyageur a sa réponse.",
+    "empty": "Airbnb, Booking.com et votre site, un fil par réservation, avec modèles et réponses automatiques.",
     "inquiry": "demande",
     "slaBreached": "Délai dépassé",
     "slaLeft": "{minutes} min pour répondre",
@@ -548,14 +555,16 @@
     "dates": "Dates",
     "unit": "Unité",
     "thread": "Conversation",
-    "assignee": "Responsable"
+    "assignee": "Responsable",
+    "emptyTitle": "Tous les messages des clients au même endroit",
+    "emptyAction": "Connecter un canal"
   },
   "owners": {
     "title": "Propriétaires",
     "expenses": "Dépenses",
     "statements": "Relevés",
     "payouts": "Versements",
-    "empty": "Aucun propriétaire pour l'instant.",
+    "empty": "Ajoutez les propriétaires pour qui vous gérez. Chaque mois leur relevé est construit à partir des réservations et des dépenses, prêt à approuver et à payer.",
     "agreementsCount": "mandat(s)",
     "portalOn": "accès au portail",
     "newOwner": "Nouveau propriétaire",
@@ -654,7 +663,9 @@
       "netDue": "Net dû au propriétaire",
       "payable": "Payable maintenant"
     },
-    "generateStatement": "Générer le relevé du mois"
+    "generateStatement": "Générer le relevé du mois",
+    "emptyTitle": "Propriétaires, relevés et versements",
+    "emptyAction": "Ajouter un propriétaire"
   },
   "owner": {
     "loginTitle": "Connexion propriétaire",
@@ -829,7 +840,10 @@
         "name": "Délais de réponse aux messages",
         "description": "Médianes de première réponse par hébergement et canal."
       }
-    }
+    },
+    "emptyTitle": "Taux d'occupation, prix moyen et RevPAR",
+    "empty": "Les rapports se remplissent à mesure des réservations. Exportez-les, ou recevez-en un par e-mail selon un calendrier.",
+    "emptyAction": "Voir les biens"
   },
   "alertsPage": {
     "title": "Alertes",
