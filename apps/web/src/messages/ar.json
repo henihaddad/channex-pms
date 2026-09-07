@@ -42,7 +42,8 @@
     "search": "البحث في الحجوزات",
     "searchPlaceholder": "ابحث عن ضيف أو حجز",
     "maintenance": "الصيانة",
-    "help": "مساعدة"
+    "help": "مساعدة",
+    "togglePages": "صفحات {section}"
   },
   "auth": {
     "signIn": "تسجيل الدخول",

@@ -60,6 +60,29 @@ export const navIcons = {
       <path d="M16 12a4 4 0 0 1-4 4H9a4 4 0 0 1 0-8h1" />
     </>,
   ),
+  frontDesk: wrap(
+    <>
+      <path d="M3 20h18M5 20v-7h14v7" />
+      <path d="M7 13V8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5" />
+    </>,
+  ),
+  owners: wrap(
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 1 0 0-6M18 20a6 6 0 0 0-3-5.2" />
+    </>,
+  ),
+  reports: wrap(
+    <>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </>,
+  ),
+  direct: wrap(
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18" />
+    </>,
+  ),
   more: wrap(
     <>
       <circle cx="6" cy="12" r="1" />

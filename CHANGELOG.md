@@ -32,6 +32,11 @@ All notable changes to this project are documented here. The format follows
   done, shown on the dashboard and condensed into every page header; Properties is a grid of
   photo cards with per-channel badges and the state; and direct bookings can be collected in
   instalments through named payment rules (spec 10 §10.4b) with a daily collection job.
+- The sidebar shows every section (Dashboard, Inbox, Calendar, Reservations, Front desk,
+  Operations, Properties, Channels, Direct bookings, Owners, Reports, Settings) with its pages
+  unfolding underneath: no "More" drawer, and a section opens when you are inside it or when you
+  open it, remembered per browser. The Settings tabs are gone, since the sidebar now lists those
+  pages.
 
 - Airbnb through Channex (spec 07 CH-5): "Connect Airbnb" asks Channex, the approved Airbnb
   partner, for Airbnb's authorisation link (`POST /meta/airbnb/connection_link`) for the live

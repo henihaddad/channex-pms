@@ -42,7 +42,8 @@
     "search": "Rechercher des réservations",
     "searchPlaceholder": "Rechercher un client ou une réservation",
     "maintenance": "Maintenance",
-    "help": "Aide"
+    "help": "Aide",
+    "togglePages": "Pages de {section}"
   },
   "auth": {
     "signIn": "Se connecter",

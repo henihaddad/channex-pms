@@ -11,11 +11,12 @@ export async function pickOption(
   target: { label?: string | RegExp; testId?: string; locator?: Locator },
   option: { value?: string; label?: string | RegExp; index?: number },
 ): Promise<void> {
+  // by label, only inside the page: the sidebar has its own buttons with section names
   const trigger = target.locator
     ? target.locator.getByRole("button").first()
     : target.testId
       ? page.getByTestId(target.testId).getByRole("button").first()
-      : page.getByRole("button", {
+      : page.getByRole("main").getByRole("button", {
           name: typeof target.label === "string" ? new RegExp(target.label, "i") : target.label,
         });
   const listbox = page.getByRole("listbox").last();

@@ -42,7 +42,8 @@
     "search": "Search reservations",
     "searchPlaceholder": "Search guests and reservations",
     "maintenance": "Maintenance",
-    "help": "Help"
+    "help": "Help",
+    "togglePages": "Pages of {section}"
   },
   "auth": {
     "signIn": "Sign in",
