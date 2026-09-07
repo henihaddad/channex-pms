@@ -37,6 +37,27 @@ scheduled, not done.
 ## Navigation model
 
 ```
+Sidebar (each section unfolds its pages)
+
+Dashboard
+Inbox ▸            Templates · Automation · Response times
+Calendar
+Reservations ▸     Mapping queue · New booking
+Front desk
+Operations ▸       Blocks · Crews · Maintenance
+Properties ▸       New property · Import a CSV
+Channels ▸         Connect via Channex · Sync health
+Direct bookings ▸  Payment rules
+Owners ▸           Expenses · Statements · Payouts
+Reports ▸          Alerts · Reviews
+Settings ▸         Organization · Members · Billing · Plugins · Audit log · Support
+
+Sign out, and the operator console for operators, sit below the sections.
+```
+
+The first version of this model, kept here because the rewrite is the lesson:
+
+```
 Global (sidebar)         Local (inside the section)              Utility
 ──────────────────       ────────────────────────────            ───────────
 Dashboard                                                        Settings

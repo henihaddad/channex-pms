@@ -7,9 +7,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
-- Console navigation rebuilt from a UX audit (`docs/ux/2026-09-console-ux-audit.md`): seven
-  primary destinations with icons, the rest under "More", Settings as one section with local
-  tabs, a header search for guests and reservations, breadcrumbs on property pages. The
+- Console navigation rebuilt from a UX audit (`docs/ux/2026-09-console-ux-audit.md`): sections
+  with icons and their pages beneath them, a header search for guests and reservations, breadcrumbs on property pages. The
   dashboard opens with a Getting started card whose steps are the ones a manager does (add a
   property, property live, connect a channel) with one primary action. The property wizard is
   three plain sections with selects for country, time zone and currency and prices typed per
