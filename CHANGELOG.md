@@ -27,6 +27,11 @@ All notable changes to this project are documented here. The format follows
   action that fills it, in English, French and Arabic. From the Guesty walkthrough recorded in
   `docs/research/2026-09-competitors.md`, where every unconnected page sells its feature rather
   than reporting that nothing is there.
+- Guesty-parity round (`docs/research/2026-09-competitors.md`): the getting-started programme is
+  three tracks of steps with the minutes each takes, later tracks locked until the one before is
+  done, shown on the dashboard and condensed into every page header; Properties is a grid of
+  photo cards with per-channel badges and the state; and direct bookings can be collected in
+  instalments through named payment rules (spec 10 §10.4b) with a daily collection job.
 
 - Airbnb through Channex (spec 07 CH-5): "Connect Airbnb" asks Channex, the approved Airbnb
   partner, for Airbnb's authorisation link (`POST /meta/airbnb/connection_link`) for the live

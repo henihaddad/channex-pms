@@ -143,6 +143,59 @@ export const extra = pgTable(
   (t) => [index("extra_property_idx").on(t.propertyId, t.active)],
 );
 
+/**
+ * Payment rules (spec 10 §10.4): named instalments an organisation collects, scoped to
+ * properties and channels. `remainder` closes a plan; ordering is by `position`.
+ */
+export const paymentRule = pgTable(
+  "payment_rule",
+  {
+    id: uuid("id").primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organization.id),
+    name: text("name").notNull(),
+    trigger: text("trigger").notNull().default("confirmation"), // confirmation|before_arrival|after_arrival
+    offsetDays: integer("offset_days").notNull().default(0),
+    amountKind: text("amount_kind").notNull().default("remainder"), // percent|fixed|remainder
+    /** Basis points for `percent`, minor units for `fixed`, unused for `remainder`. */
+    amountValue: integer("amount_value").notNull().default(0),
+    propertyIds: jsonb("property_ids").notNull().default([]).$type<string[]>(),
+    channels: jsonb("channels").notNull().default([]).$type<string[]>(),
+    enabled: boolean("enabled").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: ts("created_at").notNull().default(now()),
+  },
+  (t) => [index("payment_rule_org_idx").on(t.orgId, t.position)],
+);
+
+/** One instalment a booking owes, produced by the rules when the booking is confirmed. */
+export const paymentSchedule = pgTable(
+  "payment_schedule",
+  {
+    id: uuid("id").primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organization.id),
+    bookingId: uuid("booking_id").notNull(),
+    ruleId: uuid("rule_id"),
+    name: text("name").notNull(),
+    dueOn: date("due_on", { mode: "string" }).notNull(),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    state: text("state").notNull().default("scheduled"), // scheduled|paid|failed|cancelled
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    paymentId: uuid("payment_id"),
+    createdAt: ts("created_at").notNull().default(now()),
+    settledAt: ts("settled_at"),
+  },
+  (t) => [
+    index("payment_schedule_due_idx").on(t.state, t.dueOn),
+    uniqueIndex("payment_schedule_booking_rule_idx").on(t.bookingId, t.ruleId, t.dueOn),
+  ],
+);
+
 /** Guest portal sessions (spec 10 §10.6): scoped to one booking, short-lived, from a single-use magic link. */
 export const guestSession = pgTable(
   "guest_session",

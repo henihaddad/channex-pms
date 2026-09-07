@@ -39,11 +39,18 @@ test("onboarding → billing → plugins → operator console → impersonation 
   const hooks = await request.post("/api/v1/test/drain", { data: { orgId } });
   test.skip(hooks.status() === 404, "test hooks disabled");
 
-  // onboarding checklist (spec 12 §12.3): organization done, property not yet
+  // onboarding programme (spec 12 §12.3): the first track is unlocked, the property step not done,
+  // later tracks locked until it is; the header carries the next step of the same programme
   await expect(page.getByTestId("onboarding-checklist")).toBeVisible();
   await expect(
-    page.locator('[data-testid="onboarding-checklist"] [data-step="property"]'),
+    page.locator('[data-testid="getting-started"] [data-step="property"]'),
   ).toHaveAttribute("data-done", "0");
+  await expect(
+    page.locator('[data-testid="getting-started"] [data-track="connect"]'),
+  ).toHaveAttribute("data-unlocked", "1");
+  await expect(
+    page.locator('[data-testid="getting-started"] [data-track="automate"]'),
+  ).toHaveAttribute("data-unlocked", "0");
   await page.goto("/properties/new");
   await page.getByLabel("Title").fill("Platform Flat");
   await page.getByTestId("create-property").click();
@@ -52,7 +59,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await request.post("/api/v1/test/drain", { data: { orgId } });
   await page.goto("/");
   await expect(
-    page.locator('[data-testid="onboarding-checklist"] [data-step="property"]'),
+    page.locator('[data-testid="getting-started"] [data-step="property"]'),
   ).toHaveAttribute("data-done", "1");
 
   // billing (spec 12 §12.5): trial → plan chosen → active; a card; usage and the invoice explainer

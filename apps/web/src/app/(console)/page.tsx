@@ -14,6 +14,8 @@ import { guard } from "@/server/guard";
 import { currentOrgId, currentSession } from "@/server/session";
 import { consoleContext } from "@/server/console-context";
 import { AutoRefresh } from "./auto-refresh";
+import { GettingStarted } from "./getting-started";
+import { startLabels } from "./start-labels";
 import { memberships } from "@/server/auth-flows";
 import { loadDashboard, refreshRollupsAction } from "./reports/reports.actions";
 import { Kpi, money, pct } from "./reports/kpi";
@@ -32,7 +34,6 @@ export default async function DashboardPage({
   const tob = await getTranslations("onboarding");
   const orgId = await currentOrgId();
   const setup = orgId ? (await consoleContext(orgId)).onboarding : null;
-  const nextStep = setup?.find((s) => !s.done);
   const m = d.month.current;
   const cur = d.month.currency;
   const fresh = d.month.freshness
@@ -88,51 +89,7 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {setup ? (
-        <Card title={tob("title")} description={tob("lead")} data-testid="getting-started">
-          <ol className="grid gap-3 sm:grid-cols-3">
-            {setup.map((s, i) => {
-              const current = s.key === nextStep?.key;
-              return (
-                <li
-                  key={s.key}
-                  data-step={s.key}
-                  data-done={s.done ? "1" : "0"}
-                  className={`rounded-xl border p-4 ${current ? "border-accent bg-accent-soft/30" : "border-border"}`}
-                >
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <span
-                      className={`grid h-6 w-6 place-items-center rounded-full text-xs ${s.done ? "bg-success-soft text-success-soft-foreground" : current ? "bg-accent text-white" : "bg-default text-muted"}`}
-                    >
-                      {s.done ? "✓" : i + 1}
-                    </span>
-                    <span className={s.done ? "text-muted" : ""}>{tob(s.key)}</span>
-                  </p>
-                  {current ? (
-                    <div className="mt-3">
-                      {s.key === "live" ? (
-                        <p className="text-xs text-muted">
-                          {tob("waitingLive")}
-                          <AutoRefresh />
-                        </p>
-                      ) : (
-                        <LinkButton
-                          href={s.href}
-                          variant="primary"
-                          size="sm"
-                          data-testid="setup-next"
-                        >
-                          {tob(s.key)}
-                        </LinkButton>
-                      )}
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        </Card>
-      ) : null}
+      {setup ? <GettingStarted tracks={setup} labels={startLabels(tob)} /> : null}
 
       {showOps ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="today-board">

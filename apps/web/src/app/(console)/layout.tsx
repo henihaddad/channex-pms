@@ -11,6 +11,8 @@ import { Logo } from "@/components/logo";
 import { Alert, Button } from "@/components/ui";
 import { NavLink, NavMore, type NavItem } from "./nav-link";
 import { navIcons } from "./nav-icons";
+import { StartWidget } from "./getting-started";
+import { startLabels } from "./start-labels";
 
 /**
  * The console shell. Seven daily destinations always visible, the rest under
@@ -138,29 +140,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           >
             {t("help")}
           </a>
-          {cx?.onboarding ? (
-            <Link
-              href="/"
-              className="flex shrink-0 items-center gap-2 text-sm"
-              data-testid="onboarding-checklist"
-            >
-              <span className="text-muted">
-                {tob("progress", { done, total: cx.onboarding.length })}
-              </span>
-              <span className="flex h-1.5 w-24 overflow-hidden rounded-full bg-default">
-                <span
-                  className="bridge-rail h-full rounded-full"
-                  style={{ width: `${(done / cx.onboarding.length) * 100}%` }}
-                />
-              </span>
-              {next ? <span className="font-medium text-accent">{tob(next.key)} →</span> : null}
-              <span hidden>
-                {cx.onboarding.map((s) => (
-                  <span key={s.key} data-step={s.key} data-done={s.done ? "1" : "0"} />
-                ))}
-              </span>
-            </Link>
-          ) : null}
+          {cx?.onboarding ? <StartWidget tracks={cx.onboarding} labels={startLabels(tob)} /> : null}
         </header>
         <main className="flex-1 px-8 py-7">
           <div className="mx-auto flex max-w-[1400px] flex-col gap-4">

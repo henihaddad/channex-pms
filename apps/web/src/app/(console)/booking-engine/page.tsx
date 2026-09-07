@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { rawRows, sql } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
-import { Card, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import { Card, LinkButton, PageHeader, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 
 interface Row {
   id: string;
@@ -33,9 +33,21 @@ const loadIndex = withPermission<[], Row[]>(
 export default async function BookingEngineIndexPage() {
   const rows = await loadIndex();
   const t = await getTranslations("engine");
+  const tp = await getTranslations("payments");
   return (
     <div className="space-y-4">
-      <PageTitle>{t("index")}</PageTitle>
+      <PageHeader
+        title={t("index")}
+        actions={
+          <LinkButton
+            href="/booking-engine/payments"
+            variant="secondary"
+            data-testid="payment-rules-link"
+          >
+            {tp("title")}
+          </LinkButton>
+        }
+      />
       <Card>
         <Table data-testid="engine-index">
           <THead>

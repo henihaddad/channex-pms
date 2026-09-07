@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   Card,
+  Chip,
   EmptyState,
   LinkButton,
   PageTitle,
@@ -17,11 +18,11 @@ import { guard } from "@/server/guard";
 import { listProperties, listTemplates } from "./properties.actions";
 import { AdoptForm } from "./adopt-form";
 
-const stateTone: Record<string, string> = {
-  live: "bg-success-soft text-success-soft-foreground",
-  syncing: "bg-accent-soft text-accent",
-  draft: "bg-background text-foreground",
-  suspended: "bg-warning-soft text-warning-soft-foreground",
+const stateColor: Record<string, "success" | "accent" | "default" | "warning"> = {
+  live: "success",
+  syncing: "accent",
+  draft: "default",
+  suspended: "warning",
 };
 
 export default async function PropertiesPage() {
@@ -53,41 +54,66 @@ export default async function PropertiesPage() {
             preview={<PropertiesPreview />}
           />
         ) : null}
-        <Table data-testid="properties-table" hidden={rows.length === 0}>
-          <THead className="uppercase">
-            <Tr>
-              <Th>{t("name")}</Th>
-              <Th>{t("kind")}</Th>
-              <Th>{t("state")}</Th>
-              <Th>{t("provisioning")}</Th>
-              <Th className="text-end">{t("inventory")}</Th>
-            </Tr>
-          </THead>
-          <TBody>
+        {rows.length > 0 ? (
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-testid="properties-table">
             {rows.map((p) => (
-              <Tr key={p.id} data-state={p.state}>
-                <Td>
-                  <Link href={`/properties/${p.id}`} className="hover:underline">
-                    {p.title}
-                  </Link>
-                </Td>
-                <Td>{p.kind}</Td>
-                <Td>
-                  <span className={`rounded px-2 py-0.5 text-xs ${stateTone[p.state] ?? ""}`}>
-                    {p.state}
-                  </span>
-                </Td>
-                <Td>
-                  {p.provisioningStep ?? "—"}
-                  {p.provisioningError ? ` · ${p.provisioningError}` : ""}
-                </Td>
-                <Td className="text-end">
-                  {p.roomTypes} / {p.ratePlans} / {p.units}
-                </Td>
-              </Tr>
+              <li key={p.id} data-state={p.state}>
+                <Link
+                  href={`/properties/${p.id}`}
+                  className="group block overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/60"
+                >
+                  <div className="relative aspect-[16/9] bg-surface-secondary">
+                    {p.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- remote OTA photo, no loader configured
+                      <img
+                        src={p.photoUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-3xl text-muted">
+                        {p.title.slice(0, 1).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="absolute start-3 top-3">
+                      <Chip color={stateColor[p.state] ?? "default"} size="sm">
+                        {t(`states.${p.state}`)}
+                      </Chip>
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{p.title}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted">
+                        {[p.city, t(`kinds.${p.kind}`)].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span
+                      className="flex shrink-0 flex-wrap justify-end gap-1"
+                      data-testid="property-channels"
+                    >
+                      {p.channels.length === 0 ? (
+                        <span className="text-xs text-muted">{t("noChannelsShort")}</span>
+                      ) : (
+                        p.channels.map((c) => (
+                          <span
+                            key={c}
+                            title={c}
+                            data-channel={c}
+                            className="rounded-md bg-default px-1.5 py-0.5 text-[0.65rem] font-medium text-foreground"
+                          >
+                            {c === "BookingCom" ? "Booking" : c === "AirBNB" ? "Airbnb" : c}
+                          </span>
+                        ))
+                      )}
+                    </span>
+                  </div>
+                </Link>
+              </li>
             ))}
-          </TBody>
-        </Table>
+          </ul>
+        ) : null}
       </Card>
       <Card title={t("templates")}>
         {templates.length === 0 ? (

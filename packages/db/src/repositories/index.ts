@@ -74,6 +74,9 @@ export {
 } from "./analytics.js";
 export {
   DrizzleBookingEngineRepository,
+  DrizzlePaymentRuleRepository,
+  duePayments,
+  type ScheduledPayment,
   type EngineSettings,
   type StorefrontProperty,
   type HoldRow,

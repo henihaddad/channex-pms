@@ -15,3 +15,13 @@ export {
   type PaymentIntentRequest,
   type PaymentIntentStatus,
 } from "./payment-port.js";
+export {
+  planPayments,
+  uncoveredMinor,
+  defaultPaymentRules,
+  type PaymentRule,
+  type PaymentTrigger,
+  type PaymentAmount,
+  type PaymentPlanInput,
+  type Instalment,
+} from "./payment-rules.js";

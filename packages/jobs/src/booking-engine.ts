@@ -25,6 +25,7 @@ import {
   type PromoCode,
   type Quote,
   type SearchQuery,
+  planPayments,
 } from "@pms/core";
 import {
   asSystem,
@@ -44,6 +45,7 @@ import {
   type HoldRow,
   type StorefrontProperty,
   type Tx,
+  DrizzlePaymentRuleRepository,
 } from "@pms/db";
 import type { Logger } from "@pms/runtime";
 import { queueAriPush } from "./ari-events.js";
@@ -612,6 +614,20 @@ async function finalize(
       state: intent.status === "requires_capture" ? "held" : "captured",
       providerRef: intent.intentId,
     });
+
+  // what the rules still expect to collect after today's payment (spec 10 §10.4)
+  const rules = new DrizzlePaymentRuleRepository(tx, orgId);
+  const plan = planPayments({
+    rules: await rules.listRules(),
+    totalMinor: Math.max(0, quoteNow.totalMinor - quoteNow.dueNowMinor),
+    currency: quoteNow.currency,
+    propertyId: hold.propertyId,
+    channel: "direct",
+    arrival: hold.arrivalDate,
+    bookedOn: nowIso.slice(0, 10),
+  });
+  const later = plan.filter((i) => i.dueOn > nowIso.slice(0, 10));
+  if (later.length > 0) await rules.saveSchedule(bookingId, quoteNow.currency, later);
 
   // the direct thread (spec 10 §10.6), the door code (spec 15 M7 exit), the portal link, the mail (BE-7)
   const [b] = await rawRows<{ guest_id: string | null; code: string | null }>(

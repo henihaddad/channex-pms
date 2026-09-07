@@ -263,7 +263,13 @@
     "setCount": "Update",
     "recentOpsHint": "Bulk updates made on this property.",
     "emptyTitle": "Your properties live here",
-    "emptyAction": "Add a property"
+    "emptyAction": "Add a property",
+    "kinds": {
+      "single_unit": "One rental",
+      "multi_unit": "Several units",
+      "hotel": "Hotel"
+    },
+    "noChannelsShort": "No channel"
   },
   "calendar": {
     "title": "Calendar"
@@ -1200,13 +1206,56 @@
   },
   "onboarding": {
     "title": "Get to your first OTA booking",
-    "progress": "Setup {done}/{total}",
+    "lead": "Three short tracks. Each one unlocks the next.",
+    "progress": "{done}/{total}",
+    "minutes": "{n} min",
+    "locked": "Locked",
+    "done": "Done",
+    "waitingLive": "Your calendar is being sent to the channel manager. This usually takes a few minutes and finishes on its own.",
+    "hide": "Hide",
+    "show": "Setup",
+    "tracks": {
+      "connect": "Connect your channels",
+      "sell": "Set up how you sell",
+      "automate": "Automate the work"
+    },
     "provider": "Connect the channel manager",
     "property": "Add your first property",
     "live": "Property live on the channel manager",
     "channel": "Connect a channel",
-    "lead": "Three steps and bookings start flowing in.",
-    "waitingLive": "Your calendar is being sent to the channel manager. This usually takes a few minutes; this page refreshes on its own.",
-    "done": "Done"
+    "rates": "Set your prices for a few dates",
+    "engine": "Turn on direct bookings",
+    "owner": "Add an owner",
+    "template": "Write a message template",
+    "automation": "Create an automation",
+    "crew": "Add a cleaning crew"
+  },
+  "payments": {
+    "title": "Payment rules",
+    "lead": "What a direct booking is charged, and when. Rules apply in order; the first that matches takes its share of what is left.",
+    "add": "Add a rule",
+    "name": "Name",
+    "when": "When",
+    "confirmation": "At booking confirmation",
+    "beforeArrival": "Before arrival",
+    "afterArrival": "After arrival",
+    "days": "Days",
+    "take": "Take",
+    "percent": "Percent of the stay",
+    "fixed": "Fixed amount",
+    "remainder": "Everything still owed",
+    "value": "Value",
+    "properties": "Properties",
+    "allProperties": "All properties",
+    "channels": "Channels",
+    "allChannels": "All channels",
+    "direct": "Direct bookings",
+    "enabled": "Active",
+    "save": "Save",
+    "remove": "Remove",
+    "saved": "Saved",
+    "example": "On a 1 000.00 stay arriving in 60 days",
+    "exampleHint": "What your rules would collect, and when.",
+    "uncovered": "Not covered by any rule"
   }
 }

@@ -63,6 +63,30 @@
     "publicReason": "booking_engine"
   },
   {
+    "file": "src/app/(console)/booking-engine/payments/payments.actions.ts",
+    "export": "deletePaymentRule",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payment:capture",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/booking-engine/payments/payments.actions.ts",
+    "export": "loadPaymentRules",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "folio:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/booking-engine/payments/payments.actions.ts",
+    "export": "savePaymentRule",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "payment:capture",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "acknowledgeEventAction",
     "kind": "action",

@@ -33,6 +33,11 @@ export interface PropertySummary {
   provisioningStep: string | null;
   provisioningError: string | null;
   createdAt: string;
+  /** First photo, from the property's own library or the content an import carried over. */
+  photoUrl: string | null;
+  city: string | null;
+  /** Adapter codes of the property's live connections, for the channel badges. */
+  channels: string[];
 }
 
 export interface PropertyDetail {
@@ -173,7 +178,15 @@ export class DrizzlePropertyRepository implements PropertyRepository {
         (select count(*)::int from room_type rt where rt.property_id = p.id and rt.archived_at is null) as "roomTypes",
         (select count(*)::int from rate_plan rp where rp.property_id = p.id and rp.archived_at is null) as "ratePlans",
         (select count(*)::int from unit u where u.property_id = p.id and u.archived_at is null) as "units",
-        pv.step as "provisioningStep", pv.last_error as "provisioningError", p.created_at as "createdAt"
+        pv.step as "provisioningStep", pv.last_error as "provisioningError", p.created_at as "createdAt",
+        coalesce(
+          (select ph.storage_key from photo ph where ph.property_id = p.id order by ph.position, ph.id limit 1),
+          p.settings #>> '{content,photos,0}'
+        ) as "photoUrl",
+        p.address ->> 'city' as city,
+        coalesce((select array_agg(distinct cc.adapter_code order by cc.adapter_code)
+          from channel_connection cc
+          where cc.property_id = p.id and cc.archived_at is null and cc.state in ('active','mapped','testing')), '{}') as channels
         from property p left join property_provisioning pv on pv.property_id = p.id
         where p.archived_at is null order by p.title, p.id`,
     );

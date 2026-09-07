@@ -263,7 +263,13 @@
     "setCount": "Mettre à jour",
     "recentOpsHint": "Modifications en masse faites sur ce bien.",
     "emptyTitle": "Vos biens apparaissent ici",
-    "emptyAction": "Ajouter un bien"
+    "emptyAction": "Ajouter un bien",
+    "kinds": {
+      "single_unit": "Un logement",
+      "multi_unit": "Plusieurs unités",
+      "hotel": "Hôtel"
+    },
+    "noChannelsShort": "Aucun canal"
   },
   "calendar": {
     "title": "Calendrier"
@@ -1200,13 +1206,56 @@
   },
   "onboarding": {
     "title": "Vers votre première réservation OTA",
-    "progress": "Configuration {done}/{total}",
+    "lead": "Trois parcours courts. Chacun débloque le suivant.",
+    "progress": "{done}/{total}",
+    "minutes": "{n} min",
+    "locked": "Verrouillé",
+    "done": "Terminé",
+    "waitingLive": "Votre calendrier est envoyé au gestionnaire de canaux. Cela prend quelques minutes et se termine tout seul.",
+    "hide": "Masquer",
+    "show": "Configuration",
+    "tracks": {
+      "connect": "Connecter vos canaux",
+      "sell": "Organiser votre vente",
+      "automate": "Automatiser le travail"
+    },
     "provider": "Connecter le gestionnaire de canaux",
     "property": "Ajouter votre premier bien",
     "live": "Bien en ligne sur le gestionnaire de canaux",
     "channel": "Connecter un canal",
-    "lead": "Trois étapes, et les réservations arrivent.",
-    "waitingLive": "Votre calendrier est envoyé au gestionnaire de canaux. Cela prend quelques minutes ; cette page se rafraîchit seule.",
-    "done": "Terminé"
+    "rates": "Fixer vos prix sur quelques dates",
+    "engine": "Activer les réservations directes",
+    "owner": "Ajouter un propriétaire",
+    "template": "Écrire un modèle de message",
+    "automation": "Créer une automatisation",
+    "crew": "Ajouter une équipe de ménage"
+  },
+  "payments": {
+    "title": "Règles de paiement",
+    "lead": "Ce qu'une réservation directe paie, et quand. Les règles s'appliquent dans l'ordre ; la première qui correspond prend sa part de ce qui reste.",
+    "add": "Ajouter une règle",
+    "name": "Nom",
+    "when": "Quand",
+    "confirmation": "À la confirmation",
+    "beforeArrival": "Avant l'arrivée",
+    "afterArrival": "Après l'arrivée",
+    "days": "Jours",
+    "take": "Prendre",
+    "percent": "Pourcentage du séjour",
+    "fixed": "Montant fixe",
+    "remainder": "Tout le reste dû",
+    "value": "Valeur",
+    "properties": "Biens",
+    "allProperties": "Tous les biens",
+    "channels": "Canaux",
+    "allChannels": "Tous les canaux",
+    "direct": "Réservations directes",
+    "enabled": "Active",
+    "save": "Enregistrer",
+    "remove": "Supprimer",
+    "saved": "Enregistré",
+    "example": "Sur un séjour de 1 000,00 arrivant dans 60 jours",
+    "exampleHint": "Ce que vos règles encaisseraient, et quand.",
+    "uncovered": "Non couvert par une règle"
   }
 }

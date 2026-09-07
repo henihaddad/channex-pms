@@ -91,6 +91,8 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   booking_engine_settings: "org",
   booking_hold: "org",
   promo_code: "org",
+  payment_rule: "org",
+  payment_schedule: "org",
   extra: "org",
   guest_session: "org",
   pre_checkin: "org",

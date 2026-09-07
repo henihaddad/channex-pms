@@ -141,6 +141,20 @@
       "when": 1788365615528,
       "tag": "0019_m8_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788785837575,
+      "tag": "0020_m9_payment_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788785857864,
+      "tag": "0021_m9_payment_rls",
+      "breakpoints": true
     }
   ]
 }

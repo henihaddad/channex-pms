@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   activeHoldsByDate,
   Id,
@@ -9,6 +9,8 @@ import {
   type Quote,
   type SearchableRoomType,
   type TaxRules,
+  type Instalment,
+  type PaymentRule,
 } from "@pms/core";
 import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
@@ -745,6 +747,147 @@ export class DrizzleBookingEngineRepository {
         set: { ...p, completedAt: sql`now()`, updatedAt: sql`now()` },
       });
   }
+}
+
+/** Payment rules and the instalments they produce (spec 10 §10.4). */
+export class DrizzlePaymentRuleRepository {
+  constructor(
+    private readonly tx: Tx,
+    private readonly orgId: string,
+  ) {}
+
+  async listRules(): Promise<PaymentRule[]> {
+    const rows = await this.tx
+      .select()
+      .from(s.paymentRule)
+      .orderBy(asc(s.paymentRule.position), asc(s.paymentRule.id));
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      trigger: r.trigger as PaymentRule["trigger"],
+      offsetDays: r.offsetDays,
+      amount:
+        r.amountKind === "percent"
+          ? { kind: "percent", percentBps: r.amountValue }
+          : r.amountKind === "fixed"
+            ? { kind: "fixed", amountMinor: r.amountValue }
+            : { kind: "remainder" },
+      propertyIds: r.propertyIds,
+      channels: r.channels,
+      enabled: r.enabled,
+      position: r.position,
+    }));
+  }
+
+  async saveRule(r: PaymentRule): Promise<void> {
+    const row = {
+      orgId: this.orgId,
+      name: r.name,
+      trigger: r.trigger,
+      offsetDays: r.offsetDays,
+      amountKind: r.amount.kind,
+      amountValue:
+        r.amount.kind === "percent"
+          ? r.amount.percentBps
+          : r.amount.kind === "fixed"
+            ? r.amount.amountMinor
+            : 0,
+      propertyIds: r.propertyIds,
+      channels: r.channels,
+      enabled: r.enabled,
+      position: r.position,
+    };
+    await this.tx
+      .insert(s.paymentRule)
+      .values({ id: r.id, ...row })
+      .onConflictDoUpdate({ target: s.paymentRule.id, set: row });
+  }
+
+  async deleteRule(id: string): Promise<void> {
+    await this.tx.delete(s.paymentRule).where(eq(s.paymentRule.id, id));
+  }
+
+  /** Write a booking's instalments; re-running with the same plan changes nothing. */
+  async saveSchedule(
+    bookingId: string,
+    currency: string,
+    instalments: readonly Instalment[],
+  ): Promise<void> {
+    for (const i of instalments)
+      await this.tx
+        .insert(s.paymentSchedule)
+        .values({
+          id: Id.next(),
+          orgId: this.orgId,
+          bookingId,
+          ruleId: i.ruleId,
+          name: i.name,
+          dueOn: i.dueOn,
+          amountMinor: i.amountMinor,
+          currency,
+        })
+        .onConflictDoNothing();
+  }
+
+  async listSchedule(bookingId: string): Promise<ScheduledPayment[]> {
+    const rows = await this.tx
+      .select()
+      .from(s.paymentSchedule)
+      .where(eq(s.paymentSchedule.bookingId, bookingId))
+      .orderBy(asc(s.paymentSchedule.dueOn));
+    return rows.map(toScheduled);
+  }
+
+  /** Cancel what a cancelled or shortened booking no longer owes. */
+  async cancelSchedule(bookingId: string): Promise<void> {
+    await this.tx
+      .update(s.paymentSchedule)
+      .set({ state: "cancelled", settledAt: sql`now()` })
+      .where(
+        and(eq(s.paymentSchedule.bookingId, bookingId), eq(s.paymentSchedule.state, "scheduled")),
+      );
+  }
+}
+
+export interface ScheduledPayment {
+  id: string;
+  bookingId: string;
+  ruleId: string | null;
+  name: string;
+  dueOn: string;
+  amountMinor: number;
+  currency: string;
+  state: "scheduled" | "paid" | "failed" | "cancelled";
+  attempts: number;
+  lastError: string | null;
+}
+
+const toScheduled = (r: typeof s.paymentSchedule.$inferSelect): ScheduledPayment => ({
+  id: r.id,
+  bookingId: r.bookingId,
+  ruleId: r.ruleId,
+  name: r.name,
+  dueOn: r.dueOn,
+  amountMinor: r.amountMinor,
+  currency: r.currency,
+  state: r.state as ScheduledPayment["state"],
+  attempts: r.attempts,
+  lastError: r.lastError,
+});
+
+/** Instalments due on or before a date, across tenants: the collection job's queue. */
+export async function duePayments(
+  tx: Tx,
+  onOrBefore: string,
+  limit = 200,
+): Promise<Array<ScheduledPayment & { orgId: string }>> {
+  const rows = await rawRows<typeof s.paymentSchedule.$inferSelect & { org_id: string }>(
+    tx,
+    sql`select * from payment_schedule
+      where state = 'scheduled' and due_on <= ${onOrBefore} and attempts < 6
+      order by due_on limit ${limit}`,
+  );
+  return rows.map((r) => ({ ...toScheduled(r), orgId: r.org_id }));
 }
 
 /**

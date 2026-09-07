@@ -99,6 +99,21 @@ properties already using it.
   step-up auth.
 - Multi-currency: display currency vs charge currency always stated explicitly.
 
+## 10.4b Payment rules
+
+An organisation collects a direct booking in named instalments (`payment_rule`): a share of the
+stay, a fixed amount, or everything still owed, due at booking confirmation or a number of days
+before or after arrival, scoped to properties and channels and applied in `position` order. A
+rule never overshoots the stay: each takes at most what is unallocated, and a `remainder` rule
+closes the plan exactly. A moment already past is due on the day of booking, never in the past.
+
+`planPayments()` in `packages/core/src/booking-engine/payment-rules.ts` is the pure function,
+covered by property tests; confirmation writes the instalments due after today into
+`payment_schedule`, and the daily `payments.collect` job charges each one through the
+`PaymentProvider` with `schedule:<id>` as the idempotency key, records it on the folio, and
+cancels the rest when a booking is cancelled. Attempts stop after six failures. The console page
+is Direct bookings → Payment rules, with a worked example on a 1 000.00 stay.
+
 ## 10.5 Direct-only commercial tools
 
 - **Promo codes** — percentage or amount, date and stay constraints, usage caps,

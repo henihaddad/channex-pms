@@ -21,6 +21,7 @@ import {
   snapshotSource,
 } from "../analytics.js";
 import { expireHolds, sendAbandonmentMails } from "../booking-engine.js";
+import { collectDuePayments } from "../payments.js";
 import { pollChannelHealth } from "../channels.js";
 import { extendHorizons } from "../horizon.js";
 import {
@@ -446,6 +447,16 @@ export async function runSystemJob(
       if (n > 0) log.info({ released: n }, "holds.expire.run");
       return;
     }
+    case "payments.collect": {
+      const r = await collectDuePayments({
+        db,
+        payments: d.engine.payments,
+        clock: w.clock,
+        log,
+      });
+      if (r.charged + r.failed + r.cancelled > 0) log.info(r, "payments.collect.run");
+      return;
+    }
     case "holds.abandoned": {
       let sent = 0;
       for (const o of await withoutTenant(db, (tx) =>
@@ -543,6 +554,7 @@ export const SCHEDULE: ReadonlyArray<{ name: string; every?: number; pattern?: s
   { name: "daily_close", pattern: "20 * * * *" },
   { name: "retention.purge", pattern: "40 4 * * *" },
   { name: "holds.expire", every: 60_000 },
+  { name: "payments.collect", pattern: "0 6 * * *" },
   { name: "usage.meter", pattern: "45 2 * * *" },
   { name: "billing.close", pattern: "0 5 * * *" },
   { name: "dunning.run", pattern: "30 5 * * *" },

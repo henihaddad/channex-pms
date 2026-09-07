@@ -64,7 +64,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   expect(drained.provisioned).toBe(20);
   expect(drained.live).toBe(20);
   await page.goto("/properties");
-  await expect(page.locator('tr[data-state="live"]')).toHaveCount(20);
+  await expect(page.locator('li[data-state="live"]')).toHaveCount(20);
 
   // Airbnb is a primary path (CH-5): authorised once through Channex (the Airbnb partner), which
   // sends the host back with the new channel; then listings map to rate plans and the connection activates
