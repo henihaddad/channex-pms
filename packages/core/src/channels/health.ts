@@ -54,6 +54,16 @@ export function describeChannelEvent(type: string, ctx: EventContext): Alert {
           "The channel refused a rate; the affected dates keep their previous price there.",
         action: "Fix the rate (often below the channel minimum) and it re-syncs automatically.",
       };
+    case "messages_app_missing":
+      // CXMSG-1: a silent empty inbox is a support ticket, so the gap is named with its remedy
+      return {
+        severity: "p2",
+        title: `Messages are not enabled for ${ctx.propertyTitle} on ${ctx.channelTitle}`,
+        consequence:
+          "Guest conversations from Airbnb, Booking.com and Expedia are not reaching the inbox.",
+        action:
+          "In Channex, open the property's Applications and install Channex Messages; conversations appear within two minutes.",
+      };
     case "readiness_regression":
       return {
         severity: "p2",

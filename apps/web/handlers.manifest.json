@@ -306,6 +306,14 @@
   },
   {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "messagingGaps",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
     "export": "previewTemplateAction",
     "kind": "action",
     "wrapper": "withPermission",

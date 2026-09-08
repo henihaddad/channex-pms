@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createHash, randomBytes } from "node:crypto";
 import {
+  AuthorizationError,
   createProperty,
   FakeClock,
   FakeLockProvider,
@@ -15,6 +16,7 @@ import { createTestDb } from "@pms/db/testing";
 import {
   asSystem,
   BookingRepositoryPerCall,
+  DrizzleChannelRepository,
   DrizzleMessagingRepository,
   DrizzlePropertyRepository,
   rawRows,
@@ -31,6 +33,7 @@ import {
   firstResponseKpi,
   runAutomation,
   syncReviews,
+  pollThreads,
   syncThreads,
 } from "./messaging.js";
 
@@ -560,6 +563,26 @@ describe("thread sync (CXMSG-2/3)", () => {
     });
     expect(fake.ledger.messagesSent).toHaveLength(before);
     expect(mails.at(-1)).toMatchObject({ body: "See you soon" });
+  });
+
+  it("CXMSG-1: a 403 on the thread list names the missing Messages app once, and the gap closes on the next good sync", async () => {
+    const forbidden = new FakeProvider();
+    forbidden.listThreads = async () => {
+      throw new AuthorizationError("Forbidden", { op: "message_threads.list" });
+    };
+    const events = () =>
+      asSystem(handle.db, ORG, (tx) =>
+        new DrizzleChannelRepository(tx, ORG).listEvents({ propertyId, openOnly: true }),
+      );
+    await pollThreads({ db: handle.db, ...deps, provider: forbidden }, ORG);
+    await pollThreads({ db: handle.db, ...deps, provider: forbidden }, ORG);
+    const open = (await events()).filter((e) => e.type === "messages_app_missing");
+    expect(open).toHaveLength(1);
+    expect(open[0]).toMatchObject({ severity: "p2", connectionId: null });
+    expect(open[0]?.message).toContain("Alfama Loft");
+    expect(open[0]?.message).toContain("Channex Messages");
+    await pollThreads({ db: handle.db, ...deps }, ORG);
+    expect((await events()).filter((e) => e.type === "messages_app_missing")).toHaveLength(0);
   });
 
   it("reviews sync once and a response reaches the OTA", async () => {

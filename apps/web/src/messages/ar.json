@@ -564,7 +564,8 @@
     "thread": "المحادثة",
     "assignee": "المسؤول",
     "emptyTitle": "كل رسائل الضيوف في مكان واحد",
-    "emptyAction": "اربط قناة"
+    "emptyAction": "اربط قناة",
+    "messagesAppMissing": "المراسلة غير مفعّلة في مدير القنوات للعقارات: {properties}. في Channex، افتح تطبيقات العقار وثبّت Channex Messages؛ تظهر المحادثات هنا خلال دقيقتين."
   },
   "owners": {
     "title": "المالكون",

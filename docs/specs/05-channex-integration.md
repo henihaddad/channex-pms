@@ -346,6 +346,14 @@ of it works.
 
 - **CXMSG-1** The onboarding wizard checks for the Messages app and, if missing,
   tells the user exactly what to enable — a silent empty inbox is a support ticket.
+  Implemented 2026-09-09 on the sync side: Channex answers `403` on
+  `GET /message_threads` while the application is not installed; the 2-minute poll
+  turns that into one open `messages_app_missing` channel event per property
+  (p2, with the remedy: Applications → install *Channex Messages*), the inbox shows
+  it as a banner, and the first successful sync closes it. The application can
+  also be installed by API (`POST /applications/install` with
+  `application_installation: { property_id, application_code: "channex_messages" }`);
+  it is billable on production, so it stays a person's decision.
 - **CXMSG-2** Threads and messages are mirrored locally so the inbox is fast,
   searchable, and readable during a provider outage.
 - **CXMSG-3** Inbound: `message` webhook triggers a thread pull; a 2-minute poll

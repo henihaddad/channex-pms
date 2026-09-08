@@ -10,7 +10,14 @@ import {
   type InboxView,
   type MessageTemplate,
 } from "@pms/core";
-import type { RuleRow, ReviewRow, ThreadDetail, ThreadRow } from "@pms/db";
+import {
+  DrizzleChannelRepository,
+  DrizzlePropertyRepository,
+  type RuleRow,
+  type ReviewRow,
+  type ThreadDetail,
+  type ThreadRow,
+} from "@pms/db";
 import { firstResponseKpi, renderTemplate, type FirstResponseKpi } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
@@ -50,6 +57,24 @@ export interface InboxListing {
   properties: Array<{ id: string; title: string }>;
   view: InboxView;
 }
+
+/** CXMSG-1: the properties whose channel manager has no Messages application, so the inbox can say so. */
+export const messagingGaps = withPermission<[], Array<{ propertyId: string; title: string }>>(
+  "message:read",
+  { scope: "organization", audit: false },
+  async (ctx) => {
+    const events = await new DrizzleChannelRepository(ctx.tx, ctx.orgId).listEvents({
+      openOnly: true,
+      limit: 200,
+    });
+    const ids = new Set(
+      events.filter((e) => e.type === "messages_app_missing").map((e) => e.propertyId),
+    );
+    if (ids.size === 0) return [];
+    const titles = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list();
+    return titles.filter((p) => ids.has(p.id)).map((p) => ({ propertyId: p.id, title: p.title }));
+  },
+);
 
 export const listInbox = withPermission<
   [{ view?: string; propertyId?: string | null; provider?: string | null; q?: string | null }],

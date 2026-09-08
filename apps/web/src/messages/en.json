@@ -564,7 +564,8 @@
     "thread": "Conversation",
     "assignee": "Assignee",
     "emptyTitle": "Every guest message in one place",
-    "emptyAction": "Connect a channel"
+    "emptyAction": "Connect a channel",
+    "messagesAppMissing": "Messages are not enabled on the channel manager for {properties}. In Channex, open the property's Applications and install Channex Messages; conversations appear here within two minutes."
   },
   "owners": {
     "title": "Owners",

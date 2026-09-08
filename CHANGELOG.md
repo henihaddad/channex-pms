@@ -133,6 +133,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Silent empty inbox (spec 05 CXMSG-1): Channex refuses the message threads list with 403 while
+  the property has no Messages application installed, and the two-minute poll only logged it.
+  The poll now records one open `messages_app_missing` event per property, the inbox shows a
+  banner naming the property and the remedy (Applications → install Channex Messages), and the
+  first successful sync clears it.
 - Channel activation on real Channex (spec 07 CH-4): a freshly created channel is inactive by
   design, and the readiness check counted that as "not ready" with no reason, so activation
   bailed out before ever calling activate, stored an empty readiness ("Not ready: unknown" on
