@@ -31,6 +31,14 @@ All notable changes to this project are documented here. The format follows
   done, shown on the dashboard and condensed into every page header; Properties is a grid of
   photo cards with per-channel badges and the state; and direct bookings can be collected in
   instalments through named payment rules (spec 10 §10.4b) with a daily collection job.
+- Real cards on the two payment surfaces (spec 10 §10.4): with
+  `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` set, `CardField` mounts Stripe's hosted Card Element on the
+  guest checkout and on Settings → Billing and exchanges it for a payment-method id on submit, so
+  a card number never reaches our DOM or our servers, and `js.stripe.com` loads on those two pages
+  only. A 3-D Secure challenge is answered in place (`CardChallenge` over the intent's client
+  secret) and the form re-submits; `confirmIntent` reads the intent before confirming, so one the
+  browser already carried through is not confirmed twice. Without a publishable key the field
+  stays a token input, which is what the fake provider and the tests expect.
 - The sidebar shows every section (Dashboard, Inbox, Calendar, Reservations, Front desk,
   Operations, Properties, Channels, Direct bookings, Owners, Reports, Settings) with its pages
   unfolding underneath: no "More" drawer, and a section opens when you are inside it or when you

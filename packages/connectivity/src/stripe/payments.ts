@@ -46,6 +46,15 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   async confirmIntent(intentId: string): Promise<PaymentIntent> {
+    // A challenge answered in the browser leaves the intent already succeeded, and Stripe
+    // rejects a confirm on one of those: look first, confirm only if there is anything to do.
+    const got = await this.http.request({
+      method: "GET",
+      path: `/v1/payment_intents/${intentId}`,
+      headers: { authorization: `Bearer ${this.secretKey}` },
+    });
+    const current = toIntent(got.status, got.body);
+    if (current.status === "succeeded" || current.status === "requires_capture") return current;
     const res = await this.http.request({
       method: "POST",
       path: `/v1/payment_intents/${intentId}/confirm`,
@@ -97,6 +106,7 @@ export class StripePaymentProvider implements PaymentProvider {
 interface StripeIntent {
   id?: string;
   status?: string;
+  client_secret?: string;
   next_action?: { type?: string; redirect_to_url?: { url?: string } };
   last_payment_error?: { message?: string; code?: string };
   error?: { message?: string; code?: string; payment_intent?: StripeIntent };
@@ -123,7 +133,9 @@ function toIntent(status: number, body: unknown): PaymentIntent {
           : pi.status === "processing"
             ? "requires_action"
             : "failed";
-  const next = pi.next_action?.redirect_to_url?.url ?? pi.next_action?.type;
+  // the client secret is what Stripe.js needs to run the challenge in place; the redirect
+  // url or the action type is the fallback when Stripe did not hand one back
+  const next = pi.client_secret ?? pi.next_action?.redirect_to_url?.url ?? pi.next_action?.type;
   return {
     intentId: pi.id,
     status: mapped,

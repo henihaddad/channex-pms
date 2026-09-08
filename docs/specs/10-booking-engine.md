@@ -184,7 +184,13 @@ What v0.6 ships, where it lives, and where it deliberately stops short of the te
 - **Payments (§10.4).** `StripePaymentProvider` speaks the PaymentIntents REST API over the
   `HttpTransport` port and is unit-tested with a fake transport; `FakePaymentProvider` drives
   tests and the demo (`tok_decline`, `tok_3ds`). The checkout marks a `data-payment-mount`
-  element for hosted fields; nothing from a payment provider loads by default (BE-11).
+  element; when `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set, `CardField` mounts Stripe's hosted
+  Card Element there, loading `js.stripe.com` only on that page, and exchanges it for a `pm_…`
+  on submit, so no card data reaches our DOM or our servers. Without the key the field takes a
+  token, which is what the fake provider expects, and nothing from a payment provider loads
+  (BE-11). A challenge comes back as the intent's client secret: `CardChallenge` runs
+  `handleNextAction` in place and submits again, and `confirmIntent` reads the intent before
+  confirming so an intent the browser already carried through is not confirmed twice.
   *Deferred:* card-on-file vaulting through a SetupIntent (the guarantee is accepted, no
   instrument is stored in v0.6); multi-room bookings in one transaction (BE-3, one room type
   per hold today).

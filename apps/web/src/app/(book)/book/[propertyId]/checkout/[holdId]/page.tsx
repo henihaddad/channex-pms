@@ -83,6 +83,7 @@ export default async function CheckoutPage({
           idempotencyKey={c.crypto.randomToken(8)}
           needsPayment={q.dueNowMinor > 0}
           guest={hold.guest}
+          publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
           labels={{
             guestDetails: t("guestDetails"),
             firstName: t("firstName"),
@@ -93,6 +94,7 @@ export default async function CheckoutPage({
             consent: t("consent"),
             payment: t("payment"),
             cardToken: t("cardToken"),
+            cardError: t("cardError"),
             paymentHint: t("paymentHint"),
             confirm: t("confirm"),
             confirming: t("confirming"),

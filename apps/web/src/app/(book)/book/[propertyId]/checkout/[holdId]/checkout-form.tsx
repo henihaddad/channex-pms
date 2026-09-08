@@ -3,24 +3,30 @@
 import { useActionState } from "react";
 import { confirmAction, type ConfirmState } from "../../../book.actions";
 import { Alert, Button, Field, Label, Textarea } from "@/components/ui";
+import { CardChallenge, CardField } from "@/components/card-field";
+
+const FORM_ID = "checkout-form";
 
 /**
  * One form, one idempotency key (BE-6): a double click sends the same key twice and
  * gets the same booking. A declined card gets a fresh key so the retry is a new
- * attempt. Card fields are the provider's hosted elements mounted on the marked
- * element; the fake provider takes a token directly (spec 10 §10.4).
+ * attempt. The card is entered in Stripe's hosted field mounted on the marked element
+ * and never reaches us; with no publishable key the field takes a token, which is what
+ * the fake provider expects (spec 10 §10.4).
  */
 export function CheckoutForm({
   holdId,
   idempotencyKey,
   needsPayment,
   guest,
+  publishableKey,
   labels,
 }: {
   holdId: string;
   idempotencyKey: string;
   needsPayment: boolean;
   guest: { name: string; surname: string; email: string; phone: string | null } | null;
+  publishableKey: string | null;
   labels: Record<string, string>;
 }) {
   const [state, action, pending] = useActionState<ConfirmState, FormData>(confirmAction, {});
@@ -28,7 +34,7 @@ export function CheckoutForm({
   // React resets a form after its action; remount the fields with what the guest typed
   const g = state.guest ?? guest;
   return (
-    <form action={action} className="space-y-4" data-testid="checkout-form">
+    <form id={FORM_ID} action={action} className="space-y-4" data-testid="checkout-form">
       <input type="hidden" name="holdId" value={holdId} />
       <input type="hidden" name="idempotencyKey" value={key} />
       {state.error ? (
@@ -43,6 +49,12 @@ export function CheckoutForm({
         <fieldset className="rounded border border-warning/50 bg-warning-soft p-3 text-sm">
           <legend>{labels.payment}</legend>
           <p data-testid="requires-action">{labels.requiresAction}</p>
+          <CardChallenge
+            formId={FORM_ID}
+            clientSecret={state.requiresAction}
+            publishableKey={publishableKey}
+            errorLabel={labels.cardError!}
+          />
           <Button type="submit" disabled={pending} className="mt-2" data-testid="complete-3ds">
             {labels.completeVerification}
           </Button>
@@ -95,11 +107,12 @@ export function CheckoutForm({
             <fieldset className="space-y-2">
               <legend className="mb-1 font-semibold">{labels.payment}</legend>
               <div data-payment-mount>
-                <Field
-                  label={labels.cardToken!}
+                <CardField
+                  formId={FORM_ID}
                   name="cardToken"
-                  autoComplete="off"
-                  placeholder="tok_visa"
+                  label={labels.cardToken!}
+                  publishableKey={publishableKey}
+                  errorLabel={labels.cardError!}
                 />
               </div>
               <p className="text-xs text-muted">{labels.paymentHint}</p>

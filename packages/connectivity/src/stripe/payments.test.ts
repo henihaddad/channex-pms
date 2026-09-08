@@ -5,9 +5,11 @@ import { StripePaymentProvider } from "./payments.js";
 class FakeStripe implements HttpTransport {
   requests: HttpRequest[] = [];
   next: HttpResponse = { status: 200, headers: {}, body: { id: "pi_1", status: "succeeded" } };
+  /** Scripted replies, consumed in order; `next` answers once the script runs out. */
+  queue: HttpResponse[] = [];
   async request(req: HttpRequest): Promise<HttpResponse> {
     this.requests.push(req);
-    return this.next;
+    return this.queue.shift() ?? this.next;
   }
 }
 const req = {
@@ -52,9 +54,43 @@ describe("StripePaymentProvider", () => {
       status: "requires_action",
       nextAction: "use_stripe_sdk",
     });
-    http.next = { status: 200, headers: {}, body: { id: "pi_2", status: "succeeded" } };
+    // the challenge is still open: look, then confirm
+    http.queue = [
+      { status: 200, headers: {}, body: { id: "pi_2", status: "requires_action" } },
+      { status: 200, headers: {}, body: { id: "pi_2", status: "succeeded" } },
+    ];
     expect(await p.confirmIntent("pi_2")).toEqual({ intentId: "pi_2", status: "succeeded" });
-    expect(http.requests[1]!.path).toBe("/v1/payment_intents/pi_2/confirm");
+    expect(http.requests[1]!.method).toBe("GET");
+    expect(http.requests[2]!.path).toBe("/v1/payment_intents/pi_2/confirm");
+  });
+
+  it("does not re-confirm an intent the browser already carried through the challenge", async () => {
+    const http = new FakeStripe();
+    http.next = { status: 200, headers: {}, body: { id: "pi_4", status: "succeeded" } };
+    const p = new StripePaymentProvider(http, "sk_test_x");
+    expect(await p.confirmIntent("pi_4")).toEqual({ intentId: "pi_4", status: "succeeded" });
+    expect(http.requests).toHaveLength(1);
+    expect(http.requests[0]!.method).toBe("GET");
+  });
+
+  it("hands the client secret to the browser as the next step when Stripe returns one", async () => {
+    const http = new FakeStripe();
+    http.next = {
+      status: 200,
+      headers: {},
+      body: {
+        id: "pi_5",
+        status: "requires_action",
+        client_secret: "pi_5_secret_abc",
+        next_action: { type: "use_stripe_sdk" },
+      },
+    };
+    const p = new StripePaymentProvider(http, "sk_test_x");
+    expect(await p.createIntent(req)).toEqual({
+      intentId: "pi_5",
+      status: "requires_action",
+      nextAction: "pi_5_secret_abc",
+    });
   });
 
   it("surfaces a decline as a recoverable failure carrying Stripe's reason", async () => {

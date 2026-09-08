@@ -4,7 +4,6 @@ import {
   Button,
   Card,
   Field,
-  Input,
   Label,
   SectionTitle,
   TBody,
@@ -15,6 +14,7 @@ import {
   Tr,
 } from "@/components/ui";
 import { guard } from "@/server/guard";
+import { CardField } from "@/components/card-field";
 import { money } from "@/server/booking-engine";
 import {
   attachCardAction,
@@ -27,6 +27,7 @@ import {
 
 /** Plan, usage, invoices, export and leaving (spec 12 §12.3, §12.5). Self-hosted sees export only. */
 export default async function BillingPage() {
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
   const t = await getTranslations("billing");
   const v = await guard(() => loadBilling());
   const sub = v.subscription;
@@ -146,22 +147,25 @@ export default async function BillingPage() {
               ? `${sub.paymentMethod.brand} •••• ${sub.paymentMethod.last4}`
               : t("noMethod")}
           </p>
-          <form action={attachCardAction} className="mt-2 flex items-end gap-2">
-            <div data-payment-mount>
-              <Label htmlFor="cardToken">{t("cardToken")}</Label>
-              <Input
-                id="cardToken"
+          <form
+            id="attach-card-form"
+            action={attachCardAction}
+            className="mt-2 flex items-end gap-2"
+          >
+            <div className="min-w-0 flex-1">
+              <CardField
+                formId="attach-card-form"
                 name="cardToken"
-
-                placeholder="tok_visa_4242"
-                required
+                label={t("cardToken")}
+                hint={t("cardHint")}
+                publishableKey={publishableKey}
+                errorLabel={t("cardError")}
               />
             </div>
             <Button type="submit" data-testid="attach-card">
               {t("attachCard")}
             </Button>
           </form>
-          <p className="mt-1 text-xs text-muted">{t("cardHint")}</p>
         </Card>
       ) : null}
       {v.hosted ? (
