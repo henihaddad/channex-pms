@@ -134,6 +134,31 @@ export async function choosePlan(
 }
 
 /**
+ * The customer at the billing provider we are actually talking to. A tenant that chose its
+ * plan while the fake provider was wired (a demo, a self-hosted install before Stripe was
+ * configured) carries a `cus_fake_…` reference no real provider knows: create the customer
+ * for real and keep the new reference, rather than failing every card and every invoice.
+ */
+async function customerFor(deps: PlatformDeps, orgId: string, run: TxRunner): Promise<string> {
+  const sub = await run((tx) => repoFor(deps, tx, orgId).subscription());
+  if (!sub?.customerRef) throw new Error("choose a plan first");
+  if (deps.billing.kind === "fake" || !sub.customerRef.startsWith("cus_fake_"))
+    return sub.customerRef;
+  const customer = await deps.billing.ensureCustomer({
+    orgId,
+    name: sub.billingName ?? orgId,
+    email: sub.billingEmail ?? "",
+    country: sub.country,
+    vatId: sub.vatId,
+    customerRef: null,
+  });
+  await run((tx) =>
+    repoFor(deps, tx, orgId).updateSubscription({ customerRef: customer.customerRef }),
+  );
+  return customer.customerRef;
+}
+
+/**
  * The client secret the browser needs to set the card up: the one 3-D Secure challenge a
  * European card answers happens here, at the desk, not on an invoice charged off-session.
  */
@@ -142,9 +167,7 @@ export async function startCardSetup(
   orgId: string,
   run: TxRunner,
 ): Promise<{ clientSecret: string }> {
-  const sub = await run((tx) => repoFor(deps, tx, orgId).subscription());
-  if (!sub?.customerRef) throw new Error("choose a plan first");
-  return deps.billing.startCardSetup(sub.customerRef);
+  return deps.billing.startCardSetup(await customerFor(deps, orgId, run));
 }
 
 export async function attachPaymentMethod(
@@ -153,9 +176,8 @@ export async function attachPaymentMethod(
   methodToken: string,
   run: TxRunner,
 ): Promise<{ brand: string; last4: string }> {
-  const sub = await run((tx) => repoFor(deps, tx, orgId).subscription());
-  if (!sub?.customerRef) throw new Error("choose a plan first");
-  const method = await deps.billing.attachPaymentMethod(sub.customerRef, methodToken);
+  const customerRef = await customerFor(deps, orgId, run);
+  const method = await deps.billing.attachPaymentMethod(customerRef, methodToken);
   await run((tx) => repoFor(deps, tx, orgId).updateSubscription({ paymentMethod: method }));
   // a fresh card pays the open invoice straight away (dunning recovery)
   await collectOpenInvoice(deps, orgId, run);

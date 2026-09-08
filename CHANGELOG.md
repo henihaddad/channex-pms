@@ -41,7 +41,9 @@ All notable changes to this project are documented here. The format follows
   stays a token input, which is what the fake provider and the tests expect. On Settings →
   Billing the card is set up through a SetupIntent (`startCardSetup` on `BillingProvider`,
   `POST /api/v1/billing/card-setup`), so a European card answers its challenge once, at the
-  desk, and the invoices that follow are charged off-session.
+  desk, and the invoices that follow are charged off-session. A tenant that chose its plan while
+  the fake provider was wired keeps a `cus_fake_…` customer no real provider knows; cards and
+  invoices now create the customer for real and store the new reference instead of failing.
 - The sidebar shows every section (Dashboard, Inbox, Calendar, Reservations, Front desk,
   Operations, Properties, Channels, Direct bookings, Owners, Reports, Settings) with its pages
   unfolding underneath: no "More" drawer, and a section opens when you are inside it or when you
