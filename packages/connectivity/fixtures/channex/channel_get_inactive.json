@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API: one channel as Channex holds it right after creation, inactive and without readiness issues. Activation is the client's call."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000001"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "type": "channel",
+        "id": "7c0e2b1a-0000-4000-8000-000000000001",
+        "attributes": {
+          "channel": "AirBNB",
+          "title": "Airbnb · Ribeira Loft",
+          "is_active": false,
+          "status": "pending",
+          "readiness_issues": []
+        }
+      }
+    }
+  }
+}

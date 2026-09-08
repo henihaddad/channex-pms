@@ -352,13 +352,16 @@ export async function pollChannelHealth(
             requestId: `health:${c.id}`,
           },
         );
+        // after activation, a channel the provider switched off is a gap like any other
+        const gaps = r.inactive ? [...r.issues, "channel deactivated on the provider"] : r.issues;
+        const readiness: Readiness = { ready: gaps.length === 0, issues: gaps };
         await asSystem(deps.db, orgId, async (tx) => {
           const ch = new DrizzleChannelRepository(tx, orgId);
-          if (!r.ready && c.readiness.ready) {
+          if (!readiness.ready && c.readiness.ready) {
             regressions++;
             const alert = describeChannelEvent("readiness_regression", {
               ...ctx,
-              detail: r.issues.join("; "),
+              detail: gaps.join("; "),
             });
             await ch.insertEvent({
               id: Id.next(),
@@ -367,22 +370,22 @@ export async function pollChannelHealth(
               type: "readiness_regression",
               severity: alert.severity,
               message: `${alert.title}. ${alert.consequence} ${alert.action}`,
-              payload: { issues: r.issues },
+              payload: { issues: gaps },
             });
             const next = transition(c.state, "readiness_failed");
             await ch.updateConnection(c.id, {
-              readiness: r,
+              readiness,
               ...(next.ok ? { state: next.value } : {}),
-              lastError: r.issues.join("; "),
+              lastError: gaps.join("; "),
             });
-          } else if (r.ready && c.state === "error") {
+          } else if (readiness.ready && c.state === "error") {
             const next = transition(c.state, "recovered");
             await ch.updateConnection(c.id, {
-              readiness: r,
+              readiness,
               ...(next.ok ? { state: next.value } : {}),
               lastError: null,
             });
-          } else await ch.updateConnection(c.id, { readiness: r });
+          } else await ch.updateConnection(c.id, { readiness });
         });
       } catch (e) {
         const invalid = e instanceof AuthError || e instanceof AuthorizationError;

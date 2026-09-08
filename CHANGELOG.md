@@ -133,6 +133,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Channel activation on real Channex (spec 07 CH-4): a freshly created channel is inactive by
+  design, and the readiness check counted that as "not ready" with no reason, so activation
+  bailed out before ever calling activate, stored an empty readiness ("Not ready: unknown" on
+  the health board) and the button still said "Active". Readiness is now the provider's gaps
+  only; the inactive flag travels on its own and is a regression only after activation. A failed
+  activation always shows why, with a fallback message when the provider names nothing.
 - ARI push: Channex's "Not found property for this change", answered to a push that lands right
   after provisioning created the objects, no longer burns every cell of the horizon as a
   permanent validation failure; those cells return to pending and the push retries (spec 05

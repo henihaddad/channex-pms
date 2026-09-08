@@ -555,7 +555,14 @@ export class ChannexProvider implements ConnectivityProvider {
     );
     const attrs = obj(obj(obj(body).data).attributes);
     const issues = arr(attrs.readiness_issues ?? obj(attrs.readiness).issues).map(String);
-    return { ready: issues.length === 0 && attrs.is_active !== false, issues };
+    // Channex creates a channel inactive and activation is our call (CH-4): `is_active` is
+    // reported on its own rather than folded into `ready`, otherwise a fresh channel could
+    // never pass the readiness check that precedes its activation.
+    return {
+      ready: issues.length === 0,
+      issues,
+      ...(attrs.is_active === false ? { inactive: true } : {}),
+    };
   }
 
   async setChannelActive(ref: ProviderRef, active: boolean, meta: CallMeta): Promise<void> {

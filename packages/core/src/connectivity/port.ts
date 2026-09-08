@@ -198,8 +198,15 @@ export interface ChannelSpec extends ConnectionSettings {
 }
 
 export interface Readiness {
+  /** No readiness gaps: the channel can be activated, or keeps selling. */
   ready: boolean;
   issues: string[];
+  /**
+   * The provider holds the channel switched off. Channex creates every channel inactive and
+   * activation is our call (CH-4), so this is not a gap before activation; after it, it is a
+   * regression the health poll reports.
+   */
+  inactive?: boolean;
 }
 
 /** What the provider needs to start Airbnb's authorisation on our behalf (Channex: connection link). */

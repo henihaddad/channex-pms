@@ -247,6 +247,12 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
     });
   });
 
+  it("reads a fresh channel as ready but inactive: activation is our call (CH-4)", async () => {
+    const { p } = provider();
+    const r = await p.checkReadiness({ id: "7c0e2b1a-0000-4000-8000-000000000001" }, meta);
+    expect(r).toEqual({ ready: true, issues: [], inactive: true });
+  });
+
   it("lists the property's channel connections with their mappings", async () => {
     const { p } = provider();
     const rows = await p.listChannels(PROPERTY, meta);
