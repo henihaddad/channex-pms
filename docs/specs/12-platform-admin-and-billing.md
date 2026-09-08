@@ -180,8 +180,10 @@ The pressure valve that keeps core small ([01 §1.4](./01-vision-and-scope.md#14
   billed on the period peak; invoices built from the stored usage and kept with their draft
   (BILL-2); EU VAT with reverse charge and OSS; proration helper; dunning on days 3, 5, 7 then
   a 14-day grace (tests drive it with a fake clock); a billing outage leaves the invoice open and
-  the tenant untouched (BILL-1). Self-service: plan choice, card through the provider's hosted
-  fields, invoices with an explainer, cancel at period end, export, leave. *Deferred:* invoice
+  the tenant untouched (BILL-1). Self-service: plan choice, card through Stripe's hosted Card
+  Element and a SetupIntent (`startCardSetup`), so the one 3-D Secure challenge a European card
+  needs is answered at the desk and the invoices that follow are charged off-session, invoices
+  with an explainer, cancel at period end, export, leave. *Deferred:* invoice
   PDFs of our own (the provider's PDF link is shown), tax-id validation against VIES.
 - **Support tooling** (§12.6): pre-granted time-boxed support access, impersonation approvals,
   the diagnostics bundle (config as set/absent, health, recent errors, request ids). The

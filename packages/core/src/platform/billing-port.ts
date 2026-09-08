@@ -28,6 +28,12 @@ export interface BillingProvider {
     vatId: string | null;
     customerRef: string | null;
   }): Promise<BillingCustomer>;
+  /**
+   * Start a card setup for the customer: the browser confirms it with the hosted field,
+   * which is where a European card answers its one 3-D Secure challenge, so the invoices
+   * that follow are charged off-session without another one.
+   */
+  startCardSetup(customerRef: string): Promise<{ clientSecret: string }>;
   /** A provider token from hosted fields; never a PAN. */
   attachPaymentMethod(customerRef: string, methodToken: string): Promise<BillingPaymentMethod>;
   /** Create and try to collect an invoice for one period; idempotent per key. */
@@ -62,6 +68,9 @@ export class FakeBillingProvider implements BillingProvider {
     const ref = input.customerRef ?? `cus_fake_${input.orgId.slice(0, 8)}`;
     this.customers.set(ref, { name: input.name, email: input.email });
     return { customerRef: ref };
+  }
+  async startCardSetup(customerRef: string): Promise<{ clientSecret: string }> {
+    return { clientSecret: `seti_fake_${customerRef}_secret_fake` };
   }
   async attachPaymentMethod(
     customerRef: string,

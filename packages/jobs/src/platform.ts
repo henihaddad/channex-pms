@@ -133,6 +133,20 @@ export async function choosePlan(
   return { planId: chosen.plan.id, periodTo: chosen.periodTo };
 }
 
+/**
+ * The client secret the browser needs to set the card up: the one 3-D Secure challenge a
+ * European card answers happens here, at the desk, not on an invoice charged off-session.
+ */
+export async function startCardSetup(
+  deps: PlatformDeps,
+  orgId: string,
+  run: TxRunner,
+): Promise<{ clientSecret: string }> {
+  const sub = await run((tx) => repoFor(deps, tx, orgId).subscription());
+  if (!sub?.customerRef) throw new Error("choose a plan first");
+  return deps.billing.startCardSetup(sub.customerRef);
+}
+
 export async function attachPaymentMethod(
   deps: PlatformDeps,
   orgId: string,

@@ -1447,6 +1447,14 @@
     "publicReason": "catalogue"
   },
   {
+    "file": "src/app/api/v1/billing/card-setup/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "billing:manage",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/v1/channels/oauth/airbnb/callback/route.ts",
     "export": "GET",
     "kind": "route",

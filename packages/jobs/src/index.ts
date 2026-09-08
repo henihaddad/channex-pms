@@ -116,6 +116,7 @@ export {
   transitionTenant,
   choosePlan,
   attachPaymentMethod,
+  startCardSetup,
   meterUsage,
   quotaFor,
   closeBillingPeriods,

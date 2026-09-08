@@ -21,6 +21,7 @@ export function CardField({
   hint,
   publishableKey,
   errorLabel,
+  setupUrl,
 }: {
   formId: string;
   name: string;
@@ -28,6 +29,13 @@ export function CardField({
   hint?: string;
   publishableKey: string | null;
   errorLabel: string;
+  /**
+   * Where to ask for a card-setup client secret. Given one, the card is set up through a
+   * SetupIntent: the 3-D Secure challenge a European card needs is answered here, once, so
+   * the invoices that follow are charged off-session. Without it (a guest paying now) the
+   * element is exchanged for a payment method and the intent carries its own challenge.
+   */
+  setupUrl?: string;
 }) {
   const mount = useRef<HTMLDivElement>(null);
   const hidden = useRef<HTMLInputElement>(null);
@@ -47,14 +55,16 @@ export function CardField({
       e.preventDefault();
       e.stopPropagation();
       setError(null);
-      void stripe.createPaymentMethod({ type: "card", card: element }).then((r) => {
-        if (r.error || !r.paymentMethod) {
-          setError(r.error?.message ?? errorLabel);
-          return;
-        }
-        input.value = r.paymentMethod.id;
-        form?.requestSubmit();
-      });
+      const s = stripe;
+      const el = element;
+      void tokenFor(s, el, setupUrl)
+        .then((methodId) => {
+          input.value = methodId;
+          form?.requestSubmit();
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : errorLabel);
+        });
     };
 
     void loadStripe(publishableKey).then((s) => {
@@ -86,7 +96,7 @@ export function CardField({
       form?.removeEventListener("submit", onSubmit, true);
       element?.unmount();
     };
-  }, [publishableKey, formId, errorLabel]);
+  }, [publishableKey, formId, errorLabel, setupUrl]);
 
   if (!publishableKey)
     return (
@@ -180,7 +190,37 @@ interface StripeJs {
     type: "card";
     card: StripeElement;
   }): Promise<{ paymentMethod?: { id: string }; error?: { message?: string } }>;
+  confirmCardSetup(
+    clientSecret: string,
+    data: { payment_method: { card: StripeElement } },
+  ): Promise<{ setupIntent?: { payment_method?: string }; error?: { message?: string } }>;
   handleNextAction(opts: { clientSecret: string }): Promise<{ error?: { message?: string } }>;
+}
+
+/** The payment-method id the form posts: through a SetupIntent when we have one. */
+async function tokenFor(
+  stripe: StripeJs,
+  element: StripeElement,
+  setupUrl: string | undefined,
+): Promise<string> {
+  if (setupUrl) {
+    const res = await fetch(setupUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const body = (await res.json()) as { clientSecret?: string; detail?: string };
+    if (!res.ok || !body.clientSecret) throw new Error(body.detail ?? "setup failed");
+    const r = await stripe.confirmCardSetup(body.clientSecret, {
+      payment_method: { card: element },
+    });
+    if (r.error || !r.setupIntent?.payment_method)
+      throw new Error(r.error?.message ?? "setup failed");
+    return r.setupIntent.payment_method;
+  }
+  const r = await stripe.createPaymentMethod({ type: "card", card: element });
+  if (r.error || !r.paymentMethod) throw new Error(r.error?.message ?? "card failed");
+  return r.paymentMethod.id;
 }
 
 declare global {

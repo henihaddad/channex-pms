@@ -38,7 +38,10 @@ All notable changes to this project are documented here. The format follows
   only. A 3-D Secure challenge is answered in place (`CardChallenge` over the intent's client
   secret) and the form re-submits; `confirmIntent` reads the intent before confirming, so one the
   browser already carried through is not confirmed twice. Without a publishable key the field
-  stays a token input, which is what the fake provider and the tests expect.
+  stays a token input, which is what the fake provider and the tests expect. On Settings →
+  Billing the card is set up through a SetupIntent (`startCardSetup` on `BillingProvider`,
+  `POST /api/v1/billing/card-setup`), so a European card answers its challenge once, at the
+  desk, and the invoices that follow are charged off-session.
 - The sidebar shows every section (Dashboard, Inbox, Calendar, Reservations, Front desk,
   Operations, Properties, Channels, Direct bookings, Owners, Reports, Settings) with its pages
   unfolding underneath: no "More" drawer, and a section opens when you are inside it or when you

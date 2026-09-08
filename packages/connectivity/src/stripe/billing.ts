@@ -59,6 +59,23 @@ export class StripeBillingProvider implements BillingProvider {
     return { customerRef: o.id };
   }
 
+  async startCardSetup(customerRef: string): Promise<{ clientSecret: string }> {
+    const res = await this.http.request({
+      method: "POST",
+      path: "/v1/setup_intents",
+      headers: this.headers(),
+      body: new URLSearchParams({
+        customer: customerRef,
+        usage: "off_session",
+        "payment_method_types[0]": "card",
+      }).toString(),
+    });
+    const o = (res.body ?? {}) as { client_secret?: string; error?: { message?: string } };
+    if (res.status >= 400 || !o.client_secret)
+      throw new Error(o.error?.message ?? `stripe ${String(res.status)}`);
+    return { clientSecret: o.client_secret };
+  }
+
   async attachPaymentMethod(
     customerRef: string,
     methodToken: string,

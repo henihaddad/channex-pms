@@ -160,6 +160,7 @@ export default async function BillingPage() {
                 hint={t("cardHint")}
                 publishableKey={publishableKey}
                 errorLabel={t("cardError")}
+                setupUrl="/api/v1/billing/card-setup"
               />
             </div>
             <Button type="submit" data-testid="attach-card">
