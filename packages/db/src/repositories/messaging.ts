@@ -219,6 +219,9 @@ export class DrizzleMessagingRepository {
     let lastOutbound: string | undefined;
     let lastAny: string | undefined;
     for (const m of t.messages) {
+      // every outbound message the provider shows us, stored already or not: a thread whose
+      // reply we recorded before we tracked this still heals itself on the next poll
+      if (m.direction === "outbound") lastOutbound = later(lastOutbound, m.sentAt);
       if (known.has(m.id)) continue;
       if (m.direction === "outbound") {
         // one of ours? match the oldest queued/sent message without a provider id and the same body
@@ -264,7 +267,7 @@ export class DrizzleMessagingRepository {
       if (m.direction === "inbound") {
         newInbound += 1;
         lastInbound = later(lastInbound, m.sentAt);
-      } else lastOutbound = later(lastOutbound, m.sentAt);
+      }
     }
     const lastBody = t.messages.at(-1)?.body;
     if (newInbound > 0 && lastInbound) {
