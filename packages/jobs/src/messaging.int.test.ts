@@ -227,6 +227,46 @@ describe("thread sync (CXMSG-2/3)", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("a reply typed in the OTA's own app answers the guest: no needs-reply, no breach", async () => {
+    const guest = fake.emitGuestMessage({
+      propertyId: remotePropertyId,
+      body: "Is late check-out possible?",
+      guestName: "Bo Guest",
+      provider: "airbnb",
+    });
+    await syncThreads({ db: handle.db, ...deps }, { orgId: ORG, propertyId });
+    const waiting = await repo((r) =>
+      r.list({
+        view: "needs_reply",
+        userId: STAFF,
+        nowIso: clock.now().toString(),
+        today: "2026-10-01",
+      }),
+    );
+    expect(waiting.map((t) => t.id)).toContain(
+      (
+        await repo((r) =>
+          r.list({
+            view: "all",
+            userId: STAFF,
+            nowIso: clock.now().toString(),
+            today: "2026-10-01",
+          }),
+        )
+      ).find((t) => t.providerThreadId === guest.threadId)!.id,
+    );
+    clock.advance({ minutes: 9 });
+    fake.emitHostReply({ threadId: guest.threadId, body: "Yes, until 13:00." });
+    await syncThreads({ db: handle.db, ...deps }, { orgId: ORG, propertyId });
+    const after = await repo((r) =>
+      r.list({ view: "all", userId: STAFF, nowIso: clock.now().toString(), today: "2026-10-01" }),
+    );
+    const t = after.find((x) => x.providerThreadId === guest.threadId)!;
+    expect(t.lastOutboundAt).not.toBeNull();
+    expect(t.sla.needsReply).toBe(false);
+    expect(t.sla.breached).toBe(false);
+  });
+
   it("a failed provider send is rendered failed, never as delivered; a retry re-queues it", async () => {
     fake.plan.rules[0]!.times = 10;
     const id = await repo((r) =>

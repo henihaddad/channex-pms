@@ -216,6 +216,7 @@ export class DrizzleMessagingRepository {
     );
     let newInbound = 0;
     let lastInbound: string | undefined;
+    let lastOutbound: string | undefined;
     let lastAny: string | undefined;
     for (const m of t.messages) {
       if (known.has(m.id)) continue;
@@ -263,7 +264,7 @@ export class DrizzleMessagingRepository {
       if (m.direction === "inbound") {
         newInbound += 1;
         lastInbound = later(lastInbound, m.sentAt);
-      }
+      } else lastOutbound = later(lastOutbound, m.sentAt);
     }
     const lastBody = t.messages.at(-1)?.body;
     if (newInbound > 0 && lastInbound) {
@@ -277,6 +278,16 @@ export class DrizzleMessagingRepository {
           snoozed_until = null, updated_at = now()
         where id = ${threadId}`);
     }
+    // a reply sent on the OTA's own app comes back through the pull: it answers the guest,
+    // so the thread is neither unanswered nor breaching (MSG-1)
+    if (lastOutbound)
+      await this.tx.execute(sql`
+        update message_thread set last_outbound_at = greatest(last_outbound_at, ${lastOutbound}::timestamptz),
+          first_response_at = case when first_response_at is null and last_inbound_at is not null
+            and ${lastOutbound}::timestamptz >= last_inbound_at then ${lastOutbound}::timestamptz else first_response_at end,
+          first_response_due_at = case when last_inbound_at is null or ${lastOutbound}::timestamptz >= last_inbound_at
+            then null else first_response_due_at end
+        where id = ${threadId}`);
     await this.tx.execute(sql`
       update message_thread set provider_updated_at = greatest(coalesce(provider_updated_at, ${t.updatedAt ?? nowIso}), ${t.updatedAt ?? nowIso}),
         last_message_at = greatest(last_message_at, ${lastAny ?? null}::timestamptz),

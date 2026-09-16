@@ -816,6 +816,34 @@ export class FakeProvider implements ConnectivityProvider {
     return { threadId: thread.id, messageId: message.id };
   }
 
+  /**
+   * The host answers in the OTA's own app, not in the console: an outbound message we
+   * never queued, which the next pull has to recognise as a reply (spec 09 MSG-1).
+   */
+  emitHostReply(input: { threadId: string; body: string }): string {
+    const thread = this.threads.get(input.threadId);
+    if (!thread) throw new Error(`no thread ${input.threadId}`);
+    const at = this.stamp();
+    const message: FakeMessage = {
+      id: Id.next(),
+      direction: "outbound",
+      authorType: "staff",
+      body: input.body,
+      sentAt: at,
+      attachments: [],
+    };
+    thread.messages.push(message);
+    thread.updatedAt = at;
+    this.queueWebhook({
+      event: "message",
+      property_id: thread.propertyId,
+      timestamp: at,
+      user_id: null,
+      payload: { thread_id: thread.id, message_id: message.id },
+    });
+    return message.id;
+  }
+
   /** A stay was reviewed on the OTA; queues a `review` webhook. */
   emitReview(input: {
     propertyId: string;

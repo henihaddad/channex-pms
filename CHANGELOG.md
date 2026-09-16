@@ -37,7 +37,9 @@ All notable changes to this project are documented here. The format follows
   it in the thread's `title`) was missing. `ChannexProvider.listThreads` now reads each changed
   thread's messages, oldest first, and a thread with no messages no longer has `last_message_at`
   pushed to the poll time. Covered by fixtures and a contract test, whose absence let the shape
-  mismatch through in the first place.
+  mismatch through in the first place. A reply typed in the OTA's own app now counts as a reply:
+  the pulled outbound message sets `last_outbound_at` and the first-response time, so the thread
+  stops showing "needs reply" and stops breaching its SLA.
 - Real cards on the two payment surfaces (spec 10 §10.4): with
   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` set, `CardField` mounts Stripe's hosted Card Element on the
   guest checkout and on Settings → Billing and exchanges it for a payment-method id on submit, so
