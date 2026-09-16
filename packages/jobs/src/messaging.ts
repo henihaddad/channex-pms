@@ -1,6 +1,8 @@
 import {
   assertSendable,
+  AuthorizationError,
   channelCapabilities,
+  describeChannelEvent,
   guardAutomation,
   Id,
   inQuietHours,
@@ -22,6 +24,7 @@ import {
 } from "@pms/core";
 import {
   asSystem,
+  DrizzleChannelRepository,
   DrizzleMessagingRepository,
   rawRows,
   sql,
@@ -126,14 +129,62 @@ export async function pollThreads(
   for (const p of props) {
     try {
       newInbound += (await syncThreads(deps, p)).newInbound;
+      await closeMessagesAppGap(deps, p);
     } catch (e) {
       deps.log.warn(
         { propertyId: p.propertyId, err: e instanceof Error ? e.message : String(e) },
         "messages.sync.failed",
       );
+      if (e instanceof AuthorizationError) await recordMessagesAppGap(deps, p);
     }
   }
   return { properties: props.length, newInbound };
+}
+
+const MESSAGES_APP_MISSING = "messages_app_missing";
+
+/**
+ * CXMSG-1: Channex answers 403 on the threads list while the property has no
+ * Messages application installed. One open event names the gap and its remedy
+ * on the inbox; it closes itself on the first successful sync.
+ */
+async function recordMessagesAppGap(
+  deps: MessagingDeps,
+  p: { orgId: string; propertyId: string },
+): Promise<void> {
+  await asSystem(deps.db, p.orgId, async (tx) => {
+    const ch = new DrizzleChannelRepository(tx, p.orgId);
+    const open = await ch.listEvents({ propertyId: p.propertyId, openOnly: true, limit: 50 });
+    if (open.some((e) => e.type === MESSAGES_APP_MISSING)) return;
+    const [row] = await rawRows<{ title: string }>(
+      tx,
+      sql`select title from property where id = ${p.propertyId}`,
+    );
+    const alert = describeChannelEvent(MESSAGES_APP_MISSING, {
+      propertyTitle: row?.title ?? p.propertyId,
+      channelTitle: "Channex",
+    });
+    await ch.insertEvent({
+      id: Id.next(),
+      connectionId: null,
+      propertyId: p.propertyId,
+      type: MESSAGES_APP_MISSING,
+      severity: alert.severity,
+      message: `${alert.title}. ${alert.consequence} ${alert.action}`,
+      occurredAt: deps.clock.now().toString(),
+    });
+  });
+}
+
+async function closeMessagesAppGap(
+  deps: MessagingDeps,
+  p: { orgId: string; propertyId: string },
+): Promise<void> {
+  await asSystem(deps.db, p.orgId, (tx) =>
+    tx.execute(
+      sql`update channel_event set acknowledged_at = now() where property_id = ${p.propertyId} and type = ${MESSAGES_APP_MISSING} and acknowledged_at is null`,
+    ),
+  );
 }
 
 export async function syncReviews(

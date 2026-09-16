@@ -222,5 +222,18 @@ describe("channel activation and health (CH-4, CH-6, CH-8, spec 07 §7.4)", () =
       new DrizzleChannelRepository(tx, ORG).getConnection(connId),
     ))!;
     expect(c.state).toBe("active");
+    // a channel the provider switched off after activation is a regression too, named as such
+    const switchedOff = new FakeProvider();
+    switchedOff.checkReadiness = async () => ({ ready: true, issues: [], inactive: true });
+    expect(await pollChannelHealth({ ...cd, provider: switchedOff })).toEqual({
+      checked: 1,
+      regressions: 1,
+    });
+    c = (await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).getConnection(connId),
+    ))!;
+    expect(c.state).toBe("error");
+    expect(c.lastError).toContain("deactivated");
+    await pollChannelHealth(cd);
   });
 });

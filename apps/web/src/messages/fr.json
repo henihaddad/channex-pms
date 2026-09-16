@@ -564,7 +564,8 @@
     "thread": "Conversation",
     "assignee": "Responsable",
     "emptyTitle": "Tous les messages des clients au même endroit",
-    "emptyAction": "Connecter un canal"
+    "emptyAction": "Connecter un canal",
+    "messagesAppMissing": "La messagerie n'est pas activée sur le gestionnaire de canaux pour {properties}. Dans Channex, ouvrez les Applications du bien et installez Channex Messages ; les conversations apparaissent ici en deux minutes."
   },
   "owners": {
     "title": "Propriétaires",

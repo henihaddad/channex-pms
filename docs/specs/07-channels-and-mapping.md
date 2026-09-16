@@ -47,6 +47,14 @@ Requirements:
   verbatim *and* translated into a likely cause and remedy.
 - **CH-4** Connections are created inactive and only activated after readiness
   passes — matching Channex's own sequencing, so we never half-connect a channel.
+  Readiness means "no gaps reported by the provider"; the provider's own
+  `is_active` flag is not a gap before activation (Channex creates every channel
+  switched off and activation is our call), and travels separately as
+  `Readiness.inactive`, which the health poll treats as a regression once the
+  connection is active. A failed activation always shows a reason on the console,
+  even when the provider named none (fixed 2026-09-08: a fresh Channex channel was
+  reported "not ready" with an empty list, could never activate, and the button
+  still said "Active").
 - **CH-5** **Airbnb is a primary path, not a branch**: OAuth authorise once at
   org level (`ChannelAccount`), import listings in bulk, and offer per-listing
   match-or-create against our properties. Inquiries, reservation requests and

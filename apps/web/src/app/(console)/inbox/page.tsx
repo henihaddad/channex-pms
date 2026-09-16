@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { InboxView } from "@pms/core";
 import {
+  Alert,
   Button,
   Card,
   Chip,
@@ -20,6 +21,7 @@ import {
   assignThreadAction,
   listInbox,
   loadThread,
+  messagingGaps,
   retryMessageAction,
   setThreadStateAction,
   snoozeThreadAction,
@@ -57,6 +59,8 @@ export default async function InboxPage({
     }),
   );
   const open = sp.thread ? await guard(() => loadThread({ threadId: sp.thread! })) : null;
+  // CXMSG-1: a property whose channel manager has no Messages app is named here, never a silent empty inbox
+  const gaps = await guard(() => messagingGaps());
   const qs = (view: string) =>
     `/inbox?view=${view}${sp.property ? `&property=${sp.property}` : ""}${sp.thread ? `&thread=${sp.thread}` : ""}`;
   const hidden = (threadId: string, propertyId: string) => (
@@ -86,6 +90,11 @@ export default async function InboxPage({
           </>
         }
       />
+      {gaps.length > 0 ? (
+        <Alert tone="warning" data-testid="messages-app-missing">
+          {t("messagesAppMissing", { properties: gaps.map((g) => g.title).join(", ") })}
+        </Alert>
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-[200px_minmax(300px,1fr)_minmax(0,2fr)]">
         <nav className="flex flex-col gap-3" data-testid="inbox-filters">
           <ul className="flex flex-col gap-0.5">
