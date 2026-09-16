@@ -53,7 +53,13 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export interface InboxListing {
   rows: ThreadRow[];
-  counts: { unread: number; needsReply: number; breaching: number; assignedToMe: number };
+  counts: {
+    open: number;
+    unread: number;
+    needsReply: number;
+    breaching: number;
+    assignedToMe: number;
+  };
   properties: Array<{ id: string; title: string }>;
   view: InboxView;
 }

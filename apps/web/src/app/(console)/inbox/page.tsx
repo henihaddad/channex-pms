@@ -154,7 +154,21 @@ export default async function InboxPage({
 
         <Card className="max-h-[80vh] overflow-y-auto p-2" contentClassName="flex flex-col gap-1">
           {listing.rows.length === 0 ? (
-            <EmptyState title={t("emptyTitle")} description={t("empty")} className="px-3" />
+            listing.counts.open > 0 ? (
+              // conversations exist, this filter has none of them: say that, not the first-run pitch
+              <EmptyState
+                title={t("viewEmptyTitle")}
+                description={t("viewEmpty", { view: t(`views.${listing.view}`) })}
+                className="px-3"
+                action={
+                  <LinkButton href="/inbox?view=all" variant="secondary" size="sm">
+                    {t("showAll")}
+                  </LinkButton>
+                }
+              />
+            ) : (
+              <EmptyState title={t("emptyTitle")} description={t("empty")} className="px-3" />
+            )
           ) : null}
           {listing.rows.map((r) => (
             <Link

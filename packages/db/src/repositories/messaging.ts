@@ -430,10 +430,17 @@ export class DrizzleMessagingRepository {
   async counts(
     userId: string,
     nowIso: string,
-  ): Promise<{ unread: number; needsReply: number; breaching: number; assignedToMe: number }> {
+  ): Promise<{
+    open: number;
+    unread: number;
+    needsReply: number;
+    breaching: number;
+    assignedToMe: number;
+  }> {
     const rows = await this.rows(sql`t.state = 'open'`, nowIso);
     const ctx = { nowIso, userId };
     return {
+      open: rows.length,
       unread: rows.reduce((a, r) => a + r.unreadCount, 0),
       needsReply: rows.filter((r) => matchesView(toThread(r), "needs_reply", ctx)).length,
       breaching: rows.filter((r) => matchesView(toThread(r), "breaching_sla", ctx)).length,
