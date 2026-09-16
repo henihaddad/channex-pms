@@ -183,6 +183,9 @@ What the code does, where it refines the text above:
 - **Sync.** A `message` webhook queues `message.sync` for the property; a 2-minute poll
   (`messages.poll`) asks the provider for every thread changed since our cursor (five minutes of
   slack) and upserts by provider message id, so duplicates and re-pulls add nothing (CXMSG-2/3).
+  Channex answers a thread list with the thread's last message only, so the provider reads each
+  changed thread's conversation from `GET /api/v1/message_threads/{id}/messages` (newest first,
+  paginated) and hands it over oldest first; an Airbnb thread's `title` is the guest's name.
   Guest names and bodies are sealed with the org key; the thread row keeps only counts and
   timestamps in the clear.
 - **Delivery.** The console never calls the provider inside a transaction (ADR-0007). A reply is

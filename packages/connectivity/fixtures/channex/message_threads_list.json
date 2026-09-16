@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Shape verified against staging 2026-09-16: a thread carries only its last message, the conversation lives at /message_threads/{id}/messages, and an Airbnb thread's `title` is the guest's name. Names and ids here are invented."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/message_threads",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "b77ae4d8-5bd8-49ec-974f-d706f1e3910a",
+          "type": "message_thread",
+          "attributes": {
+            "title": "Alex",
+            "provider": "AirBNB",
+            "is_closed": false,
+            "message_count": 2,
+            "ota_message_thread_id": "2665190811",
+            "inserted_at": "2026-09-12T10:48:10.569469",
+            "updated_at": "2026-09-13T07:20:59.805863",
+            "last_message_received_at": "2026-09-13T07:20:44.000000",
+            "last_message": {
+              "message": "Hi there",
+              "sender": "property",
+              "inserted_at": "2026-09-13T07:20:44.000000",
+              "attachments": []
+            },
+            "meta": { "listing_id": "1629149422535053411" }
+          },
+          "relationships": {
+            "property": {
+              "data": { "id": "716305c4-561a-4561-a187-7f5b8aeb5920", "type": "property" }
+            },
+            "channel": {
+              "data": { "id": "b73b10cd-17cd-4668-b3f6-7154f7d0a33e", "type": "channel" }
+            }
+          }
+        }
+      ],
+      "meta": { "total": 1, "limit": 100, "page": 1, "order_by": "last_message_received_at" }
+    }
+  }
+}

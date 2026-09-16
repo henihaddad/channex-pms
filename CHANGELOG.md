@@ -31,6 +31,13 @@ All notable changes to this project are documented here. The format follows
   done, shown on the dashboard and condensed into every page header; Properties is a grid of
   photo cards with per-channel badges and the state; and direct bookings can be collected in
   instalments through named payment rules (spec 10 §10.4b) with a daily collection job.
+- Fixed: Airbnb guest messages never reached the inbox. Channex hands back a thread with only
+  its last message; the conversation lives at `GET /api/v1/message_threads/{id}/messages`, which
+  we never called, so threads synced with no messages in them and the guest's name (Channex puts
+  it in the thread's `title`) was missing. `ChannexProvider.listThreads` now reads each changed
+  thread's messages, oldest first, and a thread with no messages no longer has `last_message_at`
+  pushed to the poll time. Covered by fixtures and a contract test, whose absence let the shape
+  mismatch through in the first place.
 - Real cards on the two payment surfaces (spec 10 §10.4): with
   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` set, `CardField` mounts Stripe's hosted Card Element on the
   guest checkout and on Settings → Billing and exchanges it for a payment-method id on submit, so

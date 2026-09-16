@@ -367,4 +367,20 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
       path: `/api/v1/channels/${CHANNEL}/mappings/8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e`,
     });
   });
+
+  it("reads a thread's conversation from its own collection, oldest first", async () => {
+    const { p, http } = provider();
+    const page = await p.listThreads({ propertyId: PROPERTY }, meta);
+    expect(page.threads).toHaveLength(1);
+    const t = page.threads[0]!;
+    // Channex titles an Airbnb thread with the guest's name and inlines no messages
+    expect(t).toMatchObject({ guestName: "Alex", provider: "AirBNB", kind: "inquiry" });
+    expect(http.calls[1]?.path).toBe(
+      "/api/v1/message_threads/b77ae4d8-5bd8-49ec-974f-d706f1e3910a/messages",
+    );
+    expect(t.messages.map((m) => [m.direction, m.authorType, m.body])).toEqual([
+      ["inbound", "guest", "Is early check-in possible?"],
+      ["outbound", "staff", "Hi there"],
+    ]);
+  });
 });

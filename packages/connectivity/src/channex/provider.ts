@@ -874,47 +874,57 @@ export class ChannexProvider implements ConnectivityProvider {
       },
       meta,
     );
-    const threads = arr(obj(body).data).map((t) => {
+    const threads = [];
+    for (const t of arr(obj(body).data)) {
       const a = obj(obj(t).attributes);
       const guest = obj(a.guest);
-      return {
-        id: String(obj(t).id),
+      const id = String(obj(t).id);
+      // the thread carries only its last message; the conversation is its own collection
+      const inline = arr(a.messages);
+      const messages = inline.length
+        ? inline.map(parseMessage)
+        : await this.threadMessages(id, meta);
+      threads.push({
+        id,
         ...(a.booking_id ? { bookingId: String(a.booking_id) } : {}),
         provider: String(a.provider ?? a.ota ?? "unknown"),
         ...(a.updated_at ? { updatedAt: String(a.updated_at) } : {}),
-        ...(guest.name || a.guest_name ? { guestName: String(guest.name ?? a.guest_name) } : {}),
+        // Channex titles an Airbnb thread with the guest's name
+        ...(guest.name || a.guest_name || a.title
+          ? { guestName: String(guest.name ?? a.guest_name ?? a.title) }
+          : {}),
         ...(guest.language ? { guestLanguage: String(guest.language) } : {}),
         kind: a.booking_id ? ("booking" as const) : ("inquiry" as const),
         state: a.is_closed === true ? ("closed" as const) : ("open" as const),
-        messages: arr(a.messages).map((m) => {
-          const o = obj(m);
-          const sender = String(o.sender ?? "guest");
-          return {
-            id: String(o.id),
-            direction: sender === "guest" ? ("inbound" as const) : ("outbound" as const),
-            authorType:
-              sender === "guest"
-                ? ("guest" as const)
-                : sender === "system"
-                  ? ("system" as const)
-                  : ("staff" as const),
-            body: String(o.message ?? o.body ?? ""),
-            sentAt: String(o.inserted_at ?? ""),
-            ...(arr(o.attachments).length
-              ? {
-                  attachments: arr(o.attachments).map((x) => ({
-                    id: String(obj(x).id),
-                    filename: String(obj(x).filename ?? ""),
-                    contentType: String(obj(x).content_type ?? "application/octet-stream"),
-                  })),
-                }
-              : {}),
-          };
-        }),
-      };
-    });
+        messages,
+      });
+    }
     const total = Number(obj(obj(body).meta).total ?? threads.length);
     return { threads, ...(page * PAGE_LIMIT < total ? { nextCursor: String(page + 1) } : {}) };
+  }
+
+  /** Every message of one thread, oldest first (the API answers newest first, paginated). */
+  private async threadMessages(
+    threadId: string,
+    meta: CallMeta,
+  ): Promise<ThreadPage["threads"][number]["messages"]> {
+    const out: ThreadPage["threads"][number]["messages"] = [];
+    for (let page = 1; ; page += 1) {
+      const body = await this.call(
+        "messages.list",
+        {
+          method: "GET",
+          path: `/api/v1/message_threads/${threadId}/messages`,
+          query: { "pagination[page]": String(page), "pagination[limit]": String(PAGE_LIMIT) },
+        },
+        { ...meta, dedupeKey: `${meta.dedupeKey}:m${String(page)}` },
+      );
+      const data = arr(obj(body).data);
+      out.push(...data.map(parseMessage));
+      const total = Number(obj(obj(body).meta).total ?? out.length);
+      if (page * PAGE_LIMIT >= total || data.length === 0) break;
+    }
+    return out.sort((x, y) => (x.sentAt < y.sentAt ? -1 : x.sentAt > y.sentAt ? 1 : 0));
   }
 
   async sendMessage(m: OutboundMessage, meta: CallMeta): Promise<ProviderRef> {
@@ -1251,6 +1261,35 @@ function idOf(body: unknown): string {
   const id = data.id ?? obj(data.attributes).id;
   if (typeof id !== "string") throw new ContractError("response without an id", { body });
   return id;
+}
+
+/** One message as Channex returns it, from a thread's collection or inlined on the thread. */
+function parseMessage(m: unknown): ThreadPage["threads"][number]["messages"][number] {
+  const o = obj(m);
+  const a = obj(o.attributes);
+  const f = Object.keys(a).length ? a : o;
+  const sender = String(f.sender ?? "guest");
+  return {
+    id: String(o.id),
+    direction: sender === "guest" ? ("inbound" as const) : ("outbound" as const),
+    authorType:
+      sender === "guest"
+        ? ("guest" as const)
+        : sender === "system"
+          ? ("system" as const)
+          : ("staff" as const),
+    body: String(f.message ?? f.body ?? ""),
+    sentAt: String(f.inserted_at ?? ""),
+    ...(arr(f.attachments).length
+      ? {
+          attachments: arr(f.attachments).map((x) => ({
+            id: String(obj(x).id),
+            filename: String(obj(x).filename ?? ""),
+            contentType: String(obj(x).content_type ?? "application/octet-stream"),
+          })),
+        }
+      : {}),
+  };
 }
 
 function obj(v: unknown): Record<string, unknown> {

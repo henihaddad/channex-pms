@@ -279,7 +279,7 @@ export class DrizzleMessagingRepository {
     }
     await this.tx.execute(sql`
       update message_thread set provider_updated_at = greatest(coalesce(provider_updated_at, ${t.updatedAt ?? nowIso}), ${t.updatedAt ?? nowIso}),
-        last_message_at = greatest(coalesce(last_message_at, ${lastAny ?? nowIso}), ${lastAny ?? nowIso}),
+        last_message_at = greatest(last_message_at, ${lastAny ?? null}::timestamptz),
         guest_name_enc = coalesce(guest_name_enc, ${t.guestName ? await this.crypto.seal(t.guestName) : null}),
         guest_language = coalesce(guest_language, ${t.guestLanguage ?? null}),
         booking_id = coalesce(booking_id, ${booking?.id ?? null}), guest_id = coalesce(guest_id, ${booking?.guest_id ?? null}),

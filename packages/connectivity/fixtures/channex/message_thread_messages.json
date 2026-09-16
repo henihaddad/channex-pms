@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Shape verified against staging 2026-09-16: newest first, `sender` is `guest` or `property`, the author's display name sits in `meta.name`. Names and ids here are invented."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/message_threads/b77ae4d8-5bd8-49ec-974f-d706f1e3910a/messages",
+    "query": { "pagination[page]": "1", "pagination[limit]": "100" }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "a278be43-8e3f-472b-86b1-09c3545d020f",
+          "type": "message",
+          "attributes": {
+            "message": "Hi there",
+            "sender": "property",
+            "inserted_at": "2026-09-13T07:20:44.000000",
+            "updated_at": "2026-09-13T07:20:59.800683",
+            "attachments": [],
+            "meta": { "name": "Host", "role": "COHOST" }
+          },
+          "relationships": {
+            "message_thread": {
+              "data": { "id": "b77ae4d8-5bd8-49ec-974f-d706f1e3910a", "type": "message_thread" }
+            }
+          }
+        },
+        {
+          "id": "b94d0d8a-aa49-4209-b134-30e4ea80a354",
+          "type": "message",
+          "attributes": {
+            "message": "Is early check-in possible?",
+            "sender": "guest",
+            "inserted_at": "2026-09-12T10:47:54.000000",
+            "updated_at": "2026-09-12T10:48:10.730226",
+            "attachments": [],
+            "meta": { "name": "Alex", "role": "GUEST" }
+          },
+          "relationships": {
+            "message_thread": {
+              "data": { "id": "b77ae4d8-5bd8-49ec-974f-d706f1e3910a", "type": "message_thread" }
+            }
+          }
+        }
+      ],
+      "meta": { "total": 2, "limit": 100, "page": 1, "order_by": "inserted_at" }
+    }
+  }
+}
