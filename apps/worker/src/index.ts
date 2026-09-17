@@ -54,7 +54,8 @@ const wiring: WorkerWiring = {
   billing: stripeKey
     ? new StripeBillingProvider(stripeTransport(), stripeKey)
     : new FakeBillingProvider(),
-  limiter: new TokenBucket(c.clock, { baseRatePerSecond: 5, burst: 10 }),
+  // Channex: 10 restriction and 10 availability calls a minute per property (docs: Rate Limits)
+  limiter: new TokenBucket(c.clock, { baseRatePerSecond: 10 / 60, burst: 10 }),
   breaker: new MemoryCircuitBreaker(c.clock, { failureThreshold: 5, cooldownMs: 60_000 }),
   lease: redisLease(c.redis),
   sha256Hex: c.sha256Hex,

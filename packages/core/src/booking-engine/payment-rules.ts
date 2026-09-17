@@ -40,6 +40,8 @@ export interface PaymentPlanInput {
   arrival: string;
   /** The day the booking was confirmed. */
   bookedOn: string;
+  /** Channex `payment_collect`: when the guest already paid the OTA there is nothing to schedule. */
+  paymentCollect?: "property" | "ota" | null;
 }
 
 export interface Instalment {
@@ -73,6 +75,7 @@ const dueDate = (r: PaymentRule, input: PaymentPlanInput): string => {
  * otherwise. Zero-amount instalments are dropped.
  */
 export function planPayments(input: PaymentPlanInput): Instalment[] {
+  if (input.paymentCollect === "ota") return [];
   const total = Math.max(0, input.totalMinor);
   const rules = [...input.rules]
     .filter((r) => applies(r, input.propertyId, input.channel))

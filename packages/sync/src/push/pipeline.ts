@@ -125,6 +125,13 @@ export function isReferenceMiss(reason: string): boolean {
   return /not found/i.test(reason) && /(property|rate.?plan|room.?type)/i.test(reason);
 }
 
+/**
+ * Channex rate limits are per property and per endpoint (docs: Rate Limits: 10 restriction
+ * and 10 availability requests a minute per property), so that is the bucket.
+ */
+export const limitKey = (ctx: PushContext, kind: "availability" | "restrictions"): string =>
+  `${ctx.propertyId}:${kind}`;
+
 async function run(
   ctx: PushContext,
   kind: "availability" | "restrictions",
@@ -133,7 +140,7 @@ async function run(
   summary: PushSummary,
   push: (entries: never, meta: CallMeta) => Promise<PushResult>,
 ): Promise<void> {
-  await ctx.limiter.acquire(ctx.orgId);
+  await ctx.limiter.acquire(limitKey(ctx, kind));
   const meta = {
     ...ctx.meta,
     dedupeKey: `${ctx.meta.dedupeKey}:${kind}:${String(summary.batches)}`,
@@ -143,7 +150,7 @@ async function run(
     result = await push(entries as never, meta);
   } catch (e) {
     if (e instanceof ThrottleError) {
-      ctx.limiter.reportThrottle(ctx.orgId, e.retryAfterMs);
+      ctx.limiter.reportThrottle(limitKey(ctx, kind), e.retryAfterMs);
       await revertToPending(ctx, entries, versionOf);
       throw new RetryLater(e.retryAfterMs ?? 1_000, "throttled");
     }
@@ -176,7 +183,7 @@ async function run(
     throw e;
   }
   ctx.breaker.onSuccess(ctx.orgId);
-  ctx.limiter.reportSuccess(ctx.orgId);
+  ctx.limiter.reportSuccess(limitKey(ctx, kind));
   summary.batches += 1;
   summary.accepted += result.accepted;
   summary.rejected += result.rejected.length;
@@ -243,7 +250,7 @@ function cellsOf(
 
 /** Read back and compare (spec 05 §5.4.6): differing cells become `conflicted` and re-enter the pipeline. */
 export async function verify(ctx: PushContext, dateFrom: string, dateTo: string): Promise<number> {
-  await ctx.limiter.acquire(ctx.orgId);
+  await ctx.limiter.acquire(limitKey(ctx, "availability"));
   const snapshot = await ctx.provider.readAri(
     { propertyId: ctx.propertyId, dateFrom, dateTo },
     { ...ctx.meta, dedupeKey: `${ctx.meta.dedupeKey}:verify` },

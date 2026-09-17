@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Hotels Collection \u203a Update Property: PUT /properties/{id} with {property: {settings}}; absent attributes are left unchanged."
+  },
+  "request": {
+    "method": "PUT",
+    "path": "/api/v1/properties/716305c4-561a-4561-a187-7f5b8aeb5920"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "type": "property",
+        "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+        "attributes": {
+          "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+          "title": "Demo Hotel",
+          "settings": {
+            "min_stay_type": "both",
+            "state_length": 730
+          }
+        }
+      }
+    }
+  }
+}

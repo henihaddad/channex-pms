@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { organization, property } from "./identity.js";
 import { ratePlan } from "./inventory.js";
 
@@ -45,6 +45,8 @@ export const channelConnection = pgTable(
     lastError: text("last_error"),
     lastPushAt: ts("last_push_at"),
     isActive: boolean("is_active").notNull().default(false),
+    /** Channex deletes an inactive connection 30 days after deactivation; the date it will. */
+    expectedRemovalDate: date("expected_removal_date", { mode: "string" }),
     createdAt: ts("created_at").notNull().default(now()),
     updatedAt: ts("updated_at").notNull().default(now()),
     archivedAt: ts("archived_at"),

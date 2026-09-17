@@ -33,6 +33,8 @@ export interface ConnectionRow {
   lastError: string | null;
   lastPushAt: string | null;
   isActive: boolean;
+  /** Set while the provider holds the connection inactive and has scheduled its deletion. */
+  expectedRemovalDate: string | null;
   createdAt: string;
 }
 
@@ -151,7 +153,7 @@ export class DrizzleChannelRepository {
   private connectionColumns() {
     return sql`select c.id, c.property_id as "propertyId", p.title as "propertyTitle", c.channel_account_id as "channelAccountId", c.adapter_code as "adapterCode",
       c.channex_channel_id as "channexChannelId", c.settings, c.settings_enc as "settingsEnc", c.state, c.readiness, c.last_error as "lastError",
-      c.last_push_at as "lastPushAt", c.is_active as "isActive", c.created_at as "createdAt"`;
+      c.last_push_at as "lastPushAt", c.is_active as "isActive", c.expected_removal_date::text as "expectedRemovalDate", c.created_at as "createdAt"`;
   }
   async updateConnection(
     id: string,
@@ -164,6 +166,7 @@ export class DrizzleChannelRepository {
       lastPushAt: string;
       settings: Record<string, unknown>;
       settingsEnc: string | null;
+      expectedRemovalDate: string | null;
     }>,
   ): Promise<void> {
     await this.tx

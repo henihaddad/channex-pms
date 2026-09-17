@@ -213,6 +213,8 @@ export class DrizzleReservationRepository {
       currency: b.currency,
       totalAmountMinor: b.totalAmountMinor,
       otaCommissionMinor: b.otaCommissionMinor,
+      paymentCollect: b.paymentCollect,
+      paymentType: b.paymentType,
       mappingState: b.mappingState,
       lastRevisionId: b.lastRevisionId,
       rooms: rooms.map((r) => ({ ...r, days: r.days ?? [] })),
@@ -476,6 +478,9 @@ export interface ReservationDetail {
   currency: string;
   totalAmountMinor: number;
   otaCommissionMinor: number | null;
+  /** Channex `payment_collect` / `payment_type`; null when the channel did not say. */
+  paymentCollect: string | null;
+  paymentType: string | null;
   mappingState: string;
   lastRevisionId: string | null;
   rooms: Array<{

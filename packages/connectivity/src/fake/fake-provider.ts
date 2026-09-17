@@ -95,6 +95,7 @@ export interface Ledger {
   guestReviews: Array<{ reviewId: string; review: GuestReview }>;
   /** Every booking-request decision that reached the OTA. */
   requestResolutions: Array<{ eventId: string; resolution: LiveFeedResolution }>;
+  propertySettings: Array<{ propertyId: string; settings: Record<string, unknown> }>;
   calls: Array<{ op: string; dedupeKey: string; outcome: "ok" | FaultKind }>;
 }
 
@@ -151,6 +152,8 @@ export interface BookingSpec {
   currency?: string;
   adults?: number;
   otaName?: string;
+  paymentCollect?: "property" | "ota";
+  paymentType?: "credit_card" | "bank_transfer";
 }
 
 /**
@@ -170,6 +173,7 @@ export class FakeProvider implements ConnectivityProvider {
     reviewResponses: [],
     guestReviews: [],
     requestResolutions: [],
+    propertySettings: [],
     calls: [],
   };
   /** Set by the harness: where webhooks go. */
@@ -181,6 +185,7 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly acked = new Set<string>();
   private readonly bookings = new Map<string, BookingRevisionPayload>();
   private readonly created = new Map<string, unknown>();
+  private readonly removalDates = new Map<string, string>();
   private readonly liveFeed = new Map<string, LiveFeedEvent & { propertyId: string }>();
   private readonly listingMappings = new Map<
     string,
@@ -465,9 +470,27 @@ export class FakeProvider implements ConnectivityProvider {
     this.guard("channels.create", meta);
     return this.remember("channel", c);
   }
-  async checkReadiness(_ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
+  async checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
     this.guard("channels.readiness", meta);
-    return { ready: true, issues: [] };
+    const removal = this.removalDates.get(ref.id);
+    return {
+      ready: true,
+      issues: [],
+      ...(removal ? { inactive: true, expectedRemovalDate: removal } : {}),
+    };
+  }
+  /** Test knob: the provider has deactivated this channel and will delete it on `date` (docs: Channel API). */
+  scheduleRemoval(channelId: string, date: string | null): void {
+    if (date) this.removalDates.set(channelId, date);
+    else this.removalDates.delete(channelId);
+  }
+  async updatePropertySettings(
+    ref: ProviderRef,
+    settings: Record<string, unknown>,
+    meta: CallMeta,
+  ): Promise<void> {
+    this.guard("properties.update", meta);
+    this.ledger.propertySettings.push({ propertyId: ref.id, settings });
   }
   async setChannelActive(_ref: ProviderRef, _active: boolean, meta: CallMeta): Promise<void> {
     this.guard("channels.activate", meta);
@@ -650,6 +673,8 @@ export class FakeProvider implements ConnectivityProvider {
         currency: spec.currency ?? "EUR",
         amount: Object.values(spec.days).reduce((a, b) => a + b, 0),
         otaName: spec.otaName ?? "Booking.com",
+        ...(spec.paymentCollect ? { paymentCollect: spec.paymentCollect } : {}),
+        ...(spec.paymentType ? { paymentType: spec.paymentType } : {}),
         otaReservationCode: `OTA-${bookingId.slice(-8)}`,
         insertedAt: this.now(),
         rooms: [

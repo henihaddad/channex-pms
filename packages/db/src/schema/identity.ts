@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
+  date,
   integer,
   jsonb,
   pgTable,
@@ -97,6 +98,8 @@ export const property = pgTable(
     webhookSecretEnc: text("webhook_secret_enc"),
     address: jsonb("address").notNull().default({}),
     settings: jsonb("settings").notNull().default({}),
+    /** Channex removes a property with no active channel; the date it warned us about. */
+    expectedRemovalDate: date("expected_removal_date", { mode: "string" }),
     createdAt: ts("created_at").notNull().default(now()),
     updatedAt: ts("updated_at").notNull().default(now()),
     archivedAt: ts("archived_at"),

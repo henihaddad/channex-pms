@@ -136,7 +136,9 @@ describe("pushProperty", () => {
     });
     store.setRate("rp", "2026-10-01", { rate: 100 });
     await expect(pushProperty(ctx)).rejects.toBeInstanceOf(RetryLater);
-    expect(limiter.currentRate("org")).toBe(50);
+    // the bucket is the property's restrictions endpoint (docs: Rate Limits), not the org
+    expect(limiter.currentRate("prop:restrictions")).toBe(50);
+    expect(limiter.currentRate("prop:availability")).toBe(100);
     expect(store.states().pending).toBe(1);
     expect((await pushProperty(ctx)).accepted).toBe(1);
   });

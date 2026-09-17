@@ -18,6 +18,19 @@ export async function storeInboundWebhook(
   return rows.length ? { id, fresh: true } : { id: "", fresh: false };
 }
 
+/** The stored webhook body, for processors that need what the provider said (a removal date, a channel id). */
+export async function readInboundWebhook(
+  tx: Tx,
+  id: string,
+): Promise<{ event: string; propertyId: string; payload: Record<string, unknown> } | null> {
+  const [r] = await rawRows<{
+    event: string;
+    property_id: string;
+    payload: Record<string, unknown>;
+  }>(tx, sql`select event, property_id, payload from inbound_webhook where id = ${id}`);
+  return r ? { event: r.event, propertyId: r.property_id, payload: r.payload } : null;
+}
+
 export async function markWebhook(
   tx: Tx,
   id: string,

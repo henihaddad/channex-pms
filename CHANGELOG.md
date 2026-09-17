@@ -42,6 +42,17 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Channex payload and quota fixes from the docs sweep: bookings carry `payment_collect` and
+  `payment_type`, the reservation page says whether the guest already paid the channel or we
+  collect (and how), and payment rules never schedule an instalment on an OTA-collected booking;
+  `channel_removal_warning` and `property_removal_warning` webhooks are recorded as P1 alerts with
+  the date Channex will delete the connection or the property, the date is kept on the row and
+  shown on the health board and the property page, and the health poll reads
+  `expected_removal_date` from `GET /channels/{id}` so a deactivation made in Channex is announced
+  without the webhook; properties are created with `settings.state_length` at our 730-day horizon
+  (Channex defaults to 500, dropping the last 230 days we push) and existing ones were updated with
+  `PUT /properties/{id}`; the ARI rate limiter is keyed per property and endpoint at Channex's
+  documented 10 + 10 calls a minute instead of one bucket per organisation.
 - Host reviews of Airbnb guests (spec 09 §9.7): every Airbnb review on the Reviews page carries a
   short form (cleanliness, house rules, communication out of 5, recommend, public text, private
   note) that the worker posts to `POST /api/v1/reviews/{id}/guest_review`, the only way a review

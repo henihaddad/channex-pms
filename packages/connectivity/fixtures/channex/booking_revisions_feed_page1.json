@@ -91,6 +91,8 @@
             "arrival_hour": "10:00",
             "amount": "220.00",
             "ota_commission": "10.00",
+            "payment_collect": "ota",
+            "payment_type": "bank_transfer",
             "currency": "GBP",
             "notes": "Free parking please",
             "inserted_at": "2019-04-23T10:03:29.335485"

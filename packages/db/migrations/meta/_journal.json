@@ -176,6 +176,13 @@
       "when": 1789638264577,
       "tag": "0024_guest_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789639900944,
+      "tag": "0025_payment_collect_removal_dates",
+      "breakpoints": true
     }
   ]
 }

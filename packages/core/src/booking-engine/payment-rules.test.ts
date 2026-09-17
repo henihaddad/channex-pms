@@ -29,6 +29,13 @@ const base = {
 };
 
 describe("payment rules (spec 10 §10.4)", () => {
+  it("schedules nothing when the guest already paid the OTA (Channex payment_collect = ota)", () => {
+    const rules = [rule({ id: "all", amount: { kind: "remainder" } })];
+    expect(planPayments({ ...base, rules, paymentCollect: "ota" })).toEqual([]);
+    expect(planPayments({ ...base, rules, paymentCollect: "property" })).toHaveLength(1);
+    expect(planPayments({ ...base, rules, paymentCollect: null })).toHaveLength(1);
+  });
+
   it("splits a deposit at confirmation and the remainder before arrival", () => {
     const plan = planPayments({
       ...base,

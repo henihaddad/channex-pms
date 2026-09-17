@@ -270,7 +270,8 @@
       "multi_unit": "Plusieurs unités",
       "hotel": "Hôtel"
     },
-    "noChannelsShort": "Aucun canal"
+    "noChannelsShort": "Aucun canal",
+    "removalDate": "Channex retire cette propriété le"
   },
   "calendar": {
     "title": "Calendrier"
@@ -310,7 +311,8 @@
     "importRun": "Importer {n} annonces",
     "importDone": "Importé : {created} nouveaux biens, {connected} connexions. Les nouveaux biens se mettent en place sur le gestionnaire de canaux ; activez chaque connexion quand elle indique en ligne.",
     "emptyTitle": "Vendez sur tous les canaux depuis un seul calendrier",
-    "emptyAction": "Connecter Airbnb"
+    "emptyAction": "Connecter Airbnb",
+    "removalScheduled": "Channex supprime cette connexion le {date} si elle n’est pas réactivée."
   },
   "reservations": {
     "title": "Réservations",
@@ -392,7 +394,14 @@
     "from": "Du",
     "to": "Au",
     "noResults": "Aucune réservation ne correspond à ces filtres.",
-    "noResultsHint": "Changez les dates ou la vue, ou créez une réservation."
+    "noResultsHint": "Changez les dates ou la vue, ou créez une réservation.",
+    "paymentCollection": "Paiement",
+    "paidAtOta": "Le voyageur a payé {ota} : rien à encaisser",
+    "collectFromGuest": "À encaisser auprès du voyageur",
+    "paymentTypes": {
+      "credit_card": "carte sur la réservation",
+      "bank_transfer": "virement du canal"
+    }
   },
   "operations": {
     "title": "Tableau des rotations",

@@ -115,6 +115,8 @@ describe("ChannexProvider contract (fixtures)", () => {
       currency: "GBP",
       amount: 22000,
       otaCommission: 1000,
+      paymentCollect: "ota",
+      paymentType: "bank_transfer",
       otaName: "Booking.com",
       otaReservationCode: "9996013801",
     });
@@ -251,7 +253,27 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
   it("reads a fresh channel as ready but inactive: activation is our call (CH-4)", async () => {
     const { p } = provider();
     const r = await p.checkReadiness({ id: "7c0e2b1a-0000-4000-8000-000000000001" }, meta);
-    expect(r).toEqual({ ready: true, issues: [], inactive: true });
+    // an inactive connection carries the date Channex will delete it (docs: Channel API)
+    expect(r).toEqual({
+      ready: true,
+      issues: [],
+      inactive: true,
+      expectedRemovalDate: "2026-10-17",
+    });
+  });
+
+  it("updates a property's settings with PUT /properties/{id} (state_length to our horizon)", async () => {
+    const { p, http } = provider();
+    await p.updatePropertySettings({ id: PROPERTY }, { state_length: 730 }, meta);
+    // read first, then PUT the whole settings object with the change merged in
+    expect(http.calls[0]).toMatchObject({ method: "GET", path: `/api/v1/properties/${PROPERTY}` });
+    expect(http.calls[1]).toMatchObject({
+      method: "PUT",
+      path: `/api/v1/properties/${PROPERTY}`,
+      body: {
+        property: { settings: { min_stay_type: "both", state_length: 730, cut_off_days: 0 } },
+      },
+    });
   });
 
   it("lists the property's channel connections with their mappings", async () => {

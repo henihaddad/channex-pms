@@ -100,6 +100,11 @@ export default async function ChannelsPage({
                 {c.ready ? "Ready" : `Not ready: ${c.readiness.issues.join("; ") || "unknown"}`}
                 {c.lastError ? ` · ${c.lastError}` : ""}
               </p>
+              {c.expectedRemovalDate ? (
+                <p className="text-xs text-danger" data-testid="removal-scheduled">
+                  {t("removalScheduled", { date: c.expectedRemovalDate })}
+                </p>
+              ) : null}
               <p className="text-xs text-muted">
                 Pending {c.pendingCells} · failed {c.failedCells} · last push{" "}
                 {c.lastPushAt ?? "never"} · bookings 7d/30d {c.bookings7d}/{c.bookings30d} ·

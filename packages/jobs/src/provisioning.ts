@@ -7,6 +7,7 @@ import {
   type ConnectivityProvider,
   type Crypto,
   type ProvisioningState,
+  DEFAULT_HORIZON_DAYS,
 } from "@pms/core";
 import {
   asSystem,
@@ -76,6 +77,8 @@ export async function runProvisioning(
               timezone: detail.property.timezone,
               address: detail.property.address,
               ...(state.refs.group ? { groupId: state.refs.group } : {}),
+              // Channex defaults state_length to 500 days; our calendar is seeded for 730 (docs: Hotels Collection)
+              settings: { state_length: DEFAULT_HORIZON_DAYS },
             },
             meta("property"),
           );

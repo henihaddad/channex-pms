@@ -88,7 +88,8 @@ export function runtime(env: Env): Runtime {
     billing: stripeKey
       ? new StripeBillingProvider(stripeTransport(), stripeKey)
       : new FakeBillingProvider(),
-    limiter: new TokenBucket(clock, { baseRatePerSecond: 5, burst: 10 }),
+    // Channex: 10 restriction and 10 availability calls a minute per property (docs: Rate Limits)
+    limiter: new TokenBucket(clock, { baseRatePerSecond: 10 / 60, burst: 10 }),
     breaker: new MemoryCircuitBreaker(clock, { failureThreshold: 5, cooldownMs: 60_000 }),
     lease: durableLease(env.LEASE),
     sha256Hex: (s) => createHash("sha256").update(s).digest("hex"),

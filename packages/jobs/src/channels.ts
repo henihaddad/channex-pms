@@ -355,8 +355,29 @@ export async function pollChannelHealth(
         // after activation, a channel the provider switched off is a gap like any other
         const gaps = r.inactive ? [...r.issues, "channel deactivated on the provider"] : r.issues;
         const readiness: Readiness = { ready: gaps.length === 0, issues: gaps };
+        const expectedRemovalDate = r.expectedRemovalDate ?? null;
         await asSystem(deps.db, orgId, async (tx) => {
           const ch = new DrizzleChannelRepository(tx, orgId);
+          // Channex deletes an inactive connection 30 days after deactivation (docs: Channel API):
+          // the date is kept on the connection and announced once when it first appears
+          if (expectedRemovalDate !== c.expectedRemovalDate) {
+            await ch.updateConnection(c.id, { expectedRemovalDate });
+            if (expectedRemovalDate) {
+              const alert = describeChannelEvent("channel_removal_warning", {
+                ...ctx,
+                deadline: expectedRemovalDate,
+              });
+              await ch.insertEvent({
+                id: Id.next(),
+                connectionId: c.id,
+                propertyId: c.propertyId,
+                type: "channel_removal_warning",
+                severity: alert.severity,
+                message: `${alert.title}. ${alert.consequence} ${alert.action}`,
+                payload: { removalDate: expectedRemovalDate },
+              });
+            }
+          }
           if (!readiness.ready && c.readiness.ready) {
             regressions++;
             const alert = describeChannelEvent("readiness_regression", {

@@ -14,7 +14,8 @@
           "title": "Demo Hotel",
           "currency": "GBP",
           "timezone": "Europe/London",
-          "state": "active"
+          "state": "active",
+          "settings": { "min_stay_type": "both", "state_length": 500, "cut_off_days": 0 }
         },
         "relationships": {
           "groups": { "data": { "id": "3a1f0c5e-1111-4a3b-9c1d-000000000001", "type": "group" } }

@@ -6,6 +6,7 @@ import { createTestDb } from "@pms/db/testing";
 import {
   AriStorePerCall,
   DrizzleChannelRepository,
+  storeInboundWebhook,
   DrizzlePropertyRepository,
   asSystem,
   drainOutbox,
@@ -20,6 +21,7 @@ import { MemoryCircuitBreaker, pushProperty, TokenBucket } from "@pms/sync";
 import { createLogger } from "@pms/runtime";
 import { runProvisioning, markLiveIfSynced, propertiesToProvision } from "./provisioning.js";
 import { extendHorizons } from "./horizon.js";
+import { processWebhook } from "./worker/webhook-ingest.js";
 import {
   activateConnection,
   pauseConnection,
@@ -91,6 +93,13 @@ async function pushOnce(): Promise<void> {
 describe("provisioning (PROV-1..5)", () => {
   it("resumes after a failed step without orphaning provider rows, records ids per step, ends live after the initial push", async () => {
     const d = { ...deps, db: handle.db };
+    // the property is created with state_length at our horizon (docs: Hotels Collection; Channex defaults to 500)
+    const seen: Array<Record<string, unknown> | undefined> = [];
+    const realEnsure = fake.ensureProperty.bind(fake);
+    fake.ensureProperty = async (spec, m) => {
+      seen.push(spec.settings);
+      return realEnsure(spec, m);
+    };
     expect(await propertiesToProvision(handle.db)).toEqual([{ orgId: ORG, propertyId }]);
     await expect(runProvisioning(d, { orgId: ORG, propertyId })).rejects.toThrow(/simulated 5xx/);
     let st = await asSystem(handle.db, ORG, (tx) =>
@@ -105,6 +114,8 @@ describe("provisioning (PROV-1..5)", () => {
     // the resumed run did not re-create the property (PROV-3) and registered exactly one webhook (PROV-4)
     expect(fake.ledger.calls.filter((c) => c.op === "ensureProperty").length).toBe(propertyCalls);
     expect(fake.ledger.calls.filter((c) => c.op === "ensureWebhook").length).toBe(1);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((x) => x?.state_length === 730)).toBe(true);
     const [row] = await asSystem(handle.db, ORG, (tx) =>
       rawRows<{ state: string; channex_property_id: string | null }>(
         tx,
@@ -235,5 +246,58 @@ describe("channel activation and health (CH-4, CH-6, CH-8, spec 07 §7.4)", () =
     expect(c.state).toBe("error");
     expect(c.lastError).toContain("deactivated");
     await pollChannelHealth(cd);
+  });
+});
+
+describe("removal warnings (docs: Webhook Collection, Channel API)", () => {
+  it("a property_removal_warning webhook lands as a p1 event with the date on the property", async () => {
+    const stored = await asSystem(handle.db, ORG, (tx) =>
+      storeInboundWebhook(tx, {
+        orgId: ORG,
+        propertyId,
+        event: "property_removal_warning",
+        payload: {
+          event: "property_removal_warning",
+          payload: {
+            live_feed_event_id: "9d1f9262-3260-4f96-9b58-1a4e0e6e3c5d",
+            property_id: "remote",
+            property_name: "Demo Hotel",
+            days_left: 30,
+            removal_date: "2026-11-04",
+          },
+          property_id: "remote",
+          timestamp: "2026-10-05T13:00:00.000000Z",
+        },
+        dedupeKey: "removal-1",
+      }),
+    );
+    const kind = await processWebhook(
+      handle.db,
+      {
+        id: Id.next(),
+        type: "webhook.received",
+        orgId: ORG,
+        aggregate: { kind: "property", id: propertyId as Id },
+        payload: { webhookId: stored.id, propertyId, event: "property_removal_warning" },
+        occurredAt: clock.now().toString(),
+        dedupeKey: "webhook.received:removal-1",
+      },
+      log,
+    );
+    expect(kind).toBe("warning");
+    const [row] = await asSystem(handle.db, ORG, (tx) =>
+      rawRows<{ expected_removal_date: string | null }>(
+        tx,
+        sql`select expected_removal_date::text from property where id = ${propertyId}`,
+      ),
+    );
+    expect(row?.expected_removal_date).toBe("2026-11-04");
+    const events = await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).listEvents({ propertyId, openOnly: true }),
+    );
+    const warn = events.find((e) => e.type === "property_removal_warning");
+    expect(warn).toMatchObject({ severity: "p1", connectionId: null });
+    expect(warn?.message).toContain("2026-11-04");
+    expect(warn?.message).toContain("Connect and activate a channel");
   });
 });

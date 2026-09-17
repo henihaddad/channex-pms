@@ -85,6 +85,9 @@ export const booking = pgTable(
     currency: text("currency").notNull(),
     totalAmountMinor: bigint("total_amount_minor", { mode: "number" }).notNull(),
     otaCommissionMinor: bigint("ota_commission_minor", { mode: "number" }),
+    /** Channex `payment_collect` / `payment_type`: who collects the money and how (null: unstated). */
+    paymentCollect: text("payment_collect"),
+    paymentType: text("payment_type"),
     guestId: uuid("guest_id").references(() => guest.id),
     mappingState: text("mapping_state").notNull().default("mapped"), // mapped|unmapped_room|unmapped_rate
     opsState: text("ops_state").notNull().default("expected"),

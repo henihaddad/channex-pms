@@ -567,7 +567,36 @@ export class ChannexProvider implements ConnectivityProvider {
       ready: issues.length === 0,
       issues,
       ...(attrs.is_active === false ? { inactive: true } : {}),
+      // docs: Channel API — set when the connection is inactive and scheduled for deletion
+      ...(typeof attrs.expected_removal_date === "string" && attrs.expected_removal_date !== ""
+        ? { expectedRemovalDate: attrs.expected_removal_date }
+        : {}),
     };
+  }
+
+  async updatePropertySettings(
+    ref: ProviderRef,
+    settings: Record<string, unknown>,
+    meta: CallMeta,
+  ): Promise<void> {
+    // docs: Hotels Collection › Update Property: attributes absent from the request are left
+    // unchanged, but `settings` is one attribute, so the current object is read and merged
+    // (verified on staging: a partial object would replace the rest)
+    const current = await this.call(
+      "properties.get",
+      { method: "GET", path: `/api/v1/properties/${ref.id}` },
+      { ...meta, dedupeKey: `${meta.dedupeKey}:read` },
+    );
+    const merged = { ...obj(obj(obj(obj(current).data).attributes).settings), ...settings };
+    await this.call(
+      "properties.update",
+      {
+        method: "PUT",
+        path: `/api/v1/properties/${ref.id}`,
+        body: { property: { settings: merged } },
+      },
+      meta,
+    );
   }
 
   async setChannelActive(ref: ProviderRef, active: boolean, meta: CallMeta): Promise<void> {
@@ -1342,6 +1371,13 @@ export function parseRevision(d: Record<string, unknown>): BookingRevisionPayloa
     }),
     ...(a.ota_commission !== undefined && a.ota_commission !== null
       ? { otaCommission: money(a.ota_commission) }
+      : {}),
+    // docs: Bookings Collection — who collects and how; null means unspecified (we collect)
+    ...(a.payment_collect === "ota" || a.payment_collect === "property"
+      ? { paymentCollect: a.payment_collect }
+      : {}),
+    ...(a.payment_type === "credit_card" || a.payment_type === "bank_transfer"
+      ? { paymentType: a.payment_type }
       : {}),
     ...(guarantee
       ? {

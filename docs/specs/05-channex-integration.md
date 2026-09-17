@@ -84,7 +84,10 @@ Rules:
   trip — but handlers never *depend* on payload contents (§5.5.3).
 - **PROV-5** The default seeded horizon is **730 days**, configurable. Channex
   documents property size limits; the wizard warns before creating inventory that
-  would exceed them.
+  would exceed them. Channex keeps a property's state for `settings.state_length`
+  days (its default is 500), so the property is created with `state_length` equal
+  to the horizon and existing properties are updated with `PUT /properties/{id}`;
+  otherwise the last 230 days of the calendar are pushed and silently dropped.
 
 Implementation notes (M2): the state machine runs one step per job iteration and
 records provider ids in the same transaction as the step (`property_provisioning`);
@@ -172,10 +175,12 @@ same payload. Our builder exploits that.
 
 - **One in-flight ARI job per property** (`ari.push` concurrency 1 per property
   key). Prevents two batches racing to opposite values.
-- **Token bucket per organization** for provider calls, with **adaptive**
+- **Token bucket per property and endpoint** for ARI calls, with **adaptive**
   refill: sustained `429`s halve the rate, a clean window restores it. Channex
-  documents `429 Too Many Requests` but not exact quotas, so the limiter is
-  configurable and self-tuning rather than hard-coded to a guess.
+  documents the quota (Rate Limits): 10 restriction-and-price requests and 10
+  availability requests a minute per property, so the bucket is keyed
+  `<property>:<availability|restrictions>` at that rate with a burst of 10; the
+  self-tuning stays for the day the quota changes.
 - **Backoff** is exponential with full jitter, capped, and bounded by attempt
   count; exhausted operations land in a visible DLQ, never a silent drop.
 - **Circuit breaker per organization.** Open on repeated 5xx: stop calling, keep
@@ -265,7 +270,7 @@ Channex does **not** HMAC-sign webhooks, so we layer our own defences:
 | `message_thread_booking_assigned` | Re-link thread to booking; merge any provisional thread created from an inquiry. |
 | `new_channel`, `updated_channel`, `activate_channel`, `deactivate_channel` | Refresh connection state; audit who/what changed it (including changes made in Channex directly). |
 | `disconnect_channel`, `disconnect_listing` | **P1 tenant alert** — inventory is no longer selling. Show a fix-it card with the reconnect flow. |
-| `channel_removal_warning`, `property_removal_warning` | P1 alert with deadline and required action. |
+| `channel_removal_warning`, `property_removal_warning` | P1 alert with deadline and required action. The payload is the news here (`removal_date`, `days_left`, `channel_id`): the date is stored on the connection or the property and shown on the health board and the property page; the health poll also reads `expected_removal_date` from `GET /channels/{id}` so a deactivation made in Channex is announced without the webhook. |
 | `sync_error`, `sync_warning`, `rate_error` | Append to `ChannelEvent`, surface on the channel health board with a plain-language explanation and remedy. |
 | `review`, `updated_review` | Upsert review, notify guest-relations, start response SLA. |
 | `reservation_request`, `alteration_request` (Airbnb) | Create an actionable task with accept/decline; enforce the OTA's response deadline with reminders. |

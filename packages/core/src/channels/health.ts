@@ -29,12 +29,25 @@ export function describeChannelEvent(type: string, ctx: EventContext): Alert {
         action: "Reconnect the channel.",
       };
     case "channel_removal_warning":
-    case "property_removal_warning":
+      // docs: Webhook Collection — an inactive connection is deleted 30 days after deactivation
       return {
         severity: "p1",
         title: `${where} will be removed${ctx.deadline ? ` on ${ctx.deadline}` : ""}`,
-        consequence: "The channel will drop the listing and stop selling it.",
-        action: ctx.detail ?? "Complete the action the channel requires before the deadline.",
+        consequence:
+          "Channex deletes an inactive connection on that date, with its mappings; reconnecting later means mapping again.",
+        action:
+          ctx.detail ?? "Resume the connection if you still sell there, or remove it deliberately.",
+      };
+    case "property_removal_warning":
+      // docs: Webhook Collection — a property with no active channel is removed by Channex
+      return {
+        severity: "p1",
+        title: `${ctx.propertyTitle} will be removed from the channel manager${ctx.deadline ? ` on ${ctx.deadline}` : ""}`,
+        consequence:
+          "Its rates, availability and connections on Channex are deleted on that date; the property here stays but stops syncing.",
+        action:
+          ctx.detail ??
+          "Connect and activate a channel for it, or archive it if it no longer sells.",
       };
     case "credentials_invalid":
     case "oauth_expired":

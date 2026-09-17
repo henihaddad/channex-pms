@@ -270,7 +270,8 @@
       "multi_unit": "Several units",
       "hotel": "Hotel"
     },
-    "noChannelsShort": "No channel"
+    "noChannelsShort": "No channel",
+    "removalDate": "Channex removes this property on"
   },
   "calendar": {
     "title": "Calendar"
@@ -310,7 +311,8 @@
     "importRun": "Import {n} listings",
     "importDone": "Imported: {created} new properties, {connected} connections. New properties are being set up on the channel manager; activate each connection once it reads live.",
     "emptyTitle": "Sell on every channel from one calendar",
-    "emptyAction": "Connect Airbnb"
+    "emptyAction": "Connect Airbnb",
+    "removalScheduled": "Channex deletes this connection on {date} unless it is resumed."
   },
   "reservations": {
     "title": "Reservations",
@@ -392,7 +394,14 @@
     "from": "From",
     "to": "To",
     "noResults": "No reservations match these filters.",
-    "noResultsHint": "Change the dates or the view, or create a booking."
+    "noResultsHint": "Change the dates or the view, or create a booking.",
+    "paymentCollection": "Payment",
+    "paidAtOta": "Guest paid {ota}: nothing to collect",
+    "collectFromGuest": "Collect from the guest",
+    "paymentTypes": {
+      "credit_card": "card on the booking",
+      "bank_transfer": "bank transfer from the channel"
+    }
   },
   "operations": {
     "title": "Turnover board",

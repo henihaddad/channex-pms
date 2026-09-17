@@ -6,12 +6,15 @@ export {
   type PendingAri,
 } from "@pms/core";
 
-/** Per-organization token bucket that learns from 429s (spec 05 §5.4.4). */
+/**
+ * Token bucket that learns from 429s (spec 05 §5.4.4). The key is whatever the provider
+ * limits on: for Channex, `<property>:<availability|restrictions>` (docs: Rate Limits).
+ */
 export interface RateLimiter {
   /** Resolves when a token is available. */
-  acquire(orgId: string): Promise<void>;
-  reportThrottle(orgId: string, retryAfterMs?: number): void;
-  reportSuccess(orgId: string): void;
+  acquire(key: string): Promise<void>;
+  reportThrottle(key: string, retryAfterMs?: number): void;
+  reportSuccess(key: string): void;
 }
 
 export type BreakerState = "closed" | "open" | "half_open";

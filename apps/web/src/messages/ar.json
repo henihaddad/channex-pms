@@ -270,7 +270,8 @@
       "multi_unit": "عدة وحدات",
       "hotel": "فندق"
     },
-    "noChannelsShort": "لا قناة"
+    "noChannelsShort": "لا قناة",
+    "removalDate": "يزيل Channex هذا العقار في"
   },
   "calendar": {
     "title": "التقويم"
@@ -310,7 +311,8 @@
     "importRun": "استيراد {n} إعلانات",
     "importDone": "تم الاستيراد: {created} عقارات جديدة و{connected} اتصالات. يجري إعداد العقارات الجديدة على مدير القنوات؛ فعّل كل اتصال عندما يصبح مفعّلًا.",
     "emptyTitle": "بِع على كل القنوات من تقويم واحد",
-    "emptyAction": "اربط Airbnb"
+    "emptyAction": "اربط Airbnb",
+    "removalScheduled": "يحذف Channex هذا الاتصال في {date} ما لم يُستأنف."
   },
   "reservations": {
     "title": "الحجوزات",
@@ -392,7 +394,14 @@
     "from": "من",
     "to": "إلى",
     "noResults": "لا توجد حجوزات تطابق هذه العوامل.",
-    "noResultsHint": "غيّر التواريخ أو العرض، أو أنشئ حجزًا."
+    "noResultsHint": "غيّر التواريخ أو العرض، أو أنشئ حجزًا.",
+    "paymentCollection": "الدفع",
+    "paidAtOta": "دفع الضيف عبر {ota}: لا شيء للتحصيل",
+    "collectFromGuest": "يُحصَّل من الضيف",
+    "paymentTypes": {
+      "credit_card": "بطاقة على الحجز",
+      "bank_transfer": "تحويل بنكي من القناة"
+    }
   },
   "operations": {
     "title": "لوحة التنظيف",

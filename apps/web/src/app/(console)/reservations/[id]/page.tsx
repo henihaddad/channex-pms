@@ -218,6 +218,17 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
             <dd className="text-end">{money(d.financials.withheldTaxesMinor, d.currency)}</dd>
             <dt>{t("otaCommission")}</dt>
             <dd className="text-end">{money(d.financials.otaCommissionMinor, d.currency)}</dd>
+            <dt>{t("paymentCollection")}</dt>
+            <dd
+              className="text-end"
+              data-testid="payment-collect"
+              data-collect={d.paymentCollect ?? "unknown"}
+            >
+              {d.paymentCollect === "ota"
+                ? t("paidAtOta", { ota: d.otaName ?? "the channel" })
+                : t("collectFromGuest")}
+              {d.paymentType ? ` · ${t(`paymentTypes.${d.paymentType}`)}` : ""}
+            </dd>
             <dt className="font-semibold">{t("expectedPayout")}</dt>
             <dd className="text-end font-semibold">
               {money(

@@ -17,6 +17,7 @@
           "channel": "AirBNB",
           "title": "Airbnb · Ribeira Loft",
           "is_active": false,
+          "expected_removal_date": "2026-10-17",
           "status": "pending",
           "readiness_issues": []
         }

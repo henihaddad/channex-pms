@@ -45,6 +45,8 @@ export interface PropertyDetail {
     address: Record<string, string>;
     channexPropertyId: string | null;
     webhookToken: string | null;
+    /** Channex removes a property with no active channel; the date it warned about. */
+    expectedRemovalDate: string | null;
   };
   roomTypes: Array<RoomTypeRecord & { channexRoomTypeId: string | null }>;
   units: UnitRecord[];
@@ -236,6 +238,7 @@ export class DrizzlePropertyRepository implements PropertyRepository {
         address: p.address as Record<string, string>,
         channexPropertyId: p.channexPropertyId,
         webhookToken: p.webhookToken,
+        expectedRemovalDate: p.expectedRemovalDate,
       },
       roomTypes: roomTypes.map((r) => ({
         id: r.id as Id,

@@ -29,6 +29,8 @@ export function projectRevision(rev: BookingRevisionPayload, bookingId: string):
     currency: rev.currency,
     totalAmountMinor: rev.amount,
     otaCommissionMinor: rev.otaCommission ?? null,
+    paymentCollect: rev.paymentCollect ?? null,
+    paymentType: rev.paymentType ?? null,
     otaName: rev.otaName,
     otaReservationCode: rev.otaReservationCode,
     mappingState: mappingStateOf(rev),

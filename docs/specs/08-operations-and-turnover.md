@@ -37,7 +37,7 @@ Shipped views: **Arrivals today**, **Departures today**, **In stay**,
 | **Stay** | Room/unit, rate plan, occupancy (with children's ages), assigned unit, nightly price breakdown from `BookingRoomDay`. |
 | **Access** | Issued credentials: type, validity window, delivery state, rotate/revoke actions. Gated by `access_credential:read`; values masked by default. |
 | **Guest** | Contact, language, country, stay history, notes, preferences. Gated by `booking:read_pii`. |
-| **Financials** | Room revenue, extras, taxes, **OTA-withheld taxes separately**, OTA commission, expected payout, folio balance, **owner attribution** (which agreement this revenue flows to). |
+| **Financials** | Room revenue, extras, taxes, **OTA-withheld taxes separately**, OTA commission, who collects the payment (Channex `payment_collect`: the guest paid the OTA and there is nothing to collect, or we collect, by card on the booking or by bank transfer from the channel; `payment_type`), expected payout, folio balance, **owner attribution** (which agreement this revenue flows to). A booking the OTA collected never gets a payment schedule (spec 10 §10.4). |
 | **Payment** | Instrument metadata (masked card / VCC balance and window). Step-up gated, audited per view. |
 | **Operations** | The linked turnover tasks: previous departure clean, pre-arrival inspection, states and photos. |
 | **Revisions** | The timeline (§8.3). |

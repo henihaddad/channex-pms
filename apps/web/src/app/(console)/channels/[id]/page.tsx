@@ -28,6 +28,11 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
             : `not ready: ${v.connection.readiness.issues.join("; ")}`}{" "}
           · Channex channel {v.connection.channexChannelId ?? "—"}
         </p>
+        {v.connection.expectedRemovalDate ? (
+          <p className="text-sm text-danger" data-testid="removal-scheduled">
+            {t("removalScheduled", { date: v.connection.expectedRemovalDate })}
+          </p>
+        ) : null}
         <p className="text-xs text-muted">
           Settings:{" "}
           {Object.entries(v.connection.settings)

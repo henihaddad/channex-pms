@@ -13,6 +13,9 @@ export interface BookingProjection {
   currency: string;
   totalAmountMinor: number;
   otaCommissionMinor: number | null;
+  /** `ota` when the guest paid the channel, `property` when we collect, null when unstated. */
+  paymentCollect: "property" | "ota" | null;
+  paymentType: "credit_card" | "bank_transfer" | null;
   otaName: string;
   otaReservationCode: string;
   mappingState: MappingState;

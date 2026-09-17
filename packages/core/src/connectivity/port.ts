@@ -150,6 +150,13 @@ export interface BookingRevisionPayload {
   services: Array<{ name: string; amount: number; isInclusive: boolean }>;
   taxes: Array<{ name: string; amount: number; isInclusive: boolean; withheldByOta?: boolean }>;
   otaCommission?: number;
+  /**
+   * Who collects the money (docs: Bookings Collection): `ota` when the guest already paid the
+   * channel, `property` when we collect; absent when the channel did not say (usually: we collect).
+   */
+  paymentCollect?: "property" | "ota";
+  /** How: a card on the booking, or a bank transfer from the OTA. */
+  paymentType?: "credit_card" | "bank_transfer";
   /** Masked card metadata only, never a PAN (BK-7). */
   guarantee?: { cardType: string; maskedNumber: string; expiry: string; cardholder: string };
   raw: unknown;
@@ -207,6 +214,8 @@ export interface Readiness {
    * regression the health poll reports.
    */
   inactive?: boolean;
+  /** Channex removes an inactive connection 30 days after deactivation; the date it will do so. */
+  expectedRemovalDate?: string;
 }
 
 /** What the provider needs to start Airbnb's authorisation on our behalf (Channex: connection link). */
@@ -457,6 +466,12 @@ export interface ConnectivityProvider {
   createChannel(c: ChannelSpec, meta: CallMeta): Promise<ProviderRef>;
   checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness>;
   setChannelActive(ref: ProviderRef, active: boolean, meta: CallMeta): Promise<void>;
+  /** Change a property's provider-side settings, e.g. how far ahead its state reaches (`state_length`). */
+  updatePropertySettings(
+    ref: ProviderRef,
+    settings: Record<string, unknown>,
+    meta: CallMeta,
+  ): Promise<void>;
   /**
    * A short-lived session for the provider's own channel screen, embedded for
    * the channels only the provider can connect (Airbnb's OAuth lives there).

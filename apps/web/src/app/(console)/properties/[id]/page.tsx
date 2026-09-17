@@ -273,6 +273,14 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </dd>
           <dt className="text-muted">{t("channexId")}</dt>
           <dd className="font-mono">{d.property.channexPropertyId ?? "—"}</dd>
+          {d.property.expectedRemovalDate ? (
+            <>
+              <dt className="text-danger">{t("removalDate")}</dt>
+              <dd className="text-danger" data-testid="removal-scheduled">
+                {d.property.expectedRemovalDate}
+              </dd>
+            </>
+          ) : null}
           <dt className="text-muted">{t("webhook")}</dt>
           <dd>{d.property.webhookToken ? t("registered") : "—"}</dd>
           <dt className="text-muted">{t("cells")}</dt>
