@@ -20,7 +20,8 @@
     "lint": "eslint src certification",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:certification": "vitest run --config vitest.cert.config.ts"
+    "test:certification": "vitest run --config vitest.cert.config.ts",
+    "check:docs": "node ../../scripts/check-channex-docs-refs.mjs"
   },
   "dependencies": {
     "@pms/core": "workspace:*",

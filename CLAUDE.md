@@ -42,6 +42,11 @@ docs/specs/      the specification
 - Tests: Vitest with fast-check property tests for anything touching dates, money or ARI diffs.
 - Conventional Commits. Every behaviour change updates the spec in the same PR, plus CHANGELOG.
 - Keep Channex vocabulary (`rate_plan`, `booking_revision`, `restrictions`).
+- Channex calls are written from the vendored docs, never from memory: read the page under
+  `docs/vendor/channex/` (refresh with `node scripts/channex-docs-sync.mjs`), cite it in a
+  `// docs: <page>` comment above the call (`pnpm check` fails otherwise), record a fixture from the
+  documented response and assert the request body in `contract.test.ts`. Check what we _send_ as
+  carefully as what we parse: every integration bug found on 2026-09-17 was on the request side.
 - Every feature names its persona (spec 02). No persona, no feature.
 - Licence: Sustainable Use License. Files needing an enterprise licence carry `.ee.` in the name.
 

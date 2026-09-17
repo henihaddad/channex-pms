@@ -101,6 +101,7 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     if (existing) return { id: existing };
+    // docs: groups-collection (Create Group)
     const body = await this.call(
       "groups.create",
       { method: "POST", path: "/api/v1/groups", body: { group: { title: g.title } } },
@@ -118,6 +119,7 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     if (existing) return { id: existing };
+    // docs: hotels-collection (Create a property)
     const body = await this.call(
       "properties.create",
       {
@@ -153,6 +155,7 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     if (existing) return { id: existing };
+    // docs: room-types-collection (Create Room Type)
     const body = await this.call(
       "room_types.create",
       {
@@ -187,6 +190,7 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     if (existing) return { id: existing };
+    // docs: rate-plans-collection (Create Rate Plan)
     const body = await this.call(
       "rate_plans.create",
       {
@@ -223,6 +227,7 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
     if (existing) return { id: existing };
+    // docs: webhook-collection (Create Webhook)
     const body = await this.call(
       "webhooks.create",
       {
@@ -247,6 +252,7 @@ export class ChannexProvider implements ConnectivityProvider {
 
   /** Q7: read a property with its room types and rate plans, paginated explicitly. */
   async importProperty(ref: ProviderRef, meta: CallMeta): Promise<ImportedProperty> {
+    // docs: hotels-collection (Retrieve a property)
     const p = await this.call(
       "properties.get",
       { method: "GET", path: `/api/v1/properties/${ref.id}` },
@@ -255,9 +261,8 @@ export class ChannexProvider implements ConnectivityProvider {
     const pa = obj(obj(obj(p).data).attributes);
     const rels = obj(obj(obj(p).data).relationships);
     const groupId = groupIdOf(rels);
-    const roomTypes = (
-      await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)
-    ).map((r) => {
+    const roomTypes = // docs: room-types-collection (Room Types List)
+    (await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)).map((r) => {
       const a = obj(obj(r).attributes);
       return {
         id: String(obj(r).id),
@@ -268,9 +273,8 @@ export class ChannexProvider implements ConnectivityProvider {
         occInfants: Number(a.occ_infants ?? 0),
       };
     });
-    const ratePlans = (
-      await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)
-    ).map((r) => {
+    const ratePlans = // docs: rate-plans-collection (Rate Plans List)
+    (await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)).map((r) => {
       const a = obj(obj(r).attributes);
       const rl = obj(obj(r).relationships);
       return {
@@ -370,6 +374,7 @@ export class ChannexProvider implements ConnectivityProvider {
       ...(e.days ? { days: e.days } : {}),
       availability: e.availability,
     }));
+    // docs: ari (Update Availability)
     const body = await this.call(
       "availability.push",
       { method: "POST", path: "/api/v1/availability", body: { values } },
@@ -409,6 +414,7 @@ export class ChannexProvider implements ConnectivityProvider {
       ...(e.closedToDeparture !== undefined ? { closed_to_departure: e.closedToDeparture } : {}),
       ...(e.stopSell !== undefined ? { stop_sell: e.stopSell } : {}),
     }));
+    // docs: ari (Update Restrictions)
     const body = await this.call(
       "restrictions.push",
       { method: "POST", path: "/api/v1/restrictions", body: { values } },
@@ -423,11 +429,13 @@ export class ChannexProvider implements ConnectivityProvider {
       "filter[date][gte]": q.dateFrom,
       "filter[date][lte]": q.dateTo,
     };
+    // docs: ari (Get Availability)
     const avail = await this.call(
       "availability.read",
       { method: "GET", path: "/api/v1/availability", query: filter },
       meta,
     );
+    // docs: ari (Get Restrictions)
     const restr = await this.call(
       "restrictions.read",
       {
@@ -447,6 +455,7 @@ export class ChannexProvider implements ConnectivityProvider {
   // ---- channels ----------------------------------------------------------------------
 
   async getAdapterDescriptor(code: string, meta: CallMeta): Promise<AdapterDescriptor> {
+    // docs: channel-api (Get the adapter descriptor)
     const body = await this.call(
       "channels.adapter",
       { method: "GET", path: "/api/v1/channels/adapter", query: { code } },
@@ -480,6 +489,7 @@ export class ChannexProvider implements ConnectivityProvider {
 
   async testConnection(s: ConnectionSettings, meta: CallMeta): Promise<TestResult> {
     try {
+      // docs: channel-api (Test the connection)
       const body = await this.call(
         "channels.test_connection",
         {
@@ -498,6 +508,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async readChannelMappingOptions(s: ConnectionSettings, meta: CallMeta): Promise<MappingOptions> {
+    // docs: channel-api (Get the mapping details)
     const body = await this.call(
       "channels.mapping_details",
       {
@@ -553,6 +564,7 @@ export class ChannexProvider implements ConnectivityProvider {
         });
       groupId = g;
     }
+    // docs: channel-api-examples/booking.com (Create the connection)
     const body = await this.call(
       "channels.create",
       {
@@ -585,6 +597,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
+    // docs: channel-api (Get a channel connection)
     const body = await this.call(
       "channels.get",
       { method: "GET", path: `/api/v1/channels/${ref.id}` },
@@ -639,6 +652,7 @@ export class ChannexProvider implements ConnectivityProvider {
     );
   }
   async createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
+    // docs: channel-iframe (one_time_token)
     const body = await this.call(
       "auth.one_time_token",
       {
@@ -655,6 +669,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async listChannels(propertyId: string, meta: CallMeta): Promise<RemoteChannel[]> {
+    // docs: channel-api (List channel connections)
     const rows = await this.listAll("channels.list", "/api/v1/channels", propertyId, meta);
     return rows.map((raw) => {
       const r = obj(raw);
@@ -692,6 +707,7 @@ export class ChannexProvider implements ConnectivityProvider {
     if (!groupId) {
       const first = spec.propertyIds[0];
       if (!first) throw new ContractError("connection link needs at least one property", {});
+      // docs: hotels-collection (Retrieve a property)
       const prop = await this.call(
         "properties.get",
         { method: "GET", path: `/api/v1/properties/${first}` },
@@ -704,6 +720,7 @@ export class ChannexProvider implements ConnectivityProvider {
         });
       groupId = g;
     }
+    // docs: channel-api-examples/airbnb (connection_link)
     const body = await this.call(
       "airbnb.connection_link",
       {
@@ -734,6 +751,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async listChannelListings(ref: ProviderRef, meta: CallMeta): Promise<RemoteListing[]> {
+    // docs: channel-api-examples/airbnb (listings action)
     const body = await this.call(
       "airbnb.listings",
       { method: "GET", path: `/api/v1/channels/${ref.id}/action/listings` },
@@ -759,6 +777,7 @@ export class ChannexProvider implements ConnectivityProvider {
     listingId: string,
     meta: CallMeta,
   ): Promise<RemoteListingDetails> {
+    // docs: channel-api-examples/airbnb (listing_details action)
     const body = await this.call(
       "airbnb.listing_details",
       {
@@ -803,6 +822,7 @@ export class ChannexProvider implements ConnectivityProvider {
     range: { from: string; to: string },
     meta: CallMeta,
   ): Promise<RemoteListingCalendar> {
+    // docs: airbnb-api (get_listing_calendar action)
     const body = await this.call(
       "airbnb.listing_calendar",
       {
@@ -840,6 +860,7 @@ export class ChannexProvider implements ConnectivityProvider {
     mapping: { ratePlanId: string; listingId: string },
     meta: CallMeta,
   ): Promise<ProviderRef> {
+    // docs: channel-api-examples/airbnb (mappings)
     const body = await this.call(
       "airbnb.mapping.create",
       {
@@ -858,6 +879,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async removeMapping(ref: ProviderRef, mappingId: string, meta: CallMeta): Promise<void> {
+    // docs: channel-api (Delete a mapping)
     await this.call(
       "channels.mapping.delete",
       { method: "DELETE", path: `/api/v1/channels/${ref.id}/mappings/${mappingId}` },
@@ -870,6 +892,7 @@ export class ChannexProvider implements ConnectivityProvider {
     meta: CallMeta,
     listingId?: string,
   ): Promise<void> {
+    // docs: channel-api (load_future_reservations action)
     await this.call(
       "airbnb.load_future_reservations",
       {
@@ -889,6 +912,7 @@ export class ChannexProvider implements ConnectivityProvider {
     meta: CallMeta,
   ): Promise<BookingRevisionPage> {
     const page = cursor ? Number(cursor) : 1;
+    // docs: bookings-collection (Booking Revisions Feed)
     const body = await this.call(
       "booking_revisions.feed",
       {
@@ -913,6 +937,7 @@ export class ChannexProvider implements ConnectivityProvider {
 
   async ackBookingRevisions(ids: string[], meta: CallMeta): Promise<void> {
     for (const id of ids)
+      // docs: bookings-collection (Acknowledge Booking Revision)
       await this.call(
         "booking_revisions.ack",
         { method: "POST", path: `/api/v1/booking_revisions/${id}/ack` },
@@ -921,6 +946,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async getBooking(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
+    // docs: bookings-collection (Get Booking by ID)
     const body = await this.call(
       "bookings.get",
       { method: "GET", path: `/api/v1/bookings/${ref.id}` },
@@ -933,6 +959,7 @@ export class ChannexProvider implements ConnectivityProvider {
 
   async listThreads(q: ThreadQuery, meta: CallMeta): Promise<ThreadPage> {
     const page = q.cursor ? Number(q.cursor) : 1;
+    // docs: messages-collection (Message Threads List)
     const body = await this.call(
       "message_threads.list",
       {
@@ -986,6 +1013,7 @@ export class ChannexProvider implements ConnectivityProvider {
   ): Promise<ThreadPage["threads"][number]["messages"]> {
     const out: ThreadPage["threads"][number]["messages"] = [];
     for (let page = 1; ; page += 1) {
+      // docs: messages-collection (Get Messages of Thread)
       const body = await this.call(
         "messages.list",
         {
@@ -1027,6 +1055,7 @@ export class ChannexProvider implements ConnectivityProvider {
 
   /** `POST /attachments`: the file goes up first and is then sent as a message of its own. */
   async uploadAttachment(a: AttachmentUpload, meta: CallMeta): Promise<ProviderRef> {
+    // docs: messages-collection (Send attachment)
     const body = await this.call(
       "attachments.upload",
       {
@@ -1059,6 +1088,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async listReviews(q: ReviewQuery, meta: CallMeta): Promise<ReviewPage> {
+    // docs: reviews-collection (Get Reviews List)
     const body = await this.call(
       "reviews.list",
       {
@@ -1103,6 +1133,7 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void> {
+    // docs: reviews-collection (Reply to Review)
     await this.call(
       "reviews.reply",
       // docs: Reviews Collection › Reply to Review
@@ -1180,6 +1211,7 @@ export class ChannexProvider implements ConnectivityProvider {
             ? { type: "preapproval", block_instant_booking: r.blockInstantBooking ?? false }
             : { type: "special_offer", total_price: r.totalPrice }
           : { accept: r.accept };
+    // docs: airbnb-api (Booking Requests › resolve)
     const body = await this.call(
       "live_feed.resolve",
       { method: "POST", path: `/api/v1/live_feed/${ref.id}/resolve`, body: { resolution } },

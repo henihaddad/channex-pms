@@ -42,6 +42,11 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- The Channex documentation is vendored under `docs/vendor/channex/` (122 pages as Channex's own
+  Markdown, `node scripts/channex-docs-sync.mjs` refreshes them from `llms.txt`, `--check` says
+  when they are stale). Every Channex call in the provider cites the page it was written from
+  (`// docs: <page>`), and `pnpm check` fails on a call without one
+  (`scripts/check-channex-docs-refs.mjs`). CLAUDE.md carries the rule.
 - Fixed: reconnecting a property to a different hotel on the same channel proposed the previous
   hotel's room and rate codes (the remembered mapping), which Channex rejected with "Channel has
   no rate", and the wizard hid the reason behind a masked production error. A remembered mapping
