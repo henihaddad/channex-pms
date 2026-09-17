@@ -148,7 +148,8 @@ export async function activateConnection(
     await ch.updateConnection(connectionId, {
       state: next.ok ? next.value : "active",
       isActive: true,
-      readiness,
+      // the readiness was read before activation: `inactive` is no longer true
+      readiness: { ready: readiness.ready, issues: readiness.issues },
       lastError: null,
     });
     await markAllPending(tx, conn.propertyId);
