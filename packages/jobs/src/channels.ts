@@ -1,6 +1,8 @@
 import {
   AuthError,
   AuthorizationError,
+  ValidationError,
+  type CallMeta,
   describeChannelEvent,
   Id,
   transition,
@@ -88,7 +90,12 @@ export async function activateConnection(
           const rate = options.rooms
             .find((r) => r.code === m.roomCode)
             ?.rates.find((x) => x.code === m.rateCode);
-          const occupancy = m.occupancy ?? rate?.occupancy ?? occupancyOf(m.ratePlanId);
+          const wanted = m.occupancy ?? rate?.occupancy ?? occupancyOf(m.ratePlanId);
+          // never above what the OTA rate takes: Channex refuses the mapping (occupancy_exceeds_max_persons)
+          const occupancy =
+            wanted !== undefined && rate?.maxPersons !== undefined
+              ? Math.min(wanted, rate.maxPersons)
+              : wanted;
           const pair = `${m.roomCode}::${m.rateCode}`;
           const primaryOcc = !primaries.has(pair);
           primaries.add(pair);
@@ -339,11 +346,25 @@ export async function removeConnection(
       await run((tx) => new DrizzleChannelRepository(tx, orgId).listConnections())
     ).filter((c) => c.id !== connectionId && c.channexChannelId === conn.channexChannelId);
     if (others.length === 0)
-      await deps.provider.setChannelActive({ id: conn.channexChannelId }, false, meta("remove"));
+      await deactivateIfStillThere(deps, conn.channexChannelId, meta("remove"));
   } else if (conn.channexChannelId) {
-    await deps.provider.setChannelActive({ id: conn.channexChannelId }, false, meta("remove"));
+    await deactivateIfStillThere(deps, conn.channexChannelId, meta("remove"));
   }
   await run((tx) => new DrizzleChannelRepository(tx, orgId).removeConnection(connectionId));
+}
+
+/** A channel the provider already deleted (404) needs no deactivation; removing it here must still succeed. */
+async function deactivateIfStillThere(
+  deps: Omit<ChannelDeps, "db">,
+  channexChannelId: string,
+  meta: CallMeta,
+): Promise<void> {
+  try {
+    await deps.provider.setChannelActive({ id: channexChannelId }, false, meta);
+  } catch (e) {
+    if (e instanceof ValidationError && e.details.status === 404) return;
+    throw e;
+  }
 }
 
 /**
@@ -435,25 +456,37 @@ export async function pollChannelHealth(
         });
       } catch (e) {
         const invalid = e instanceof AuthError || e instanceof AuthorizationError;
-        const type = invalid ? "credentials_invalid" : "provider_error";
+        // the provider no longer has the channel (deleted in Channex, or a shared test hotel reclaimed)
+        const removed = e instanceof ValidationError && e.details.status === 404;
+        const type = invalid
+          ? "credentials_invalid"
+          : removed
+            ? "channel_removed"
+            : "provider_error";
         const alert = describeChannelEvent(type, {
           ...ctx,
           detail: e instanceof Error ? e.message : String(e),
         });
         await asSystem(deps.db, orgId, async (tx) => {
           const ch = new DrizzleChannelRepository(tx, orgId);
-          await ch.insertEvent({
-            id: Id.next(),
-            connectionId: c.id,
-            propertyId: c.propertyId,
-            type,
-            severity: invalid ? "p1" : alert.severity,
-            message: `${alert.title}. ${alert.consequence} ${alert.action}`,
-          });
-          if (invalid) {
+          // one open event per cause; the poll runs every five minutes and must not shout each time
+          const open = await ch.listEvents({ connectionId: c.id, openOnly: true, limit: 50 });
+          if (!open.some((ev) => ev.type === type))
+            await ch.insertEvent({
+              id: Id.next(),
+              connectionId: c.id,
+              propertyId: c.propertyId,
+              type,
+              severity: invalid || removed ? "p1" : alert.severity,
+              message: `${alert.title}. ${alert.consequence} ${alert.action}`,
+            });
+          if (invalid || removed) {
             const next = transition(c.state, "provider_error");
             await ch.updateConnection(c.id, {
               ...(next.ok ? { state: next.value } : {}),
+              ...(removed
+                ? { isActive: false, readiness: { ready: false, issues: [alert.title] } }
+                : {}),
               lastError: alert.title,
             });
           }

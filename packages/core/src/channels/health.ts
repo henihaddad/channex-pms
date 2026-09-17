@@ -91,6 +91,21 @@ export function describeChannelEvent(type: string, ctx: EventContext): Alert {
         consequence: ctx.detail ?? "Some cells on the channel do not match what we hold.",
         action: "Force a resync; the affected cells are re-pushed.",
       };
+    case "sync_error":
+      // docs: Webhook Collection — a sync error at the channel, e.g. occupancy_exceeds_max_persons
+      return {
+        severity: "p2",
+        title: `${where}: the channel rejected an update${ctx.detail ? ` (${ctx.detail})` : ""}`,
+        consequence: "The affected rates or availability did not reach the channel.",
+        action: "Check the mapping (occupancy, rate) on the connection page and resync.",
+      };
+    case "channel_removed":
+      return {
+        severity: "p1",
+        title: `${where} no longer exists on the channel manager`,
+        consequence: "Nothing is selling there; bookings made on the channel are not reaching us.",
+        action: "Connect the channel again from the Channels page.",
+      };
     case "sync_warning":
       return {
         severity: "info",

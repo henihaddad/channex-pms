@@ -8,7 +8,7 @@ import {
   sql,
   type Db,
 } from "@pms/db";
-import { describeChannelEvent, Id, type DomainEvent } from "@pms/core";
+import { describeChannelEvent, Id, transition, type DomainEvent } from "@pms/core";
 import type { Logger } from "@pms/runtime";
 
 const BOOKING_EVENTS = new Set([
@@ -29,6 +29,9 @@ const REQUEST_EVENTS = new Set([
   "accepted_reservation",
   "declined_reservation",
 ]);
+
+/** The provider changed a connection's state, or a sync at the channel failed (docs: Webhook Collection). */
+const CHANNEL_STATE_EVENTS = new Set(["activate_channel", "deactivate_channel", "sync_error"]);
 
 /** Channex deletes inactive connections and channel-less properties; it warns 30/7/1 days ahead (docs: Webhook Collection). */
 const REMOVAL_EVENTS = new Set(["channel_removal_warning", "property_removal_warning"]);
@@ -87,6 +90,9 @@ export async function processWebhook(
         occurredAt: event.occurredAt,
         dedupeKey: `requests.sync:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 5000))}`,
       });
+    } else if (CHANNEL_STATE_EVENTS.has(p.event)) {
+      kind = "warning";
+      await recordChannelStateEvent(tx, event.orgId, p);
     } else if (REMOVAL_EVENTS.has(p.event)) {
       // the one webhook whose payload is the news: the date, and which connection
       kind = "warning";
@@ -147,4 +153,74 @@ async function recordRemovalWarning(
     message: `${alert.title}. ${alert.consequence} ${alert.action}`,
     payload: { removalDate, daysLeft: body.days_left ?? null, channelId },
   });
+}
+
+/**
+ * `activate_channel` / `deactivate_channel`: the connection's state as the provider now holds it
+ * (spec 05 §5.5: refresh the state, audit who changed it). `sync_error`: a channel-side rejection,
+ * kept as an event so the health board names it.
+ */
+async function recordChannelStateEvent(
+  tx: Parameters<typeof readInboundWebhook>[0],
+  orgId: string,
+  p: { webhookId: string; propertyId: string; event: string },
+): Promise<void> {
+  const stored = await readInboundWebhook(tx, p.webhookId);
+  const body = (stored?.payload.payload ?? {}) as Record<string, unknown>;
+  const text = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+  const ch = new DrizzleChannelRepository(tx, orgId);
+  const channelId = text(body.channel_id);
+  const conn = channelId
+    ? (await ch.listConnections(p.propertyId)).find((c) => c.channexChannelId === channelId)
+    : undefined;
+  if (!conn) return;
+  const ctx = {
+    propertyTitle: conn.propertyTitle,
+    channelTitle: text(body.channel_name) ?? text(body.title) ?? conn.adapterCode,
+  };
+  if (p.event === "sync_error") {
+    const alert = describeChannelEvent("sync_error", {
+      ...ctx,
+      ...(text(body.error_type) ? { detail: text(body.error_type)! } : {}),
+    });
+    await ch.insertEvent({
+      id: Id.next(),
+      connectionId: conn.id,
+      propertyId: p.propertyId,
+      type: "sync_error",
+      severity: alert.severity,
+      message: `${alert.title}. ${alert.consequence} ${alert.action}`,
+      payload: { errorType: body.error_type ?? null, logId: body.log_id ?? null },
+    });
+    return;
+  }
+  if (p.event === "deactivate_channel") {
+    if (!conn.isActive && conn.state !== "active") return; // we did it ourselves (pause/remove)
+    const alert = describeChannelEvent("disconnect_channel", ctx);
+    const next = transition(conn.state, "provider_error");
+    await ch.updateConnection(conn.id, {
+      isActive: false,
+      ...(next.ok ? { state: next.value } : {}),
+      lastError: "Deactivated on the channel manager",
+    });
+    await ch.insertEvent({
+      id: Id.next(),
+      connectionId: conn.id,
+      propertyId: p.propertyId,
+      type: "disconnect_channel",
+      severity: alert.severity,
+      message: `${alert.title}. ${alert.consequence} ${alert.action}`,
+      payload: { source: "webhook" },
+    });
+    return;
+  }
+  // activate_channel: the provider switched it on (from its own screen, or our activation echoed)
+  if (!conn.isActive) {
+    const next = transition(conn.state, conn.state === "paused" ? "resumed" : "recovered");
+    await ch.updateConnection(conn.id, {
+      isActive: true,
+      ...(next.ok ? { state: next.value } : {}),
+      lastError: null,
+    });
+  }
 }

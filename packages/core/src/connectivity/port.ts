@@ -204,6 +204,8 @@ export interface MappingOptions {
       occupancy?: number;
       /** OBP hotels: the occupancy options the rate sells. */
       occupancies?: number[];
+      /** The most guests the OTA rate takes; a mapping above it is refused (`occupancy_exceeds_max_persons`). */
+      maxPersons?: number;
       /** A rate the OTA does not let us write to. */
       readonly?: boolean;
     }>;

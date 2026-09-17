@@ -26,6 +26,7 @@ import {
   activateConnection,
   pauseConnection,
   pollChannelHealth,
+  removeConnection,
   systemRunner,
 } from "./channels.js";
 
@@ -246,6 +247,106 @@ describe("channel activation and health (CH-4, CH-6, CH-8, spec 07 §7.4)", () =
     expect(c.state).toBe("error");
     expect(c.lastError).toContain("deactivated");
     await pollChannelHealth(cd);
+  });
+});
+
+describe("channel state from the provider (docs: Webhook Collection, Channel API)", () => {
+  const cd = () => ({ db: handle.db, provider: fake, clock, log });
+  const webhook = async (event: string, payload: Record<string, unknown>, key: string) => {
+    const stored = await asSystem(handle.db, ORG, (tx) =>
+      storeInboundWebhook(tx, {
+        orgId: ORG,
+        propertyId,
+        event,
+        payload: { event, payload, property_id: "remote", timestamp: "2026-10-05T13:00:00Z" },
+        dedupeKey: key,
+      }),
+    );
+    return processWebhook(
+      handle.db,
+      {
+        id: Id.next(),
+        type: "webhook.received",
+        orgId: ORG,
+        aggregate: { kind: "property", id: propertyId as Id },
+        payload: { webhookId: stored.id, propertyId, event },
+        occurredAt: clock.now().toString(),
+        dedupeKey: `webhook.received:${key}`,
+      },
+      log,
+    );
+  };
+  const conn = async () =>
+    (
+      await asSystem(handle.db, ORG, (tx) =>
+        new DrizzleChannelRepository(tx, ORG).listConnections(propertyId),
+      )
+    ).find((c) => c.adapterCode === "BookingCom")!;
+  const events = async (type: string) =>
+    (
+      await asSystem(handle.db, ORG, (tx) =>
+        new DrizzleChannelRepository(tx, ORG).listEvents({ propertyId, openOnly: true }),
+      )
+    ).filter((e) => e.type === type);
+
+  it("a sync_error webhook becomes a P2 event naming the channel's reason", async () => {
+    const c = await conn();
+    expect(
+      await webhook(
+        "sync_error",
+        {
+          channel_id: c.channexChannelId,
+          channel: "BookingCom",
+          channel_name: "BookingCom - Test",
+          error_type: "occupancy_exceeds_max_persons",
+        },
+        "sync-1",
+      ),
+    ).toBe("warning");
+    const [e] = await events("sync_error");
+    expect(e).toMatchObject({ severity: "p2", connectionId: c.id });
+    expect(e?.message).toContain("occupancy_exceeds_max_persons");
+  });
+
+  it("deactivate_channel from the provider puts the connection in error; activate_channel recovers it", async () => {
+    const before = await conn();
+    await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).updateConnection(before.id, {
+        state: "active",
+        isActive: true,
+        lastError: null,
+      }),
+    );
+    await webhook(
+      "deactivate_channel",
+      { channel_id: before.channexChannelId, title: "BookingCom - Test", ota_name: "BookingCom" },
+      "deact-1",
+    );
+    expect(await conn()).toMatchObject({
+      state: "error",
+      isActive: false,
+      lastError: "Deactivated on the channel manager",
+    });
+    expect(await events("disconnect_channel")).toHaveLength(1);
+    await webhook(
+      "activate_channel",
+      { channel_id: before.channexChannelId, title: "BookingCom - Test", ota_name: "BookingCom" },
+      "act-1",
+    );
+    expect(await conn()).toMatchObject({ state: "active", isActive: true, lastError: null });
+  });
+
+  it("a channel the provider deleted is marked removed once by the health poll, not every five minutes", async () => {
+    const c = await conn();
+    fake.deleteChannel(c.channexChannelId!);
+    await pollChannelHealth(cd());
+    await pollChannelHealth(cd());
+    expect(await conn()).toMatchObject({ state: "error", isActive: false });
+    expect((await conn()).lastError).toContain("no longer exists");
+    expect(await events("channel_removed")).toHaveLength(1);
+    // and the operator can still remove it here, although the provider answers 404
+    await removeConnection({ provider: fake, clock, log }, ORG, c.id, systemRunner(handle.db, ORG));
+    expect(await conn()).toBeUndefined();
   });
 });
 

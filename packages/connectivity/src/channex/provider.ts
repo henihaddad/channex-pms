@@ -523,6 +523,7 @@ export class ChannexProvider implements ConnectivityProvider {
               ? { occupancies: y.occupancies.map(Number) }
               : {}),
             ...(typeof y.readonly === "boolean" ? { readonly: y.readonly } : {}),
+            ...(typeof y.max_persons === "number" ? { maxPersons: y.max_persons } : {}),
           };
         }),
       };

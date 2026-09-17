@@ -186,6 +186,7 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly bookings = new Map<string, BookingRevisionPayload>();
   private readonly created = new Map<string, unknown>();
   private readonly removalDates = new Map<string, string>();
+  private readonly deletedChannels = new Set<string>();
   private readonly liveFeed = new Map<string, LiveFeedEvent & { propertyId: string }>();
   private readonly listingMappings = new Map<
     string,
@@ -472,12 +473,21 @@ export class FakeProvider implements ConnectivityProvider {
   }
   async checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
     this.guard("channels.readiness", meta);
+    if (this.deletedChannels.has(ref.id))
+      throw new ValidationError("channels.get: Resource Not Found", {
+        op: "channels.get",
+        status: 404,
+      });
     const removal = this.removalDates.get(ref.id);
     return {
       ready: true,
       issues: [],
       ...(removal ? { inactive: true, expectedRemovalDate: removal } : {}),
     };
+  }
+  /** Test knob: the provider deleted this channel outright (a shared test hotel reclaimed, a removal in Channex). */
+  deleteChannel(channelId: string): void {
+    this.deletedChannels.add(channelId);
   }
   /** Test knob: the provider has deactivated this channel and will delete it on `date` (docs: Channel API). */
   scheduleRemoval(channelId: string, date: string | null): void {
@@ -492,8 +502,13 @@ export class FakeProvider implements ConnectivityProvider {
     this.guard("properties.update", meta);
     this.ledger.propertySettings.push({ propertyId: ref.id, settings });
   }
-  async setChannelActive(_ref: ProviderRef, _active: boolean, meta: CallMeta): Promise<void> {
+  async setChannelActive(ref: ProviderRef, _active: boolean, meta: CallMeta): Promise<void> {
     this.guard("channels.activate", meta);
+    if (this.deletedChannels.has(ref.id))
+      throw new ValidationError("channels.deactivate: Resource Not Found", {
+        op: "channels.deactivate",
+        status: 404,
+      });
   }
   async createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
     this.guard("channels.session", meta);

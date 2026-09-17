@@ -42,6 +42,14 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Fixed, from the first live Booking.com connection on Channex staging: a mapping's occupancy is
+  capped at the OTA rate's `max_persons` (Channex logged `occupancy_exceeds_max_persons` for a
+  single room mapped at 2); `sync_error` webhooks become P2 events naming the channel's reason;
+  `deactivate_channel` / `activate_channel` webhooks move the connection to error and back, so a
+  channel switched off in Channex no longer shows as active here; a channel the provider deleted
+  (a shared test hotel reclaimed, a removal in Channex) is marked removed by the health poll with
+  one P1 alert instead of an info event every five minutes, and removing such a connection here
+  succeeds although the provider answers 404.
 - Fixed: a provider refusal during activation ("channel with the same settings already exists",
   a rejected mapping) surfaced as a blank React error in production. Channex's `details` now
   travel in the error message, the activate action returns the reason as a readiness issue and
