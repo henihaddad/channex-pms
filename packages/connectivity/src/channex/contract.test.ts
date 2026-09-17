@@ -457,6 +457,36 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
     });
     await p.respondToReview({ id: "5d9aa0d9-a888-46b5-bde8-13cc7a15161c" }, "Thank you!", meta);
     expect(http.calls[1]?.body).toEqual({ reply: { reply: "Thank you!" } });
+    await p.reviewGuest(
+      { id: "5d9aa0d9-a888-46b5-bde8-13cc7a15161c" },
+      {
+        scores: [
+          { category: "cleanliness", rating: 5 },
+          { category: "respect_house_rules", rating: 5 },
+          { category: "communication", rating: 4 },
+        ],
+        publicReview: "Lovely guests.",
+        isRecommended: true,
+        tags: ["host_review_guest_positive_neat_and_tidy"],
+      },
+      meta,
+    );
+    expect(http.calls[2]?.path).toBe(
+      "/api/v1/reviews/5d9aa0d9-a888-46b5-bde8-13cc7a15161c/guest_review",
+    );
+    expect(http.calls[2]?.body).toEqual({
+      review: {
+        scores: [
+          { category: "cleanliness", rating: 5 },
+          { category: "respect_house_rules", rating: 5 },
+          { category: "communication", rating: 4 },
+        ],
+        public_review: "Lovely guests.",
+        private_review: "",
+        is_reviewee_recommended: true,
+        tags: ["host_review_guest_positive_neat_and_tidy"],
+      },
+    });
   });
 
   it("reads Airbnb booking requests from the live feed and answers them on /resolve", async () => {

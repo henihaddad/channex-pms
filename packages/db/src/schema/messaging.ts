@@ -231,6 +231,10 @@ export const review = pgTable(
     hidden: boolean("hidden").notNull().default(false),
     responseState: text("response_state").notNull().default("pending"), // pending|queued|responded|failed|not_supported
     responseDueAt: ts("response_due_at"),
+    /** Airbnb: the host's review of the guest, queued here and delivered by the worker. */
+    guestReview: jsonb("guest_review"),
+    guestReviewState: text("guest_review_state"), // null|queued|sent|failed
+    guestReviewedAt: ts("guest_reviewed_at"),
     createdAt: ts("created_at").notNull().default(now()),
   },
   (t) => [

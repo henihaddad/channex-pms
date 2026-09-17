@@ -395,6 +395,17 @@ export type LiveFeedResolution =
   | { kind: "inquiry"; type: "preapproval"; blockInstantBooking?: boolean }
   | { kind: "inquiry"; type: "special_offer"; totalPrice: number }
   | { kind: "alteration_request"; accept: "accept" | "decline" | "cancel" };
+export type GuestReviewCategory = "cleanliness" | "respect_house_rules" | "communication";
+/** What Airbnb asks the host about a guest (docs: Reviews Collection › Send Guest Review). */
+export interface GuestReview {
+  /** 1–5 per category. */
+  scores: Array<{ category: GuestReviewCategory; rating: number }>;
+  publicReview: string;
+  privateReview?: string;
+  isRecommended: boolean;
+  /** Airbnb tag codes, e.g. `host_review_guest_positive_neat_and_tidy`. */
+  tags?: string[];
+}
 export interface ReviewQuery {
   propertyId: string;
   since?: string;
@@ -501,6 +512,8 @@ export interface ConnectivityProvider {
   closeThread(ref: ProviderRef, reason: CloseReason, meta: CallMeta): Promise<void>;
   listReviews(q: ReviewQuery, meta: CallMeta): Promise<ReviewPage>;
   respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void>;
+  /** Airbnb only: the host's review of the guest, which also reveals the guest's review of the stay. */
+  reviewGuest(ref: ProviderRef, r: GuestReview, meta: CallMeta): Promise<void>;
   /** Airbnb booking requests waiting for a decision, from the provider's live feed. */
   listLiveFeed(q: LiveFeedQuery, meta: CallMeta): Promise<LiveFeedPage>;
   /** Answer one request; a decision is final on the OTA's side. */

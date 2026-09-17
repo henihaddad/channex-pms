@@ -379,6 +379,9 @@ export async function deliverOutbound(
   const responses = await asSystem(deps.db, orgId, (tx) =>
     repoFor(deps, tx, orgId).queuedReviewResponses(),
   );
+  const guestReviews = await asSystem(deps.db, orgId, (tx) =>
+    repoFor(deps, tx, orgId).queuedGuestReviews(),
+  );
   const out = { sent: 0, failed: 0, retried: 0 };
   for (const m of queued) {
     const entry = assertSendable({
@@ -457,6 +460,31 @@ export async function deliverOutbound(
         r.id,
         error === undefined ? "sent" : retryable ? "queued" : "failed",
         error,
+      ),
+    );
+    if (error === undefined) out.sent++;
+    else if (retryable) out.retried++;
+    else out.failed++;
+  }
+  // Airbnb: the host's review of the guest; a transient failure stays queued for the next pass
+  for (const g of guestReviews) {
+    let error: string | undefined;
+    let retryable = false;
+    try {
+      await deps.provider.reviewGuest({ id: g.providerReviewId }, g.review, {
+        dedupeKey: `review.guest_review:${g.id}`,
+        requestId: Id.next(),
+      });
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+      retryable = e instanceof TransientError || e instanceof ThrottleError;
+      if (!retryable) deps.log.warn({ reviewId: g.id, error }, "review.guest_review.failed");
+    }
+    await asSystem(deps.db, orgId, (tx) =>
+      repoFor(deps, tx, orgId).markGuestReview(
+        g.id,
+        error === undefined ? "sent" : retryable ? "queued" : "failed",
+        deps.clock.now().toString(),
       ),
     );
     if (error === undefined) out.sent++;

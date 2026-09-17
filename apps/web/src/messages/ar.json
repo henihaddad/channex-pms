@@ -604,6 +604,18 @@
       "accept": "قبول التعديل",
       "decline": "رفض التعديل",
       "cancel": "إلغاء الحجز"
+    },
+    "reviewTheGuest": "قيّم الضيف على Airbnb (يكشف تقييمه)",
+    "yourGuestReview": "تقييمك للضيف",
+    "recommendGuest": "أنصح به المضيفين الآخرين",
+    "recommended": "موصى به",
+    "publicReviewPlaceholder": "ما ينبغي أن يعرفه المضيفون الآخرون…",
+    "privateReviewPlaceholder": "ملاحظة خاصة للضيف (اختياري)",
+    "sendGuestReview": "إرسال تقييم الضيف",
+    "guestReviewCategories": {
+      "cleanliness": "النظافة",
+      "respect_house_rules": "قواعد المنزل",
+      "communication": "التواصل"
     }
   },
   "owners": {

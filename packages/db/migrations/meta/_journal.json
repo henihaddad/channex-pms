@@ -169,6 +169,13 @@
       "when": 1789636071099,
       "tag": "0023_booking_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789638264577,
+      "tag": "0024_guest_reviews",
+      "breakpoints": true
     }
   ]
 }

@@ -14,6 +14,7 @@ import {
   type SlaState,
   type TemplateContext,
   type Thread,
+  type GuestReview,
   type LiveFeedEvent,
   type ThreadPage,
 } from "@pms/core";
@@ -189,6 +190,8 @@ export interface ReviewRow {
   responseDueAt: string | null;
   response: { body: string; deliveryState: string; sentAt: string | null } | null;
   bookingId: string | null;
+  /** Airbnb: our review of the guest, once written (queued|sent|failed). */
+  guestReview: (GuestReview & { deliveryState: string; reviewedAt: string | null }) | null;
 }
 
 const later = (a: string | undefined, b: string): string => (a !== undefined && a > b ? a : b);
@@ -1518,10 +1521,14 @@ export class DrizzleMessagingRepository {
       resp_body: string | null;
       resp_state: string | null;
       resp_sent_at: string | null;
+      guest_review: GuestReview | null;
+      guest_review_state: string | null;
+      guest_reviewed_at: string | null;
     }>(
       this.tx,
       sql`select r.id, r.property_id, p.title as property_title, r.ota, r.rating, r.body, r.guest_name_enc, r.inserted_at::text, r.received_at::text, r.can_respond, r.hidden,
-            r.response_state, r.response_due_at::text, r.booking_id, rr.body as resp_body, rr.delivery_state as resp_state, rr.sent_at::text as resp_sent_at
+            r.response_state, r.response_due_at::text, r.booking_id, rr.body as resp_body, rr.delivery_state as resp_state, rr.sent_at::text as resp_sent_at,
+            r.guest_review, r.guest_review_state, r.guest_reviewed_at::text
           from review r join property p on p.id = r.property_id
           left join lateral (select body, delivery_state, sent_at from review_response x where x.review_id = r.id order by created_at desc limit 1) rr on true
           where ${sql.join(conds, sql` and `)} order by coalesce(r.received_at, r.inserted_at) desc limit 500`,
@@ -1546,8 +1553,63 @@ export class DrizzleMessagingRepository {
           ? { body: r.resp_body, deliveryState: r.resp_state ?? "queued", sentAt: r.resp_sent_at }
           : null,
         bookingId: r.booking_id,
+        guestReview: r.guest_review
+          ? {
+              ...r.guest_review,
+              deliveryState: r.guest_review_state ?? "queued",
+              reviewedAt: r.guest_reviewed_at,
+            }
+          : null,
       });
     return out;
+  }
+
+  /** Airbnb: the host's review of the guest waits here for the worker (ADR-0007). */
+  async queueGuestReview(reviewId: string, review: GuestReview): Promise<boolean> {
+    const rows = await this.tx
+      .update(s.review)
+      .set({ guestReview: review, guestReviewState: "queued" })
+      .where(
+        and(
+          eq(s.review.orgId, this.orgId),
+          eq(s.review.id, reviewId),
+          sql`${s.review.guestReviewState} is distinct from 'sent'`,
+        ),
+      )
+      .returning({ id: s.review.id });
+    return rows.length === 1;
+  }
+
+  async queuedGuestReviews(): Promise<
+    Array<{ id: string; providerReviewId: string; review: GuestReview }>
+  > {
+    const rows = await rawRows<{
+      id: string;
+      provider_review_id: string;
+      guest_review: GuestReview;
+    }>(
+      this.tx,
+      sql`select id, provider_review_id, guest_review from review where org_id = ${this.orgId} and guest_review_state = 'queued' order by inserted_at`,
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      providerReviewId: r.provider_review_id,
+      review: r.guest_review,
+    }));
+  }
+
+  async markGuestReview(
+    id: string,
+    state: "queued" | "sent" | "failed",
+    nowIso: string,
+  ): Promise<void> {
+    await this.tx
+      .update(s.review)
+      .set({
+        guestReviewState: state,
+        ...(state === "sent" ? { guestReviewedAt: nowIso, hidden: false } : {}),
+      })
+      .where(and(eq(s.review.orgId, this.orgId), eq(s.review.id, id)));
   }
 
   async queueReviewResponse(reviewId: string, body: string, authorId: string): Promise<string> {

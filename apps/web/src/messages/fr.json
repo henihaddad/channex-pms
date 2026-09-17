@@ -604,6 +604,18 @@
       "accept": "Accepter la modification",
       "decline": "Refuser la modification",
       "cancel": "Annuler la réservation"
+    },
+    "reviewTheGuest": "Évaluer le voyageur sur Airbnb (révèle son avis)",
+    "yourGuestReview": "Votre évaluation du voyageur",
+    "recommendGuest": "Recommander à d’autres hôtes",
+    "recommended": "recommandé",
+    "publicReviewPlaceholder": "Ce que les autres hôtes doivent savoir…",
+    "privateReviewPlaceholder": "Note privée au voyageur (facultatif)",
+    "sendGuestReview": "Envoyer l’évaluation",
+    "guestReviewCategories": {
+      "cleanliness": "Propreté",
+      "respect_house_rules": "Règlement intérieur",
+      "communication": "Communication"
     }
   },
   "owners": {

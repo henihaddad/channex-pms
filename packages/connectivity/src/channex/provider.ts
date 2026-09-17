@@ -40,6 +40,7 @@ import {
   type RemoteListing,
   type RemoteListingCalendar,
   type RemoteListingDetails,
+  type GuestReview,
   type LiveFeedEvent,
   type LiveFeedPage,
   type LiveFeedQuery,
@@ -1045,6 +1046,27 @@ export class ChannexProvider implements ConnectivityProvider {
       "reviews.reply",
       // docs: Reviews Collection › Reply to Review
       { method: "POST", path: `/api/v1/reviews/${ref.id}/reply`, body: { reply: { reply: body } } },
+      meta,
+    );
+  }
+
+  async reviewGuest(ref: ProviderRef, r: GuestReview, meta: CallMeta): Promise<void> {
+    await this.call(
+      "reviews.guest_review",
+      // docs: Reviews Collection › Send Guest Review (Airbnb only)
+      {
+        method: "POST",
+        path: `/api/v1/reviews/${ref.id}/guest_review`,
+        body: {
+          review: {
+            scores: r.scores.map((x) => ({ category: x.category, rating: x.rating })),
+            public_review: r.publicReview,
+            private_review: r.privateReview ?? "",
+            is_reviewee_recommended: r.isRecommended,
+            tags: r.tags ?? [],
+          },
+        },
+      },
       meta,
     );
   }

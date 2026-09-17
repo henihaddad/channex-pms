@@ -42,6 +42,11 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Host reviews of Airbnb guests (spec 09 §9.7): every Airbnb review on the Reviews page carries a
+  short form (cleanliness, house rules, communication out of 5, recommend, public text, private
+  note) that the worker posts to `POST /api/v1/reviews/{id}/guest_review`, the only way a review
+  Airbnb hides until the host writes theirs becomes visible. Delivered once, kept on the review
+  with its state, covered by a fixture, a contract test, an integration test and the inbox e2e.
 - Airbnb requests (spec 09 §9.1, §9.10): inquiries, reservation requests and alteration requests
   are read from the Channex live feed (`GET /api/v1/live_feed`), the only place they carry an
   event id, and land in a requests queue under Reservations and as a card on the guest's

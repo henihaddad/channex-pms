@@ -37,6 +37,7 @@ import {
   type TestResult,
   type ThreadPage,
   type ThreadQuery,
+  type GuestReview,
   type LiveFeedEvent,
   type LiveFeedPage,
   type LiveFeedQuery,
@@ -91,6 +92,7 @@ export interface Ledger {
   /** Every guest-facing message the fake accepted (MSG-6 oracle: notes never appear here). */
   messagesSent: Array<{ threadId: string; id: string; body: string; dedupeKey: string }>;
   reviewResponses: Array<{ reviewId: string; body: string }>;
+  guestReviews: Array<{ reviewId: string; review: GuestReview }>;
   /** Every booking-request decision that reached the OTA. */
   requestResolutions: Array<{ eventId: string; resolution: LiveFeedResolution }>;
   calls: Array<{ op: string; dedupeKey: string; outcome: "ok" | FaultKind }>;
@@ -134,6 +136,8 @@ export interface FakeReview {
   guestName: string;
   insertedAt: string;
   response: string | undefined;
+  /** Airbnb: hidden until the host reviews the guest. */
+  hidden: boolean;
 }
 
 export interface BookingSpec {
@@ -164,6 +168,7 @@ export class FakeProvider implements ConnectivityProvider {
     webhooksDropped: 0,
     messagesSent: [],
     reviewResponses: [],
+    guestReviews: [],
     requestResolutions: [],
     calls: [],
   };
@@ -968,6 +973,7 @@ export class FakeProvider implements ConnectivityProvider {
     text: string;
     ota?: string;
     guestName?: string;
+    hidden?: boolean;
   }): string {
     const at = this.stamp();
     const review: FakeReview = {
@@ -980,6 +986,7 @@ export class FakeProvider implements ConnectivityProvider {
       guestName: input.guestName ?? "Ana Guest",
       insertedAt: at,
       response: undefined,
+      hidden: input.hidden ?? false,
     };
     this.reviews.set(review.id, review);
     this.queueWebhook({
@@ -1105,7 +1112,7 @@ export class FakeProvider implements ConnectivityProvider {
           receivedAt: r.insertedAt,
           guestName: r.guestName,
           canRespond: true,
-          hidden: false,
+          hidden: r.hidden,
           ...(r.response !== undefined ? { response: r.response } : {}),
         })),
     };
@@ -1116,6 +1123,17 @@ export class FakeProvider implements ConnectivityProvider {
     if (!r) throw new ValidationError("reviews.reply: not found", { id: ref.id });
     r.response = body;
     this.ledger.reviewResponses.push({ reviewId: ref.id, body });
+  }
+
+  async reviewGuest(ref: ProviderRef, review: GuestReview, meta: CallMeta): Promise<void> {
+    this.guard("reviews.guest_review", meta);
+    const r = this.reviews.get(ref.id);
+    if (!r) throw new ValidationError("reviews.guest_review: not found", { id: ref.id });
+    if (!r.ota.toLowerCase().includes("airbnb"))
+      throw new ValidationError("reviews.guest_review: Airbnb only", { id: ref.id });
+    // Airbnb reveals the guest's review once the host has written theirs
+    r.hidden = false;
+    this.ledger.guestReviews.push({ reviewId: ref.id, review });
   }
 
   private stamp(): string {

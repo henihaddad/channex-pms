@@ -337,6 +337,14 @@
   },
   {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "reviewGuestAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "review:respond",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
     "export": "saveRuleAction",
     "kind": "action",
     "wrapper": "withPermission",

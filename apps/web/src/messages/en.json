@@ -604,6 +604,18 @@
       "accept": "Accept change",
       "decline": "Decline change",
       "cancel": "Cancel booking"
+    },
+    "reviewTheGuest": "Review the guest on Airbnb (this reveals their review)",
+    "yourGuestReview": "Your review of the guest",
+    "recommendGuest": "Recommend to other hosts",
+    "recommended": "recommended",
+    "publicReviewPlaceholder": "What other hosts should know…",
+    "privateReviewPlaceholder": "Private note to the guest (optional)",
+    "sendGuestReview": "Send guest review",
+    "guestReviewCategories": {
+      "cleanliness": "Cleanliness",
+      "respect_house_rules": "House rules",
+      "communication": "Communication"
     }
   },
   "owners": {

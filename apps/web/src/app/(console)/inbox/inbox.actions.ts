@@ -516,6 +516,55 @@ export const respondReviewAction = withPermission<[FormData], void>(
   },
 );
 
+const guestReviewSchema = z.object({
+  cleanliness: z.coerce.number().int().min(1).max(5),
+  respect_house_rules: z.coerce.number().int().min(1).max(5),
+  communication: z.coerce.number().int().min(1).max(5),
+  publicReview: z.string().trim().min(1).max(2000),
+  privateReview: z.string().trim().max(2000),
+  isRecommended: z.boolean(),
+});
+/** Airbnb: review the guest, which also reveals their review of the stay (spec 09 §9.7). Queued; the worker delivers. */
+export const reviewGuestAction = withPermission<[FormData], void>(
+  "review:respond",
+  {
+    scope: "property",
+    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+    subject: (fd) => ({ kind: "review", id: String(fd.get("reviewId")) }),
+    redact: ["publicReview", "privateReview"],
+  },
+  async (ctx, fd) => {
+    const repo = await messaging(ctx);
+    const review = (await repo.listReviews({ propertyId: String(fd.get("propertyId")) })).find(
+      (r) => r.id === String(fd.get("reviewId")),
+    );
+    if (!review) throw new HttpProblem(404, "not_found", "Review not found");
+    if (!review.provider.toLowerCase().includes("airbnb"))
+      throw new HttpProblem(422, "unsupported", "Only Airbnb asks hosts to review guests");
+    const g = guestReviewSchema.parse({
+      cleanliness: fd.get("cleanliness"),
+      respect_house_rules: fd.get("respect_house_rules"),
+      communication: fd.get("communication"),
+      publicReview: fd.get("publicReview") ?? "",
+      privateReview: fd.get("privateReview") ?? "",
+      isRecommended: fd.get("isRecommended") === "1",
+    });
+    const queued = await repo.queueGuestReview(review.id, {
+      scores: [
+        { category: "cleanliness", rating: g.cleanliness },
+        { category: "respect_house_rules", rating: g.respect_house_rules },
+        { category: "communication", rating: g.communication },
+      ],
+      publicReview: g.publicReview,
+      ...(g.privateReview ? { privateReview: g.privateReview } : {}),
+      isRecommended: g.isRecommended,
+    });
+    if (!queued) throw new HttpProblem(409, "already_reviewed", "Already reviewed");
+    await queueDelivery(ctx, `guest_review:${review.id}`);
+    revalidatePath("/reviews");
+  },
+);
+
 /** Used by the composer to show what a template says for this thread; wraps interpolate for clients without a booking. */
 export const interpolatePreview = withPermission<
   [{ body: string; guestName: string; propertyTitle: string }],

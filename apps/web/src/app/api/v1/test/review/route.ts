@@ -15,6 +15,8 @@ export const POST = publicRoute("test_hook", async (req) => {
     rating: number;
     text: string;
     guestName?: string;
+    ota?: string;
+    hidden?: boolean;
   };
   const [p] = await withoutTenant(c.db.db, (tx) =>
     rawRows<{ remote: string | null }>(
@@ -30,6 +32,8 @@ export const POST = publicRoute("test_hook", async (req) => {
     text: body.text,
     ...(body.bookingId ? { bookingId: body.bookingId } : {}),
     ...(body.guestName ? { guestName: body.guestName } : {}),
+    ...(body.ota ? { ota: body.ota } : {}),
+    ...(body.hidden ? { hidden: true } : {}),
   });
   return Response.json({ reviewId: id }, { status: 201 });
 });

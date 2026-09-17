@@ -250,7 +250,12 @@ What the code does, where it refines the text above:
   `can_respond` and puts the review in `expired`; the response is due at the earlier of our
   48-hour SLA and that window. The stay is found by `relationships.booking`, else by
   `ota_reservation_id`. Airbnb's `is_hidden` marks a review the guest cannot see until the host
-  reviews the guest.
+  reviews the guest; the Reviews page asks for that review on every Airbnb stay (cleanliness,
+  house rules and communication out of 5, a recommendation, public text and an optional private
+  note), queues it on the review row and the worker posts `POST /reviews/{id}/guest_review`
+  (`{review: {scores, public_review, private_review, is_reviewee_recommended, tags}}`), after
+  which the guest's review is shown as revealed. It goes out once; a transient failure stays
+  queued for the next delivery pass.
 
 Deferred beyond v0.3: translation, AI-assisted drafts (`LlmProvider`), presence and unsent-draft
 collision warnings, rule-based assignment, attachment upload from the console and malware

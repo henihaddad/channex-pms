@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Reviews Collection \u203a Send Guest Review: Airbnb only; {review: {scores, private_review, public_review, is_reviewee_recommended, tags}} \u2192 {success: true}."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/reviews/5d9aa0d9-a888-46b5-bde8-13cc7a15161c/guest_review"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "success": true
+    }
+  }
+}

@@ -729,4 +729,47 @@ describe("thread sync (CXMSG-2/3)", () => {
     ]);
     expect((await repo((r) => r.listReviews({})))[0]!.responseState).toBe("responded");
   });
+  it("Airbnb: the host reviews the guest through the worker and the guest's review stops being hidden", async () => {
+    const d = { db: handle.db, ...deps };
+    const id = fake.emitReview({
+      propertyId: remotePropertyId,
+      rating: 10,
+      text: "Hidden until reviewed",
+      ota: "Airbnb",
+      hidden: true,
+    });
+    await syncReviews(d, { orgId: ORG, propertyId });
+    const mine = (await repo((r) => r.listReviews({}))).find(
+      (r) => r.body === "Hidden until reviewed",
+    );
+    expect(mine).toMatchObject({ provider: "airbnb", hidden: true, guestReview: null });
+    const review = {
+      scores: [
+        { category: "cleanliness" as const, rating: 5 },
+        { category: "respect_house_rules" as const, rating: 5 },
+        { category: "communication" as const, rating: 4 },
+      ],
+      publicReview: "Great guest",
+      isRecommended: true,
+    };
+    expect(await repo((r) => r.queueGuestReview(mine!.id, review))).toBe(true);
+    const out = await deliverOutbound(d, ORG);
+    expect(out.failed).toBe(0);
+    expect(fake.ledger.guestReviews).toEqual([{ reviewId: id, review }]);
+    const after = (await repo((r) => r.listReviews({}))).find((r) => r.id === mine!.id);
+    expect(after).toMatchObject({
+      hidden: false,
+      guestReview: { deliveryState: "sent", publicReview: "Great guest" },
+    });
+    expect(after!.guestReview!.reviewedAt).not.toBeNull();
+    // sent once: a second queue attempt is refused and nothing else goes out
+    expect(await repo((r) => r.queueGuestReview(mine!.id, review))).toBe(false);
+    await deliverOutbound(d, ORG);
+    expect(fake.ledger.guestReviews).toHaveLength(1);
+    // the next sync keeps the reveal even though the fake's copy is authoritative
+    await syncReviews(d, { orgId: ORG, propertyId });
+    expect((await repo((r) => r.listReviews({}))).find((r) => r.id === mine!.id)!.hidden).toBe(
+      false,
+    );
+  });
 });

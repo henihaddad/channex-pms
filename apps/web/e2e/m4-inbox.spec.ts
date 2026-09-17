@@ -165,6 +165,39 @@ test("guest message → inbox → template reply; note never leaves; automation 
   };
   expect(after.reviewResponses).toHaveLength(1);
 
+  // Airbnb hides the guest's review until the host reviews the guest; reviewing them from here reveals it
+  await request.post("/api/v1/test/review", {
+    data: {
+      propertyId,
+      rating: 10,
+      text: "Hidden until you review me.",
+      guestName: "Rui",
+      ota: "Airbnb",
+      hidden: true,
+    },
+  });
+  await request.post("/api/v1/test/drain", { data: { orgId } });
+  await page.goto("/reviews?state=pending");
+  const airbnbRow = page
+    .getByTestId("review-row")
+    .filter({ hasText: "Hidden until you review me." });
+  await expect(airbnbRow.getByTestId("review-hidden")).toBeVisible();
+  await airbnbRow.getByTestId("guest-review-public").fill("Left the flat spotless.");
+  await airbnbRow.getByTestId("submit-guest-review").click();
+  await expect(airbnbRow.getByTestId("guest-review")).toHaveAttribute("data-state", "queued");
+  await request.post("/api/v1/test/drain", { data: { orgId } });
+  await page.reload();
+  await expect(airbnbRow.getByTestId("guest-review")).toHaveAttribute("data-state", "sent");
+  await expect(airbnbRow.getByTestId("review-hidden")).toHaveCount(0);
+  const reviewed = (await (await request.get("/api/v1/test/message")).json()) as {
+    guestReviews: Array<{ review: { publicReview: string; isRecommended: boolean } }>;
+  };
+  expect(reviewed.guestReviews).toHaveLength(1);
+  expect(reviewed.guestReviews[0]!.review).toMatchObject({
+    publicReview: "Left the flat spotless.",
+    isRecommended: true,
+  });
+
   // spec 09 §9.8: an Airbnb inquiry waits in the requests queue with its deadline; pre-approving it reaches Airbnb
   const q1 = iso(new Date(Date.now() + 20 * 86_400_000));
   const q2 = iso(new Date(Date.now() + 23 * 86_400_000));

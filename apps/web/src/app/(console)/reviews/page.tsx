@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Chip, Input, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Chip, Input, PageTitle, Select, Textarea } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { providerLabel } from "@/server/inbox";
-import { listReviews, respondReviewAction } from "../inbox/inbox.actions";
+import { listReviews, respondReviewAction, reviewGuestAction } from "../inbox/inbox.actions";
 
 /** Reviews next to messaging (spec 09 §9.7): filter by property, channel, rating and response state; respond where the OTA allows. */
 export default async function ReviewsPage({
@@ -112,6 +112,76 @@ export default async function ReviewsPage({
             ) : (
               <p className="text-xs text-muted">{t("noResponseSupport")}</p>
             )}
+            {r.provider.toLowerCase().includes("airbnb") ? (
+              r.guestReview ? (
+                <p
+                  className="mt-1 rounded bg-surface-secondary p-2 text-xs"
+                  data-testid="guest-review"
+                  data-state={r.guestReview.deliveryState}
+                >
+                  <strong>
+                    {t("yourGuestReview")} ({r.guestReview.deliveryState}):
+                  </strong>{" "}
+                  {r.guestReview.publicReview} ·{" "}
+                  {r.guestReview.scores
+                    .map((x) => `${t(`guestReviewCategories.${x.category}`)} ${x.rating}/5`)
+                    .join(" · ")}
+                  {r.guestReview.isRecommended ? ` · ${t("recommended")}` : ""}
+                </p>
+              ) : (
+                <form
+                  action={reviewGuestAction}
+                  className="mt-2 flex flex-wrap items-end gap-2 rounded bg-surface-secondary p-2 text-xs"
+                  data-testid="guest-review-form"
+                >
+                  <input type="hidden" name="reviewId" value={r.id} />
+                  <input type="hidden" name="propertyId" value={r.propertyId} />
+                  <span className="w-full font-medium">{t("reviewTheGuest")}</span>
+                  {(["cleanliness", "respect_house_rules", "communication"] as const).map((c) => (
+                    <label key={c} className="flex items-center gap-1">
+                      {t(`guestReviewCategories.${c}`)}
+                      <Select
+                        name={c}
+                        size="sm"
+                        defaultValue="5"
+                        aria-label={t(`guestReviewCategories.${c}`)}
+                      >
+                        {[5, 4, 3, 2, 1].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" name="isRecommended" value="1" defaultChecked />
+                    {t("recommendGuest")}
+                  </label>
+                  <Textarea
+                    name="publicReview"
+                    required
+                    rows={2}
+                    placeholder={t("publicReviewPlaceholder")}
+                    className="w-full"
+                    data-testid="guest-review-public"
+                  />
+                  <Input
+                    name="privateReview"
+                    placeholder={t("privateReviewPlaceholder")}
+                    className="w-full"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="secondary"
+                    data-testid="submit-guest-review"
+                  >
+                    {t("sendGuestReview")}
+                  </Button>
+                </form>
+              )
+            ) : null}
           </div>
         ))}
       </Card>
