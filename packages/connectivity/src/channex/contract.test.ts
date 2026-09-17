@@ -250,6 +250,60 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
     });
   });
 
+  it("creates a Booking.com connection the way the docs describe: group_id from the property, mappings under rate_plans", async () => {
+    const { p, http } = provider();
+    const ref = await p.createChannel(
+      {
+        adapterCode: "BookingCom",
+        propertyId: PROPERTY,
+        settings: { hotel_id: "5868189" },
+        mappings: [
+          {
+            ratePlanId: "a35f1fd4-63c6-4fbc-8fbe-359869bd9958",
+            roomCode: "586818903",
+            rateCode: "16385046",
+            occupancy: 2,
+            pricingType: "Standard",
+            primaryOcc: true,
+            readonly: false,
+          },
+        ],
+      },
+      meta,
+    );
+    expect(ref).toEqual({ id: "ca4ac55f-3be1-4039-9542-21e8285ffbf9" });
+    // the group is read from the property first, then the channel is created
+    expect(http.calls[0]).toMatchObject({ method: "GET", path: `/api/v1/properties/${PROPERTY}` });
+    expect(http.calls[1]).toMatchObject({
+      method: "POST",
+      path: "/api/v1/channels",
+      body: {
+        channel: {
+          channel: "BookingCom",
+          group_id: "3a1f0c5e-1111-4a3b-9c1d-000000000001",
+          properties: [PROPERTY],
+          settings: { hotel_id: "5868189" },
+          rate_plans: [
+            {
+              rate_plan_id: "a35f1fd4-63c6-4fbc-8fbe-359869bd9958",
+              settings: {
+                room_type_code: "586818903",
+                rate_plan_code: "16385046",
+                occupancy: 2,
+                pricing_type: "Standard",
+                primary_occ: true,
+                readonly: false,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(
+      (http.calls[1]?.body as { channel: Record<string, unknown> }).channel,
+    ).not.toHaveProperty("mappings");
+  });
+
   it("reads a fresh channel as ready but inactive: activation is our call (CH-4)", async () => {
     const { p } = provider();
     const r = await p.checkReadiness({ id: "7c0e2b1a-0000-4000-8000-000000000001" }, meta);

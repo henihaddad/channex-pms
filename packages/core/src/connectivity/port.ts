@@ -193,15 +193,37 @@ export interface TestResult {
 }
 
 export interface MappingOptions {
+  /** Booking.com: `Standard` (one price per rate) or `OBP` (a price per occupancy option). */
+  pricingType?: "Standard" | "OBP";
   rooms: Array<{
     code: string;
     title: string;
-    rates: Array<{ code: string; title: string; occupancy?: number }>;
+    rates: Array<{
+      code: string;
+      title: string;
+      occupancy?: number;
+      /** OBP hotels: the occupancy options the rate sells. */
+      occupancies?: number[];
+      /** A rate the OTA does not let us write to. */
+      readonly?: boolean;
+    }>;
   }>;
 }
 
 export interface ChannelSpec extends ConnectionSettings {
-  mappings: Array<{ ratePlanId: string; roomCode: string; rateCode: string; occupancy?: number }>;
+  /** The provider group the connection belongs to (Channex requires it); read from the property when absent. */
+  groupId?: string;
+  mappings: Array<{
+    ratePlanId: string;
+    roomCode: string;
+    rateCode: string;
+    occupancy?: number;
+    /** docs: Channel API examples — required per mapping on Booking.com. */
+    pricingType?: "Standard" | "OBP";
+    /** Exactly one mapping per room + rate pair sends availability and restrictions. */
+    primaryOcc?: boolean;
+    readonly?: boolean;
+  }>;
 }
 
 export interface Readiness {

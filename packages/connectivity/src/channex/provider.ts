@@ -507,7 +507,8 @@ export class ChannexProvider implements ConnectivityProvider {
       },
       meta,
     );
-    const rooms = arr(obj(obj(body).data).rooms).map((r) => {
+    const data = obj(obj(body).data);
+    const rooms = arr(data.rooms).map((r) => {
       const o = obj(r);
       return {
         code: String(o.id ?? o.code),
@@ -518,14 +519,39 @@ export class ChannexProvider implements ConnectivityProvider {
             code: String(y.id ?? y.code),
             title: String(y.title),
             ...(y.occupancy !== undefined ? { occupancy: Number(y.occupancy) } : {}),
+            ...(Array.isArray(y.occupancies) && y.occupancies.length
+              ? { occupancies: y.occupancies.map(Number) }
+              : {}),
+            ...(typeof y.readonly === "boolean" ? { readonly: y.readonly } : {}),
           };
         }),
       };
     });
-    return { rooms };
+    // docs: Channel API examples › mapping details — the hotel's pricing model, copied into every mapping
+    const pricingType =
+      data.pricing_type === "OBP" || data.pricing_type === "Standard"
+        ? data.pricing_type
+        : undefined;
+    return { ...(pricingType ? { pricingType } : {}), rooms };
   }
 
   async createChannel(c: ChannelSpec, meta: CallMeta): Promise<ProviderRef> {
+    // docs: Channel API examples › Create the connection — group_id is required; the property
+    // carries its group under relationships.groups (verified on staging: a bare array)
+    let groupId = c.groupId;
+    if (!groupId) {
+      const prop = await this.call(
+        "properties.get",
+        { method: "GET", path: `/api/v1/properties/${c.propertyId}` },
+        { ...meta, dedupeKey: `${meta.dedupeKey}:group` },
+      );
+      const g = groupIdOf(obj(obj(obj(prop).data).relationships));
+      if (typeof g !== "string")
+        throw new ContractError("property without a group; cannot create the channel", {
+          propertyId: c.propertyId,
+        });
+      groupId = g;
+    }
     const body = await this.call(
       "channels.create",
       {
@@ -534,14 +560,19 @@ export class ChannexProvider implements ConnectivityProvider {
         body: {
           channel: {
             channel: c.adapterCode,
+            group_id: groupId,
             properties: [c.propertyId],
             settings: c.settings,
-            mappings: c.mappings.map((m) => ({
+            // the mapping structure lives under `rate_plans`, one entry per rate plan occupancy
+            rate_plans: c.mappings.map((m) => ({
               rate_plan_id: m.ratePlanId,
               settings: {
                 room_type_code: m.roomCode,
                 rate_plan_code: m.rateCode,
-                occupancy: m.occupancy,
+                ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
+                ...(m.pricingType ? { pricing_type: m.pricingType } : {}),
+                ...(m.primaryOcc !== undefined ? { primary_occ: m.primaryOcc } : {}),
+                ...(m.readonly !== undefined ? { readonly: m.readonly } : {}),
               },
             })),
           },

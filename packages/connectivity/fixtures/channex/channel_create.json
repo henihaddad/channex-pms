@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Channel API examples \u203a Booking.com \u203a Create the connection: {channel: {channel, group_id, properties, settings, rate_plans}} \u2192 201 with the channel resource, is_active false."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels"
+  },
+  "response": {
+    "status": 201,
+    "body": {
+      "data": {
+        "type": "channel",
+        "id": "ca4ac55f-3be1-4039-9542-21e8285ffbf9",
+        "attributes": {
+          "id": "ca4ac55f-3be1-4039-9542-21e8285ffbf9",
+          "title": "Booking.com \u00b7 Demo Hotel",
+          "channel": "BookingCom",
+          "currency": "GBP",
+          "is_active": false,
+          "properties": ["716305c4-561a-4561-a187-7f5b8aeb5920"],
+          "settings": {
+            "hotel_id": "5868189",
+            "machine_account": "Channex-staging"
+          }
+        }
+      }
+    }
+  }
+}

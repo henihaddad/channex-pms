@@ -42,6 +42,15 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Fixed: connecting Booking.com (and every other non-Airbnb channel) never created the connection
+  on Channex. `POST /channels` requires `group_id` and takes the mapping structure under
+  `rate_plans`, each entry with `occupancy`, `pricing_type`, `primary_occ` and `readonly` (docs:
+  Channel API examples › Booking.com); we sent no group and a `mappings` key, Channex refused, and
+  the console had already reported "created inactive". The provider now reads the property's
+  group, activation fills the mapping fields from `mapping_details` (the hotel's pricing model,
+  the rate's readonly flag, one primary mapping per room + rate pair) and the create call has a
+  fixture and a contract test. Found by connecting Channex's shared Booking.com test hotel on
+  staging (spec 07).
 - Channex payload and quota fixes from the docs sweep: bookings carry `payment_collect` and
   `payment_type`, the reservation page says whether the guest already paid the channel or we
   collect (and how), and payment rules never schedule an instalment on an OTA-collected booking;

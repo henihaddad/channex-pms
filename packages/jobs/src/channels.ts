@@ -67,17 +67,41 @@ export async function activateConnection(
   });
   let channexChannelId = conn.channexChannelId;
   if (!channexChannelId) {
+    // docs: Channel API examples — every mapping names its occupancy, the hotel's pricing model,
+    // the rate's readonly flag, and exactly one mapping per room + rate pair is primary
+    const options = await deps.provider.readChannelMappingOptions(
+      { adapterCode: conn.adapterCode, propertyId: idMap.property.remote, settings: conn.settings },
+      meta("mapping_details"),
+    );
+    const detail = await run((tx) => new DrizzlePropertyRepository(tx, orgId).get(conn.propertyId));
+    const occupancyOf = (ratePlanId: string): number | undefined => {
+      const rp = detail?.ratePlans.find((r) => r.id === ratePlanId);
+      return detail?.roomTypes.find((r) => r.id === rp?.roomTypeId)?.defaultOccupancy;
+    };
+    const primaries = new Set<string>();
     const ref = await deps.provider.createChannel(
       {
         adapterCode: conn.adapterCode,
         propertyId: idMap.property.remote,
         settings: conn.settings,
-        mappings: mappings.map((m) => ({
-          ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
-          roomCode: m.roomCode,
-          rateCode: m.rateCode,
-          ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
-        })),
+        mappings: mappings.map((m) => {
+          const rate = options.rooms
+            .find((r) => r.code === m.roomCode)
+            ?.rates.find((x) => x.code === m.rateCode);
+          const occupancy = m.occupancy ?? rate?.occupancy ?? occupancyOf(m.ratePlanId);
+          const pair = `${m.roomCode}::${m.rateCode}`;
+          const primaryOcc = !primaries.has(pair);
+          primaries.add(pair);
+          return {
+            ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
+            roomCode: m.roomCode,
+            rateCode: m.rateCode,
+            ...(occupancy !== undefined ? { occupancy } : {}),
+            ...(options.pricingType ? { pricingType: options.pricingType } : {}),
+            primaryOcc,
+            readonly: rate?.readonly ?? false,
+          };
+        }),
       },
       meta("create"),
     );
