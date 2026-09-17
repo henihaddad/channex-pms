@@ -570,7 +570,41 @@
     "assignee": "Responsable",
     "emptyTitle": "Tous les messages des clients au même endroit",
     "emptyAction": "Connecter un canal",
-    "messagesAppMissing": "La messagerie n'est pas activée sur le gestionnaire de canaux pour {properties}. Dans Channex, ouvrez les Applications du bien et installez Channex Messages ; les conversations apparaissent ici en deux minutes."
+    "messagesAppMissing": "La messagerie n'est pas activée sur le gestionnaire de canaux pour {properties}. Dans Channex, ouvrez les Applications du bien et installez Channex Messages ; les conversations apparaissent ici en deux minutes.",
+    "requests": "Demandes Airbnb",
+    "noRequests": "Aucune demande en attente",
+    "noRequestsHint": "Les demandes d’information, de réservation et de modification Airbnb arrivent ici avec leur échéance.",
+    "nights": "nuits",
+    "preApprove": "Pré-approuver",
+    "specialOfferTotal": "Prix total {currency}",
+    "sendSpecialOffer": "Envoyer une offre spéciale",
+    "acceptRequest": "Accepter",
+    "declineRequest": "Refuser",
+    "messageToGuest": "Message au voyageur (facultatif)",
+    "decisionOnItsWay": "Votre réponse est en route vers Airbnb.",
+    "openConversation": "Ouvrir la conversation",
+    "requestStates": {
+      "open": "En attente de vous",
+      "deciding": "Envoi",
+      "accepted": "Acceptée",
+      "declined": "Refusée",
+      "preapproved": "Pré-approuvée",
+      "special_offer": "Offre spéciale envoyée",
+      "cancelled": "Annulée",
+      "expired": "Expirée",
+      "resolved_elsewhere": "Répondue sur Airbnb"
+    },
+    "declineReasons": {
+      "dates_not_available": "Dates indisponibles",
+      "not_a_good_fit": "Ne convient pas",
+      "waiting_for_better_reservation": "En attente d’une meilleure réservation",
+      "not_comfortable": "Pas à l’aise"
+    },
+    "alterationAnswers": {
+      "accept": "Accepter la modification",
+      "decline": "Refuser la modification",
+      "cancel": "Annuler la réservation"
+    }
   },
   "owners": {
     "title": "Propriétaires",

@@ -894,6 +894,22 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/reservations/requests/requests.actions.ts",
+    "export": "listRequests",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/requests/requests.actions.ts",
+    "export": "resolveRequestAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:modify",
+    "scope": "property"
+  },
+  {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "acknowledgeAction",
     "kind": "action",
@@ -1635,6 +1651,13 @@
   },
   {
     "file": "src/app/api/v1/test/property/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/test/request/route.ts",
     "export": "POST",
     "kind": "route",
     "wrapper": "publicRoute",

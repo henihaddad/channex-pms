@@ -165,6 +165,40 @@ test("guest message → inbox → template reply; note never leaves; automation 
   };
   expect(after.reviewResponses).toHaveLength(1);
 
+  // spec 09 §9.8: an Airbnb inquiry waits in the requests queue with its deadline; pre-approving it reaches Airbnb
+  const q1 = iso(new Date(Date.now() + 20 * 86_400_000));
+  const q2 = iso(new Date(Date.now() + 23 * 86_400_000));
+  const asked = await request.post("/api/v1/test/request", {
+    data: { propertyId, kind: "inquiry", checkIn: q1, checkOut: q2, guests: 2, guestName: "Rui" },
+  });
+  expect(asked.status()).toBe(201);
+  await request.post("/api/v1/test/drain", { data: { orgId } });
+  await page.goto("/reservations/requests");
+  const reqRow = page.getByTestId("request-row").first();
+  await expect(reqRow).toHaveAttribute("data-state", "open");
+  await expect(reqRow).toContainText(`${q1} → ${q2}`);
+  await expect(reqRow).toContainText("Respond by");
+  await reqRow.getByTestId("request-preapprove").click();
+  await expect(page.getByTestId("request-card").first()).toHaveAttribute("data-state", "deciding");
+  await request.post("/api/v1/test/drain", { data: { orgId } });
+  await page.goto("/reservations/requests?state=all");
+  await expect(page.getByTestId("request-card").first()).toHaveAttribute(
+    "data-state",
+    "preapproved",
+  );
+  const decided = (await (await request.get("/api/v1/test/message")).json()) as {
+    requestResolutions: Array<{ resolution: { kind: string; type?: string } }>;
+  };
+  expect(decided.requestResolutions).toHaveLength(1);
+  expect(decided.requestResolutions[0]!.resolution).toMatchObject({
+    kind: "inquiry",
+    type: "preapproval",
+  });
+  // the same card sits on the conversation
+  await page.goto("/inbox?view=all");
+  await page.getByTestId("thread-row").filter({ hasText: "Rui" }).first().click();
+  await expect(page.getByTestId("request-card")).toHaveAttribute("data-state", "preapproved");
+
   // the KPI is measurable
   await page.goto("/inbox/kpi");
   await expect(page.getByTestId("kpi-overall")).toContainText(/\d+ min/);

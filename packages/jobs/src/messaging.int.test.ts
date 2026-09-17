@@ -33,6 +33,8 @@ import {
   firstResponseKpi,
   runAutomation,
   syncReviews,
+  syncRequests,
+  deliverRequestDecision,
   pollThreads,
   syncThreads,
 } from "./messaging.js";
@@ -623,6 +625,80 @@ describe("thread sync (CXMSG-2/3)", () => {
     expect(open[0]?.message).toContain("Channex Messages");
     await pollThreads({ db: handle.db, ...deps }, ORG);
     expect((await events()).filter((e) => e.type === "messages_app_missing")).toHaveLength(0);
+  });
+
+  it("Airbnb requests mirror the live feed; a decision reaches Airbnb once and one made there lands here", async () => {
+    const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    const { eventId } = fake.emitBookingRequest({
+      propertyId: remotePropertyId,
+      kind: "reservation_request",
+      checkIn: day(10),
+      checkOut: day(13),
+      guests: 3,
+      guestName: "Rui",
+      payoutText: "€420",
+    });
+    const d = { db: handle.db, ...deps };
+    expect(await syncRequests(d, { orgId: ORG, propertyId })).toEqual({ requests: 1, created: 1 });
+    expect((await syncRequests(d, { orgId: ORG, propertyId })).created).toBe(0);
+    const [open] = await repo((r) => r.listRequests({}));
+    expect(open).toMatchObject({
+      kind: "reservation_request",
+      state: "open",
+      providerEventId: eventId,
+      guestName: "Rui",
+      details: { checkIn: day(10), checkOut: day(13), nights: 3, guests: 3, payoutText: "€420" },
+    });
+    expect(open!.respondBy).not.toBeNull();
+    // the console records the decision; the worker carries it, exactly once
+    const now = new Date().toISOString();
+    expect(
+      await repo((r) =>
+        r.markRequestDeciding(open!.id, {
+          resolution: { kind: "reservation_request", accept: true },
+          byUserId: STAFF,
+          nowIso: now,
+        }),
+      ),
+    ).toBe(true);
+    expect(await deliverRequestDecision(d, ORG, open!.id)).toEqual({ state: "accepted" });
+    expect(await deliverRequestDecision(d, ORG, open!.id)).toEqual({ state: "accepted" });
+    expect(fake.ledger.requestResolutions).toEqual([
+      { eventId, resolution: { kind: "reservation_request", accept: true } },
+    ]);
+    const [done] = await repo((r) => r.listRequests({ state: "all" }));
+    expect(done).toMatchObject({ state: "accepted", resolvedBy: STAFF });
+    // a later sync keeps our record; a request answered on Airbnb closes here
+    await syncRequests(d, { orgId: ORG, propertyId });
+    expect((await repo((r) => r.listRequests({ state: "all" })))[0]!.state).toBe("accepted");
+    const second = fake.emitBookingRequest({
+      propertyId: remotePropertyId,
+      kind: "inquiry",
+      checkIn: day(20),
+      checkOut: day(22),
+    });
+    // the request may land before its thread; the next sync fills the link in
+    await syncRequests(d, { orgId: ORG, propertyId });
+    await pollThreads(d, ORG);
+    await syncRequests(d, { orgId: ORG, propertyId });
+    const inquiry = (await repo((r) => r.listRequests({}))).find(
+      (r) => r.providerEventId === second.eventId,
+    );
+    expect(inquiry).toMatchObject({ kind: "inquiry", state: "open" });
+    expect(inquiry!.threadId).not.toBeNull();
+    expect(await repo((r) => r.requestForThread(inquiry!.threadId!))).toMatchObject({
+      id: inquiry!.id,
+    });
+    await fake.resolveLiveFeedEvent(
+      { id: second.eventId },
+      { kind: "inquiry", type: "preapproval" },
+      { dedupeKey: "t", requestId: "t" },
+    );
+    await syncRequests(d, { orgId: ORG, propertyId });
+    expect(await repo((r) => r.request(inquiry!.id))).toMatchObject({
+      state: "preapproved",
+      resolvedBy: null,
+    });
   });
 
   it("reviews sync once and a response reaches the OTA", async () => {

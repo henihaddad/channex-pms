@@ -61,5 +61,6 @@ export const GET = publicRoute("test_hook", async () => {
   return Response.json({
     sent: c.fake.ledger.messagesSent.map((m) => ({ threadId: m.threadId, body: m.body })),
     reviewResponses: c.fake.ledger.reviewResponses,
+    requestResolutions: c.fake.ledger.requestResolutions,
   });
 });

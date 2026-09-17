@@ -51,8 +51,11 @@ OTA references.
   status, special requests, previous stays, and quick actions (assign room, add
   note, view booking). Answering "can I check in early" should not require opening
   another tab.
-- **Airbnb inquiry cards**: the parsed system message (requested dates, guests,
-  price) rendered as a structured card with quote/accept/decline actions.
+- **Airbnb request cards**: an inquiry, reservation request or alteration request rendered as a
+  structured card (requested dates, guests, payout, the OTA's deadline) with the answers Airbnb
+  accepts for that kind: pre-approve or send a special offer, accept or decline with a reason,
+  accept, decline or cancel an alteration. The same cards form the requests queue under
+  Reservations, oldest deadline first.
 - Attachments inline (images previewed, documents downloadable), stored in our
   object store and pushed to the provider.
 - Delivery states per message: `queued`, `sent`, `failed` with a retry button. A
@@ -226,6 +229,20 @@ What the code does, where it refines the text above:
   message stops counting against the response time), and for attachments `POST /attachments`
   (base64 `file`, `file_name`, `file_type`) followed by one message per attachment carrying
   `attachment_id` and no `message` field, since Channex ignores an attachment sent next to text.
+- **Airbnb requests** come from the Channex live feed (`GET /api/v1/live_feed?filter[property_id]`),
+  not from the conversation: the thread's system message is a courtesy copy without the event id.
+  `requests.sync` runs on the `inquiry`, `reservation_request`, `alteration_request`,
+  `accepted_reservation` and `declined_reservation` webhooks and every two minutes, reads from the
+  newest event we hold (or the oldest still open) minus slack, and mirrors each event into
+  `booking_request` with its stay, guest first name, payout text and `respond_by` (Airbnb's
+  `non_response_at`, else the end of the arrival day). A decision taken on Airbnb closes the open
+  row with the OTA's own word (`accepted`, `declined`, `expired`, `resolved_elsewhere`); a row we
+  decided keeps our record and who made it. The console records a decision as `deciding` and
+  queues `request.resolve`; the worker posts `POST /api/v1/live_feed/{id}/resolve` with the
+  resolution Airbnb expects for that kind (`{accept}` with reason and messages for a reservation
+  request, `{type: "preapproval"|"special_offer"}` for an inquiry, `{accept: "accept"|"decline"|"cancel"}`
+  for an alteration), then settles the row. A decision is final on Airbnb: resolving twice returns
+  the event unchanged, and the worker treats an already-resolved row as done.
 - **Reviews** sync hourly and on the `review` webhook; a response is queued and delivered by the
   same worker step (`POST /reviews/{id}/reply` with `{reply: {reply}}`). A review carries two
   dates: `inserted_at`, when Channex took it in (the sync cursor), and `received_at`, when the
@@ -237,5 +254,5 @@ What the code does, where it refines the text above:
 
 Deferred beyond v0.3: translation, AI-assisted drafts (`LlmProvider`), presence and unsent-draft
 collision warnings, rule-based assignment, attachment upload from the console and malware
-scanning, retention purge and the per-guest transcript export, and Airbnb quote/accept/decline
-actions (Channex exposes the cards as system messages only).
+scanning, retention purge and the per-guest transcript export. Airbnb requests (inquiries, reservation and
+alteration requests) shipped after v1.0 through the Channex live feed, see above.

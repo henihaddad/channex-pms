@@ -259,3 +259,43 @@ export const reviewResponse = pgTable(
   },
   (t) => [index("review_response_review_idx").on(t.reviewId)],
 );
+
+/**
+ * An Airbnb booking request waiting for the host (spec 09 §9.8): an inquiry, a reservation
+ * request or an alteration request, mirrored from the provider's live feed. A decision is
+ * final on the OTA's side; ours is recorded here with who made it.
+ */
+export const bookingRequest = pgTable(
+  "booking_request",
+  {
+    id: uuid("id").primaryKey(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => organization.id),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => property.id),
+    /** The live feed event id on the provider. */
+    providerEventId: text("provider_event_id").notNull(),
+    kind: text("kind").notNull(), // inquiry|reservation_request|alteration_request
+    provider: text("provider").notNull().default("airbnb"),
+    threadId: uuid("thread_id").references(() => messageThread.id),
+    bookingId: uuid("booking_id").references(() => booking.id),
+    /** open, or the outcome: accepted|declined|preapproved|special_offer|cancelled|resolved_elsewhere|expired */
+    state: text("state").notNull().default("open"),
+    /** The stay as the guest asked for it: dates, guests, payout, listing (no PII beyond a first name). */
+    details: jsonb("details").notNull().default({}),
+    resolution: jsonb("resolution"),
+    resolvedAt: ts("resolved_at"),
+    resolvedBy: uuid("resolved_by").references(() => user.id),
+    /** When the OTA stops waiting: Airbnb's `non_response_at`, else 24 h after arrival. */
+    respondBy: ts("respond_by"),
+    providerInsertedAt: ts("provider_inserted_at").notNull(),
+    createdAt: ts("created_at").notNull().default(now()),
+    updatedAt: ts("updated_at").notNull().default(now()),
+  },
+  (t) => [
+    uniqueIndex("booking_request_provider_idx").on(t.propertyId, t.providerEventId),
+    index("booking_request_org_idx").on(t.orgId, t.state, t.respondBy),
+  ],
+);

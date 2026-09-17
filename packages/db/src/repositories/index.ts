@@ -56,6 +56,7 @@ export {
   type RuleRow,
   type AutomationBooking,
   type ReviewRow,
+  type BookingRequestRow,
 } from "./messaging.js";
 export {
   DrizzleOwnerRepository,

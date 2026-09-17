@@ -12,6 +12,15 @@ const BOOKING_EVENTS = new Set([
   "non_acked_booking",
 ]);
 
+/** Airbnb booking requests and their outcomes (docs: Webhook Collection). */
+const REQUEST_EVENTS = new Set([
+  "inquiry",
+  "reservation_request",
+  "alteration_request",
+  "accepted_reservation",
+  "declined_reservation",
+]);
+
 /**
  * webhook.ingest: a webhook is a trigger, not truth (spec 04 §4.4). Booking
  * events queue a feed pull for the property; `ari` events queue a targeted
@@ -21,10 +30,10 @@ export async function processWebhook(
   db: Db,
   event: DomainEvent,
   log: Logger,
-): Promise<"booking" | "ari" | "message" | "review" | "other"> {
+): Promise<"booking" | "ari" | "message" | "review" | "request" | "other"> {
   const p = event.payload as { webhookId: string; propertyId: string; event: string };
   return asSystem(db, event.orgId, async (tx) => {
-    let kind: "booking" | "ari" | "message" | "review" | "other" = "other";
+    let kind: "booking" | "ari" | "message" | "review" | "request" | "other" = "other";
     if (BOOKING_EVENTS.has(p.event)) {
       kind = "booking";
       await enqueueOutbox(tx, {
@@ -55,6 +64,16 @@ export async function processWebhook(
         payload: { orgId: event.orgId, propertyId: p.propertyId, reason: "webhook" },
         occurredAt: event.occurredAt,
         dedupeKey: `message.sync:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 5000))}`,
+      });
+    } else if (REQUEST_EVENTS.has(p.event)) {
+      kind = "request";
+      await enqueueOutbox(tx, {
+        type: "requests.sync",
+        orgId: event.orgId,
+        aggregate: { kind: "property", id: p.propertyId as DomainEvent["aggregate"]["id"] },
+        payload: { orgId: event.orgId, propertyId: p.propertyId, reason: "webhook" },
+        occurredAt: event.occurredAt,
+        dedupeKey: `requests.sync:${p.propertyId}:${String(Math.floor(Date.parse(event.occurredAt) / 5000))}`,
       });
     } else if (p.event === "review") {
       kind = "review";

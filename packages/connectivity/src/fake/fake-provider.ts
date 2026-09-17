@@ -37,6 +37,10 @@ import {
   type TestResult,
   type ThreadPage,
   type ThreadQuery,
+  type LiveFeedEvent,
+  type LiveFeedPage,
+  type LiveFeedQuery,
+  type LiveFeedResolution,
   type RestrictionEntry,
   type AvailabilityEntry,
   type WebhookSpec,
@@ -87,6 +91,8 @@ export interface Ledger {
   /** Every guest-facing message the fake accepted (MSG-6 oracle: notes never appear here). */
   messagesSent: Array<{ threadId: string; id: string; body: string; dedupeKey: string }>;
   reviewResponses: Array<{ reviewId: string; body: string }>;
+  /** Every booking-request decision that reached the OTA. */
+  requestResolutions: Array<{ eventId: string; resolution: LiveFeedResolution }>;
   calls: Array<{ op: string; dedupeKey: string; outcome: "ok" | FaultKind }>;
 }
 
@@ -158,6 +164,7 @@ export class FakeProvider implements ConnectivityProvider {
     webhooksDropped: 0,
     messagesSent: [],
     reviewResponses: [],
+    requestResolutions: [],
     calls: [],
   };
   /** Set by the harness: where webhooks go. */
@@ -169,6 +176,7 @@ export class FakeProvider implements ConnectivityProvider {
   private readonly acked = new Set<string>();
   private readonly bookings = new Map<string, BookingRevisionPayload>();
   private readonly created = new Map<string, unknown>();
+  private readonly liveFeed = new Map<string, LiveFeedEvent & { propertyId: string }>();
   private readonly listingMappings = new Map<
     string,
     Array<{ id: string; ratePlanId: string; listingId: string }>
@@ -842,6 +850,114 @@ export class FakeProvider implements ConnectivityProvider {
       payload: { thread_id: thread.id, message_id: message.id },
     });
     return message.id;
+  }
+
+  /**
+   * An Airbnb guest asks for something that waits on the host: an inquiry, a reservation
+   * request or an alteration (spec 09 §9.8). Lands in the live feed; an inquiry also opens a
+   * thread with a system message, as Channex does. Queues the matching webhook.
+   */
+  emitBookingRequest(input: {
+    propertyId: string;
+    kind: "inquiry" | "reservation_request" | "alteration_request";
+    checkIn: string;
+    checkOut: string;
+    guests?: number;
+    guestName?: string;
+    currency?: string;
+    payoutText?: string;
+    bookingId?: string;
+    threadId?: string;
+  }): { eventId: string; threadId?: string } {
+    const at = this.stamp();
+    const id = Id.next();
+    let threadId = input.threadId;
+    if (input.kind === "inquiry" && !threadId) {
+      const r = this.emitGuestMessage({
+        propertyId: input.propertyId,
+        body: "inquiry",
+        guestName: input.guestName ?? "Ana Guest",
+        provider: "airbnb",
+        kind: "inquiry",
+        authorType: "system",
+      });
+      threadId = r.threadId;
+    }
+    const nights = Math.round(
+      (Date.parse(input.checkOut) - Date.parse(input.checkIn)) / 86_400_000,
+    );
+    this.liveFeed.set(id, {
+      id,
+      propertyId: input.propertyId,
+      kind: input.kind,
+      insertedAt: at,
+      ...(threadId ? { threadId } : {}),
+      ...(input.bookingId ? { bookingId: input.bookingId } : {}),
+      resolved: false,
+      status: "active",
+      details: {
+        checkIn: input.checkIn,
+        checkOut: input.checkOut,
+        nights,
+        guests: input.guests ?? 2,
+        adults: input.guests ?? 2,
+        currency: input.currency ?? "EUR",
+        ...(input.payoutText ? { payoutText: input.payoutText } : {}),
+        guestName: input.guestName ?? "Ana Guest",
+        respondBy: new Date(Date.parse(at) + 24 * 3_600_000).toISOString(),
+      },
+    });
+    this.queueWebhook({
+      event: input.kind,
+      property_id: input.propertyId,
+      timestamp: at,
+      user_id: null,
+      payload: { live_feed_event_id: id, message_thread_id: threadId ?? null, resolved: false },
+    });
+    return { eventId: id, ...(threadId ? { threadId } : {}) };
+  }
+
+  async listLiveFeed(q: LiveFeedQuery, meta: CallMeta): Promise<LiveFeedPage> {
+    this.guard("live_feed.list", meta);
+    const events = [...this.liveFeed.values()]
+      .filter((e) => e.propertyId === q.propertyId && (!q.since || e.insertedAt >= q.since))
+      .sort((a, b) => (a.insertedAt < b.insertedAt ? 1 : -1))
+      .map(({ propertyId: _p, ...e }) => e);
+    return { events };
+  }
+
+  async resolveLiveFeedEvent(
+    ref: ProviderRef,
+    r: LiveFeedResolution,
+    meta: CallMeta,
+  ): Promise<LiveFeedEvent> {
+    this.guard("live_feed.resolve", meta);
+    const e = this.liveFeed.get(ref.id);
+    if (!e) throw new ValidationError("live_feed.resolve: not found", { id: ref.id });
+    if (e.kind !== r.kind)
+      throw new ValidationError("live_feed.resolve: resolution kind does not match the event", {
+        id: ref.id,
+      });
+    // a decision is final: resolving again returns the event unchanged (docs)
+    if (!e.resolved) {
+      e.resolved = true;
+      e.resolution =
+        r.kind === "reservation_request"
+          ? r.accept
+            ? "accepted"
+            : "declined"
+          : r.kind === "inquiry"
+            ? r.type
+            : r.accept === "accept"
+              ? "accepted"
+              : r.accept === "decline"
+                ? "declined"
+                : "cancelled";
+      e.status = e.resolution;
+      this.ledger.requestResolutions.push({ eventId: ref.id, resolution: r });
+    }
+    const { propertyId: _p, ...out } = e;
+    return out;
   }
 
   /** A stay was reviewed on the OTA; queues a `review` webhook. */

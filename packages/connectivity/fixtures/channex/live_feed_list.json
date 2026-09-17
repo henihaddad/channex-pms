@@ -1,0 +1,147 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Shape verified against staging 2026-09-17 (inquiry, message events) and docs.channex.io › Airbnb API › Booking Requests (reservation and alteration requests). Only request kinds are mapped; message and review events are skipped."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/live_feed",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "812b82aa-0306-4673-9cb5-3f7a03166f33",
+          "type": "live_feed_event",
+          "attributes": {
+            "id": "812b82aa-0306-4673-9cb5-3f7a03166f33",
+            "event": "message",
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "inserted_at": "2026-09-13T07:20:59.765329",
+            "payload": {
+              "id": "a278be43-8e3f-472b-86b1-09c3545d020f",
+              "message": "Hi",
+              "sender": "property",
+              "message_thread_id": "b77ae4d8-5bd8-49ec-974f-d706f1e3910a"
+            }
+          }
+        },
+        {
+          "id": "2e69fbd7-60f1-4036-99c6-09b968111b9b",
+          "type": "live_feed_event",
+          "attributes": {
+            "id": "2e69fbd7-60f1-4036-99c6-09b968111b9b",
+            "event": "inquiry",
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "inserted_at": "2026-09-12T10:48:10.581844",
+            "payload": {
+              "status": "active",
+              "message_thread_id": "b77ae4d8-5bd8-49ec-974f-d706f1e3910a",
+              "resolved": false,
+              "booking_details": {
+                "checkin_date": "2026-10-02",
+                "checkout_date": "2026-10-05",
+                "nights": 3,
+                "currency": "EUR",
+                "expected_payout_amount_accurate": "210.00",
+                "guest_name": "Alex",
+                "listing_id": "1629149422535053411",
+                "listing_name": "Chambre privée",
+                "number_of_adults": 2,
+                "number_of_children": 0,
+                "number_of_guests": 2,
+                "number_of_infants": 0,
+                "number_of_pets": 0,
+                "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+                "room_type_id": "0d9e1f11-1f1a-4f3d-9d1a-9b1e2c3d4e5f",
+                "non_response_at": "2026-09-13T10:48:10.000Z"
+              }
+            }
+          }
+        },
+        {
+          "id": "9a52c05b-ea75-4fad-aaab-21741c3be253",
+          "type": "live_feed_event",
+          "attributes": {
+            "id": "9a52c05b-ea75-4fad-aaab-21741c3be253",
+            "event": "reservation_request",
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "inserted_at": "2026-09-15T20:00:11.416184",
+            "payload": {
+              "message_thread_id": "6d0f3fd0-9b93-4b2f-9fe3-6f2a3f6a1c07",
+              "resolved": false,
+              "bms": {
+                "attributes": {
+                  "arrival_date": "2026-11-03",
+                  "departure_date": "2026-11-06",
+                  "currency": "EUR",
+                  "amount": "330.00",
+                  "occupancy": {
+                    "adults": 2,
+                    "children": 1,
+                    "infants": 0
+                  },
+                  "customer": {
+                    "name": "Dana",
+                    "surname": "Ruiz"
+                  },
+                  "ota_name": "Airbnb",
+                  "ota_reservation_code": "HMREQUEST01",
+                  "rooms": []
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
+          "type": "live_feed_event",
+          "attributes": {
+            "id": "7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f",
+            "event": "alteration_request",
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "inserted_at": "2026-09-16T08:00:00.000000",
+            "payload": {
+              "id": "1092837465",
+              "resolved": true,
+              "status": "ACCEPTED",
+              "resolution": "accept",
+              "comment": "Accepted by Host at 2026-09-16 09:00:00Z",
+              "bms": {
+                "attributes": {
+                  "booking_id": "c1620561-4a91-4a0a-8c22-7882095e3525",
+                  "arrival_date": "2026-12-01",
+                  "departure_date": "2026-12-04",
+                  "currency": "EUR",
+                  "amount": "300.00",
+                  "occupancy": {
+                    "adults": 2,
+                    "children": 0,
+                    "infants": 0
+                  },
+                  "customer": {
+                    "name": "Sam",
+                    "surname": "Lee"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 4,
+        "limit": 100,
+        "page": 1,
+        "order_by": "inserted_at",
+        "order_direction": "desc"
+      }
+    }
+  }
+}

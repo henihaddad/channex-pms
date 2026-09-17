@@ -570,7 +570,41 @@
     "assignee": "Assignee",
     "emptyTitle": "Every guest message in one place",
     "emptyAction": "Connect a channel",
-    "messagesAppMissing": "Messages are not enabled on the channel manager for {properties}. In Channex, open the property's Applications and install Channex Messages; conversations appear here within two minutes."
+    "messagesAppMissing": "Messages are not enabled on the channel manager for {properties}. In Channex, open the property's Applications and install Channex Messages; conversations appear here within two minutes.",
+    "requests": "Airbnb requests",
+    "noRequests": "No requests waiting",
+    "noRequestsHint": "Airbnb inquiries, reservation requests and alteration requests land here with their deadline.",
+    "nights": "nights",
+    "preApprove": "Pre-approve",
+    "specialOfferTotal": "Total price {currency}",
+    "sendSpecialOffer": "Send special offer",
+    "acceptRequest": "Accept",
+    "declineRequest": "Decline",
+    "messageToGuest": "Message to the guest (optional)",
+    "decisionOnItsWay": "Your answer is on its way to Airbnb.",
+    "openConversation": "Open the conversation",
+    "requestStates": {
+      "open": "Waiting for you",
+      "deciding": "Sending",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "preapproved": "Pre-approved",
+      "special_offer": "Special offer sent",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "resolved_elsewhere": "Answered on Airbnb"
+    },
+    "declineReasons": {
+      "dates_not_available": "Dates not available",
+      "not_a_good_fit": "Not a good fit",
+      "waiting_for_better_reservation": "Waiting for a better reservation",
+      "not_comfortable": "Not comfortable"
+    },
+    "alterationAnswers": {
+      "accept": "Accept change",
+      "decline": "Decline change",
+      "cancel": "Cancel booking"
+    }
   },
   "owners": {
     "title": "Owners",

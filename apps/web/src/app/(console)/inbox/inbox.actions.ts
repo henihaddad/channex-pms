@@ -13,6 +13,7 @@ import {
 import {
   DrizzleChannelRepository,
   DrizzlePropertyRepository,
+  type BookingRequestRow,
   type RuleRow,
   type ReviewRow,
   type ThreadDetail,
@@ -112,6 +113,8 @@ export interface ThreadView {
   templates: Array<MessageTemplate & { warnings: string[] }>;
   users: Array<{ id: string; name: string }>;
   inquiry: ReturnType<typeof parseInquiry> | null;
+  /** The Airbnb request this conversation is about, with its decision buttons (spec 09 §9.8). */
+  request: BookingRequestRow | null;
 }
 
 /** Opening a thread marks it read; bodies are opened under `message:read` and audited. */
@@ -129,6 +132,7 @@ export const loadThread = withPermission<[{ threadId: string }], ThreadView | nu
       capabilities: capabilitiesFor(detail),
       templates: await repo.listTemplates(),
       users: await repo.users(),
+      request: await repo.requestForThread(threadId),
       inquiry:
         detail.kind === "inquiry" && system ? parseInquiry(system.body, system.sentAt) : null,
     };

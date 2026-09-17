@@ -62,6 +62,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     {
       item: { href: "/reservations", label: t("reservations"), icon: navIcons.reservations },
       children: [
+        { href: "/reservations/requests", label: ti("requests") },
         { href: "/reservations/unmapped", label: t2("unmappedQueue") },
         { href: "/reservations/new", label: t2("newBooking") },
       ],

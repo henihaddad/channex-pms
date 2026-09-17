@@ -14,6 +14,7 @@ import {
   type SlaState,
   type TemplateContext,
   type Thread,
+  type LiveFeedEvent,
   type ThreadPage,
 } from "@pms/core";
 import * as s from "../schema/index.js";
@@ -84,6 +85,63 @@ export interface ThreadDetail extends ThreadRow {
     previousStays: number;
   } | null;
 }
+
+export interface BookingRequestRow {
+  id: string;
+  propertyId: string;
+  propertyTitle: string;
+  providerEventId: string;
+  kind: "inquiry" | "reservation_request" | "alteration_request";
+  provider: string;
+  threadId: string | null;
+  bookingId: string | null;
+  state: string;
+  details: LiveFeedEvent["details"];
+  resolution: Record<string, unknown> | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  respondBy: string | null;
+  providerInsertedAt: string;
+  guestName: string | null;
+}
+
+interface RequestRaw {
+  id: string;
+  property_id: string;
+  property_title: string;
+  provider_event_id: string;
+  kind: string;
+  provider: string;
+  thread_id: string | null;
+  booking_id: string | null;
+  state: string;
+  details: LiveFeedEvent["details"];
+  resolution: Record<string, unknown> | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  respond_by: string | null;
+  provider_inserted_at: string;
+  guest_name_enc: string | null;
+}
+
+function requestOutcome(word: string | undefined): string {
+  const w = (word ?? "").toLowerCase();
+  if (w.includes("preapprov") || w.includes("pre_approv")) return "preapproved";
+  if (w.includes("special")) return "special_offer";
+  if (w.includes("accept") || w.includes("approve")) return "accepted";
+  if (w.includes("decline") || w.includes("deny") || w.includes("reject")) return "declined";
+  if (w.includes("cancel") || w.includes("withdraw")) return "cancelled";
+  if (w.includes("expire") || w.includes("timeout") || w.includes("not_possible")) return "expired";
+  return "resolved_elsewhere";
+}
+
+const REQUEST_SELECT = sql`select r.id, r.property_id, p.title as property_title, r.provider_event_id, r.kind,
+      r.provider, r.thread_id, r.booking_id, r.state, r.details, r.resolution,
+      r.resolved_at::text as resolved_at, r.resolved_by, r.respond_by::text as respond_by,
+      r.provider_inserted_at::text as provider_inserted_at, t.guest_name_enc
+    from booking_request r
+    join property p on p.id = r.property_id
+    left join message_thread t on t.id = r.thread_id`;
 
 export interface QueuedOutbound {
   id: string;
@@ -1600,6 +1658,174 @@ export class DrizzleMessagingRepository {
       .where(and(eq(s.property.orgId, this.orgId), isNull(s.property.archivedAt)))
       .orderBy(s.property.title);
     return rows;
+  }
+
+  // ---- booking requests (spec 09 §9.8) --------------------------------------------------------
+
+  /** The newest event we mirrored for a property; the sync reads from there minus slack. */
+  async requestCursor(propertyId: string): Promise<string | undefined> {
+    const [row] = await rawRows<{ at: string | null }>(
+      this.tx,
+      sql`select max(provider_inserted_at)::text as at from booking_request where property_id = ${propertyId}`,
+    );
+    return row?.at ?? undefined;
+  }
+
+  /**
+   * Mirror one live feed event. A decision made on the OTA (or the window closing) lands as a
+   * state change on the open row; our own decision is never overwritten. Returns true when new.
+   */
+  async upsertRequest(propertyId: string, e: LiveFeedEvent, nowIso: string): Promise<boolean> {
+    const [thread] = e.threadId
+      ? await rawRows<{ id: string; booking_id: string | null }>(
+          this.tx,
+          sql`select id, booking_id from message_thread where property_id = ${propertyId} and provider_thread_id = ${e.threadId}`,
+        )
+      : [];
+    const [booking] = e.bookingId
+      ? await rawRows<{ id: string }>(
+          this.tx,
+          sql`select id from booking where property_id = ${propertyId} and channex_booking_id = ${e.bookingId}`,
+        )
+      : [];
+    const respondBy =
+      e.details.respondBy ?? (e.details.checkIn ? `${e.details.checkIn}T23:59:59.000Z` : null);
+    const remoteState = e.resolved ? requestOutcome(e.resolution ?? e.status) : "open";
+    const rows = await this.tx
+      .insert(s.bookingRequest)
+      .values({
+        id: Id.next(),
+        orgId: this.orgId,
+        propertyId,
+        providerEventId: e.id,
+        kind: e.kind,
+        provider: "airbnb",
+        threadId: thread?.id ?? null,
+        bookingId: booking?.id ?? thread?.booking_id ?? null,
+        state: remoteState,
+        details: e.details,
+        resolution: e.resolved ? { remote: e.resolution ?? e.status ?? null } : null,
+        resolvedAt: e.resolved ? nowIso : null,
+        respondBy,
+        providerInsertedAt: e.insertedAt,
+      })
+      .onConflictDoUpdate({
+        target: [s.bookingRequest.propertyId, s.bookingRequest.providerEventId],
+        set: {
+          details: e.details,
+          respondBy,
+          threadId: sql`coalesce(${s.bookingRequest.threadId}, ${thread?.id ?? null})`,
+          bookingId: sql`coalesce(${s.bookingRequest.bookingId}, ${booking?.id ?? thread?.booking_id ?? null})`,
+          // a decision on Airbnb closes an open row; a row we decided keeps our record
+          state: sql`case when ${s.bookingRequest.state} = 'open' then ${remoteState} else ${s.bookingRequest.state} end`,
+          resolution: sql`case when ${s.bookingRequest.state} = 'open' and ${e.resolved} then ${JSON.stringify({ remote: e.resolution ?? e.status ?? null })}::jsonb else ${s.bookingRequest.resolution} end`,
+          resolvedAt: sql`case when ${s.bookingRequest.state} = 'open' and ${e.resolved} then ${nowIso}::timestamptz else ${s.bookingRequest.resolvedAt} end`,
+          updatedAt: nowIso,
+        },
+      })
+      .returning({ inserted: sql<boolean>`(xmax = 0)` });
+    return rows[0]?.inserted ?? false;
+  }
+
+  async listRequests(
+    q: { state?: "open" | "all"; propertyId?: string } = {},
+  ): Promise<BookingRequestRow[]> {
+    const where = [sql`r.org_id = ${this.orgId}`];
+    // a decision on its way to the OTA still belongs in the queue
+    if ((q.state ?? "open") === "open") where.push(sql`r.state in ('open', 'deciding')`);
+    if (q.propertyId) where.push(sql`r.property_id = ${q.propertyId}`);
+    const rows = await rawRows<RequestRaw>(
+      this.tx,
+      sql`${REQUEST_SELECT} where ${sql.join(where, sql` and `)}
+        order by (r.state = 'open') desc, r.respond_by asc nulls last, r.provider_inserted_at desc limit 200`,
+    );
+    return Promise.all(rows.map((r) => this.requestRow(r)));
+  }
+
+  async request(id: string): Promise<BookingRequestRow | null> {
+    const [r] = await rawRows<RequestRaw>(
+      this.tx,
+      sql`${REQUEST_SELECT} where r.org_id = ${this.orgId} and r.id = ${id}`,
+    );
+    return r ? this.requestRow(r) : null;
+  }
+
+  /** The open request a conversation is about, so the thread shows the decision card. */
+  async requestForThread(threadId: string): Promise<BookingRequestRow | null> {
+    const [r] = await rawRows<RequestRaw>(
+      this.tx,
+      sql`${REQUEST_SELECT} where r.org_id = ${this.orgId} and r.thread_id = ${threadId}
+        order by (r.state = 'open') desc, r.provider_inserted_at desc limit 1`,
+    );
+    return r ? this.requestRow(r) : null;
+  }
+
+  /** The console's decision, recorded before the worker carries it to the OTA (ADR-0007). */
+  async markRequestDeciding(
+    id: string,
+    a: { resolution: Record<string, unknown>; byUserId: string | null; nowIso: string },
+  ): Promise<boolean> {
+    const rows = await this.tx
+      .update(s.bookingRequest)
+      .set({
+        state: "deciding",
+        resolution: a.resolution,
+        resolvedBy: a.byUserId,
+        updatedAt: a.nowIso,
+      })
+      .where(
+        and(
+          eq(s.bookingRequest.orgId, this.orgId),
+          eq(s.bookingRequest.id, id),
+          eq(s.bookingRequest.state, "open"),
+        ),
+      )
+      .returning({ id: s.bookingRequest.id });
+    return rows.length === 1;
+  }
+
+  async markRequestResolved(
+    id: string,
+    a: {
+      state: string;
+      resolution: Record<string, unknown>;
+      byUserId: string | null;
+      nowIso: string;
+    },
+  ): Promise<void> {
+    await this.tx
+      .update(s.bookingRequest)
+      .set({
+        state: a.state,
+        resolution: a.resolution,
+        resolvedAt: a.nowIso,
+        resolvedBy: a.byUserId,
+        updatedAt: a.nowIso,
+      })
+      .where(and(eq(s.bookingRequest.orgId, this.orgId), eq(s.bookingRequest.id, id)));
+  }
+
+  private async requestRow(r: RequestRaw): Promise<BookingRequestRow> {
+    return {
+      id: r.id,
+      propertyId: r.property_id,
+      propertyTitle: r.property_title,
+      providerEventId: r.provider_event_id,
+      kind: r.kind as BookingRequestRow["kind"],
+      provider: r.provider,
+      threadId: r.thread_id,
+      bookingId: r.booking_id,
+      state: r.state,
+      details: r.details ?? {},
+      resolution: r.resolution,
+      resolvedAt: r.resolved_at,
+      resolvedBy: r.resolved_by,
+      respondBy: r.respond_by,
+      providerInsertedAt: r.provider_inserted_at,
+      guestName:
+        r.details?.guestName ??
+        (r.guest_name_enc ? await this.crypto.open(r.guest_name_enc) : null),
+    };
   }
 
   async users(): Promise<Array<{ id: string; name: string }>> {

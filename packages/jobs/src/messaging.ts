@@ -21,6 +21,8 @@ import {
   type Mailer,
   type SlaTargets,
   type ThreadPage,
+  type LiveFeedEvent,
+  type LiveFeedResolution,
 } from "@pms/core";
 import {
   asSystem,
@@ -213,6 +215,139 @@ export async function syncReviews(
     for (const r of page.reviews) if (await repo.upsertReview(job.propertyId, r, now)) created++;
   });
   return { reviews: page.reviews.length, created };
+}
+
+/**
+ * Airbnb booking requests (spec 09 §9.8): pull the live feed since our cursor and mirror the
+ * inquiries, reservation requests and alteration requests, including decisions made on Airbnb.
+ */
+export async function syncRequests(
+  deps: MessagingDeps,
+  job: { orgId: string; propertyId: string },
+): Promise<{ requests: number; created: number }> {
+  const [prop] = await withoutTenant(deps.db, (tx) =>
+    rawRows<{ remote: string | null }>(
+      tx,
+      sql`select channex_property_id as remote from property where id = ${job.propertyId} and org_id = ${job.orgId}`,
+    ),
+  );
+  if (!prop?.remote) return { requests: 0, created: 0 };
+  const cursor = await asSystem(deps.db, job.orgId, (tx) =>
+    repoFor(deps, tx, job.orgId).requestCursor(job.propertyId),
+  );
+  // open requests are re-read every time: a decision on Airbnb, or the window closing, has to land here
+  const [oldestOpen] = await asSystem(deps.db, job.orgId, (tx) =>
+    rawRows<{ at: string | null }>(
+      tx,
+      sql`select min(provider_inserted_at)::text as at from booking_request where property_id = ${job.propertyId} and state = 'open'`,
+    ),
+  );
+  const sinceCandidates = [cursor, oldestOpen?.at].filter((x): x is string => !!x);
+  const since = sinceCandidates.length
+    ? new Date(
+        Math.min(...sinceCandidates.map((x) => Date.parse(x))) - CURSOR_SLACK_MS,
+      ).toISOString()
+    : undefined;
+  const events: LiveFeedEvent[] = [];
+  let page: string | undefined;
+  do {
+    const res = await deps.provider.listLiveFeed(
+      { propertyId: prop.remote, ...(since ? { since } : {}), ...(page ? { cursor: page } : {}) },
+      { dedupeKey: `live_feed.list:${job.propertyId}:${String(Date.now())}`, requestId: Id.next() },
+    );
+    events.push(...res.events);
+    page = res.nextCursor;
+  } while (page);
+  let created = 0;
+  const now = deps.clock.now().toString();
+  await asSystem(deps.db, job.orgId, async (tx) => {
+    const repo = repoFor(deps, tx, job.orgId);
+    for (const e of events) if (await repo.upsertRequest(job.propertyId, e, now)) created++;
+  });
+  return { requests: events.length, created };
+}
+
+/** The 2-minute poll for booking requests; the webhooks are the trigger, this is the truth. */
+export async function pollRequests(
+  deps: MessagingDeps,
+  orgId?: string,
+): Promise<{ properties: number; created: number }> {
+  let created = 0;
+  const props = await messagingProperties(deps.db, orgId);
+  for (const p of props) {
+    try {
+      created += (await syncRequests(deps, p)).created;
+    } catch (e) {
+      deps.log.warn(
+        { propertyId: p.propertyId, err: e instanceof Error ? e.message : String(e) },
+        "requests.sync.failed",
+      );
+    }
+  }
+  return { properties: props.length, created };
+}
+
+/**
+ * Answer a request. The provider call happens outside any transaction (ADR-0007) and the
+ * decision is final on the OTA's side; ours is recorded with who made it.
+ */
+export async function resolveRequest(
+  deps: MessagingDeps,
+  orgId: string,
+  requestId: string,
+  resolution: LiveFeedResolution,
+  actor: { userId: string | null },
+): Promise<{ state: string }> {
+  const r = await asSystem(deps.db, orgId, (tx) => repoFor(deps, tx, orgId).request(requestId));
+  if (!r) throw new Error("request not found");
+  if (r.state !== "open" && r.state !== "deciding") return { state: r.state };
+  if (r.kind !== resolution.kind) throw new Error("resolution does not match the request");
+  const remote = await deps.provider.resolveLiveFeedEvent({ id: r.providerEventId }, resolution, {
+    dedupeKey: `live_feed.resolve:${requestId}`,
+    requestId: Id.next(),
+  });
+  const state =
+    resolution.kind === "reservation_request"
+      ? resolution.accept
+        ? "accepted"
+        : "declined"
+      : resolution.kind === "inquiry"
+        ? resolution.type === "preapproval"
+          ? "preapproved"
+          : "special_offer"
+        : resolution.accept === "accept"
+          ? "accepted"
+          : resolution.accept === "decline"
+            ? "declined"
+            : "cancelled";
+  const now = deps.clock.now().toString();
+  await asSystem(deps.db, orgId, (tx) =>
+    repoFor(deps, tx, orgId).markRequestResolved(requestId, {
+      state,
+      resolution: { ...resolution, remote: remote.resolution ?? remote.status ?? null },
+      byUserId: actor.userId,
+      nowIso: now,
+    }),
+  );
+  return { state };
+}
+
+/**
+ * Carry a decision the console recorded (`deciding`) to the OTA: the `request.resolve`
+ * outbox event, retried by the queue until Airbnb has it.
+ */
+export async function deliverRequestDecision(
+  deps: MessagingDeps,
+  orgId: string,
+  requestId: string,
+): Promise<{ state: string }> {
+  const r = await asSystem(deps.db, orgId, (tx) => repoFor(deps, tx, orgId).request(requestId));
+  if (!r) throw new Error("request not found");
+  if (r.state !== "deciding") return { state: r.state };
+  const { remote: _remote, ...resolution } = r.resolution ?? {};
+  return resolveRequest(deps, orgId, requestId, resolution as unknown as LiveFeedResolution, {
+    userId: r.resolvedBy,
+  });
 }
 
 export async function pollReviews(deps: MessagingDeps, orgId?: string): Promise<number> {

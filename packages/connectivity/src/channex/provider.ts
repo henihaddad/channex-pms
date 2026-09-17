@@ -40,6 +40,10 @@ import {
   type RemoteListing,
   type RemoteListingCalendar,
   type RemoteListingDetails,
+  type LiveFeedEvent,
+  type LiveFeedPage,
+  type LiveFeedQuery,
+  type LiveFeedResolution,
 } from "@pms/core";
 import type { HttpRequest, HttpResponse, HttpTransport } from "../transport/http.js";
 
@@ -1045,6 +1049,64 @@ export class ChannexProvider implements ConnectivityProvider {
     );
   }
 
+  // ---- Airbnb booking requests (docs: Airbnb API › Booking Requests) --------------------
+
+  async listLiveFeed(q: LiveFeedQuery, meta: CallMeta): Promise<LiveFeedPage> {
+    const page = q.cursor ? Number(q.cursor) : 1;
+    const body = await this.call(
+      "live_feed.list",
+      {
+        method: "GET",
+        path: "/api/v1/live_feed",
+        query: {
+          "filter[property_id]": q.propertyId,
+          ...(q.since ? { "filter[inserted_at][gte]": q.since } : {}),
+          "pagination[page]": String(page),
+          "pagination[limit]": String(PAGE_LIMIT),
+        },
+      },
+      meta,
+    );
+    // the feed carries every event kind (messages, reviews, requests); only requests are ours here
+    const events = arr(obj(body).data)
+      .map(parseLiveFeedEvent)
+      .filter((e): e is LiveFeedEvent => e !== null);
+    const total = Number(obj(obj(body).meta).total ?? 0);
+    return { events, ...(page * PAGE_LIMIT < total ? { nextCursor: String(page + 1) } : {}) };
+  }
+
+  async resolveLiveFeedEvent(
+    ref: ProviderRef,
+    r: LiveFeedResolution,
+    meta: CallMeta,
+  ): Promise<LiveFeedEvent> {
+    // one endpoint, three payload shapes: a boolean for reservation requests, a string for
+    // alterations, `type` for inquiries (docs: Airbnb API › Answering a request)
+    const resolution: Record<string, unknown> =
+      r.kind === "reservation_request"
+        ? r.accept
+          ? { accept: true }
+          : {
+              accept: false,
+              reason: r.reason ?? "not_comfortable",
+              ...(r.messageToGuest ? { decline_message_to_guest: r.messageToGuest } : {}),
+              ...(r.messageToAirbnb ? { decline_message_to_airbnb: r.messageToAirbnb } : {}),
+            }
+        : r.kind === "inquiry"
+          ? r.type === "preapproval"
+            ? { type: "preapproval", block_instant_booking: r.blockInstantBooking ?? false }
+            : { type: "special_offer", total_price: r.totalPrice }
+          : { accept: r.accept };
+    const body = await this.call(
+      "live_feed.resolve",
+      { method: "POST", path: `/api/v1/live_feed/${ref.id}/resolve`, body: { resolution } },
+      meta,
+    );
+    const event = parseLiveFeedEvent(obj(body).data);
+    if (!event) throw new ContractError("live_feed.resolve: response without an event", { body });
+    return event;
+  }
+
   // ---- plumbing ----------------------------------------------------------------------
 
   private async call(op: string, req: HttpRequest, meta: CallMeta): Promise<unknown> {
@@ -1323,6 +1385,79 @@ function parseMessage(m: unknown): ThreadPage["threads"][number]["messages"][num
         }
       : {}),
   };
+}
+
+const REQUEST_KINDS = new Set(["inquiry", "reservation_request", "alteration_request"]);
+
+/**
+ * A live feed event as a booking request, or null for the other kinds. Inquiries carry
+ * `booking_details`; reservation and alteration requests carry the stay as `bms`, a booking
+ * revision (docs: Airbnb API › Event payload).
+ */
+function parseLiveFeedEvent(e: unknown): LiveFeedEvent | null {
+  const o = obj(e);
+  const a = obj(o.attributes);
+  const kind = String(a.event ?? "");
+  if (!REQUEST_KINDS.has(kind)) return null;
+  const p = obj(a.payload);
+  const bd = obj(p.booking_details);
+  const bms = obj(obj(p.bms).attributes ?? p.bms);
+  const occupancy = obj(bms.occupancy);
+  const customer = obj(bms.customer);
+  const num = (v: unknown): number | undefined =>
+    v === undefined || v === null || v === "" || Number.isNaN(Number(v)) ? undefined : Number(v);
+  const str = (v: unknown): string | undefined =>
+    v === undefined || v === null || v === "" ? undefined : String(v);
+  const details: LiveFeedEvent["details"] = {};
+  const checkIn = str(bd.checkin_date ?? bms.arrival_date);
+  if (checkIn !== undefined) details.checkIn = checkIn;
+  const checkOut = str(bd.checkout_date ?? bms.departure_date);
+  if (checkOut !== undefined) details.checkOut = checkOut;
+  const nights = num(bd.nights);
+  if (nights !== undefined) details.nights = nights;
+  const adults = num(bd.number_of_adults ?? occupancy.adults);
+  if (adults !== undefined) details.adults = adults;
+  const children = num(bd.number_of_children ?? occupancy.children);
+  if (children !== undefined) details.children = children;
+  const infants = num(bd.number_of_infants ?? occupancy.infants);
+  if (infants !== undefined) details.infants = infants;
+  const pets = num(bd.number_of_pets);
+  if (pets !== undefined) details.pets = pets;
+  const guests =
+    num(bd.number_of_guests) ?? (adults === undefined ? undefined : adults + (children ?? 0));
+  if (guests !== undefined) details.guests = guests;
+  const currency = str(bd.currency ?? bms.currency);
+  if (currency !== undefined) details.currency = currency;
+  const payout = str(bd.payout_amount ?? bd.expected_payout_amount_accurate ?? bms.amount);
+  if (payout !== undefined) details.payoutText = payout;
+  const guestName =
+    str(bd.guest_name) ?? str([customer.name, customer.surname].filter(Boolean).join(" "));
+  if (guestName !== undefined) details.guestName = guestName;
+  const listingId = str(bd.listing_id);
+  if (listingId !== undefined) details.listingId = listingId;
+  const listingName = str(bd.listing_name);
+  if (listingName !== undefined) details.listingName = listingName;
+  const roomTypeId = str(bd.room_type_id);
+  if (roomTypeId !== undefined) details.roomTypeId = roomTypeId;
+  const respondBy = str(bd.non_response_at);
+  if (respondBy !== undefined) details.respondBy = respondBy;
+  const event: LiveFeedEvent = {
+    id: String(o.id),
+    kind: kind as LiveFeedEvent["kind"],
+    insertedAt: String(a.inserted_at ?? ""),
+    resolved: p.resolved === true,
+    details,
+  };
+  const threadId = str(p.message_thread_id);
+  if (threadId !== undefined) event.threadId = threadId;
+  const bookingId = str(bms.booking_id) ?? str(p.booking_id) ?? relationshipId(e, "booking");
+  if (bookingId !== undefined) event.bookingId = bookingId;
+  const status = str(p.status);
+  if (status !== undefined) event.status = status;
+  if (p.resolution !== undefined && p.resolution !== null)
+    event.resolution =
+      typeof p.resolution === "string" ? p.resolution : JSON.stringify(p.resolution);
+  return event;
 }
 
 /** The id under `relationships.<name>.data`, where Channex links a resource to another. */

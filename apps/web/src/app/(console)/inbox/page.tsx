@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { providerLabel } from "@/server/inbox";
+import { RequestCard } from "../reservations/requests/request-card";
 import { Composer } from "./composer";
 import {
   assignThreadAction,
@@ -241,7 +242,9 @@ export default async function InboxPage({
               description={`${t("via")} ${providerLabel(open.detail.provider)} · ${open.detail.propertyTitle}`}
               contentClassName="flex flex-col gap-3"
             >
-              {open.inquiry ? (
+              {open.request ? (
+                <RequestCard r={open.request} compact />
+              ) : open.inquiry ? (
                 <div
                   className="rounded-2xl bg-accent-soft px-3 py-2 text-xs text-accent-soft-foreground"
                   data-testid="inquiry-card"

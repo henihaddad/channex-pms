@@ -328,6 +328,73 @@ export interface AttachmentUpload {
   bytes: Uint8Array;
 }
 export type CloseReason = "resolved" | "no_reply_needed";
+
+/**
+ * An Airbnb booking request as Channex's live feed carries it (docs: Airbnb API › Booking
+ * Requests). Three kinds wait for the host's decision, each for 24 hours.
+ */
+export type BookingRequestKind = "inquiry" | "reservation_request" | "alteration_request";
+export interface LiveFeedQuery {
+  propertyId: string;
+  /** Only events inserted at or after this instant. */
+  since?: string;
+  cursor?: string;
+}
+export interface LiveFeedEvent {
+  id: string;
+  kind: BookingRequestKind;
+  insertedAt: string;
+  /** The guest conversation the request arrived in. */
+  threadId?: string;
+  /** Alterations name the booking being altered. */
+  bookingId?: string;
+  /** Once decided, on either side. */
+  resolved: boolean;
+  /** Airbnb's own status word, and what we sent when we answered. */
+  status?: string;
+  resolution?: string;
+  /** The stay the guest asked about (inquiries) or the requested booking (`bms`). */
+  details: {
+    checkIn?: string;
+    checkOut?: string;
+    nights?: number;
+    guests?: number;
+    adults?: number;
+    children?: number;
+    infants?: number;
+    pets?: number;
+    currency?: string;
+    /** What the host would receive, as the OTA states it, in major units. */
+    payoutText?: string;
+    guestName?: string;
+    listingId?: string;
+    listingName?: string;
+    roomTypeId?: string;
+    /** When the OTA stops waiting for the host. */
+    respondBy?: string;
+  };
+}
+export interface LiveFeedPage {
+  events: LiveFeedEvent[];
+  nextCursor?: string;
+}
+/** The one call that answers a request: what goes in depends on its kind. */
+export type LiveFeedResolution =
+  | { kind: "reservation_request"; accept: true }
+  | {
+      kind: "reservation_request";
+      accept: false;
+      reason?:
+        | "dates_not_available"
+        | "not_a_good_fit"
+        | "waiting_for_better_reservation"
+        | "not_comfortable";
+      messageToGuest?: string;
+      messageToAirbnb?: string;
+    }
+  | { kind: "inquiry"; type: "preapproval"; blockInstantBooking?: boolean }
+  | { kind: "inquiry"; type: "special_offer"; totalPrice: number }
+  | { kind: "alteration_request"; accept: "accept" | "decline" | "cancel" };
 export interface ReviewQuery {
   propertyId: string;
   since?: string;
@@ -434,4 +501,12 @@ export interface ConnectivityProvider {
   closeThread(ref: ProviderRef, reason: CloseReason, meta: CallMeta): Promise<void>;
   listReviews(q: ReviewQuery, meta: CallMeta): Promise<ReviewPage>;
   respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void>;
+  /** Airbnb booking requests waiting for a decision, from the provider's live feed. */
+  listLiveFeed(q: LiveFeedQuery, meta: CallMeta): Promise<LiveFeedPage>;
+  /** Answer one request; a decision is final on the OTA's side. */
+  resolveLiveFeedEvent(
+    ref: ProviderRef,
+    r: LiveFeedResolution,
+    meta: CallMeta,
+  ): Promise<LiveFeedEvent>;
 }

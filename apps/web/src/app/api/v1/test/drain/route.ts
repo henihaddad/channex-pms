@@ -11,6 +11,7 @@ import {
 import { withIdMap } from "@pms/connectivity";
 import {
   closeThreadRemote,
+  deliverRequestDecision,
   computeAlerts,
   deliverOutbound,
   executePayout,
@@ -26,6 +27,7 @@ import {
   runExports,
   markLiveIfSynced,
   orgsWithAutomation,
+  pollRequests,
   pollReviews,
   pollThreads,
   runAutomation,
@@ -110,7 +112,10 @@ export const POST = publicRoute("test_hook", async (req) => {
     mailer: c.mailer,
   };
   for (const e of events)
-    if (e.type === "thread.close") {
+    if (e.type === "request.resolve") {
+      const p = e.payload as { requestId: string };
+      await deliverRequestDecision(messagingDeps, e.orgId, p.requestId);
+    } else if (e.type === "thread.close") {
       const p = e.payload as { threadId: string; reason: string };
       await closeThreadRemote(
         messagingDeps,
@@ -121,6 +126,7 @@ export const POST = publicRoute("test_hook", async (req) => {
     }
   const messages = await pollThreads(messagingDeps, body.orgId);
   const reviews = await pollReviews(messagingDeps, body.orgId);
+  const requests = await pollRequests(messagingDeps, body.orgId);
   const automation = { sent: 0, skipped: 0, failed: 0 };
   for (const orgId of await orgsWithAutomation(c.db.db)) {
     if (body.orgId && orgId !== body.orgId) continue;
@@ -237,6 +243,7 @@ export const POST = publicRoute("test_hook", async (req) => {
     closes,
     messages,
     reviews,
+    requests,
     automation,
     delivered,
     payouts,

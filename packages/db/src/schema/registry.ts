@@ -74,6 +74,7 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   automation_run: "org",
   review: "org",
   review_response: "org",
+  booking_request: "org",
   owner: "org",
   owner_document: "org",
   owner_agreement: "org",

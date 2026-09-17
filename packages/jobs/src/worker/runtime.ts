@@ -33,6 +33,9 @@ import {
   runAutomation,
   syncReviews,
   syncThreads,
+  syncRequests,
+  deliverRequestDecision,
+  pollRequests,
 } from "../messaging.js";
 import {
   escalateTurnovers,
@@ -256,7 +259,12 @@ export async function handleQueueJob(
     case QUEUES.messagesSync: {
       // message.sync / review.sync from webhooks; message.deliver and thread.close from the console
       const e = data as DomainEvent;
-      const p = e.payload as { propertyId?: string; threadId?: string; reason?: string };
+      const p = e.payload as {
+        propertyId?: string;
+        threadId?: string;
+        requestId?: string;
+        reason?: string;
+      };
       switch (e.type) {
         case "message.sync":
           if (p.propertyId)
@@ -272,8 +280,23 @@ export async function handleQueueJob(
               { orgId: e.orgId, propertyId: p.propertyId },
             );
           break;
+        case "requests.sync":
+          if (p.propertyId)
+            await syncRequests(
+              { ...d.messaging, provider: await mappedProvider(w, e.orgId, p.propertyId) },
+              { orgId: e.orgId, propertyId: p.propertyId },
+            );
+          break;
         case "message.deliver":
           await deliverOutbound(d.messaging, e.orgId);
+          break;
+        case "request.resolve":
+          if (p.requestId)
+            await deliverRequestDecision(
+              { ...d.messaging, provider: await mappedProvider(w, e.orgId, p.propertyId ?? "") },
+              e.orgId,
+              p.requestId,
+            );
           break;
         case "thread.close":
           if (p.threadId)
@@ -395,6 +418,11 @@ export async function runSystemJob(
           { orgId },
           { jobId: `automation.run:${orgId}:${String(Math.floor(Date.now() / 60_000))}` },
         );
+      return;
+    }
+    case "requests.poll": {
+      const r = await pollRequests(d.messaging);
+      if (r.created > 0) log.info(r, "requests.poll.run");
       return;
     }
     case "reviews.sweep": {
@@ -546,6 +574,7 @@ export const SCHEDULE: ReadonlyArray<{ name: string; every?: number; pattern?: s
   { name: "channel.health_poll", every: 300_000 },
   { name: "ops.escalate", every: 60_000 },
   { name: "messages.poll", every: 120_000 },
+  { name: "requests.poll", every: 120_000 },
   { name: "statements.sweep", pattern: "0 4 * * *" },
   { name: "statements.autosend", pattern: "30 4 * * *" },
   { name: "payouts.poll", pattern: "10 * * * *" },

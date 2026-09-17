@@ -42,6 +42,18 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Airbnb requests (spec 09 §9.1, §9.10): inquiries, reservation requests and alteration requests
+  are read from the Channex live feed (`GET /api/v1/live_feed`), the only place they carry an
+  event id, and land in a requests queue under Reservations and as a card on the guest's
+  conversation, with the stay the guest asked for, the payout and Airbnb's deadline. The card
+  offers the answers Airbnb takes for that kind: pre-approve or send a special offer, accept or
+  decline with a reason and a message, accept, decline or cancel an alteration. The decision is
+  recorded first and carried to Airbnb by the worker (`POST /api/v1/live_feed/{id}/resolve`), so
+  a provider outage never loses it; a request answered on Airbnb itself closes here on the next
+  sync. New table `booking_request`; `requests.sync` on the five request webhooks and a two-minute
+  poll; FakeProvider live feed with a ledger of resolutions; fixtures and contract tests for the
+  list and resolve calls. Before this, the inquiry card parsed the system message and had no
+  buttons, and reservation requests were invisible until Airbnb declined them for silence.
 - Fixed: Airbnb guest messages never reached the inbox. Channex hands back a thread with only
   its last message; the conversation lives at `GET /api/v1/message_threads/{id}/messages`, which
   we never called, so threads synced with no messages in them and the guest's name (Channex puts

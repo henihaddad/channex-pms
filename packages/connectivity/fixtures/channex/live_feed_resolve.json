@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Airbnb API › Answering a request. The response is the event with its payload updated."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/live_feed/9a52c05b-ea75-4fad-aaab-21741c3be253/resolve"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "9a52c05b-ea75-4fad-aaab-21741c3be253",
+        "type": "live_feed_event",
+        "attributes": {
+          "id": "9a52c05b-ea75-4fad-aaab-21741c3be253",
+          "event": "reservation_request",
+          "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+          "inserted_at": "2026-09-15T20:00:11.416184",
+          "payload": {
+            "message_thread_id": "6d0f3fd0-9b93-4b2f-9fe3-6f2a3f6a1c07",
+            "resolved": true,
+            "resolution": "accepted",
+            "comment": "Accepted by Jane Doe at 2026-09-15 20:04:22Z",
+            "bms": {
+              "attributes": {
+                "arrival_date": "2026-11-03",
+                "departure_date": "2026-11-06",
+                "currency": "EUR",
+                "amount": "330.00",
+                "occupancy": {
+                  "adults": 2,
+                  "children": 1,
+                  "infants": 0
+                },
+                "customer": {
+                  "name": "Dana",
+                  "surname": "Ruiz"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

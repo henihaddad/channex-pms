@@ -458,4 +458,51 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
     await p.respondToReview({ id: "5d9aa0d9-a888-46b5-bde8-13cc7a15161c" }, "Thank you!", meta);
     expect(http.calls[1]?.body).toEqual({ reply: { reply: "Thank you!" } });
   });
+
+  it("reads Airbnb booking requests from the live feed and answers them on /resolve", async () => {
+    const { p, http } = provider();
+    const page = await p.listLiveFeed({ propertyId: PROPERTY }, meta);
+    // message and review events are not requests
+    expect(page.events.map((e) => e.kind)).toEqual([
+      "inquiry",
+      "reservation_request",
+      "alteration_request",
+    ]);
+    expect(page.events[0]).toMatchObject({
+      threadId: "b77ae4d8-5bd8-49ec-974f-d706f1e3910a",
+      resolved: false,
+      status: "active",
+      details: {
+        checkIn: "2026-10-02",
+        checkOut: "2026-10-05",
+        nights: 3,
+        guests: 2,
+        currency: "EUR",
+        payoutText: "210.00",
+        guestName: "Alex",
+        respondBy: "2026-09-13T10:48:10.000Z",
+      },
+    });
+    // a reservation request carries the stay as a booking revision (`bms`)
+    expect(page.events[1]).toMatchObject({
+      details: { checkIn: "2026-11-03", checkOut: "2026-11-06", guests: 3, guestName: "Dana Ruiz" },
+    });
+    // an alteration names the booking it alters and may already be decided on Airbnb
+    expect(page.events[2]).toMatchObject({
+      bookingId: "c1620561-4a91-4a0a-8c22-7882095e3525",
+      resolved: true,
+      resolution: "accept",
+    });
+    const done = await p.resolveLiveFeedEvent(
+      { id: "9a52c05b-ea75-4fad-aaab-21741c3be253" },
+      { kind: "reservation_request", accept: true },
+      meta,
+    );
+    expect(http.calls[1]).toMatchObject({
+      method: "POST",
+      path: "/api/v1/live_feed/9a52c05b-ea75-4fad-aaab-21741c3be253/resolve",
+      body: { resolution: { accept: true } },
+    });
+    expect(done).toMatchObject({ resolved: true, resolution: "accepted" });
+  });
 });

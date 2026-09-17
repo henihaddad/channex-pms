@@ -570,7 +570,41 @@
     "assignee": "المسؤول",
     "emptyTitle": "كل رسائل الضيوف في مكان واحد",
     "emptyAction": "اربط قناة",
-    "messagesAppMissing": "المراسلة غير مفعّلة في مدير القنوات للعقارات: {properties}. في Channex، افتح تطبيقات العقار وثبّت Channex Messages؛ تظهر المحادثات هنا خلال دقيقتين."
+    "messagesAppMissing": "المراسلة غير مفعّلة في مدير القنوات للعقارات: {properties}. في Channex، افتح تطبيقات العقار وثبّت Channex Messages؛ تظهر المحادثات هنا خلال دقيقتين.",
+    "requests": "طلبات Airbnb",
+    "noRequests": "لا توجد طلبات بانتظارك",
+    "noRequestsHint": "استفسارات Airbnb وطلبات الحجز وطلبات التعديل تصل هنا مع مهلتها.",
+    "nights": "ليالٍ",
+    "preApprove": "موافقة مسبقة",
+    "specialOfferTotal": "السعر الإجمالي {currency}",
+    "sendSpecialOffer": "إرسال عرض خاص",
+    "acceptRequest": "قبول",
+    "declineRequest": "رفض",
+    "messageToGuest": "رسالة إلى الضيف (اختياري)",
+    "decisionOnItsWay": "ردّك في طريقه إلى Airbnb.",
+    "openConversation": "فتح المحادثة",
+    "requestStates": {
+      "open": "بانتظارك",
+      "deciding": "جارٍ الإرسال",
+      "accepted": "مقبول",
+      "declined": "مرفوض",
+      "preapproved": "موافَق عليه مسبقًا",
+      "special_offer": "أُرسل عرض خاص",
+      "cancelled": "ملغى",
+      "expired": "منتهي",
+      "resolved_elsewhere": "تمت الإجابة على Airbnb"
+    },
+    "declineReasons": {
+      "dates_not_available": "التواريخ غير متاحة",
+      "not_a_good_fit": "غير مناسب",
+      "waiting_for_better_reservation": "بانتظار حجز أفضل",
+      "not_comfortable": "غير مرتاح"
+    },
+    "alterationAnswers": {
+      "accept": "قبول التعديل",
+      "decline": "رفض التعديل",
+      "cancel": "إلغاء الحجز"
+    }
   },
   "owners": {
     "title": "المالكون",
