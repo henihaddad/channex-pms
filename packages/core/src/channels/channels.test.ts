@@ -89,6 +89,14 @@ describe("mapping suggestions (MAP-1)", () => {
       confidence: 1,
     });
   });
+  it("a remembered mapping is dropped when the channel no longer offers its room and rate", () => {
+    // reconnecting the same property to another hotel: the old codes must not come back
+    const history: MappingRow[] = [{ ratePlanId: "rp-dbl-std", roomCode: "OLD", rateCode: "GONE" }];
+    const s = suggestMappings(ours, theirs, history);
+    const dbl = s.find((x) => x.ratePlanId === "rp-dbl-std");
+    expect(dbl?.roomCode).not.toBe("OLD");
+    expect(dbl?.reasons).not.toContain("previously accepted mapping");
+  });
   it("similarity is symmetric and bounded", () => {
     fc.assert(
       fc.property(fc.string({ maxLength: 20 }), fc.string({ maxLength: 20 }), (a, b) => {

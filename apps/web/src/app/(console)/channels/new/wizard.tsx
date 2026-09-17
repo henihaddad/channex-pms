@@ -253,6 +253,10 @@ export function ConnectionWizard({
             onClick={() =>
               run(async () => {
                 const r = await createConnectionAction({ ...input, mappings });
+                if (r.error) {
+                  setError(r.error);
+                  return;
+                }
                 setCreated(r);
                 setStep(7);
               })

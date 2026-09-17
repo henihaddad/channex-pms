@@ -42,6 +42,11 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Fixed: reconnecting a property to a different hotel on the same channel proposed the previous
+  hotel's room and rate codes (the remembered mapping), which Channex rejected with "Channel has
+  no rate", and the wizard hid the reason behind a masked production error. A remembered mapping
+  is suggested only while the channel still offers that room and rate, and the create step returns
+  a mapping error to the wizard instead of throwing it.
 - Fixed, from the first live Booking.com connection on Channex staging: a mapping's occupancy is
   capped at the OTA rate's `max_persons` (Channex logged `occupancy_exceeds_max_persons` for a
   single room mapped at 2); `sync_error` webhooks become P2 events naming the channel's reason;

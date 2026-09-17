@@ -276,7 +276,7 @@ const createSchema = settingsSchema.extend({ mappings: z.array(mappingRowSchema)
 /** Steps 5-6: validate (MAP-3), warn (MAP-2), create inactive (CH-4) with credentials sealed (CH-2). */
 export const createConnectionAction = withPermission<
   [z.infer<typeof createSchema>],
-  { connectionId: string; warnings: CoverageWarning[] }
+  { connectionId: string; warnings: CoverageWarning[]; error?: string }
 >(
   "channel:create",
   {
@@ -301,8 +301,9 @@ export const createConnectionAction = withPermission<
     );
     const ours = ourPlans(d);
     const errors = validateMappings(input.mappings, ours, input.propertyId, options.rooms);
+    // returned, not thrown: production hides a thrown action's message from the wizard
     if (errors.length > 0)
-      throw new HttpProblem(422, "mapping_invalid", errors.map((e) => e.message).join("; "));
+      return { connectionId: "", warnings: [], error: errors.map((e) => e.message).join("; ") };
     const warnings = coverageWarnings(ours, options.rooms, input.mappings);
     const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
     const id = Id.next();

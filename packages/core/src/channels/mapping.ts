@@ -50,7 +50,16 @@ export function suggestMappings(
   history: readonly MappingRow[] = [],
 ): Suggestion[] {
   const candidates: Suggestion[] = [];
-  const previous = new Map(history.map((h) => [h.ratePlanId, h]));
+  // a previously accepted mapping counts only while the channel still offers that room and rate:
+  // reconnecting to another hotel (or a re-built listing) must not carry the old codes over
+  const offered = new Set(
+    theirs.flatMap((room) => room.rates.map((r) => `${room.code}::${r.code}`)),
+  );
+  const previous = new Map(
+    history
+      .filter((h) => offered.has(`${h.roomCode}::${h.rateCode}`))
+      .map((h) => [h.ratePlanId, h]),
+  );
   for (const rp of ours) {
     const prior = previous.get(rp.id);
     if (prior) {
