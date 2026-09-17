@@ -229,6 +229,9 @@ What the code does, where it refines the text above:
   message stops counting against the response time), and for attachments `POST /attachments`
   (base64 `file`, `file_name`, `file_type`) followed by one message per attachment carrying
   `attachment_id` and no `message` field, since Channex ignores an attachment sent next to text.
+  Open (audit 2026-09-17, finding 18): the parts go out as separate calls but are retried as one
+  unit, so a transient failure on an attachment part re-sends the text; the fix is a per-part
+  delivery record on the outbound row so a retry resumes from the first unsent part.
 - **Airbnb requests** come from the Channex live feed (`GET /api/v1/live_feed?filter[property_id]`),
   not from the conversation: the thread's system message is a courtesy copy without the event id.
   `requests.sync` runs on the `inquiry`, `reservation_request`, `alteration_request`,

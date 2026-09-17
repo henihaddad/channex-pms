@@ -28,7 +28,13 @@ import {
   type ChannelEventRow,
   type ConnectionRow,
 } from "@pms/db";
-import { activateConnection, pauseConnection, queueAriPush, removeConnection } from "@pms/jobs";
+import {
+  activateConnection,
+  pauseConnection,
+  queueAriPush,
+  removeConnection,
+  syncMappings,
+} from "@pms/jobs";
 import { CHANNEX_PRODUCTION, CHANNEX_STAGING, channexChannelScreenUrl } from "@pms/connectivity";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
@@ -477,6 +483,13 @@ export const saveMappingsAction = withPermission<
     const before = await ch.listMappings(connectionId);
     const diff = mappingDiff(before, mappings);
     await ch.replaceMappings(connectionId, mappings, () => Id.next());
+    // the provider holds the mapping set too: replaced as a whole (docs: PUT /channels/{id})
+    await syncMappings(
+      { provider: c.provider, clock: c.clock, log: c.log },
+      ctx.orgId,
+      connectionId,
+      (fn) => fn(ctx.tx),
+    );
     const warnings = coverageWarnings(ours, rooms, mappings);
     await ch.updateConnection(connectionId, {
       readiness: { ready: warnings.length === 0, issues: warnings.map((w) => w.message) },
@@ -830,14 +843,20 @@ export const syncConnectionsAction = withPermission<[FormData], void>(
           rateCode: m.rateCode ?? "",
           ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
         }));
+      // `status` exists on Google Hotel ARI connections only (docs: Channel API); the documented
+      // signals for every channel are is_active and the mapping set, and the health poll asks
+      // check_readiness for the real answer once the row exists
+      const issues = [
+        ...(r.mappings.length === 0 ? ["No rate plans mapped on the channel manager"] : []),
+        ...(r.status === "permanent_error" || r.status === "temporal_error"
+          ? [`Channex reports ${r.status.replace("_", " ")}`]
+          : []),
+      ];
       await ch.updateConnection(rowId, {
         channexChannelId: r.id,
         state: r.isActive ? "active" : r.status === "permanent_error" ? "error" : "mapped",
         isActive: r.isActive,
-        readiness: {
-          ready: r.status === "active",
-          issues: r.status === "active" ? [] : [`Channex reports ${r.status}`],
-        },
+        readiness: { ready: issues.length === 0, issues },
       });
       if (mappings.length > 0) await ch.replaceMappings(rowId, mappings, () => Id.next());
     }

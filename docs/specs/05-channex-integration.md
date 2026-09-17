@@ -79,6 +79,15 @@ Rules:
   transaction that marks the step complete.
 - **PROV-3** Re-running provisioning is idempotent: we reconcile by natural key
   (title + property) before creating, so a retry never duplicates a rate plan.
+  Channex requires rate plan titles to be unique per property (a duplicate is a
+  422), while here the same title recurs on every room type; a property with more
+  than one room type therefore names its plans `<title> · <room type>` on Channex,
+  and reconciliation matches either that or the plain title. Adoption strips the
+  suffix back off. A per-room plan is created with its room type's maximum adult
+  occupancy as the primary option (Channex: "Occupancy Options"), and a derived
+  plan is created with every `inherit_*` flag off, because derivation is ours
+  ([06](./06-inventory-and-rates.md)) and Channex would otherwise overwrite the
+  child's cells whenever the parent changes.
 - **PROV-4** We register exactly one webhook endpoint per property, with the full
   event mask we handle (§5.5), and `send_data` enabled where it saves a round
   trip — but handlers never *depend* on payload contents (§5.5.3).
@@ -160,7 +169,15 @@ same payload. Our builder exploits that.
 - **RLE compression.** Contiguous dates with identical values collapse into one
   `date_from`/`date_to` entry. A year of one price becomes one entry, not 365.
 - **Weekday extraction.** When a pattern is weekday-periodic we emit a range plus
-  the `days` filter (`mo`,`tu`,…) rather than enumerating dates.
+  the `days` filter (`mo`,`tu`,…) rather than enumerating dates. Channex documents
+  `days` for rates and restrictions only; on availability it is undocumented but
+  honoured (verified on staging 2026-09-17), so both endpoints use it.
+- **Past dates.** Channex refuses dates before today on `/restrictions` (on staging
+  it moves `date_from` forward and warns). Pending cells before the property-local
+  today are failed with that reason and never sent.
+- **Warnings.** A 200 lists only the entries Channex rejected and echoes each one
+  (rate plan or room type, dates, `days`) with no index; a warning is matched back
+  to the sent entry by those keys, never by position.
 - **Base + override layering.** Write the dominant value across the full range
   first, then the exceptions, relying on FIFO. Typically cuts payload size by
   10–50× for seasonal pricing.
@@ -213,7 +230,11 @@ Because Channex is a mirror, we verify it:
    ARI back for the horizon, compare against desired values, and record
    `ari_drift_cells`. Differences re-enter the push pipeline.
 2. **Post-push verification** — sampled read-back (default 5% of batches, 100% for
-   the first week of a new property or channel) to catch silent no-ops.
+   the first week of a new property or channel) to catch silent no-ops. Read-back
+   rates are decimal strings in the plan's currency, parsed with that currency's
+   exponent (the push job passes plan → currency; the provider looks it up
+   otherwise). Per-occupancy `rates` cannot be read back (`GET /restrictions` has
+   no such value), so a cell priced by occupancy is compared on everything else.
 3. **`ari` webhook** as a change signal: any ARI change reported for a property we
    did not originate refreshes our mirror and flags an external edit (someone
    editing in the Channex dashboard or an OTA extranet directly).
@@ -238,6 +259,12 @@ Channex does **not** HMAC-sign webhooks, so we layer our own defences:
 - strict body size limits and a schema check;
 - **treat every payload as untrusted input** and pull authoritative state from the
   API before acting.
+
+Channex redelivers on 5xx only, so an authenticated delivery is never refused: a
+body over the size limit is stored as its event name alone (which still triggers
+the pull the event asks for) and answered `200`; an unknown token or a bad secret
+is a `404`/`401` logged as an alert, since that delivery is lost until the poll
+catches up.
 
 ### 5.5.2 Handling contract
 
@@ -271,7 +298,7 @@ Channex does **not** HMAC-sign webhooks, so we layer our own defences:
 | `new_channel`, `updated_channel`, `activate_channel`, `deactivate_channel` | Refresh connection state; audit who/what changed it (including changes made in Channex directly). |
 | `disconnect_channel`, `disconnect_listing` | **P1 tenant alert** — inventory is no longer selling. Show a fix-it card with the reconnect flow. |
 | `channel_removal_warning`, `property_removal_warning` | P1 alert with deadline and required action. The payload is the news here (`removal_date`, `days_left`, `channel_id`): the date is stored on the connection or the property and shown on the health board and the property page; the health poll also reads `expected_removal_date` from `GET /channels/{id}` so a deactivation made in Channex is announced without the webhook. |
-| `sync_error`, `sync_warning`, `rate_error` | Append to `ChannelEvent`, surface on the channel health board with a plain-language explanation and remedy. |
+| `sync_error`, `sync_warning`, `rate_error` | Append to `ChannelEvent`, surface on the channel health board with a plain-language explanation and remedy. The docs give no payload example for the last two; `channel_id`, `channel_name` and `error_type` are read the same way and missing ones stay null. |
 | `review`, `updated_review` | Upsert review, notify guest-relations, start response SLA. |
 | `reservation_request`, `alteration_request` (Airbnb) | Create an actionable task with accept/decline; enforce the OTA's response deadline with reminders. |
 | `accepted_reservation`, `declined_reservation` (Airbnb) | Update state, close the task, log the actor. |
@@ -283,6 +310,18 @@ Channex normalises every OTA message into a **booking revision**, serves unacked
 revisions from a feed, and stops serving them once we `POST /ack`. Unacked
 revisions trigger warnings after 30 minutes. This is the most safety-critical loop
 in the platform.
+
+The feed pages by offset over the unacked set, so acking a page shrinks it and the
+next page number would skip a hundred revisions: after a page that brought new
+revisions the feed is read from page 1 again, and a page of only known revisions
+(acks that failed) moves on by offset. `system_id` is the per-revision message id;
+when Channex omits it the revision id stands in, never `unique_id`, which every
+revision of a booking shares. `GET /bookings/:id` answers a Booking (its id is the
+booking's, the revision under `revision_id`); `GET /booking_revisions/:id` answers
+a revision; both are parsed by their own shape. Taxes and `collected_taxes` (the
+OTA's, withheld) sit on each room and are flattened onto the revision; room-level
+services join the booking-level ones; the guarantee keeps `is_virtual` and the
+virtual card's currency, balance and effective window (BK-7).
 
 ```mermaid
 flowchart TD
@@ -362,7 +401,9 @@ of it works.
 - **CXMSG-2** Threads and messages are mirrored locally so the inbox is fast,
   searchable, and readable during a provider outage.
 - **CXMSG-3** Inbound: `message` webhook triggers a thread pull; a 2-minute poll
-  backstops it. Attachments are fetched and stored in our object store.
+  backstops it. Channex lists a message's attachments as relative links, completed
+  with the environment's `/api/v1/` base; the link is kept as the provider
+  reference and the file is fetched into our object store from that URL.
 - **CXMSG-4** Outbound sends are queued with `delivery_state`; failures are retried
   and, if terminal, surfaced in-thread as a failed bubble with a retry button. We
   never show a message as delivered when it was not.
@@ -381,6 +422,12 @@ Pull reviews on the `review` / `updated_review` webhooks plus an hourly sweep.
 Store rating, sub-scores, text, and OTA. Respond where the channel allows it, with
 a response SLA timer and templates. Feed reputation KPIs in
 [11](./11-dashboards-and-analytics.md).
+
+The list is ordered by `received_at` and read whole, page by page; the sync filters
+on `updated_at` (accepted on staging, undocumented) so a review revealed, replied to
+elsewhere or whose reply Channex later refused (`reply_error`) is read again and its
+text, score, hidden flag and reply state refreshed. A refused reply marks our
+response failed with the OTA's reason.
 
 ## 5.10 Error taxonomy
 

@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API › POST /channels/{id}/check_readiness: an empty list means the connection is ready."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000001/check_readiness"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [],
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}

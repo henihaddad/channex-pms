@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 import { AuthError, ThrottleError, TransientError } from "@pms/core";
-import { ChannexProvider, maskPan } from "./provider.js";
+import { ChannexProvider, maskPan, parseTestResult, pushResult } from "./provider.js";
 import { loadFixtures, ReplayTransport } from "../transport/fixtures.js";
 
 const fixtures = loadFixtures(resolve(import.meta.dirname, "../../fixtures/channex"));
@@ -22,12 +22,20 @@ describe("ChannexProvider contract (fixtures)", () => {
         propertyId: PROPERTY,
         entries: [
           { roomTypeId: "rt", dateFrom: "2026-10-01", dateTo: "2026-10-10", availability: 1 },
+          // weekday filter: undocumented on /availability, honoured (verified on staging)
+          {
+            roomTypeId: "rt",
+            dateFrom: "2026-10-01",
+            dateTo: "2026-10-10",
+            days: ["sa", "su"],
+            availability: 0,
+          },
         ],
       },
       meta,
     );
     expect(r).toMatchObject({
-      accepted: 1,
+      accepted: 2,
       rejected: [],
       taskIds: ["eb31d631-4fcc-478a-80c3-bf7a2acf0699"],
     });
@@ -40,56 +48,107 @@ describe("ChannexProvider contract (fixtures)", () => {
           date_to: "2026-10-10",
           availability: 1,
         },
+        {
+          property_id: PROPERTY,
+          room_type_id: "rt",
+          date_from: "2026-10-01",
+          date_to: "2026-10-10",
+          days: ["sa", "su"],
+          availability: 0,
+        },
       ],
     });
     expect(http.calls[0]?.headers).toMatchObject({ "idempotency-key": "t", "x-request-id": "r" });
   });
 
-  it("turns 200-with-warnings into per-entry rejections and sends rates as minor units", async () => {
+  it("matches 200-with-warnings back to the sent entry by its echoed keys, not its position, and sends rates as minor units", async () => {
     const { p, http } = provider();
+    const RP = "7e6c22e9-2ad5-44f6-9b54-97cc9022f12e";
     const r = await p.pushRatesAndRestrictions(
       {
         propertyId: PROPERTY,
         entries: [
           {
-            ratePlanId: "rp",
-            dateFrom: "2026-10-01",
-            dateTo: "2026-10-03",
-            rate: -100,
+            ratePlanId: RP,
+            dateFrom: "2028-03-06",
+            dateTo: "2028-03-07",
             minStay: 2,
             days: ["fr", "sa"],
           },
           {
-            ratePlanId: "rp",
-            dateFrom: "2026-10-04",
-            dateTo: "2026-10-05",
-            rate: 12000,
+            ratePlanId: RP,
+            dateFrom: "2028-03-08",
+            dateTo: "2028-03-09",
+            rate: -5,
             stopSell: true,
           },
         ],
       },
       meta,
     );
+    // Channex lists only the rejected entry (recorded on staging): the second one sent
     expect(r.accepted).toBe(1);
     expect(r.rejected).toEqual([
-      { index: 0, reason: "rate: must be greater than or equal to 0", field: "rate" },
+      { index: 1, reason: "rate: must be greater than 0", field: "rate" },
     ]);
     const body = http.calls[0]?.body as { values: Array<Record<string, unknown>> };
     expect(body.values[0]).toMatchObject({
-      rate: -100,
       min_stay_arrival: 2,
       min_stay_through: 2,
       days: ["fr", "sa"],
     });
-    expect(body.values[1]).toMatchObject({ rate: 12000, stop_sell: true });
+    expect(body.values[1]).toMatchObject({ rate: -5, stop_sell: true });
   });
 
-  it("reads ARI back into the snapshot shape with minor-unit rates", async () => {
-    const { p } = provider();
+  it("pushResult: a warning it cannot place is kept as text, a string warning too", () => {
+    const sent = [{ rate_plan_id: "a", date_from: "2028-01-01", date_to: "2028-01-02", rate: 1 }];
+    const r = pushResult(
+      {
+        data: [],
+        meta: {
+          warnings: [
+            "Past date is not allowed. `date_from` was changed from 2026-09-15 to 2026-09-17",
+            {
+              warning: { rate: ["must be greater than 0"] },
+              rate_plan_id: "zzz",
+              date_from: "2028-01-01",
+              date_to: "2028-01-02",
+            },
+          ],
+        },
+      },
+      sent,
+    );
+    expect(r.rejected).toEqual([]);
+    expect(r.accepted).toBe(1);
+    expect(r.warnings[0]).toContain("Past date is not allowed");
+    expect(r.warnings[1]).toContain("unmatched rejection rate: must be greater than 0");
+  });
+
+  it("reads ARI back into the snapshot shape with minor-unit rates in each plan's currency", async () => {
+    const { p, http } = provider();
     const snap = await p.readAri(
       { propertyId: PROPERTY, dateFrom: "2026-10-01", dateTo: "2026-10-02" },
       meta,
     );
+    // no currencies given: the rate plans are listed first so "150.00" is parsed in the plan's currency
+    expect(http.calls[0]?.path).toBe("/api/v1/rate_plans");
+    // currencies given: no lookup, and the exponent is the plan's (three decimals here)
+    const { p: p2, http: http2 } = provider();
+    const kwd = await p2.readAri(
+      {
+        propertyId: PROPERTY,
+        dateFrom: "2026-10-01",
+        dateTo: "2026-10-02",
+        currencies: { "445835fb-7956-42ac-9efc-3e6f331f0808": "KWD" },
+      },
+      meta,
+    );
+    expect(http2.calls.map((c) => c.path)).toEqual([
+      "/api/v1/availability",
+      "/api/v1/restrictions",
+    ]);
+    expect(kwd.restrictions[1]?.rate).toBe(150000);
     expect(snap.availability).toEqual([
       { roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b", date: "2026-10-01", availability: 1 },
       { roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b", date: "2026-10-02", availability: 0 },
@@ -125,12 +184,36 @@ describe("ChannexProvider contract (fixtures)", () => {
       days: { "2019-04-26": 20000 },
       occupancy: { adults: 2, children: 0, infants: 0 },
     });
-    expect(rev.services).toEqual([{ name: "Breakfast", amount: 2000, isInclusive: false }]);
+    // booking-level extras first, then each room's (docs: services at both levels)
+    expect(rev.services).toEqual([
+      { name: "Breakfast", amount: 2000, isInclusive: false, type: "Breakfast" },
+      { name: "Parking", amount: 1500, isInclusive: false, type: "Parking" },
+    ]);
+    // taxes sit on the room; collected taxes are the OTA's and withheld (docs: Collected Taxes)
+    expect(rev.taxes).toEqual([
+      { name: "VAT (5%)", amount: 729, isInclusive: true, type: "tax" },
+      {
+        name: "CITY_TAX (Withheld Tax) (7.20%)",
+        amount: 2304,
+        isInclusive: false,
+        withheldByOta: true,
+        type: "City Tax",
+      },
+    ]);
+    expect(rev.rooms[0]?.taxes).toHaveLength(2);
     expect(rev.guarantee).toEqual({
       cardType: "VI",
       maskedNumber: "411111******1111",
       expiry: "10/2020",
       cardholder: "Channex User",
+      isVirtual: true,
+      // "6755" with two decimal places is 67.55: already minor units (docs: Guarantee › meta)
+      virtualCard: {
+        currency: "GBP",
+        balanceMinor: 6755,
+        effectiveDate: "2019-04-26",
+        expirationDate: "2020-04-26",
+      },
     });
     expect(JSON.stringify(rev.guarantee)).not.toMatch(/\d{13,}/);
     expect(rev.customer).toMatchObject({ email: "user@channex.io", country: "NL" });
@@ -138,6 +221,26 @@ describe("ChannexProvider contract (fixtures)", () => {
     expect(http.calls.at(-1)?.path).toBe(
       "/api/v1/booking_revisions/03dd7198-c5b7-493c-a889-74d0c2211de7/ack",
     );
+  });
+
+  it("reads a Booking by id as its latest revision, and a revision by its own id (docs shapes)", async () => {
+    const { p } = provider();
+    // GET /bookings/:id answers a Booking: its id is the booking's, the revision under revision_id,
+    // and there is no system_id, so the revision id stands in (never unique_id, shared by all revisions)
+    const b = await p.getBooking({ id: "603e8e9e-cc67-4ca7-bd13-3c407c6c3bbd" }, meta);
+    expect(b).toMatchObject({
+      bookingId: "603e8e9e-cc67-4ca7-bd13-3c407c6c3bbd",
+      revisionId: "03dd7198-c5b7-493c-a889-74d0c2211de7",
+      systemId: "03dd7198-c5b7-493c-a889-74d0c2211de7",
+      status: "new",
+      amount: 22000,
+    });
+    const r = await p.getBookingRevision({ id: "03dd7198-c5b7-493c-a889-74d0c2211de7" }, meta);
+    expect(r).toMatchObject({
+      revisionId: "03dd7198-c5b7-493c-a889-74d0c2211de7",
+      systemId: "12331233123",
+      propertyId: PROPERTY,
+    });
   });
 
   it("classifies errors per spec 05 §5.10", async () => {
@@ -223,18 +326,40 @@ describe("ChannexProvider contract: provisioning and adoption", () => {
         occInfants: 1,
       },
     ]);
+    // the parent comes from /rate_plans/options; the list itself never carries it
     expect(imp.ratePlans.map((r) => [r.title, r.parentRatePlanId])).toEqual([
       ["Best Available Rate", null],
       ["Non Refundable", "e2f6e0a1-2222-4b3c-8d1e-000000000002"],
     ]);
+    expect(http.calls.some((c) => c.path === "/api/v1/rate_plans/options")).toBe(true);
     expect(
       http.calls.every(
         (c) =>
           c.method !== "GET" ||
           c.path.includes("/properties/") ||
+          c.path.endsWith("/options") ||
           c.query?.["pagination[limit]"] === "100",
       ),
     ).toBe(true);
+  });
+
+  it("creates a derived plan with every inherit flag off and matches an existing plan by any of its titles", async () => {
+    const { p, http } = provider();
+    // "Non Refundable" exists on the property under that very title: adopted, not created
+    const found = await p.ensureRatePlan(
+      {
+        propertyId: PROPERTY,
+        roomTypeId: "994d1375-dbbd-4072-8724-b2ab32ce781b",
+        title: "Non Refundable · Standard Room",
+        alsoKnownAs: ["Non Refundable"],
+        currency: "GBP",
+        sellMode: "per_room",
+        options: [{ occupancy: 3, isPrimary: true, rate: 0 }],
+      },
+      meta,
+    );
+    expect(found).toEqual({ id: "e2f6e0a1-2222-4b3c-8d1e-000000000003" });
+    expect(http.calls.every((c) => c.method === "GET")).toBe(true);
   });
 });
 
@@ -304,9 +429,13 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
     ).not.toHaveProperty("mappings");
   });
 
-  it("reads a fresh channel as ready but inactive: activation is our call (CH-4)", async () => {
-    const { p } = provider();
+  it("reads readiness from check_readiness and the switch from the channel: a fresh channel is ready but inactive (CH-4)", async () => {
+    const { p, http } = provider();
     const r = await p.checkReadiness({ id: "7c0e2b1a-0000-4000-8000-000000000001" }, meta);
+    expect(http.calls.map((c) => [c.method, c.path])).toEqual([
+      ["POST", "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000001/check_readiness"],
+      ["GET", "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000001"],
+    ]);
     // an inactive connection carries the date Channex will delete it (docs: Channel API)
     expect(r).toEqual({
       ready: true,
@@ -314,6 +443,76 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
       inactive: true,
       expectedRemovalDate: "2026-10-17",
     });
+    // a connection without mappings is not ready, and says so in the docs' entity/relation/code terms
+    const gap = await p.checkReadiness({ id: "7c0e2b1a-0000-4000-8000-000000000002" }, meta);
+    expect(gap).toEqual({ ready: false, issues: ["Channel Mapping: required"], inactive: true });
+  });
+
+  it("test_connection: a 200 with success false is a failed test (docs, recorded on staging)", async () => {
+    const { p } = provider();
+    const r = await p.testConnection(
+      { adapterCode: "BookingCom", propertyId: PROPERTY, settings: { hotel_id: "1" } },
+      meta,
+    );
+    expect(r).toEqual({ ok: false, message: "The channel rejected the settings" });
+    expect(parseTestResult({ data: { success: true, errors: null } })).toEqual({
+      ok: true,
+      message: "ok",
+    });
+    expect(
+      parseTestResult({ data: { success: false, errors: ["bad login", "bad password"] } }),
+    ).toEqual({
+      ok: false,
+      message: "bad login; bad password",
+    });
+  });
+
+  it("replaces the mapping set with PUT /channels/{id} and deletes a connection with DELETE", async () => {
+    const { p, http } = provider();
+    const CH = "7c0e2b1a-0000-4000-8000-000000000001";
+    await p.updateChannel(
+      { id: CH },
+      {
+        adapterCode: "BookingCom",
+        mappings: [
+          {
+            ratePlanId: "a35f1fd4-63c6-4fbc-8fbe-359869bd9958",
+            roomCode: "586818903",
+            rateCode: "16385046",
+            occupancy: 2,
+            pricingType: "Standard",
+            primaryOcc: true,
+            readonly: false,
+          },
+        ],
+      },
+      meta,
+    );
+    expect(http.calls[0]).toMatchObject({
+      method: "PUT",
+      path: `/api/v1/channels/${CH}`,
+      body: {
+        channel: {
+          channel: "BookingCom",
+          rate_plans: [
+            {
+              rate_plan_id: "a35f1fd4-63c6-4fbc-8fbe-359869bd9958",
+              settings: {
+                room_type_code: "586818903",
+                rate_plan_code: "16385046",
+                occupancy: 2,
+                pricing_type: "Standard",
+                primary_occ: true,
+                readonly: false,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect((http.calls[0]?.body as { channel: object }).channel).not.toHaveProperty("settings");
+    await p.deleteChannel({ id: CH }, meta);
+    expect(http.calls[1]).toMatchObject({ method: "DELETE", path: `/api/v1/channels/${CH}` });
   });
 
   it("updates a property's settings with PUT /properties/{id} (state_length to our horizon)", async () => {
@@ -339,7 +538,6 @@ describe("ChannexProvider channel screen (docs fixtures)", () => {
         adapterCode: "AirBNB",
         title: "Airbnb · Ribeira Loft",
         isActive: true,
-        status: "active",
         mappings: [
           {
             id: "8a1c2e3d-4f5a-4b6c-8d7e-9f0a1b2c3d4e",
@@ -465,6 +663,15 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
       ["inbound", "guest", "Is early check-in possible?"],
       ["outbound", "staff", "Hi there"],
     ]);
+    // an attachment is a relative link, completed with the environment's base (docs: Messages Collection)
+    expect(t.messages[0]?.attachments).toEqual([
+      {
+        id: "attachments/2f1c3e4d-0000-4000-8000-0000000000aa/plan.pdf",
+        filename: "plan.pdf",
+        contentType: "application/pdf",
+        url: "https://app.channex.io/api/v1/attachments/2f1c3e4d-0000-4000-8000-0000000000aa/plan.pdf",
+      },
+    ]);
     // the booking is a relationship of the thread, not an attribute
     expect(page.threads[1]).toMatchObject({
       guestName: "Sam",
@@ -519,10 +726,24 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
       rating: 10,
       receivedAt: "2026-06-06T04:22:57.510000",
       insertedAt: "2026-09-08T21:37:06.705728",
+      updatedAt: "2026-09-09T10:00:00.000000",
       otaReservationCode: "HMJSQQKHQ4",
       canRespond: false,
       replyExpiresAt: "2026-07-06T04:22:57.510000",
       hidden: false,
+      // a reply the OTA refused after we sent it (docs: reply_error, updated_review)
+      response: "Thank you!",
+      replyState: "failed",
+      replyError: "Airbnb rejected the reply: window closed",
+    });
+    expect(page.reviews[1]?.replyState).toBeUndefined();
+    // the list is read page by page (the fixture holds one) and filtered on updated_at when a cursor is given
+    const { p: p2, http: http2 } = provider();
+    await expect(
+      p2.listReviews({ propertyId: PROPERTY, since: "2026-09-01T00:00:00Z" }, meta),
+    ).rejects.toThrow(/No fixture .*updated_at/);
+    expect(http2.calls[0]?.query).toMatchObject({
+      "filter[updated_at][gte]": "2026-09-01T00:00:00Z",
     });
     expect(page.reviews[0]?.bookingId).toBeUndefined();
     expect(page.reviews[1]).toMatchObject({

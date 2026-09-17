@@ -30,7 +30,7 @@ export function selectProvider(
     const base = env.CHANNEX_ENV === "production" ? CHANNEX_PRODUCTION : CHANNEX_STAGING;
     log.info({ base }, "connectivity.provider.channex");
     return {
-      provider: new ChannexProvider(new FetchTransport(base, key), observer),
+      provider: new ChannexProvider(new FetchTransport(base, key), observer, base),
       kind: "channex",
     };
   }

@@ -13,8 +13,11 @@ import {
   type AvailabilityBatch,
   type BookingRevisionPage,
   type BookingRevisionPayload,
+  type BookingServiceLine,
+  type BookingTaxLine,
   type CallMeta,
   type ChannelSpec,
+  type ChannelUpdate,
   type CloseReason,
   type ConnectionSettings,
   type ConnectivityProvider,
@@ -88,6 +91,8 @@ export class ChannexProvider implements ConnectivityProvider {
   constructor(
     private readonly http: HttpTransport,
     private readonly observer: ProviderObserver = {},
+    /** Where relative links in responses (message attachments) resolve (docs: Messages Collection). */
+    private readonly baseUrl: string = CHANNEX_PRODUCTION,
   ) {}
 
   // ---- provisioning ------------------------------------------------------------------
@@ -179,18 +184,21 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async ensureRatePlan(rp: RatePlanSpec, meta: CallMeta): Promise<ProviderRef> {
+    const titles = new Set([rp.title, ...(rp.alsoKnownAs ?? [])]);
     const existing = await this.findExisting(
       "rate_plans.list",
       "/api/v1/rate_plans",
       { "filter[property_id]": rp.propertyId },
       (a, item) =>
-        a.title === rp.title &&
+        titles.has(String(a.title)) &&
         String(obj(obj(obj(item.relationships).room_type).data).id ?? a.room_type_id) ===
           rp.roomTypeId,
       meta,
     );
     if (existing) return { id: existing };
-    // docs: rate-plans-collection (Create Rate Plan)
+    // docs: rate-plans-collection (Create Rate Plan) — the title is unique per property ("Duplication
+    // in Rate Plan title is not allowed!", verified on staging); with a parent every inherit_* flag
+    // defaults to true, which would let Channex overwrite the child cells we derive ourselves
     const body = await this.call(
       "rate_plans.create",
       {
@@ -205,6 +213,7 @@ export class ChannexProvider implements ConnectivityProvider {
             sell_mode: rp.sellMode,
             rate_mode: "manual",
             parent_rate_plan_id: rp.parentRatePlanId ?? null,
+            ...(rp.parentRatePlanId ? NO_INHERITANCE : {}),
             options: rp.options.map((o) => ({
               occupancy: o.occupancy,
               is_primary: o.isPrimary,
@@ -273,16 +282,36 @@ export class ChannexProvider implements ConnectivityProvider {
           occInfants: Number(a.occ_infants ?? 0),
         };
       });
+    // the list carries no parent_rate_plan_id (verified on staging); the options endpoint does
+    // docs: rate-plans-collection (Rate Plan Options)
+    const options = await this.call(
+      "rate_plans.options",
+      {
+        method: "GET",
+        path: "/api/v1/rate_plans/options",
+        query: { "filter[property_id]": ref.id },
+      },
+      { ...meta, dedupeKey: `${meta.dedupeKey}:options` },
+    );
+    const parentOf = new Map<string, string | null>();
+    for (const o of arr(obj(options).data)) {
+      const a = obj(obj(o).attributes);
+      parentOf.set(
+        String(obj(o).id ?? a.id),
+        a.parent_rate_plan_id ? String(a.parent_rate_plan_id) : null,
+      );
+    }
     const ratePlans = // docs: rate-plans-collection (Rate Plans List)
       (await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)).map((r) => {
         const a = obj(obj(r).attributes);
         const rl = obj(obj(r).relationships);
+        const id = String(obj(r).id);
         return {
-          id: String(obj(r).id),
+          id,
           roomTypeId: String(obj(obj(rl.room_type).data).id ?? a.room_type_id),
           title: String(a.title),
           currency: String(a.currency),
-          parentRatePlanId: a.parent_rate_plan_id ? String(a.parent_rate_plan_id) : null,
+          parentRatePlanId: parentOf.get(id) ?? null,
         };
       });
     return {
@@ -374,13 +403,14 @@ export class ChannexProvider implements ConnectivityProvider {
       ...(e.days ? { days: e.days } : {}),
       availability: e.availability,
     }));
-    // docs: ari (Update Availability)
+    // docs: ari (Update Availability) — `days` is documented for restrictions only but honoured
+    // on availability too (verified on staging 2026-09-17: sa/su entry applied to weekends only)
     const body = await this.call(
       "availability.push",
       { method: "POST", path: "/api/v1/availability", body: { values } },
       meta,
     );
-    return pushResult(body, values.length);
+    return pushResult(body, values);
   }
 
   async pushRatesAndRestrictions(batch: RestrictionBatch, meta: CallMeta): Promise<PushResult> {
@@ -420,10 +450,13 @@ export class ChannexProvider implements ConnectivityProvider {
       { method: "POST", path: "/api/v1/restrictions", body: { values } },
       meta,
     );
-    return pushResult(body, values.length);
+    return pushResult(body, values);
   }
 
   async readAri(q: AriQuery, meta: CallMeta): Promise<AriSnapshot> {
+    // rates come back as decimal strings in the plan's currency (docs: ari — "200.00"); the
+    // exponent is the plan's, so the currencies are known before parsing
+    const currencies = q.currencies ?? (await this.ratePlanCurrencies(q.propertyId, meta));
     const filter = {
       "filter[property_id]": q.propertyId,
       "filter[date][gte]": q.dateFrom,
@@ -449,7 +482,24 @@ export class ChannexProvider implements ConnectivityProvider {
       },
       meta,
     );
-    return parseAriSnapshot(avail, restr);
+    return parseAriSnapshot(avail, restr, currencies);
+  }
+
+  private async ratePlanCurrencies(
+    propertyId: string,
+    meta: CallMeta,
+  ): Promise<Record<string, string>> {
+    // docs: rate-plans-collection (Rate Plans List)
+    const rows = await this.listAll("rate_plans.list", "/api/v1/rate_plans", propertyId, {
+      ...meta,
+      dedupeKey: `${meta.dedupeKey}:plans`,
+    });
+    const out: Record<string, string> = {};
+    for (const r of rows) {
+      const a = obj(obj(r).attributes);
+      if (typeof a.currency === "string") out[String(obj(r).id)] = a.currency;
+    }
+    return out;
   }
 
   // ---- channels ----------------------------------------------------------------------
@@ -489,7 +539,8 @@ export class ChannexProvider implements ConnectivityProvider {
 
   async testConnection(s: ConnectionSettings, meta: CallMeta): Promise<TestResult> {
     try {
-      // docs: channel-api (Test the connection)
+      // docs: channel-api (Test the connection) — rejected credentials are a 200 with
+      // `data.success: false` (verified on staging: {"data":{"success":false,"errors":null}})
       const body = await this.call(
         "channels.test_connection",
         {
@@ -499,7 +550,7 @@ export class ChannexProvider implements ConnectivityProvider {
         },
         meta,
       );
-      return { ok: true, message: String(obj(obj(body).meta).message ?? "ok") };
+      return parseTestResult(body);
     } catch (e) {
       if (e instanceof ValidationError || e instanceof AuthorizationError)
         return { ok: false, message: e.message };
@@ -577,17 +628,7 @@ export class ChannexProvider implements ConnectivityProvider {
             properties: [c.propertyId],
             settings: c.settings,
             // the mapping structure lives under `rate_plans`, one entry per rate plan occupancy
-            rate_plans: c.mappings.map((m) => ({
-              rate_plan_id: m.ratePlanId,
-              settings: {
-                room_type_code: m.roomCode,
-                rate_plan_code: m.rateCode,
-                ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
-                ...(m.pricingType ? { pricing_type: m.pricingType } : {}),
-                ...(m.primaryOcc !== undefined ? { primary_occ: m.primaryOcc } : {}),
-                ...(m.readonly !== undefined ? { readonly: m.readonly } : {}),
-              },
-            })),
+            rate_plans: wireMappings(c.mappings),
           },
         },
       },
@@ -596,15 +637,49 @@ export class ChannexProvider implements ConnectivityProvider {
     return { id: idOf(body) };
   }
 
+  async updateChannel(ref: ProviderRef, changes: ChannelUpdate, meta: CallMeta): Promise<void> {
+    // docs: channel-api (Update a channel connection) — same shape as create, wrapped in `channel`;
+    // `rate_plans` and `settings` each replace the stored set as a whole when present
+    await this.call(
+      "channels.update",
+      {
+        method: "PUT",
+        path: `/api/v1/channels/${ref.id}`,
+        body: {
+          channel: {
+            channel: changes.adapterCode,
+            ...(changes.settings ? { settings: changes.settings } : {}),
+            ...(changes.mappings ? { rate_plans: wireMappings(changes.mappings) } : {}),
+          },
+        },
+      },
+      meta,
+    );
+  }
+
   async checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
-    // docs: channel-api (Get a channel connection)
+    // docs: channel-api (Check readiness) — the problems blocking activation, each an entity
+    // with a relation and an error code; an empty list means ready
+    const check = await this.call(
+      "channels.check_readiness",
+      { method: "POST", path: `/api/v1/channels/${ref.id}/check_readiness` },
+      { ...meta, dedupeKey: `${meta.dedupeKey}:check` },
+    );
+    const issues = arr(obj(check).data).map((i) => {
+      const o = obj(i);
+      return [o.entity, o.relation, o.error_code]
+        .filter((x) => typeof x === "string" && x !== "")
+        .map(String)
+        .join(" ")
+        .replace(/ (\S+)$/, ": $1");
+    });
+    // docs: channel-api (Get a channel connection) — is_active and expected_removal_date
     const body = await this.call(
       "channels.get",
       { method: "GET", path: `/api/v1/channels/${ref.id}` },
       meta,
     );
     const attrs = obj(obj(obj(body).data).attributes);
-    const issues = arr(attrs.readiness_issues ?? obj(attrs.readiness).issues).map(String);
     // Channex creates a channel inactive and activation is our call (CH-4): `is_active` is
     // reported on its own rather than folded into `ready`, otherwise a fresh channel could
     // never pass the readiness check that precedes its activation.
@@ -651,6 +726,15 @@ export class ChannexProvider implements ConnectivityProvider {
       meta,
     );
   }
+  async deleteChannel(ref: ProviderRef, meta: CallMeta): Promise<void> {
+    // docs: channel-api (Delete a channel connection) — deactivate first; deletion frees the
+    // hotel code at once instead of 30 days later
+    await this.call(
+      "channels.delete",
+      { method: "DELETE", path: `/api/v1/channels/${ref.id}` },
+      meta,
+    );
+  }
   async createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
     // docs: channel-iframe (one_time_token)
     const body = await this.call(
@@ -674,15 +758,14 @@ export class ChannexProvider implements ConnectivityProvider {
     return rows.map((raw) => {
       const r = obj(raw);
       const a = obj(r.attributes);
-      const status = String(a.status ?? "unknown");
+      // `status` exists on Google Hotel ARI connections only (docs: Channel API); elsewhere it is absent
+      const status = CHANNEL_STATUSES.find((s) => s === a.status);
       return {
         id: String(r.id),
         adapterCode: String(a.channel ?? ""),
         title: String(a.title ?? a.channel ?? ""),
         isActive: a.is_active === true,
-        status: (["active", "pending", "temporal_error", "permanent_error"].includes(status)
-          ? status
-          : "unknown") as RemoteChannel["status"],
+        ...(status ? { status } : {}),
         mappings: (Array.isArray(a.rate_plans) ? a.rate_plans : []).map((m) => {
           const mm = obj(m);
           const st = obj(mm.settings);
@@ -946,10 +1029,21 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async getBooking(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
-    // docs: bookings-collection (Get Booking by ID)
+    // docs: bookings-collection (Get Booking by ID) — a Booking, not a revision: its id is the
+    // booking's and the revision sits under `revision_id`
     const body = await this.call(
       "bookings.get",
       { method: "GET", path: `/api/v1/bookings/${ref.id}` },
+      meta,
+    );
+    return parseRevision(obj(obj(body).data), "booking");
+  }
+
+  async getBookingRevision(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
+    // docs: bookings-collection (Get Booking Revision by ID)
+    const body = await this.call(
+      "booking_revisions.get",
+      { method: "GET", path: `/api/v1/booking_revisions/${ref.id}` },
       meta,
     );
     return parseRevision(obj(obj(body).data));
@@ -982,7 +1076,7 @@ export class ChannexProvider implements ConnectivityProvider {
       // the thread carries only its last message; the conversation is its own collection
       const inline = arr(a.messages);
       const messages = inline.length
-        ? inline.map(parseMessage)
+        ? inline.map((m) => parseMessage(m, this.baseUrl))
         : await this.threadMessages(id, meta);
       // the booking is a relationship of the thread (docs: Messages Collection); an inquiry has none
       const bookingId =
@@ -1024,7 +1118,7 @@ export class ChannexProvider implements ConnectivityProvider {
         { ...meta, dedupeKey: `${meta.dedupeKey}:m${String(page)}` },
       );
       const data = arr(obj(body).data);
-      out.push(...data.map(parseMessage));
+      out.push(...data.map((m) => parseMessage(m, this.baseUrl)));
       const total = Number(obj(obj(body).meta).total ?? out.length);
       if (page * PAGE_LIMIT >= total || data.length === 0) break;
     }
@@ -1088,48 +1182,32 @@ export class ChannexProvider implements ConnectivityProvider {
   }
 
   async listReviews(q: ReviewQuery, meta: CallMeta): Promise<ReviewPage> {
-    // docs: reviews-collection (Get Reviews List)
-    const body = await this.call(
-      "reviews.list",
-      {
-        method: "GET",
-        path: "/api/v1/reviews",
-        query: {
-          "filter[property_id]": q.propertyId,
-          ...(q.since ? { "filter[inserted_at][gte]": q.since } : {}),
-          "pagination[limit]": String(PAGE_LIMIT),
-          "pagination[page]": "1",
+    const reviews: ReviewPage["reviews"] = [];
+    // the list is ordered by received_at (its meta says so), so every page is read; the
+    // filter is on updated_at so a review revealed or replied to later is read again
+    // (verified on staging: filter[updated_at][gte] is accepted)
+    for (let page = 1; ; page += 1) {
+      // docs: reviews-collection (Get Reviews List)
+      const body = await this.call(
+        "reviews.list",
+        {
+          method: "GET",
+          path: "/api/v1/reviews",
+          query: {
+            "filter[property_id]": q.propertyId,
+            ...(q.since ? { "filter[updated_at][gte]": q.since } : {}),
+            "pagination[limit]": String(PAGE_LIMIT),
+            "pagination[page]": String(page),
+          },
         },
-      },
-      meta,
-    );
-    return {
-      reviews: arr(obj(body).data).map((r) => {
-        const a = obj(obj(r).attributes);
-        const bookingId = relationshipId(r, "booking");
-        const expiresAt = a.expired_at ? String(a.expired_at) : undefined;
-        // the reply window as the OTA reports it; its date is judged against our clock downstream
-        const expired = a.is_expired === true;
-        return {
-          id: String(obj(r).id),
-          ...(bookingId ? { bookingId } : {}),
-          ...(a.ota_reservation_id ? { otaReservationCode: String(a.ota_reservation_id) } : {}),
-          rating: Number(a.overall_score ?? a.rating ?? 0),
-          text: String(a.content ?? a.text ?? ""),
-          ota: String(a.ota ?? ""),
-          // `inserted_at` is when Channex took the review in (our sync cursor); `received_at`
-          // is when the guest wrote it, which is the date a host wants to see
-          insertedAt: String(a.inserted_at ?? ""),
-          receivedAt: String(a.received_at ?? a.inserted_at ?? ""),
-          ...(a.guest_name ? { guestName: String(a.guest_name) } : {}),
-          canRespond: a.is_replied !== true && a.can_reply !== false && !expired,
-          ...(expiresAt ? { replyExpiresAt: expiresAt } : {}),
-          // Airbnb keeps a review hidden until the host has reviewed the guest
-          hidden: a.is_hidden === true,
-          ...(a.reply ? { response: String(a.reply) } : {}),
-        };
-      }),
-    };
+        page === 1 ? meta : { ...meta, dedupeKey: `${meta.dedupeKey}:p${String(page)}` },
+      );
+      const data = arr(obj(body).data);
+      reviews.push(...data.map(parseReview));
+      const total = Number(obj(obj(body).meta).total ?? reviews.length);
+      if (page * PAGE_LIMIT >= total || data.length === 0) break;
+    }
+    return { reviews };
   }
 
   async respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void> {
@@ -1297,35 +1375,110 @@ export function classify(op: string, res: HttpResponse): unknown {
   }
 }
 
-/** A 200 is not blanket success: per-entry warnings become rejections (spec 05 §5.10 "partial"). */
-function pushResult(body: unknown, sent: number): PushResult {
+/** The ten flags Channex switches on when a rate plan has a parent (docs: Create Rate Plan). */
+const NO_INHERITANCE = {
+  inherit_rate: false,
+  inherit_closed_to_arrival: false,
+  inherit_closed_to_departure: false,
+  inherit_stop_sell: false,
+  inherit_min_stay_arrival: false,
+  inherit_min_stay_through: false,
+  inherit_max_stay: false,
+  inherit_max_sell: false,
+  inherit_max_availability: false,
+  inherit_availability_offset: false,
+} as const;
+
+const CHANNEL_STATUSES = ["active", "pending", "temporal_error", "permanent_error"] as const;
+
+/** The mapping structure under `rate_plans` (docs: Channel API examples), shared by create and update. */
+function wireMappings(mappings: ChannelSpec["mappings"]): Array<Record<string, unknown>> {
+  return mappings.map((m) => ({
+    rate_plan_id: m.ratePlanId,
+    settings: {
+      room_type_code: m.roomCode,
+      rate_plan_code: m.rateCode,
+      ...(m.occupancy !== undefined ? { occupancy: m.occupancy } : {}),
+      ...(m.pricingType ? { pricing_type: m.pricingType } : {}),
+      ...(m.primaryOcc !== undefined ? { primary_occ: m.primaryOcc } : {}),
+      ...(m.readonly !== undefined ? { readonly: m.readonly } : {}),
+    },
+  }));
+}
+
+/** docs: Channel API › test_connection: `{data: {success, errors}}`; errors is a string, a list, an object or null. */
+export function parseTestResult(body: unknown): TestResult {
+  const data = obj(obj(body).data);
+  if (data.success === true) return { ok: true, message: "ok" };
+  const e = data.errors;
+  const message =
+    typeof e === "string"
+      ? e
+      : Array.isArray(e)
+        ? e.map(String).join("; ")
+        : e && typeof e === "object"
+          ? JSON.stringify(e)
+          : "The channel rejected the settings";
+  return { ok: false, message };
+}
+
+/**
+ * A 200 is not blanket success: per-entry warnings become rejections (spec 05 §5.10 "partial").
+ * Channex lists only the entries it rejected and echoes each one (docs: ari › Warning
+ * Notifications; verified on staging: values=[good, bad] answers one warning carrying the bad
+ * entry's keys, no index), so a warning is matched back to the sent entry by those keys.
+ */
+export function pushResult(body: unknown, sent: Array<Record<string, unknown>>): PushResult {
   const metaObj = obj(obj(body).meta);
   const warnings = arr(metaObj.warnings);
   const rejected: PushResult["rejected"] = [];
   const textWarnings: string[] = [];
-  warnings.forEach((w, i) => {
+  const keyOf = (v: Record<string, unknown>): string =>
+    [
+      v.rate_plan_id ?? v.room_type_id ?? "",
+      v.date_from ?? v.date ?? "",
+      v.date_to ?? v.date ?? "",
+      arr(v.days).map(String).join(","),
+    ].join("|");
+  const sentKeys = sent.map(keyOf);
+  const taken = new Set<number>();
+  warnings.forEach((w) => {
     const o = obj(w);
     const warning = obj(o.warning);
     const fields = Object.keys(warning);
-    const index = typeof o.index === "number" ? o.index : i;
-    if (fields.length > 0)
-      rejected.push({
-        index,
-        reason: fields.map((f) => `${f}: ${arr(warning[f]).map(String).join(", ")}`).join("; "),
-        field: fields[0]!,
-      });
-    else textWarnings.push(typeof w === "string" ? w : JSON.stringify(w));
+    if (fields.length === 0) {
+      textWarnings.push(typeof w === "string" ? w : JSON.stringify(w));
+      return;
+    }
+    const reason = fields.map((f) => `${f}: ${arr(warning[f]).map(String).join(", ")}`).join("; ");
+    const key = keyOf(o);
+    const candidates = sentKeys.flatMap((k, i) => (k === key && !taken.has(i) ? [i] : []));
+    const index =
+      candidates.find((i) => fields.some((f) => f in sent[i]!)) ??
+      candidates[0] ??
+      (typeof o.index === "number" ? o.index : -1);
+    if (index < 0) {
+      // an echo we cannot place: kept as text so the sampled read-back finds the cells
+      textWarnings.push(`unmatched rejection ${reason} (${JSON.stringify(o)})`);
+      return;
+    }
+    taken.add(index);
+    rejected.push({ index, reason, field: fields[0]! });
   });
   const taskIds = arr(obj(body).data).map((d) => String(obj(d).id));
   return {
-    accepted: Math.max(0, sent - rejected.length),
+    accepted: Math.max(0, sent.length - rejected.length),
     rejected,
     warnings: textWarnings,
     taskIds,
   };
 }
 
-function parseAriSnapshot(avail: unknown, restr: unknown): AriSnapshot {
+function parseAriSnapshot(
+  avail: unknown,
+  restr: unknown,
+  currencies: Record<string, string>,
+): AriSnapshot {
   const availability: AriSnapshot["availability"] = [];
   for (const [roomTypeId, byDate] of Object.entries(obj(obj(avail).data))) {
     for (const [date, v] of Object.entries(obj(byDate)))
@@ -1335,10 +1488,11 @@ function parseAriSnapshot(avail: unknown, restr: unknown): AriSnapshot {
   for (const [ratePlanId, byDate] of Object.entries(obj(obj(restr).data))) {
     for (const [date, v] of Object.entries(obj(byDate))) {
       const o = obj(v);
+      const currency = currencies[ratePlanId] ?? "EUR";
       restrictions.push({
         ratePlanId,
         date,
-        ...(o.rate !== undefined ? { rate: minorFromWire(o.rate) } : {}),
+        ...(o.rate !== undefined ? { rate: minorFromWire(o.rate, currency) } : {}),
         // canonical minStay: the explicit field, else arrival and through when they agree
         ...(o.min_stay !== undefined
           ? { minStay: Number(o.min_stay) }
@@ -1370,7 +1524,16 @@ function minorFromWire(v: unknown, currency = "EUR"): number {
   return Money.parse(String(v), currency).minor;
 }
 
-export function parseRevision(d: Record<string, unknown>): BookingRevisionPayload {
+/**
+ * A booking revision (the feed, GET /booking_revisions/:id) or a Booking (GET /bookings/:id,
+ * whose id is the booking's with the revision under `revision_id`), normalised. `system_id` is
+ * the per-revision message id; when absent the revision id stands in, never `unique_id`, which
+ * every revision of a booking shares (docs: Bookings Collection).
+ */
+export function parseRevision(
+  d: Record<string, unknown>,
+  shape: "revision" | "booking" = "revision",
+): BookingRevisionPayload {
   const a = obj(d.attributes);
   const currency = String(a.currency ?? "EUR");
   const money = (v: unknown): number =>
@@ -1380,11 +1543,80 @@ export function parseRevision(d: Record<string, unknown>): BookingRevisionPayloa
   const status = String(a.status);
   if (status !== "new" && status !== "modified" && status !== "cancelled")
     throw new ContractError(`unknown booking status ${status}`, { status });
+  const revisionId =
+    shape === "booking" ? String(a.revision_id ?? d.id ?? a.id) : String(a.id ?? d.id);
+  const bookingId =
+    shape === "booking"
+      ? String(d.id ?? a.id)
+      : String(a.booking_id ?? relationshipId(d, "booking") ?? "");
+  const propertyId = String(a.property_id ?? relationshipId(d, "property") ?? "");
+  const service = (s: unknown): BookingServiceLine => {
+    const o = obj(s);
+    return {
+      name: String(o.name ?? o.type ?? ""),
+      amount: money(o.total_price ?? o.amount),
+      isInclusive: Boolean(o.is_inclusive),
+      ...(typeof o.type === "string" ? { type: o.type } : {}),
+    };
+  };
+  const tax = (t: unknown): BookingTaxLine => {
+    const o = obj(t);
+    return {
+      name: String(o.name ?? ""),
+      amount: money(o.total_price ?? o.amount),
+      isInclusive: Boolean(o.is_inclusive),
+      ...(o.is_withheld !== undefined ? { withheldByOta: Boolean(o.is_withheld) } : {}),
+      ...(typeof o.type === "string" ? { type: o.type } : {}),
+    };
+  };
+  const rooms = arr(a.rooms).map((r) => {
+    const o = obj(r);
+    const occ = obj(o.occupancy);
+    const meta = obj(o.meta);
+    // taxes live on the room (docs: Booking Room › taxes, collected_taxes); withheld ones are
+    // what the OTA collected and keeps
+    const taxes = [
+      ...arr(o.taxes).map(tax),
+      ...arr(o.collected_taxes).map((t) => ({ withheldByOta: true, ...tax(t) })),
+    ];
+    const services = arr(o.services).map(service);
+    return {
+      roomTypeId: o.room_type_id ? String(o.room_type_id) : null,
+      ratePlanId: o.rate_plan_id ? String(o.rate_plan_id) : null,
+      checkinDate: String(o.checkin_date),
+      checkoutDate: String(o.checkout_date),
+      days: Object.fromEntries(Object.entries(obj(o.days)).map(([k, v]) => [k, money(v)])),
+      occupancy: {
+        adults: Number(occ.adults ?? 1),
+        children: Number(occ.children ?? 0),
+        infants: Number(occ.infants ?? 0),
+        ...(Array.isArray(occ.ages) ? { ages: occ.ages.map(Number) } : {}),
+      },
+      guests: arr(o.guests).map((g) => ({
+        name: String(obj(g).name ?? ""),
+        surname: String(obj(g).surname ?? ""),
+      })),
+      ...(services.length ? { services } : {}),
+      ...(taxes.length ? { taxes } : {}),
+      ...(meta.parent_rate_plan_id || typeof meta.payment_instruction === "string"
+        ? {
+            meta: {
+              ...(meta.parent_rate_plan_id
+                ? { parentRatePlanId: String(meta.parent_rate_plan_id) }
+                : {}),
+              ...(typeof meta.payment_instruction === "string"
+                ? { paymentInstruction: meta.payment_instruction }
+                : {}),
+            },
+          }
+        : {}),
+    };
+  });
   return {
-    revisionId: String(a.id ?? d.id),
-    bookingId: String(a.booking_id),
-    systemId: String(a.system_id ?? a.unique_id ?? d.id),
-    propertyId: String(a.property_id),
+    revisionId,
+    bookingId,
+    systemId: String(a.system_id ?? a.revision_id ?? d.id),
+    propertyId,
     status,
     arrivalDate: String(a.arrival_date),
     departureDate: String(a.departure_date),
@@ -1393,30 +1625,7 @@ export function parseRevision(d: Record<string, unknown>): BookingRevisionPayloa
     otaName: String(a.ota_name ?? ""),
     otaReservationCode: String(a.ota_reservation_code ?? a.unique_id ?? ""),
     insertedAt: String(a.inserted_at ?? ""),
-    rooms: arr(a.rooms).map((r) => {
-      const o = obj(r);
-      const occ = obj(o.occupancy);
-      return {
-        roomTypeId: o.room_type_id ? String(o.room_type_id) : null,
-        ratePlanId: o.rate_plan_id ? String(o.rate_plan_id) : null,
-        checkinDate: String(o.checkin_date),
-        checkoutDate: String(o.checkout_date),
-        days: Object.fromEntries(Object.entries(obj(o.days)).map(([k, v]) => [k, money(v)])),
-        occupancy: {
-          adults: Number(occ.adults ?? 1),
-          children: Number(occ.children ?? 0),
-          infants: Number(occ.infants ?? 0),
-          ...(Array.isArray(occ.ages) ? { ages: occ.ages.map(Number) } : {}),
-        },
-        guests: arr(o.guests).map((g) => ({
-          name: String(obj(g).name ?? ""),
-          surname: String(obj(g).surname ?? ""),
-        })),
-        ...(obj(o.meta).parent_rate_plan_id
-          ? { meta: { parentRatePlanId: String(obj(o.meta).parent_rate_plan_id) } }
-          : {}),
-      };
-    }),
+    rooms,
     customer: {
       name: String(customer.name ?? ""),
       surname: String(customer.surname ?? ""),
@@ -1425,23 +1634,9 @@ export function parseRevision(d: Record<string, unknown>): BookingRevisionPayloa
       ...(customer.country ? { country: String(customer.country) } : {}),
       ...(customer.language ? { language: String(customer.language) } : {}),
     },
-    services: arr(a.services).map((s) => {
-      const o = obj(s);
-      return {
-        name: String(o.name ?? o.type ?? ""),
-        amount: money(o.total_price ?? o.amount),
-        isInclusive: Boolean(o.is_inclusive),
-      };
-    }),
-    taxes: arr(a.taxes).map((t) => {
-      const o = obj(t);
-      return {
-        name: String(o.name ?? ""),
-        amount: money(o.total_price ?? o.amount),
-        isInclusive: Boolean(o.is_inclusive),
-        ...(o.withheld_by_ota !== undefined ? { withheldByOta: Boolean(o.withheld_by_ota) } : {}),
-      };
-    }),
+    // booking-level lines first, then each room's (docs: services at both levels; taxes per room)
+    services: [...arr(a.services).map(service), ...rooms.flatMap((r) => r.services ?? [])],
+    taxes: [...arr(a.taxes).map(tax), ...rooms.flatMap((r) => r.taxes ?? [])],
     ...(a.ota_commission !== undefined && a.ota_commission !== null
       ? { otaCommission: money(a.ota_commission) }
       : {}),
@@ -1459,10 +1654,87 @@ export function parseRevision(d: Record<string, unknown>): BookingRevisionPayloa
             maskedNumber: maskPan(String(guarantee.card_number ?? "")),
             expiry: String(guarantee.expiration_date ?? ""),
             cardholder: String(guarantee.cardholder_name ?? ""),
+            ...(guarantee.is_virtual !== undefined
+              ? { isVirtual: Boolean(guarantee.is_virtual) }
+              : {}),
+            ...virtualCardOf(obj(guarantee.meta), currency),
           },
         }
       : {}),
     raw: d,
+  };
+}
+
+/**
+ * docs: Bookings Collection › Guarantee › meta — the balance is a string whose scale is
+ * `virtual_card_decimal_places` ("6755" with "2" places is 67.55), so it is already minor units
+ * unless it carries a decimal point.
+ */
+function virtualCardOf(
+  meta: Record<string, unknown>,
+  bookingCurrency: string,
+):
+  | { virtualCard: NonNullable<NonNullable<BookingRevisionPayload["guarantee"]>["virtualCard"]> }
+  | Record<string, never> {
+  const balance = meta.virtual_card_current_balance;
+  if (balance === undefined || balance === null || balance === "") return {};
+  const currency = String(meta.virtual_card_currency_code ?? bookingCurrency);
+  const text = String(balance);
+  const balanceMinor = text.includes(".")
+    ? Money.parse(text, currency).minor
+    : Number.isFinite(Number(text))
+      ? Number(text)
+      : 0;
+  return {
+    virtualCard: {
+      currency,
+      balanceMinor,
+      ...(typeof meta.virtual_card_effective_date === "string"
+        ? { effectiveDate: meta.virtual_card_effective_date }
+        : {}),
+      ...(typeof meta.virtual_card_expiration_date === "string"
+        ? { expirationDate: meta.virtual_card_expiration_date }
+        : {}),
+    },
+  };
+}
+
+/** One review as the list returns it (docs: Reviews Collection › Review). */
+function parseReview(r: unknown): ReviewPage["reviews"][number] {
+  const a = obj(obj(r).attributes);
+  const bookingId = relationshipId(r, "booking");
+  const expiresAt = a.expired_at ? String(a.expired_at) : undefined;
+  // the reply window as the OTA reports it; its date is judged against our clock downstream
+  const expired = a.is_expired === true;
+  const replyError =
+    typeof a.reply_error === "string" && a.reply_error !== "" ? a.reply_error : null;
+  const replyState: ReviewPage["reviews"][number]["replyState"] | undefined = replyError
+    ? "failed"
+    : a.reply_sent_at
+      ? "sent"
+      : a.reply_scheduled_at
+        ? "scheduled"
+        : undefined;
+  return {
+    id: String(obj(r).id),
+    ...(bookingId ? { bookingId } : {}),
+    ...(a.ota_reservation_id ? { otaReservationCode: String(a.ota_reservation_id) } : {}),
+    rating: Number(a.overall_score ?? a.rating ?? 0),
+    text: String(a.content ?? a.text ?? ""),
+    ota: String(a.ota ?? ""),
+    // `inserted_at` is when Channex took the review in (our sync cursor); `received_at`
+    // is when the guest wrote it, which is the date a host wants to see
+    insertedAt: String(a.inserted_at ?? ""),
+    receivedAt: String(a.received_at ?? a.inserted_at ?? ""),
+    ...(a.updated_at ? { updatedAt: String(a.updated_at) } : {}),
+    ...(a.guest_name ? { guestName: String(a.guest_name) } : {}),
+    canRespond: a.is_replied !== true && a.can_reply !== false && !expired,
+    ...(expiresAt ? { replyExpiresAt: expiresAt } : {}),
+    // Airbnb keeps a review hidden until the host has reviewed the guest
+    hidden: a.is_hidden === true,
+    ...(a.reply ? { response: String(a.reply) } : {}),
+    ...(replyState ? { replyState } : {}),
+    ...(replyError ? { replyError } : {}),
   };
 }
 
@@ -1489,8 +1761,53 @@ function idOf(body: unknown): string {
   return id;
 }
 
+/**
+ * An attachment as the docs describe it: a relative link, completed with the environment's
+ * `/api/v1/` base (docs: Messages Collection › Get Message for Message Thread). An object with
+ * an id (older payloads) is kept as it is.
+ */
+function parseAttachment(
+  x: unknown,
+  baseUrl: string,
+): NonNullable<ThreadPage["threads"][number]["messages"][number]["attachments"]>[number] {
+  if (typeof x === "string") {
+    const url = /^https?:\/\//.test(x)
+      ? x
+      : x.startsWith("/api/")
+        ? `${baseUrl}${x}`
+        : `${baseUrl}/api/v1/${x.replace(/^\/+/, "")}`;
+    const filename = decodeURIComponent(x.split("?")[0]!.split("/").filter(Boolean).at(-1) ?? "");
+    return { id: x, filename, contentType: contentTypeOf(filename), url };
+  }
+  const o = obj(x);
+  const id = String(o.id ?? o.url ?? "");
+  return {
+    id,
+    filename: String(o.filename ?? o.file_name ?? ""),
+    contentType: String(o.content_type ?? o.file_type ?? contentTypeOf(String(o.filename ?? ""))),
+    ...(typeof o.url === "string" ? { url: o.url } : {}),
+  };
+}
+
+const CONTENT_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  pdf: "application/pdf",
+  txt: "text/plain",
+};
+function contentTypeOf(filename: string): string {
+  const ext = filename.toLowerCase().split(".").at(-1) ?? "";
+  return CONTENT_TYPES[ext] ?? "application/octet-stream";
+}
+
 /** One message as Channex returns it, from a thread's collection or inlined on the thread. */
-function parseMessage(m: unknown): ThreadPage["threads"][number]["messages"][number] {
+function parseMessage(
+  m: unknown,
+  baseUrl: string,
+): ThreadPage["threads"][number]["messages"][number] {
   const o = obj(m);
   const a = obj(o.attributes);
   const f = Object.keys(a).length ? a : o;
@@ -1507,13 +1824,7 @@ function parseMessage(m: unknown): ThreadPage["threads"][number]["messages"][num
     body: String(f.message ?? f.body ?? ""),
     sentAt: String(f.inserted_at ?? ""),
     ...(arr(f.attachments).length
-      ? {
-          attachments: arr(f.attachments).map((x) => ({
-            id: String(obj(x).id),
-            filename: String(obj(x).filename ?? ""),
-            contentType: String(obj(x).content_type ?? "application/octet-stream"),
-          })),
-        }
+      ? { attachments: arr(f.attachments).map((x) => parseAttachment(x, baseUrl)) }
       : {}),
   };
 }

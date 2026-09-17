@@ -1,0 +1,132 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Bookings Collection › Get Booking Revision by ID: the same shape as a feed item."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking_revisions/03dd7198-c5b7-493c-a889-74d0c2211de7"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "type": "booking_revision",
+        "id": "03dd7198-c5b7-493c-a889-74d0c2211de7",
+        "attributes": {
+          "id": "03dd7198-c5b7-493c-a889-74d0c2211de7",
+          "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+          "booking_id": "cfa33f3b-bd32-4b90-8ef9-bde2bfe986cd",
+          "unique_id": "BDC-9996013801",
+          "system_id": "12331233123",
+          "ota_reservation_code": "9996013801",
+          "ota_name": "Booking.com",
+          "status": "new",
+          "rooms": [
+            {
+              "amount": "200.00",
+              "checkin_date": "2019-04-26",
+              "checkout_date": "2019-04-27",
+              "rate_plan_id": "445835fb-7956-42ac-9efc-3e6f331f0808",
+              "room_type_id": "994d1375-dbbd-4072-8724-b2ab32ce781b",
+              "ota_unique_id": "49",
+              "days": {
+                "2019-04-26": "200.00"
+              },
+              "occupancy": {
+                "adults": 2,
+                "children": 0,
+                "infants": 0
+              },
+              "taxes": [
+                {
+                  "is_inclusive": true,
+                  "name": "VAT (5%)",
+                  "total_price": "7.29",
+                  "type": "tax"
+                }
+              ],
+              "collected_taxes": [
+                {
+                  "is_inclusive": false,
+                  "is_withheld": true,
+                  "name": "CITY_TAX (Withheld Tax) (7.20%)",
+                  "nights": 1,
+                  "persons": 2,
+                  "price_mode": "Per booking",
+                  "price_per_unit": "23.04",
+                  "total_price": "23.04",
+                  "type": "City Tax",
+                  "version": 2
+                }
+              ],
+              "services": [
+                {
+                  "name": "Parking",
+                  "type": "Parking",
+                  "nights": 1,
+                  "persons": 1,
+                  "price_mode": "Per stay",
+                  "price_per_unit": "15.00",
+                  "total_price": "15.00"
+                }
+              ]
+            }
+          ],
+          "services": [
+            {
+              "type": "Breakfast",
+              "total_price": "20.00",
+              "price_per_unit": "10.00",
+              "price_mode": "Per person per night",
+              "persons": 2,
+              "nights": 1,
+              "name": "Breakfast"
+            }
+          ],
+          "guarantee": {
+            "expiration_date": "10/2020",
+            "cvv": "***",
+            "cardholder_name": "Channex User",
+            "card_type": "VI",
+            "card_number": "411111******1111",
+            "is_virtual": true,
+            "meta": {
+              "virtual_card_currency_code": "GBP",
+              "virtual_card_current_balance": "6755",
+              "virtual_card_decimal_places": "2",
+              "virtual_card_effective_date": "2019-04-26",
+              "virtual_card_expiration_date": "2020-04-26"
+            }
+          },
+          "customer": {
+            "zip": "2031 BE",
+            "surname": "Channex",
+            "phone": "1234567890",
+            "name": "User",
+            "mail": "user@channex.io",
+            "language": "en",
+            "country": "NL",
+            "city": "Haarlem",
+            "address": "JW Lucasweg 35"
+          },
+          "occupancy": {
+            "adults": 2,
+            "children": 0,
+            "infants": 0
+          },
+          "arrival_date": "2019-04-26",
+          "departure_date": "2019-04-27",
+          "arrival_hour": "10:00",
+          "amount": "220.00",
+          "ota_commission": "10.00",
+          "payment_collect": "ota",
+          "payment_type": "bank_transfer",
+          "currency": "GBP",
+          "notes": "Free parking please",
+          "inserted_at": "2019-04-23T10:03:29.335485"
+        }
+      }
+    }
+  }
+}

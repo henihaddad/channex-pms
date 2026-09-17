@@ -214,6 +214,33 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Channex request-side audit (`docs/audits/2026-09-17-channex-request-audit.md`): every call of
+  the Channex client was checked against the vendored docs by one agent per area and a refuter per
+  finding, the open questions were settled by probes on staging, and the confirmed findings were
+  fixed with fixtures and tests. Provisioning: rate plan titles are unique per property on Channex
+  (a duplicate is refused), so a property with several room types names its plans
+  "Standard · Double Room" there and adoption strips the suffix; per-room plans carry the room's
+  maximum occupancy; a derived plan is created with every `inherit_*` flag off; the parent comes
+  from `/rate_plans/options`, which the list never carries. ARI: a rejection warning is matched to
+  the sent entry by its echoed keys (Channex lists rejected entries only, no index: the good entry
+  was marked failed and the bad one synced); cells before the property's today are failed locally
+  instead of sent; read-back rates are parsed in each plan's currency, not a fixed two decimals;
+  per-occupancy rates, which cannot be read back, no longer flag every verify as drift. Bookings:
+  taxes, collected (withheld) taxes and services are read per room; the virtual card's balance and
+  effective window are kept; `unique_id` is never used as a revision id; a Booking read by id is
+  parsed by its own shape and a revision can be read by id; a backlog over one page is read whole
+  although acking shrinks the feed. Channels: readiness comes from `POST /channels/{id}/check_readiness`
+  (the channel resource has no readiness field, so every channel looked ready); `test_connection`
+  reads `success` (a rejected hotel id answered 200 and passed the test); mapping edits reach
+  Channex through `PUT /channels/{id}`; removal deactivates and then deletes, freeing the hotel id
+  at once instead of 30 days later; `status` is read only on Google Hotel ARI connections, so
+  imported Booking.com and Airbnb connections stop being marked not ready. Messaging and reviews:
+  attachments are the relative links the docs describe; reviews are read page by page and
+  filtered on `updated_at`, `updated_review` webhooks trigger a sync, and a reply Channex refuses
+  (`reply_error`) is shown failed instead of sent; a special offer's price is a whole number.
+  Webhooks: `disconnect_channel`, `disconnect_listing`, `sync_warning` and `rate_error` land as
+  events (the first two as P1 with the connection in error); an oversized delivery is kept as its
+  event name and answered 200, since Channex redelivers on 5xx only.
 - Silent empty inbox (spec 05 CXMSG-1): Channex refuses the message threads list with 403 while
   the property has no Messages application installed, and the two-minute poll only logged it.
   The poll now records one open `messages_app_missing` event per property, the inbox shows a

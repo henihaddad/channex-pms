@@ -50,13 +50,22 @@ export async function ingestProperty(
     ackFailures: 0,
     stale: 0,
   };
+  // The feed lists unacked revisions only and pages by offset (docs: Bookings Collection), so
+  // acking a page shrinks the feed and "page 2" would skip a hundred revisions. After a page that
+  // brought new revisions the feed is read from its first page again; a page of only known
+  // revisions (acks that failed) moves on by offset.
+  const seen = new Set<string>();
   let cursor: string | undefined;
-  do {
+  for (let round = 0; round < MAX_FEED_ROUNDS; round += 1) {
     const page = await deps.provider.listBookingRevisions(propertyId, cursor, {
       ...meta,
-      dedupeKey: `${meta.dedupeKey}:feed:${cursor ?? "1"}`,
+      dedupeKey: `${meta.dedupeKey}:feed:${cursor ?? "1"}:${String(round)}`,
     });
+    let fresh = 0;
     for (const rev of page.revisions) {
+      if (seen.has(rev.systemId)) continue;
+      seen.add(rev.systemId);
+      fresh += 1;
       s.seen += 1;
       const existing = await deps.repo.findRevisionBySystemId(rev.systemId);
       if (existing?.ackedAt) {
@@ -71,10 +80,14 @@ export async function ingestProperty(
       await applyOne(deps, rev, s);
       await ack(deps, [rev.revisionId], meta, s);
     }
-    cursor = page.nextCursor;
-  } while (cursor);
+    if (!page.nextCursor) break;
+    cursor = fresh > 0 ? undefined : page.nextCursor;
+  }
   return s;
 }
+
+/** A backlog of a million revisions in one run is a bug, not a Tuesday. */
+const MAX_FEED_ROUNDS = 10_000;
 
 /** Apply a single revision (also used by the webhook-triggered path after a targeted pull). */
 export async function applyOne(

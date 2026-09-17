@@ -14,6 +14,7 @@ import {
   type BookingRevisionPayload,
   type CallMeta,
   type ChannelSpec,
+  type ChannelUpdate,
   type RemoteChannel,
   type AirbnbConnectionLinkSpec,
   type RemoteListing,
@@ -96,6 +97,10 @@ export interface Ledger {
   /** Every booking-request decision that reached the OTA. */
   requestResolutions: Array<{ eventId: string; resolution: LiveFeedResolution }>;
   propertySettings: Array<{ propertyId: string; settings: Record<string, unknown> }>;
+  /** PUT /channels/{id} calls: the mapping or settings sets we replaced on the provider. */
+  channelUpdates: Array<{ channelId: string; changes: ChannelUpdate }>;
+  /** DELETE /channels/{id} calls. */
+  channelDeletes: string[];
   calls: Array<{ op: string; dedupeKey: string; outcome: "ok" | FaultKind }>;
 }
 
@@ -139,6 +144,8 @@ export interface FakeReview {
   response: string | undefined;
   /** Airbnb: hidden until the host reviews the guest. */
   hidden: boolean;
+  /** The OTA refused the reply after we sent it (docs: reply_error). */
+  replyError?: string;
 }
 
 export interface BookingSpec {
@@ -174,6 +181,8 @@ export class FakeProvider implements ConnectivityProvider {
     guestReviews: [],
     requestResolutions: [],
     propertySettings: [],
+    channelUpdates: [],
+    channelDeletes: [],
     calls: [],
   };
   /** Set by the harness: where webhooks go. */
@@ -471,6 +480,28 @@ export class FakeProvider implements ConnectivityProvider {
     this.guard("channels.create", meta);
     return this.remember("channel", c);
   }
+  async updateChannel(ref: ProviderRef, changes: ChannelUpdate, meta: CallMeta): Promise<void> {
+    this.guard("channels.update", meta);
+    if (this.deletedChannels.has(ref.id))
+      throw new ValidationError("channels.update: Resource Not Found", {
+        op: "channels.update",
+        status: 404,
+      });
+    this.ledger.channelUpdates.push({ channelId: ref.id, changes });
+    // the stored channel spec carries the mapping set the provider now holds
+    for (const [key, id] of this.created.entries()) {
+      if (id !== ref.id || !key.startsWith("channel:")) continue;
+      const spec = JSON.parse(key.slice("channel:".length)) as ChannelSpec;
+      const next: ChannelSpec = {
+        ...spec,
+        ...(changes.settings ? { settings: changes.settings } : {}),
+        ...(changes.mappings ? { mappings: changes.mappings } : {}),
+      };
+      this.created.delete(key);
+      this.created.set(`channel:${JSON.stringify(next)}`, id);
+      break;
+    }
+  }
   async checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness> {
     this.guard("channels.readiness", meta);
     if (this.deletedChannels.has(ref.id))
@@ -486,8 +517,19 @@ export class FakeProvider implements ConnectivityProvider {
     };
   }
   /** Test knob: the provider deleted this channel outright (a shared test hotel reclaimed, a removal in Channex). */
-  deleteChannel(channelId: string): void {
+  providerDeletedChannel(channelId: string): void {
     this.deletedChannels.add(channelId);
+  }
+  /** DELETE /channels/{id}: gone for good, the hotel code free again; a second delete is a 404 like Channex's. */
+  async deleteChannel(ref: ProviderRef, meta: CallMeta): Promise<void> {
+    this.guard("channels.delete", meta);
+    if (this.deletedChannels.has(ref.id))
+      throw new ValidationError("channels.delete: Resource Not Found", {
+        op: "channels.delete",
+        status: 404,
+      });
+    this.deletedChannels.add(ref.id);
+    this.ledger.channelDeletes.push(ref.id);
   }
   /** Test knob: the provider has deactivated this channel and will delete it on `date` (docs: Channel API). */
   scheduleRemoval(channelId: string, date: string | null): void {
@@ -530,7 +572,6 @@ export class FakeProvider implements ConnectivityProvider {
         adapterCode: spec.adapterCode,
         title: spec.adapterCode,
         isActive: true,
-        status: "active",
         mappings: [
           ...spec.mappings.map((m) => ({
             ratePlanId: m.ratePlanId,
@@ -809,6 +850,15 @@ export class FakeProvider implements ConnectivityProvider {
     const b = this.bookings.get(ref.id);
     if (!b) throw new ValidationError("bookings.get: not found", { id: ref.id });
     return b;
+  }
+  async getBookingRevision(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
+    this.guard("booking_revisions.get", meta);
+    const r =
+      this.unacked.get(ref.id) ??
+      [...this.bookings.values()].find((b) => b.revisionId === ref.id) ??
+      this.ledger.emitted.find((e) => e.revisionId === ref.id);
+    if (!r) throw new ValidationError("booking_revisions.get: not found", { id: ref.id });
+    return r;
   }
 
   // ---- messaging + reviews (spec 05 §5.8, spec 09) -----------------------------------
@@ -1154,8 +1204,26 @@ export class FakeProvider implements ConnectivityProvider {
           canRespond: true,
           hidden: r.hidden,
           ...(r.response !== undefined ? { response: r.response } : {}),
+          ...(r.replyError !== undefined
+            ? { replyState: "failed" as const, replyError: r.replyError }
+            : r.response !== undefined
+              ? { replyState: "sent" as const }
+              : {}),
         })),
     };
+  }
+  /** Test knob: the OTA refused a reply we sent; queues an `updated_review` webhook as Channex does. */
+  refuseReviewReply(reviewId: string, error: string): void {
+    const r = this.reviews.get(reviewId);
+    if (!r) throw new ValidationError("reviews.refuse: not found", { id: reviewId });
+    r.replyError = error;
+    this.queueWebhook({
+      event: "updated_review",
+      property_id: r.propertyId,
+      timestamp: this.stamp(),
+      user_id: null,
+      payload: { review_id: r.id },
+    });
   }
   async respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void> {
     this.guard("reviews.reply", meta);

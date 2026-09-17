@@ -43,22 +43,19 @@ export async function processAriPush(
     return;
   }
   try {
+    const plans = await ratePlans(deps.db, orgId, propertyId);
     const summary = await pushProperty({
       orgId,
       propertyId,
       provider: deps.provider,
-      store: await knownPlansOnly(
-        deps.db,
-        orgId,
-        propertyId,
-        new AriStorePerCall(deps.db, orgId),
-        deps.log,
-      ),
+      store: knownPlansOnly(propertyId, new AriStorePerCall(deps.db, orgId), plans, deps.log),
       limiter: deps.limiter,
       breaker: deps.breaker,
       clock: deps.clock,
       meta: { dedupeKey: `ari.push:${ctl.id}`, requestId: `job:${ctl.id}` },
       verifySampleRate: deps.verifySampleRate ?? 0.05,
+      ...(plans.timezone ? { today: deps.clock.today(plans.timezone).toString() } : {}),
+      currencies: Object.fromEntries(plans.rows.map((r) => [r.id, r.currency])),
       log: deps.log,
     });
     deps.log.info({ orgId, propertyId, ...summary }, "ari.push.done");
@@ -74,29 +71,43 @@ export async function processAriPush(
   }
 }
 
+interface PlanRows {
+  timezone: string | null;
+  rows: Array<{ id: string; currency: string; known: boolean }>;
+}
+
+/** The property's plans with their currency (read-back parsing) and provider id, plus its time zone (today). */
+async function ratePlans(db: Db, orgId: string, propertyId: string): Promise<PlanRows> {
+  return asSystem(db, orgId, async (tx) => {
+    const rows = await rawRows<{ id: string; currency: string; known: boolean }>(
+      tx,
+      sql`select id, currency, channex_rate_plan_id is not null as known from rate_plan where property_id = ${propertyId} and archived_at is null`,
+    );
+    const [prop] = await rawRows<{ timezone: string | null }>(
+      tx,
+      sql`select timezone from property where id = ${propertyId}`,
+    );
+    return { timezone: prop?.timezone ?? null, rows };
+  });
+}
+
 /**
  * A rate plan added after setup finished has no provider id until the setup sweep
  * creates it; pushing its cells would make the provider refuse the whole batch and
  * hold every other plan hostage. Those cells stay pending and are pushed once the
  * plan exists. Properties that were never provisioned (tests, fakes) are left alone.
  */
-async function knownPlansOnly(
-  db: Db,
-  orgId: string,
+function knownPlansOnly(
   propertyId: string,
   store: AriCellStore,
+  plans: PlanRows,
   log: Logger,
-): Promise<AriCellStore> {
-  const rows = await asSystem(db, orgId, (tx) =>
-    rawRows<{ id: string; known: boolean }>(
-      tx,
-      sql`select id, channex_rate_plan_id is not null as known from rate_plan where property_id = ${propertyId} and archived_at is null`,
-    ),
-  );
+): AriCellStore {
+  const rows = plans.rows;
   const known = new Set(rows.filter((r) => r.known).map((r) => r.id));
   const unknown = rows.filter((r) => !r.known).map((r) => r.id);
   if (known.size === 0 || unknown.length === 0) return store;
-  log.warn({ orgId, propertyId, unknown }, "ari.push.plans_not_provisioned");
+  log.warn({ propertyId, unknown }, "ari.push.plans_not_provisioned");
   return new Proxy(store, {
     get(target, prop, receiver) {
       if (prop !== "loadPending") return Reflect.get(target, prop, receiver) as unknown;

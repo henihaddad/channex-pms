@@ -12,6 +12,7 @@ import {
   type PropertyTemplate,
 } from "@pms/core";
 import { DrizzlePropertyRepository, rawRows, sql, type PropertySummary } from "@pms/db";
+import { localRatePlanTitle } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { propertyInputSchema } from "@/api/schemas";
 import { container } from "@/server/container";
@@ -265,11 +266,14 @@ export const adoptPropertyAction = withPermission<[CreateState, FormData], Creat
         : {}),
       ratePlans: imp.ratePlans
         .filter((r) => !r.parentRatePlanId)
-        .map((r) => ({
-          title: r.title,
-          roomTypeTitle: imp.roomTypes.find((t) => t.id === r.roomTypeId)?.title ?? "",
-          baseRateMinor: 10000,
-        })),
+        .map((r) => {
+          const roomTypeTitle = imp.roomTypes.find((t) => t.id === r.roomTypeId)?.title ?? "";
+          return {
+            title: localRatePlanTitle(r.title, roomTypeTitle),
+            roomTypeTitle,
+            baseRateMinor: 10000,
+          };
+        }),
     });
     const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
     const rtMap = created.roomTypes.map((rt, i) => ({

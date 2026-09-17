@@ -6,6 +6,7 @@ import {
   describeChannelEvent,
   Id,
   transition,
+  type ChannelSpec,
   type Clock,
   type ConnectivityProvider,
   type Readiness,
@@ -69,46 +70,12 @@ export async function activateConnection(
   });
   let channexChannelId = conn.channexChannelId;
   if (!channexChannelId) {
-    // docs: Channel API examples — every mapping names its occupancy, the hotel's pricing model,
-    // the rate's readonly flag, and exactly one mapping per room + rate pair is primary
-    const options = await deps.provider.readChannelMappingOptions(
-      { adapterCode: conn.adapterCode, propertyId: idMap.property.remote, settings: conn.settings },
-      meta("mapping_details"),
-    );
-    const detail = await run((tx) => new DrizzlePropertyRepository(tx, orgId).get(conn.propertyId));
-    const occupancyOf = (ratePlanId: string): number | undefined => {
-      const rp = detail?.ratePlans.find((r) => r.id === ratePlanId);
-      return detail?.roomTypes.find((r) => r.id === rp?.roomTypeId)?.defaultOccupancy;
-    };
-    const primaries = new Set<string>();
     const ref = await deps.provider.createChannel(
       {
         adapterCode: conn.adapterCode,
         propertyId: idMap.property.remote,
         settings: conn.settings,
-        mappings: mappings.map((m) => {
-          const rate = options.rooms
-            .find((r) => r.code === m.roomCode)
-            ?.rates.find((x) => x.code === m.rateCode);
-          const wanted = m.occupancy ?? rate?.occupancy ?? occupancyOf(m.ratePlanId);
-          // never above what the OTA rate takes: Channex refuses the mapping (occupancy_exceeds_max_persons)
-          const occupancy =
-            wanted !== undefined && rate?.maxPersons !== undefined
-              ? Math.min(wanted, rate.maxPersons)
-              : wanted;
-          const pair = `${m.roomCode}::${m.rateCode}`;
-          const primaryOcc = !primaries.has(pair);
-          primaries.add(pair);
-          return {
-            ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
-            roomCode: m.roomCode,
-            rateCode: m.rateCode,
-            ...(occupancy !== undefined ? { occupancy } : {}),
-            ...(options.pricingType ? { pricingType: options.pricingType } : {}),
-            primaryOcc,
-            readonly: rate?.readonly ?? false,
-          };
-        }),
+        mappings: await remoteMappings(deps, orgId, conn, mappings, idMap, run, meta),
       },
       meta("create"),
     );
@@ -163,6 +130,92 @@ export async function activateConnection(
     await queueAriPush(tx, orgId, conn.propertyId, now, "channel.activate");
   });
   return { activated: true, readiness };
+}
+
+/**
+ * The mapping set as the provider takes it (docs: Channel API examples): every mapping names
+ * its occupancy, the hotel's pricing model, the rate's readonly flag, and exactly one mapping
+ * per room + rate pair is primary.
+ */
+async function remoteMappings(
+  deps: Omit<ChannelDeps, "db">,
+  orgId: string,
+  conn: { adapterCode: string; propertyId: string; settings: Record<string, unknown> },
+  mappings: Array<{ ratePlanId: string; roomCode: string; rateCode: string; occupancy?: number }>,
+  idMap: { property: { remote: string }; ratePlans: Array<{ local: string; remote: string }> },
+  run: TxRunner,
+  meta: (op: string) => CallMeta,
+): Promise<ChannelSpec["mappings"]> {
+  const remotePlan = new Map(idMap.ratePlans.map((r) => [r.local, r.remote]));
+  const options = await deps.provider.readChannelMappingOptions(
+    { adapterCode: conn.adapterCode, propertyId: idMap.property.remote, settings: conn.settings },
+    meta("mapping_details"),
+  );
+  const detail = await run((tx) => new DrizzlePropertyRepository(tx, orgId).get(conn.propertyId));
+  const occupancyOf = (ratePlanId: string): number | undefined => {
+    const rp = detail?.ratePlans.find((r) => r.id === ratePlanId);
+    return detail?.roomTypes.find((r) => r.id === rp?.roomTypeId)?.defaultOccupancy;
+  };
+  const primaries = new Set<string>();
+  return mappings.map((m) => {
+    const rate = options.rooms
+      .find((r) => r.code === m.roomCode)
+      ?.rates.find((x) => x.code === m.rateCode);
+    const wanted = m.occupancy ?? rate?.occupancy ?? occupancyOf(m.ratePlanId);
+    // never above what the OTA rate takes: Channex refuses the mapping (occupancy_exceeds_max_persons)
+    const occupancy =
+      wanted !== undefined && rate?.maxPersons !== undefined
+        ? Math.min(wanted, rate.maxPersons)
+        : wanted;
+    const pair = `${m.roomCode}::${m.rateCode}`;
+    const primaryOcc = !primaries.has(pair);
+    primaries.add(pair);
+    return {
+      ratePlanId: remotePlan.get(m.ratePlanId) ?? m.ratePlanId,
+      roomCode: m.roomCode,
+      rateCode: m.rateCode,
+      ...(occupancy !== undefined ? { occupancy } : {}),
+      ...(options.pricingType ? { pricingType: options.pricingType } : {}),
+      primaryOcc,
+      readonly: rate?.readonly ?? false,
+    };
+  });
+}
+
+/**
+ * MAP-4 on a connection the provider already holds: the saved mapping set replaces the
+ * provider's as a whole (docs: Channel API › PUT /channels/{id}); Channex then pushes a full
+ * synchronisation itself. Airbnb connections map listings through their own sub-resource, and a
+ * connection not yet created on the provider gets its mappings at activation.
+ */
+export async function syncMappings(
+  deps: Omit<ChannelDeps, "db">,
+  orgId: string,
+  connectionId: string,
+  run: TxRunner,
+): Promise<{ pushed: boolean }> {
+  const conn = await run((tx) =>
+    new DrizzleChannelRepository(tx, orgId).getConnection(connectionId),
+  );
+  if (!conn) throw new Error("connection not found");
+  if (!conn.channexChannelId || isAirbnbViaChannex(conn)) return { pushed: false };
+  const mappings = await run((tx) =>
+    new DrizzleChannelRepository(tx, orgId).listMappings(connectionId),
+  );
+  const idMap = await run((tx) => new DrizzlePropertyRepository(tx, orgId).idMap(conn.propertyId));
+  const meta = (op: string) => ({
+    dedupeKey: `channel:${connectionId}:${op}:${String(deps.clock.now().epochMilliseconds)}`,
+    requestId: `channel:${connectionId}`,
+  });
+  await deps.provider.updateChannel(
+    { id: conn.channexChannelId },
+    {
+      adapterCode: conn.adapterCode,
+      mappings: await remoteMappings(deps, orgId, conn, mappings, idMap, run, meta),
+    },
+    meta("update"),
+  );
+  return { pushed: true };
 }
 
 export async function pauseConnection(
@@ -345,25 +398,34 @@ export async function removeConnection(
     const others = (
       await run((tx) => new DrizzleChannelRepository(tx, orgId).listConnections())
     ).filter((c) => c.id !== connectionId && c.channexChannelId === conn.channexChannelId);
-    if (others.length === 0)
-      await deactivateIfStillThere(deps, conn.channexChannelId, meta("remove"));
+    if (others.length === 0) await deleteOnProvider(deps, conn.channexChannelId, meta);
   } else if (conn.channexChannelId) {
-    await deactivateIfStillThere(deps, conn.channexChannelId, meta("remove"));
+    await deleteOnProvider(deps, conn.channexChannelId, meta);
   }
   await run((tx) => new DrizzleChannelRepository(tx, orgId).removeConnection(connectionId));
 }
 
-/** A channel the provider already deleted (404) needs no deactivation; removing it here must still succeed. */
-async function deactivateIfStillThere(
+/**
+ * Deactivate, then delete (docs: Channel API — an active connection cannot be deleted; a
+ * deactivated one lingers 30 days and keeps its hotel code taken). A channel the provider
+ * already deleted (404) is simply gone; removing it here must still succeed.
+ */
+async function deleteOnProvider(
   deps: Omit<ChannelDeps, "db">,
   channexChannelId: string,
-  meta: CallMeta,
+  meta: (op: string) => CallMeta,
 ): Promise<void> {
+  const gone = (e: unknown) => e instanceof ValidationError && e.details.status === 404;
   try {
-    await deps.provider.setChannelActive({ id: channexChannelId }, false, meta);
+    await deps.provider.setChannelActive({ id: channexChannelId }, false, meta("remove"));
   } catch (e) {
-    if (e instanceof ValidationError && e.details.status === 404) return;
+    if (gone(e)) return;
     throw e;
+  }
+  try {
+    await deps.provider.deleteChannel({ id: channexChannelId }, meta("delete"));
+  } catch (e) {
+    if (!gone(e)) throw e;
   }
 }
 

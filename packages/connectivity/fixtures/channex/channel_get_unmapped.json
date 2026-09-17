@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API: a created, unmapped, inactive connection."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000002"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "type": "channel",
+        "id": "7c0e2b1a-0000-4000-8000-000000000002",
+        "attributes": {
+          "channel": "BookingCom",
+          "title": "Booking.com · Ribeira Loft",
+          "is_active": false,
+          "expected_removal_date": null,
+          "currency": "EUR",
+          "settings": {
+            "hotel_id": "5868189"
+          },
+          "rate_plans": [],
+          "properties": ["716305c4-561a-4561-a187-7f5b8aeb5920"],
+          "actions": []
+        }
+      }
+    }
+  }
+}

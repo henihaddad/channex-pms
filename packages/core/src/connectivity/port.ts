@@ -36,10 +36,18 @@ export interface RoomTypeSpec {
 export interface RatePlanSpec {
   propertyId: string;
   roomTypeId: string;
+  /** Unique per property on Channex (docs: Rate Plans Collection); the job scopes it by room type. */
   title: string;
+  /** Titles the same plan may already carry on the provider (created before titles were scoped). */
+  alsoKnownAs?: string[];
   currency: string;
   sellMode: "per_room" | "per_person";
+  /**
+   * The provider-side parent, recorded for reference only: derivation is ours (rule 6, spec 06),
+   * so the child is created with every `inherit_*` flag off and its cells are pushed by us.
+   */
   parentRatePlanId?: string;
+  /** Per-room plans carry one option at the room's maximum adult occupancy (docs: Occupancy Options). */
   options: Array<{ occupancy: number; isPrimary: boolean; rate: number }>;
 }
 
@@ -94,6 +102,11 @@ export interface AriQuery {
   propertyId: string;
   dateFrom: string;
   dateTo: string;
+  /**
+   * Rate plan id → ISO currency, so read-back rates ("200.00", or "20000" in a zero-decimal
+   * currency) are parsed with the plan's exponent. Without it the provider looks the plans up.
+   */
+  currencies?: Record<string, string>;
 }
 
 export interface AriSnapshot {
@@ -137,7 +150,11 @@ export interface BookingRevisionPayload {
     days: Record<string, number>;
     occupancy: { adults: number; children: number; infants: number; ages?: number[] };
     guests: Array<{ name: string; surname: string }>;
-    meta?: { parentRatePlanId?: string };
+    /** Extras booked for this room (docs: Booking Room › services). */
+    services?: BookingServiceLine[];
+    /** Taxes of this room, including the ones the OTA collected (`collected_taxes`, withheld). */
+    taxes?: BookingTaxLine[];
+    meta?: { parentRatePlanId?: string; paymentInstruction?: string };
   }>;
   customer: {
     name: string;
@@ -147,8 +164,10 @@ export interface BookingRevisionPayload {
     country?: string;
     language?: string;
   };
-  services: Array<{ name: string; amount: number; isInclusive: boolean }>;
-  taxes: Array<{ name: string; amount: number; isInclusive: boolean; withheldByOta?: boolean }>;
+  /** Booking-level extras plus every room's (docs: Booking Service). */
+  services: BookingServiceLine[];
+  /** Every room's taxes and collected taxes flattened; the revision itself carries none. */
+  taxes: BookingTaxLine[];
   otaCommission?: number;
   /**
    * Who collects the money (docs: Bookings Collection): `ota` when the guest already paid the
@@ -158,8 +177,40 @@ export interface BookingRevisionPayload {
   /** How: a card on the booking, or a bank transfer from the OTA. */
   paymentType?: "credit_card" | "bank_transfer";
   /** Masked card metadata only, never a PAN (BK-7). */
-  guarantee?: { cardType: string; maskedNumber: string; expiry: string; cardholder: string };
+  guarantee?: {
+    cardType: string;
+    maskedNumber: string;
+    expiry: string;
+    cardholder: string;
+    /** A virtual card issued by the OTA (Booking.com, some Expedia bookings). */
+    isVirtual?: boolean;
+    /** docs: Bookings Collection › Guarantee › meta — when and how much the virtual card pays. */
+    virtualCard?: {
+      currency: string;
+      balanceMinor: number;
+      effectiveDate?: string;
+      expirationDate?: string;
+    };
+  };
   raw: unknown;
+}
+
+/** A service line as Channex reports it (docs: Bookings Collection › Booking Service). */
+export interface BookingServiceLine {
+  name: string;
+  /** Minor units of the booking currency. */
+  amount: number;
+  isInclusive: boolean;
+  type?: string;
+}
+/** A tax line of a booking room (docs: Bookings Collection › Taxes, Collected Taxes). */
+export interface BookingTaxLine {
+  name: string;
+  amount: number;
+  isInclusive: boolean;
+  /** Collected by the OTA and never paid to the property (`collected_taxes[].is_withheld`). */
+  withheldByOta?: boolean;
+  type?: string;
 }
 
 export interface BookingRevisionPage {
@@ -187,6 +238,7 @@ export interface ConnectionSettings {
   settings: Record<string, unknown>;
 }
 
+/** docs: Channel API › test_connection — a rejection is `success: false` in a 200, not an error. */
 export interface TestResult {
   ok: boolean;
   message?: string;
@@ -226,6 +278,15 @@ export interface ChannelSpec extends ConnectionSettings {
     primaryOcc?: boolean;
     readonly?: boolean;
   }>;
+}
+
+/** Changes to an existing connection (docs: Channel API › PUT /channels/{id}). */
+export interface ChannelUpdate {
+  adapterCode: string;
+  /** Replaces the stored settings as a whole when present. */
+  settings?: Record<string, unknown>;
+  /** Replaces the stored mapping set as a whole when present. */
+  mappings?: ChannelSpec["mappings"];
 }
 
 export interface Readiness {
@@ -306,7 +367,8 @@ export interface RemoteChannel {
   adapterCode: string;
   title: string;
   isActive: boolean;
-  status: "active" | "pending" | "temporal_error" | "permanent_error" | "unknown";
+  /** docs: Channel API — present on Google Hotel ARI connections only; absent elsewhere. */
+  status?: "active" | "pending" | "temporal_error" | "permanent_error";
   /** Provider-side rate plan ids the connection maps, with the channel's codes where known. */
   mappings: Array<{
     /** The mapping's own id on the provider, needed to remove it. */
@@ -344,7 +406,11 @@ export interface ThreadPage {
       authorType?: "guest" | "staff" | "system";
       body: string;
       sentAt: string;
-      attachments?: Array<{ id: string; filename: string; contentType: string }>;
+      /**
+       * Channex lists attachments as relative links (docs: Messages Collection); `id` is the
+       * link as given, `url` the absolute one to fetch the bytes from.
+       */
+      attachments?: Array<{ id: string; filename: string; contentType: string; url?: string }>;
     }>;
   }>;
   nextCursor?: string;
@@ -426,6 +492,7 @@ export type LiveFeedResolution =
       messageToAirbnb?: string;
     }
   | { kind: "inquiry"; type: "preapproval"; blockInstantBooking?: boolean }
+  /** `totalPrice`: a whole number in the listing's currency, all nights and fees, no taxes or deposit (docs: Airbnb API). */
   | { kind: "inquiry"; type: "special_offer"; totalPrice: number }
   | { kind: "alteration_request"; accept: "accept" | "decline" | "cancel" };
 export type GuestReviewCategory = "cleanliness" | "respect_house_rules" | "communication";
@@ -464,6 +531,11 @@ export interface ReviewPage {
     /** Airbnb: the review stays hidden until the host reviews the guest. */
     hidden?: boolean;
     response?: string;
+    /** What became of our reply on the OTA (docs: `reply_scheduled_at`, `reply_sent_at`, `reply_error`). */
+    replyState?: "scheduled" | "sent" | "failed";
+    replyError?: string;
+    /** The provider's last change to the review; `updated_review` webhooks and the sync filter use it. */
+    updatedAt?: string;
   }>;
 }
 
@@ -488,8 +560,12 @@ export interface ConnectivityProvider {
   testConnection(s: ConnectionSettings, meta: CallMeta): Promise<TestResult>;
   readChannelMappingOptions(s: ConnectionSettings, meta: CallMeta): Promise<MappingOptions>;
   createChannel(c: ChannelSpec, meta: CallMeta): Promise<ProviderRef>;
+  /** Replace a connection's settings and/or mapping set on the provider (docs: PUT /channels/{id}). */
+  updateChannel(ref: ProviderRef, changes: ChannelUpdate, meta: CallMeta): Promise<void>;
   checkReadiness(ref: ProviderRef, meta: CallMeta): Promise<Readiness>;
   setChannelActive(ref: ProviderRef, active: boolean, meta: CallMeta): Promise<void>;
+  /** Delete a deactivated connection outright, freeing its hotel code (docs: DELETE /channels/{id}). */
+  deleteChannel(ref: ProviderRef, meta: CallMeta): Promise<void>;
   /** Change a property's provider-side settings, e.g. how far ahead its state reaches (`state_length`). */
   updatePropertySettings(
     ref: ProviderRef,
@@ -543,7 +619,10 @@ export interface ConnectivityProvider {
     meta: CallMeta,
   ): Promise<BookingRevisionPage>;
   ackBookingRevisions(ids: string[], meta: CallMeta): Promise<void>;
+  /** The booking's latest revision, read from the Booking resource (docs: Get Booking By ID). */
   getBooking(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload>;
+  /** One revision by its own id, the pull a booking webhook asks for (docs: Get Booking Revision by ID). */
+  getBookingRevision(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload>;
   // messaging + reviews
   listThreads(q: ThreadQuery, meta: CallMeta): Promise<ThreadPage>;
   sendMessage(m: OutboundMessage, meta: CallMeta): Promise<ProviderRef>;

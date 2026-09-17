@@ -11,6 +11,7 @@ import type {
   RestrictionBatch,
   RemoteChannel,
   AirbnbConnectionLinkSpec,
+  ChannelUpdate,
 } from "@pms/core";
 
 /** Local id ↔ provider id for one property (property.channex_property_id, room_type.channex_room_type_id, rate_plan.channex_rate_plan_id). */
@@ -63,7 +64,13 @@ export function withIdMap(inner: ConnectivityProvider, map: IdMap): Connectivity
       );
     },
     async readAri(q: AriQuery, meta: CallMeta): Promise<AriSnapshot> {
-      const s = await inner.readAri({ ...q, propertyId: out(q.propertyId) }, meta);
+      const currencies = q.currencies
+        ? Object.fromEntries(Object.entries(q.currencies).map(([id, c]) => [out(id), c]))
+        : undefined;
+      const s = await inner.readAri(
+        { ...q, propertyId: out(q.propertyId), ...(currencies ? { currencies } : {}) },
+        meta,
+      );
       return {
         availability: s.availability.map((a) => ({ ...a, roomTypeId: back(a.roomTypeId) })),
         restrictions: s.restrictions.map((r) => ({ ...r, ratePlanId: back(r.ratePlanId) })),
@@ -79,6 +86,21 @@ export function withIdMap(inner: ConnectivityProvider, map: IdMap): Connectivity
     },
     async getBooking(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
       return backRevision(await inner.getBooking(ref, meta));
+    },
+    async getBookingRevision(ref: ProviderRef, meta: CallMeta): Promise<BookingRevisionPayload> {
+      return backRevision(await inner.getBookingRevision(ref, meta));
+    },
+    updateChannel(ref: ProviderRef, changes: ChannelUpdate, meta: CallMeta): Promise<void> {
+      return inner.updateChannel(
+        ref,
+        {
+          ...changes,
+          ...(changes.mappings
+            ? { mappings: changes.mappings.map((m) => ({ ...m, ratePlanId: out(m.ratePlanId) })) }
+            : {}),
+        },
+        meta,
+      );
     },
     createChannelSession(propertyId: string, meta: CallMeta): Promise<{ token: string }> {
       return inner.createChannelSession(out(propertyId), meta);

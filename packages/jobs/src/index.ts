@@ -10,6 +10,8 @@ export {
   markLiveIfSynced,
   propertiesToProvision,
   reopenProvisioningForPlans,
+  remoteRatePlanTitle,
+  localRatePlanTitle,
   type ProvisioningDeps,
   type ProvisioningJob,
 } from "./provisioning.js";
@@ -18,6 +20,7 @@ export {
   activateConnection,
   pauseConnection,
   removeConnection,
+  syncMappings,
   pollChannelHealth,
   systemRunner,
   type ChannelDeps,

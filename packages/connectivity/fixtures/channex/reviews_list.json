@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "docs",
-    "note": "Shape verified against staging 2026-09-17 and docs.channex.io. Names and ids are invented. `received_at` is when the guest wrote it, `inserted_at` when Channex took it in; `expired_at`/`is_expired` close the reply window; Airbnb hides a review (`is_hidden`) until the host reviews the guest."
+    "note": "Shape verified against staging 2026-09-17 and docs.channex.io. Names and ids are invented. `received_at` is when the guest wrote it, `inserted_at` when Channex took it in; `expired_at`/`is_expired` close the reply window; Airbnb hides a review (`is_hidden`) until the host reviews the guest. The first review carries a refused reply (`reply_error`, docs changelog 2026-09-14)."
   },
   "request": {
     "method": "GET",
@@ -27,18 +27,18 @@
               "public_review": "Spotless flat, easy check-in."
             },
             "inserted_at": "2026-09-08T21:37:06.705728",
-            "updated_at": "2026-09-08T21:37:06.705728",
+            "updated_at": "2026-09-09T10:00:00.000000",
             "received_at": "2026-06-06T04:22:57.510000",
             "expired_at": "2026-07-06T04:22:57.510000",
             "is_expired": true,
             "is_hidden": false,
-            "is_replied": false,
+            "is_replied": true,
             "ota": "AirBNB",
             "ota_reservation_id": "HMJSQQKHQ4",
             "overall_score": 10.0,
-            "reply": null,
-            "reply_error": null,
-            "reply_failed_at": null,
+            "reply": "Thank you!",
+            "reply_error": "Airbnb rejected the reply: window closed",
+            "reply_failed_at": "2026-09-09T10:00:00.000000",
             "reply_scheduled_at": null,
             "reply_sent_at": null,
             "scores": [

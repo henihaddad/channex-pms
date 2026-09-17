@@ -1415,6 +1415,8 @@ export class DrizzleMessagingRepository {
       replyExpiresAt?: string;
       hidden?: boolean;
       response?: string;
+      replyState?: "scheduled" | "sent" | "failed";
+      replyError?: string;
     },
     nowIso: string,
     responseSlaHours = 48,
@@ -1473,18 +1475,27 @@ export class DrizzleMessagingRepository {
       })
       .onConflictDoUpdate({
         target: [s.review.propertyId, s.review.providerReviewId],
-        // what the OTA can change after the fact: the window closing, the review being
-        // revealed, a reply posted elsewhere, the stay turning up later
+        // what the OTA can change after the fact (`updated_review`): the window closing, the
+        // review being revealed with its text and score, a reply posted elsewhere, the stay
+        // turning up later, our reply refused
         set: {
+          body: r.text,
+          rating: Math.max(0, Math.min(10, Math.round(r.rating))),
           canRespond,
           replyExpiresAt: r.replyExpiresAt ?? null,
           hidden: r.hidden ?? false,
           bookingId: sql`coalesce(${s.review.bookingId}, ${booking?.id ?? null}::uuid)`,
-          responseState: sql`case when ${s.review.responseState} = 'pending' and ${responseState} <> 'pending' then ${responseState} else ${s.review.responseState} end`,
+          responseState: sql`case when ${r.replyState === "failed"} then 'failed' when ${s.review.responseState} = 'pending' and ${responseState} <> 'pending' then ${responseState} else ${s.review.responseState} end`,
           responseDueAt: sql`case when ${s.review.responseState} = 'pending' and ${responseState} <> 'pending' then null else ${s.review.responseDueAt} end`,
         },
       })
       .returning({ id: s.review.id, created: sql<boolean>`(xmax = 0)` });
+    // a reply the OTA refused after we sent it (docs: `reply_error`, `updated_review`): the
+    // response we hold as sent is failed with the OTA's reason
+    if (r.replyState === "failed" && rows[0])
+      await this.tx.execute(sql`
+        update review_response set delivery_state = 'failed', delivery_error = ${r.replyError ?? "refused by the channel"}
+        where review_id = ${rows[0].id} and delivery_state = 'sent'`);
     return rows[0]?.created === true;
   }
 

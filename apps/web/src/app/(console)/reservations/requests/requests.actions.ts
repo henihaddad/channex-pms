@@ -24,7 +24,11 @@ export const listRequests = withPermission<
 
 const decisionSchema = z.discriminatedUnion("decision", [
   z.object({ decision: z.literal("preapproval"), blockInstantBooking: z.boolean() }),
-  z.object({ decision: z.literal("special_offer"), totalPrice: z.coerce.number().positive() }),
+  // docs: Airbnb API › Special offer — a whole number in the listing's currency
+  z.object({
+    decision: z.literal("special_offer"),
+    totalPrice: z.coerce.number().int().positive(),
+  }),
   z.object({ decision: z.literal("accept") }),
   z.object({
     decision: z.literal("decline"),

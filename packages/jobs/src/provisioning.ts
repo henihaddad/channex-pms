@@ -139,11 +139,14 @@ export async function runProvisioning(
                 {
                   propertyId: state.refs.property!,
                   roomTypeId: state.refs[`rt:${rt.id}`] ?? rt.channexRoomTypeId ?? rt.id,
-                  title: rp.title,
+                  title: remoteRatePlanTitle(rp.title, rt.title, detail.roomTypes.length),
+                  alsoKnownAs: [rp.title],
                   currency: rp.currency,
                   sellMode: "per_room",
                   ...(parent ? { parentRatePlanId: parent } : {}),
-                  options: [{ occupancy: rt.defaultOccupancy, isPrimary: true, rate: 0 }],
+                  // docs: Rate Plans Collection › Occupancy Options — a per-room plan carries its
+                  // room's maximum occupancy, not the default one
+                  options: [{ occupancy: rt.occAdults, isPrimary: true, rate: 0 }],
                 },
                 meta(`rp:${rp.id}`),
               );
@@ -328,4 +331,29 @@ export async function propertiesToProvision(db: Db): Promise<ProvisioningJob[]> 
     ),
   );
   return rows.map((r) => ({ orgId: r.org_id, propertyId: r.id }));
+}
+
+/** The separator between a plan's title and its room type's on the provider. */
+export const REMOTE_TITLE_SEPARATOR = " · ";
+
+/**
+ * Channex requires rate plan titles to be unique per property (docs: Rate Plans Collection;
+ * "Duplication in Rate Plan title is not allowed!" on staging), while here the same plan title
+ * ("Standard") recurs on every room type. A property with several room types therefore names
+ * its plans "Standard · Double Room" on the provider; a single room type keeps the plain title.
+ */
+export function remoteRatePlanTitle(
+  title: string,
+  roomTypeTitle: string,
+  roomTypes: number,
+): string {
+  return roomTypes > 1 ? `${title}${REMOTE_TITLE_SEPARATOR}${roomTypeTitle}` : title;
+}
+
+/** The plain title back from a provider-side one, for adoption (Q7). */
+export function localRatePlanTitle(remoteTitle: string, roomTypeTitle: string): string {
+  const suffix = `${REMOTE_TITLE_SEPARATOR}${roomTypeTitle}`;
+  return roomTypeTitle && remoteTitle.endsWith(suffix)
+    ? remoteTitle.slice(0, -suffix.length)
+    : remoteTitle;
 }

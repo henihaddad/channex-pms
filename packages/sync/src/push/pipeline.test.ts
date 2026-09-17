@@ -181,6 +181,61 @@ describe("pushProperty", () => {
     expect(row.version).toBe(2);
   });
 
+  it("cells before the property's today are failed with a reason and never sent (docs: ari, past dates)", async () => {
+    const sent: string[] = [];
+    const { store, ctx } = harness({
+      pushAvailability: okPush,
+      pushRatesAndRestrictions: async (b) => {
+        sent.push(...b.entries.map((e) => `${e.dateFrom}..${e.dateTo}`));
+        return okPush(b);
+      },
+    });
+    ctx.today = "2026-10-02";
+    store.setRate("rp", "2026-10-01", { rate: 100 });
+    store.setRate("rp", "2026-10-02", { rate: 100 });
+    store.setRate("rp", "2026-10-03", { rate: 100 });
+    const s = await pushProperty(ctx);
+    expect(sent).toEqual(["2026-10-02..2026-10-03"]);
+    expect(s).toMatchObject({ accepted: 1, rejected: 0 });
+    expect(store.rate.get("rate|rp|2026-10-01")).toMatchObject({
+      state: "failed",
+      lastError: "validation",
+    });
+    expect((await pushProperty(ctx)).skipped).toBe("nothing_pending");
+  });
+
+  it("read-back ignores per-occupancy rates, which Channex never returns, and passes the plan currencies", async () => {
+    let query: unknown;
+    const { store, ctx } = harness(
+      {
+        pushAvailability: okPush,
+        pushRatesAndRestrictions: okPush,
+        readAri: async (q) => {
+          query = q;
+          return {
+            availability: [],
+            // the mirror answers a single `rate` for a plan we priced by occupancy
+            restrictions: [
+              { ratePlanId: "rp", date: "2026-10-01", rate: 12000, minStay: 2 },
+              { ratePlanId: "rp", date: "2026-10-02", rate: 9000, minStay: 2 },
+            ],
+          };
+        },
+      },
+      { verify: 1 },
+    );
+    ctx.random = () => 0;
+    ctx.currencies = { rp: "GBP" };
+    store.setRate("rp", "2026-10-01", { rates: { 1: 10000, 2: 12000 }, minStay: 2 });
+    store.setRate("rp", "2026-10-02", { rates: { 1: 10000, 2: 12000 }, minStay: 3 });
+    const s = await pushProperty(ctx);
+    expect(query).toMatchObject({ currencies: { rp: "GBP" } });
+    // 10-01 agrees on everything readable; 10-02 differs on minStay
+    expect(s.driftCells).toBe(1);
+    expect(store.rate.get("rate|rp|2026-10-01")?.state).toBe("synced");
+    expect(store.rate.get("rate|rp|2026-10-02")?.state).toBe("conflicted");
+  });
+
   it("sampled read-back marks drifted cells conflicted so they re-enter the pipeline", async () => {
     const { store, ctx } = harness(
       {

@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs.channex.io › Channel API › check_readiness: a connection without mappings (ChannelReadinessIssue: entity, relation, error_code)."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels/7c0e2b1a-0000-4000-8000-000000000002/check_readiness"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "7c0e2b1a-0000-4000-8000-000000000002",
+          "type": "entity",
+          "entity": "Channel",
+          "relation": "Mapping",
+          "error_code": "required"
+        }
+      ],
+      "meta": {
+        "message": "Success"
+      }
+    }
+  }
+}

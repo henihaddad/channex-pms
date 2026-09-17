@@ -31,6 +31,13 @@ export interface PushContext {
   limits?: BatchLimits;
   /** 0..1: fraction of pushes followed by a read-back verification (spec 05 §5.4.6 #2). */
   verifySampleRate?: number;
+  /**
+   * The property-local date. Channex refuses past dates on /restrictions (docs: ari; on staging
+   * it moves `date_from` to today with a warning), so cells before it are not pushed.
+   */
+  today?: string;
+  /** Rate plan id → currency, for parsing read-back rates in the plan's exponent. */
+  currencies?: Record<string, string>;
   /** Deterministic sampling source; defaults to Math.random. */
   random?: () => number;
   log?: { info(o: object, m: string): void; warn(o: object, m: string): void };
@@ -64,7 +71,8 @@ export async function pushProperty(ctx: PushContext): Promise<PushSummary> {
     summary.skipped = "breaker_open";
     throw new RetryLater(30_000, "circuit breaker open");
   }
-  const pending = await ctx.store.loadPending(ctx.propertyId);
+  const loaded = await ctx.store.loadPending(ctx.propertyId);
+  const pending = ctx.today ? await dropPast(ctx, loaded, ctx.today) : loaded;
   if (pending.rate.length === 0 && pending.availability.length === 0) {
     summary.skipped = "nothing_pending";
     return summary;
@@ -113,6 +121,45 @@ export async function pushProperty(ctx: PushContext): Promise<PushSummary> {
 }
 
 type Entry = AvailabilityEntry | RestrictionEntry;
+
+export const PAST_DATE_REASON = "past date: the channel manager only takes today and later";
+
+/** Cells before the property's today fail with a reason instead of going out (docs: ari, "Past dates are not allowed"). */
+async function dropPast(
+  ctx: PushContext,
+  pending: Awaited<ReturnType<AriCellStore["loadPending"]>>,
+  today: string,
+): Promise<typeof pending> {
+  const past: CellOutcome[] = [
+    ...pending.rate
+      .filter((c) => c.date < today)
+      .map((c): CellOutcome => ({
+        kind: "rate",
+        ratePlanId: c.ratePlanId,
+        date: c.date,
+        version: c.version,
+        status: "failed",
+        reason: PAST_DATE_REASON,
+      })),
+    ...pending.availability
+      .filter((c) => c.date < today)
+      .map((c): CellOutcome => ({
+        kind: "availability",
+        roomTypeId: c.roomTypeId,
+        date: c.date,
+        version: c.version,
+        status: "failed",
+        reason: PAST_DATE_REASON,
+      })),
+  ];
+  if (past.length === 0) return pending;
+  await ctx.store.applyOutcomes(ctx.propertyId, past);
+  ctx.log?.warn({ propertyId: ctx.propertyId, cells: past.length, today }, "ari.push.past_dates");
+  return {
+    rate: pending.rate.filter((c) => c.date >= today),
+    availability: pending.availability.filter((c) => c.date >= today),
+  };
+}
 
 const REFERENCE_RETRY_MS = 15_000;
 
@@ -252,7 +299,12 @@ function cellsOf(
 export async function verify(ctx: PushContext, dateFrom: string, dateTo: string): Promise<number> {
   await ctx.limiter.acquire(limitKey(ctx, "availability"));
   const snapshot = await ctx.provider.readAri(
-    { propertyId: ctx.propertyId, dateFrom, dateTo },
+    {
+      propertyId: ctx.propertyId,
+      dateFrom,
+      dateTo,
+      ...(ctx.currencies ? { currencies: ctx.currencies } : {}),
+    },
     { ...ctx.meta, dedupeKey: `${ctx.meta.dedupeKey}:verify` },
   );
   const desired = await ctx.store.loadDesired(ctx.propertyId, dateFrom, dateTo);
@@ -262,7 +314,6 @@ export async function verify(ctx: PushContext, dateFrom: string, dateTo: string)
       date: r.date,
       values: stripUndefined<RestrictionValues>({
         rate: r.rate,
-        rates: r.rates,
         minStay: r.minStay,
         minStayArrival: r.minStayArrival,
         minStayThrough: r.minStayThrough,
@@ -274,7 +325,19 @@ export async function verify(ctx: PushContext, dateFrom: string, dateTo: string)
     })),
     snapshot.availability,
   );
-  const desiredState = stateFromCells(desired.rate, desired.availability);
+  const desiredState = stateFromCells(
+    desired.rate.map((c) => ({ ...c, values: verifiable(c.values) })),
+    desired.availability,
+  );
+  // per-occupancy `rates` cannot be read back (GET /restrictions has no such value, docs: ari):
+  // a plan priced by occupancy is compared on everything else, and the read-back `rate` (which
+  // occupancy it reports is undocumented) is left out of the comparison for such cells
+  for (const [k, v] of desiredState.restrictions)
+    if (v.rate === undefined) {
+      const m = mirror.restrictions.get(k);
+      if (m)
+        mirror.restrictions.set(k, stripUndefined<RestrictionValues>({ ...m, rate: undefined }));
+    }
   // only compare cells we own: the provider may hold dates we never wrote
   for (const k of [...mirror.restrictions.keys()])
     if (!desiredState.restrictions.has(k)) mirror.restrictions.delete(k);
@@ -296,6 +359,12 @@ export async function verify(ctx: PushContext, dateFrom: string, dateTo: string)
     ctx.log?.warn({ propertyId: ctx.propertyId, cells: conflicted.length }, "ari.drift.detected");
   }
   return conflicted.length;
+}
+
+/** The desired values a read-back can confirm: `rates` never comes back, so it is not compared. */
+function verifiable(v: RestrictionValues): RestrictionValues {
+  const { rates: _rates, ...rest } = v;
+  return rest;
 }
 
 function stripUndefined<T extends object>(o: { [K in keyof T]: T[K] | undefined }): T {

@@ -27,6 +27,7 @@ import {
   pauseConnection,
   pollChannelHealth,
   removeConnection,
+  syncMappings,
   systemRunner,
 } from "./channels.js";
 
@@ -336,9 +337,99 @@ describe("channel state from the provider (docs: Webhook Collection, Channel API
     expect(await conn()).toMatchObject({ state: "active", isActive: true, lastError: null });
   });
 
+  it("disconnect_channel and disconnect_listing are the provider's doing: P1, connection in error", async () => {
+    const before = await conn();
+    await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).updateConnection(before.id, {
+        state: "active",
+        isActive: true,
+        lastError: null,
+      }),
+    );
+    expect(
+      await webhook(
+        "disconnect_channel",
+        { channel_id: before.channexChannelId, channel_name: "BookingCom - Test" },
+        "disc-1",
+      ),
+    ).toBe("warning");
+    expect(await conn()).toMatchObject({ state: "error", isActive: false });
+    const [e] = await events("disconnect_channel");
+    expect(e).toMatchObject({ severity: "p1", payload: { event: "disconnect_channel" } });
+    // sync_warning and rate_error land as events too (docs: Webhook Collection); no state change
+    await webhook(
+      "rate_error",
+      { channel_id: before.channexChannelId, error_type: "rate_below_minimum" },
+      "rate-1",
+    );
+    await webhook("sync_warning", { channel_id: before.channexChannelId }, "warn-1");
+    expect((await events("rate_error"))[0]).toMatchObject({ severity: "p2" });
+    expect((await events("rate_error"))[0]?.message).toContain("rate_below_minimum");
+    expect(await events("sync_warning")).toHaveLength(1);
+    await webhook(
+      "activate_channel",
+      { channel_id: before.channexChannelId, title: "BookingCom - Test", ota_name: "BookingCom" },
+      "act-2",
+    );
+    expect(await conn()).toMatchObject({ state: "active", isActive: true });
+  });
+
+  it("saving mappings replaces the provider's set as a whole (docs: PUT /channels/{id})", async () => {
+    const c = await conn();
+    const rp = (await asSystem(handle.db, ORG, (tx) =>
+      new DrizzlePropertyRepository(tx, ORG).get(propertyId),
+    ))!.ratePlans[0]!;
+    await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).replaceMappings(
+        c.id,
+        [{ ratePlanId: rp.id, roomCode: "R1", rateCode: "RP1", occupancy: 1 }],
+        () => Id.next(),
+      ),
+    );
+    const r = await syncMappings(
+      { provider: fake, clock, log },
+      ORG,
+      c.id,
+      systemRunner(handle.db, ORG),
+    );
+    expect(r).toEqual({ pushed: true });
+    const last = fake.ledger.channelUpdates.at(-1)!;
+    expect(last.channelId).toBe(c.channexChannelId);
+    expect(last.changes.mappings).toEqual([
+      expect.objectContaining({ roomCode: "R1", rateCode: "RP1", occupancy: 1, primaryOcc: true }),
+    ]);
+  });
+
+  it("removing a connection deactivates and then deletes it on the provider, freeing the hotel code", async () => {
+    const id = Id.next();
+    await asSystem(handle.db, ORG, async (tx) => {
+      const ch = new DrizzleChannelRepository(tx, ORG);
+      await ch.insertConnection({
+        id,
+        propertyId,
+        adapterCode: "Expedia",
+        settings: { hotel_id: "9" },
+      });
+      await ch.updateConnection(id, {
+        state: "active",
+        isActive: true,
+        channexChannelId: "ch-expedia",
+      });
+    });
+    await removeConnection({ provider: fake, clock, log }, ORG, id, systemRunner(handle.db, ORG));
+    expect(fake.ledger.channelDeletes).toContain("ch-expedia");
+    expect(
+      (
+        await asSystem(handle.db, ORG, (tx) =>
+          new DrizzleChannelRepository(tx, ORG).listConnections(propertyId),
+        )
+      ).find((x) => x.id === id),
+    ).toBeUndefined();
+  });
+
   it("a channel the provider deleted is marked removed once by the health poll, not every five minutes", async () => {
     const c = await conn();
-    fake.deleteChannel(c.channexChannelId!);
+    fake.providerDeletedChannel(c.channexChannelId!);
     await pollChannelHealth(cd());
     await pollChannelHealth(cd());
     expect(await conn()).toMatchObject({ state: "error", isActive: false });

@@ -1,7 +1,8 @@
 {
   "meta": {
-    "source": "docs",
-    "note": "200 with per-entry warnings: valid entries are processed, invalid ignored (spec 05 \u00a75.10 partial)."
+    "source": "recorded",
+    "recordedAt": "2026-09-17T00:00:00Z",
+    "note": "200 with per-entry warnings, recorded on staging: values=[good, bad] answers one warning that echoes the bad entry (no index). Valid entries are processed, invalid ignored (spec 05 §5.10 partial)."
   },
   "request": {
     "method": "POST",
@@ -12,7 +13,7 @@
     "body": {
       "data": [
         {
-          "id": "c2a4e0e1-1111-4a44-9b1a-000000000001",
+          "id": "de3206a3-e70e-4148-838b-35d472d732a5",
           "type": "task"
         }
       ],
@@ -20,13 +21,14 @@
         "message": "Success",
         "warnings": [
           {
-            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
-            "rate_plan_id": "445835fb-7956-42ac-9efc-3e6f331f0808",
-            "date_from": "2026-10-01",
-            "date_to": "2026-10-03",
             "warning": {
-              "rate": ["must be greater than or equal to 0"]
-            }
+              "rate": ["must be greater than 0"]
+            },
+            "date_from": "2028-03-08",
+            "date_to": "2028-03-09",
+            "property_id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+            "rate_plan_id": "7e6c22e9-2ad5-44f6-9b54-97cc9022f12e",
+            "rate": -5
           }
         ]
       }

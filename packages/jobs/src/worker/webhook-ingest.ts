@@ -31,7 +31,18 @@ const REQUEST_EVENTS = new Set([
 ]);
 
 /** The provider changed a connection's state, or a sync at the channel failed (docs: Webhook Collection). */
-const CHANNEL_STATE_EVENTS = new Set(["activate_channel", "deactivate_channel", "sync_error"]);
+const CHANNEL_STATE_EVENTS = new Set([
+  "activate_channel",
+  "deactivate_channel",
+  "disconnect_channel",
+  "disconnect_listing",
+  "sync_error",
+  "sync_warning",
+  "rate_error",
+]);
+
+/** A sync outcome reported by the channel, kept as an event for the health board (spec 05 §5.5.3). */
+const SYNC_EVENTS = new Set(["sync_error", "sync_warning", "rate_error"]);
 
 /** Channex deletes inactive connections and channel-less properties; it warns 30/7/1 days ahead (docs: Webhook Collection). */
 const REMOVAL_EVENTS = new Set(["channel_removal_warning", "property_removal_warning"]);
@@ -97,7 +108,8 @@ export async function processWebhook(
       // the one webhook whose payload is the news: the date, and which connection
       kind = "warning";
       await recordRemovalWarning(tx, event.orgId, p);
-    } else if (p.event === "review") {
+    } else if (p.event === "review" || p.event === "updated_review") {
+      // `updated_review`: guest feedback revealed, or our reply confirmed or refused (docs)
       kind = "review";
       await enqueueOutbox(tx, {
         type: "review.sync",
@@ -178,39 +190,49 @@ async function recordChannelStateEvent(
     propertyTitle: conn.propertyTitle,
     channelTitle: text(body.channel_name) ?? text(body.title) ?? conn.adapterCode,
   };
-  if (p.event === "sync_error") {
-    const alert = describeChannelEvent("sync_error", {
-      ...ctx,
-      ...(text(body.error_type) ? { detail: text(body.error_type)! } : {}),
-    });
+  if (SYNC_EVENTS.has(p.event)) {
+    // the docs give no payload example for sync_warning and rate_error: the same fields are read as
+    // for sync_error and missing ones stay null
+    const detail = text(body.error_type) ?? text(body.message) ?? text(body.error);
+    const alert = describeChannelEvent(p.event, { ...ctx, ...(detail ? { detail } : {}) });
     await ch.insertEvent({
       id: Id.next(),
       connectionId: conn.id,
       propertyId: p.propertyId,
-      type: "sync_error",
+      type: p.event,
       severity: alert.severity,
       message: `${alert.title}. ${alert.consequence} ${alert.action}`,
       payload: { errorType: body.error_type ?? null, logId: body.log_id ?? null },
     });
     return;
   }
-  if (p.event === "deactivate_channel") {
-    if (!conn.isActive && conn.state !== "active") return; // we did it ourselves (pause/remove)
-    const alert = describeChannelEvent("disconnect_channel", ctx);
+  if (
+    p.event === "deactivate_channel" ||
+    p.event === "disconnect_channel" ||
+    p.event === "disconnect_listing"
+  ) {
+    // deactivate_channel echoes our own pause/remove; disconnect_* is always the provider's doing
+    // (an automatic rule or a user in Channex) and a P1 (spec 05 §5.5.3)
+    if (p.event === "deactivate_channel" && !conn.isActive && conn.state !== "active") return;
+    const type = p.event === "deactivate_channel" ? "disconnect_channel" : p.event;
+    const alert = describeChannelEvent(type, ctx);
     const next = transition(conn.state, "provider_error");
     await ch.updateConnection(conn.id, {
       isActive: false,
       ...(next.ok ? { state: next.value } : {}),
-      lastError: "Deactivated on the channel manager",
+      lastError:
+        p.event === "disconnect_listing"
+          ? "Listing disconnected on Airbnb"
+          : "Deactivated on the channel manager",
     });
     await ch.insertEvent({
       id: Id.next(),
       connectionId: conn.id,
       propertyId: p.propertyId,
-      type: "disconnect_channel",
+      type,
       severity: alert.severity,
       message: `${alert.title}. ${alert.consequence} ${alert.action}`,
-      payload: { source: "webhook" },
+      payload: { source: "webhook", event: p.event, listingId: body.listing_id ?? null },
     });
     return;
   }

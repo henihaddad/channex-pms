@@ -79,7 +79,7 @@ export async function RequestCard({
                   name="totalPrice"
                   type="number"
                   min={1}
-                  step="0.01"
+                  step="1"
                   required
                   placeholder={t("specialOfferTotal", { currency: d.currency ?? "" })}
                   className="w-36"

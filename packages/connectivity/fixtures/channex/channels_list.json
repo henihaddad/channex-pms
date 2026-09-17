@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "docs",
-    "note": "docs.channex.io › Channel API: connections of one property, with the rate plan mappings the channel holds."
+    "note": "docs.channex.io › Channel API: connections of one property, with the rate plan mappings the channel holds. `status` is absent: the docs say it is present on Google Hotel ARI connections only."
   },
   "request": {
     "method": "GET",
@@ -23,7 +23,6 @@
             "channel": "AirBNB",
             "title": "Airbnb · Ribeira Loft",
             "is_active": true,
-            "status": "active",
             "properties": ["716305c4-561a-4561-a187-7f5b8aeb5920"],
             "settings": {},
             "rate_plans": [
@@ -38,11 +37,16 @@
               }
             ],
             "inserted_at": "2026-09-03T18:00:00.000000",
-            "updated_at": "2026-09-03T18:00:00.000000"
+            "updated_at": "2026-09-03T18:00:00.000000",
+            "expected_removal_date": null
           }
         }
       ],
-      "meta": { "total": 1, "limit": 100, "page": 1 }
+      "meta": {
+        "total": 1,
+        "limit": 100,
+        "page": 1
+      }
     }
   }
 }

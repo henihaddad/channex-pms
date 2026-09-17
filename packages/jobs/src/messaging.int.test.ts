@@ -728,6 +728,12 @@ describe("thread sync (CXMSG-2/3)", () => {
       { reviewId: expect.any(String), body: "Thank you, Ana!" },
     ]);
     expect((await repo((r) => r.listReviews({})))[0]!.responseState).toBe("responded");
+    // the OTA refuses the reply later (docs: reply_error, `updated_review`): the next sync says so
+    fake.refuseReviewReply(fake.ledger.reviewResponses[0]!.reviewId, "window closed");
+    await syncReviews({ db: handle.db, ...deps }, { orgId: ORG, propertyId });
+    const refused = (await repo((r) => r.listReviews({}))).find((r) => r.id === rv!.id)!;
+    expect(refused.responseState).toBe("failed");
+    expect(refused.response).toMatchObject({ deliveryState: "failed" });
   });
   it("Airbnb: the host reviews the guest through the worker and the guest's review stops being hidden", async () => {
     const d = { db: handle.db, ...deps };

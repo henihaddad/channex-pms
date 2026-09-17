@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "docs",
-    "note": "Verbatim example from docs.channex.io bookings collection."
+    "note": "Verbatim example from docs.channex.io bookings collection. Taxes and collected taxes sit on the room (docs: Booking Room); the guarantee carries the virtual card meta (docs: Guarantee)."
   },
   "request": {
     "method": "GET",
@@ -49,7 +49,40 @@
                   "adults": 2,
                   "children": 0,
                   "infants": 0
-                }
+                },
+                "taxes": [
+                  {
+                    "is_inclusive": true,
+                    "name": "VAT (5%)",
+                    "total_price": "7.29",
+                    "type": "tax"
+                  }
+                ],
+                "collected_taxes": [
+                  {
+                    "is_inclusive": false,
+                    "is_withheld": true,
+                    "name": "CITY_TAX (Withheld Tax) (7.20%)",
+                    "nights": 1,
+                    "persons": 2,
+                    "price_mode": "Per booking",
+                    "price_per_unit": "23.04",
+                    "total_price": "23.04",
+                    "type": "City Tax",
+                    "version": 2
+                  }
+                ],
+                "services": [
+                  {
+                    "name": "Parking",
+                    "type": "Parking",
+                    "nights": 1,
+                    "persons": 1,
+                    "price_mode": "Per stay",
+                    "price_per_unit": "15.00",
+                    "total_price": "15.00"
+                  }
+                ]
               }
             ],
             "services": [
@@ -68,7 +101,15 @@
               "cvv": "***",
               "cardholder_name": "Channex User",
               "card_type": "VI",
-              "card_number": "411111******1111"
+              "card_number": "411111******1111",
+              "is_virtual": true,
+              "meta": {
+                "virtual_card_currency_code": "GBP",
+                "virtual_card_current_balance": "6755",
+                "virtual_card_decimal_places": "2",
+                "virtual_card_effective_date": "2019-04-26",
+                "virtual_card_expiration_date": "2020-04-26"
+              }
             },
             "customer": {
               "zip": "2031 BE",

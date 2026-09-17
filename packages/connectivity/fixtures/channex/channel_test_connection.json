@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "source": "recorded",
+    "recordedAt": "2026-09-17T00:00:00Z",
+    "note": "POST /channels/test_connection with a hotel_id Booking.com does not know: 200 with success false and errors null, exactly as the docs say (recorded on staging)."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/channels/test_connection"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "success": false,
+        "errors": null
+      }
+    }
+  }
+}

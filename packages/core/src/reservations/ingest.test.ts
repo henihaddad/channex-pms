@@ -175,6 +175,39 @@ describe("ingestProperty", () => {
     expect(repo.events.some((e) => e.type === "booking.unmapped")).toBe(true);
   });
 
+  it("a backlog longer than one page is read whole although acking shrinks the feed (docs: feed lists unacked only)", async () => {
+    // Channex pages the unacked feed by offset: after page 1 is acked, its "page 2" would skip
+    // the next hundred. Five revisions, two per page, every one must be applied in one run.
+    const all = [1, 2, 3, 4, 5].map((n) =>
+      rev({ revisionId: `r${String(n)}`, bookingId: `b${String(n)}`, systemId: `100${String(n)}` }),
+    );
+    const feed = [...all];
+    const requested: string[] = [];
+    const provider = {
+      listBookingRevisions: async (_p: string, cursor: string | undefined) => {
+        const page = cursor ? Number(cursor) : 1;
+        requested.push(String(page));
+        const start = (page - 1) * 2;
+        const revisions = feed.slice(start, start + 2);
+        return { revisions, ...(start + 2 < feed.length ? { nextCursor: String(page + 1) } : {}) };
+      },
+      ackBookingRevisions: async (ids: string[]) => {
+        for (const id of ids)
+          feed.splice(
+            feed.findIndex((r) => r.revisionId === id),
+            1,
+          );
+      },
+    } as unknown as ConnectivityProvider;
+    const repo = new MemoryBookingRepository();
+    const deps = { provider, repo, clock: new FakeClock("2026-09-01T10:05:00Z"), orgId: "org" };
+    const s = await ingestProperty(deps, "p", meta);
+    expect(s).toMatchObject({ seen: 5, applied: 5, acked: 5 });
+    expect(repo.projections.size).toBe(5);
+    // after a page that brought new revisions the feed is read from page 1 again
+    expect(requested).toEqual(["1", "1", "1"]);
+  });
+
   it("ack sweep re-acks after 5 minutes and alerts after 10 (BK-3)", async () => {
     const { repo, deps, clock, alerts, acked } = harness([[rev()]], { failAckOnce: true });
     await ingestProperty(deps, "p", meta);
