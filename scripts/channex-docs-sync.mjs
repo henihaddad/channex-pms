@@ -18,15 +18,21 @@ const ROOT = new URL("../docs/vendor/channex/", import.meta.url).pathname;
 const INDEX_URL = "https://docs.channex.io/llms.txt";
 const check = process.argv.includes("--check");
 
-const fetchText = (url) => execFileSync("curl", ["-sSfL", "--max-time", "60", url], { encoding: "utf8" });
+const fetchText = (url) =>
+  execFileSync("curl", ["-sSfL", "--max-time", "60", url], { encoding: "utf8" });
 const fileNameFor = (url) => {
   const path = new URL(url).pathname.replace(/^\//, "").replace(/\.md$/, "") || "readme";
   return `${path.replace(/\//g, "__")}.md`;
 };
 
 const index = fetchText(INDEX_URL);
-const urls = [...new Set([...index.matchAll(/\((https:\/\/docs\.channex\.io\/[^)\s]+\.md)\)/g)].map((m) => m[1]))];
-if (urls.length < 50) throw new Error(`llms.txt listed only ${urls.length} pages; refusing to wipe the vendored copy`);
+const urls = [
+  ...new Set(
+    [...index.matchAll(/\((https:\/\/docs\.channex\.io\/[^)\s]+\.md)\)/g)].map((m) => m[1]),
+  ),
+];
+if (urls.length < 50)
+  throw new Error(`llms.txt listed only ${urls.length} pages; refusing to wipe the vendored copy`);
 
 const fresh = new Map();
 for (const url of urls) {
@@ -44,7 +50,9 @@ if (check) {
     if (!existsSync(p) || readFileSync(p, "utf8") !== body) stale.push(name);
   }
   if (stale.length) {
-    console.error(`vendored Channex docs are stale (${stale.length} pages):\n  ${stale.slice(0, 20).join("\n  ")}`);
+    console.error(
+      `vendored Channex docs are stale (${stale.length} pages):\n  ${stale.slice(0, 20).join("\n  ")}`,
+    );
     process.exit(1);
   }
   console.log(`vendored Channex docs are current (${fresh.size} pages)`);
@@ -52,8 +60,19 @@ if (check) {
 }
 
 mkdirSync(ROOT, { recursive: true });
-for (const f of readdirSync(ROOT)) if (f.endsWith(".md") && f !== "README.md") rmSync(join(ROOT, f));
+for (const f of readdirSync(ROOT))
+  if (f.endsWith(".md") && f !== "README.md") rmSync(join(ROOT, f));
 for (const [name, body] of fresh) writeFileSync(join(ROOT, name), body);
-writeFileSync(join(ROOT, "_index.json"), JSON.stringify([...fresh].map(([n, b]) => [n, b.length]), null, 0) + "\n");
-writeFileSync(join(ROOT, "_fetched.txt"), `${process.env.CHANNEX_DOCS_DATE ?? new Date().toISOString().slice(0, 10)}\n`);
+writeFileSync(
+  join(ROOT, "_index.json"),
+  JSON.stringify(
+    [...fresh].map(([n, b]) => [n, b.length]),
+    null,
+    0,
+  ) + "\n",
+);
+writeFileSync(
+  join(ROOT, "_fetched.txt"),
+  `${process.env.CHANNEX_DOCS_DATE ?? new Date().toISOString().slice(0, 10)}\n`,
+);
 console.log(`vendored ${fresh.size} pages into docs/vendor/channex`);

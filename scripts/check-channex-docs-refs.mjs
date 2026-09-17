@@ -9,7 +9,9 @@ import { readFileSync, readdirSync } from "node:fs";
 
 const file = new URL("../packages/connectivity/src/channex/provider.ts", import.meta.url).pathname;
 const vendored = new Set(
-  readdirSync(new URL("../docs/vendor/channex/", import.meta.url).pathname).map((f) => f.replace(/\.md$/, "")),
+  readdirSync(new URL("../docs/vendor/channex/", import.meta.url).pathname).map((f) =>
+    f.replace(/\.md$/, ""),
+  ),
 );
 const lines = readFileSync(file, "utf8").split("\n");
 const missing = [];
@@ -25,13 +27,27 @@ lines.forEach((line, i) => {
   if (!cite) return missing.push(`${op} (line ${i + 1})`);
   // the citation starts with the page: "hotels-collection (Update a property)", "channel-api-examples/booking.com (…)",
   // or prose like "Channel API — …"; normalised to a slug that must be part of a vendored file name
-  const slug = cite[1].split(/ \(| — | › |:/)[0].trim().toLowerCase().replace(/[^a-z0-9./-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-  const hit = slug.length >= 3 && [...vendored].some((p) => p.toLowerCase().replace(/__/g, "/").includes(slug));
+  const slug = cite[1]
+    .split(/ \(| — | › |:/)[0]
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9./-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  const hit =
+    slug.length >= 3 &&
+    [...vendored].some((p) => p.toLowerCase().replace(/__/g, "/").includes(slug));
   if (!hit) unknownPage.push(`${op} (line ${i + 1}): "${cite[1].trim().slice(0, 60)}"`);
 });
 if (missing.length || unknownPage.length) {
-  if (missing.length) console.error(`Channex calls without a docs citation (${missing.length}):\n  ${missing.join("\n  ")}`);
-  if (unknownPage.length) console.error(`Citations naming no vendored page (${unknownPage.length}):\n  ${unknownPage.join("\n  ")}`);
+  if (missing.length)
+    console.error(
+      `Channex calls without a docs citation (${missing.length}):\n  ${missing.join("\n  ")}`,
+    );
+  if (unknownPage.length)
+    console.error(
+      `Citations naming no vendored page (${unknownPage.length}):\n  ${unknownPage.join("\n  ")}`,
+    );
   process.exit(1);
 }
 console.log("every Channex call cites a vendored docs page");

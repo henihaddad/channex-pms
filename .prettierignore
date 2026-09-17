@@ -9,3 +9,4 @@ website/package-lock.json
 docs/specs
 CHANGELOG.md
 apps/web/handlers.manifest.json
+docs/vendor/

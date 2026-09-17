@@ -262,29 +262,29 @@ export class ChannexProvider implements ConnectivityProvider {
     const rels = obj(obj(obj(p).data).relationships);
     const groupId = groupIdOf(rels);
     const roomTypes = // docs: room-types-collection (Room Types List)
-    (await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)).map((r) => {
-      const a = obj(obj(r).attributes);
-      return {
-        id: String(obj(r).id),
-        title: String(a.title),
-        countOfRooms: Number(a.count_of_rooms ?? 1),
-        occAdults: Number(a.occ_adults ?? 2),
-        occChildren: Number(a.occ_children ?? 0),
-        occInfants: Number(a.occ_infants ?? 0),
-      };
-    });
+      (await this.listAll("room_types.list", "/api/v1/room_types", ref.id, meta)).map((r) => {
+        const a = obj(obj(r).attributes);
+        return {
+          id: String(obj(r).id),
+          title: String(a.title),
+          countOfRooms: Number(a.count_of_rooms ?? 1),
+          occAdults: Number(a.occ_adults ?? 2),
+          occChildren: Number(a.occ_children ?? 0),
+          occInfants: Number(a.occ_infants ?? 0),
+        };
+      });
     const ratePlans = // docs: rate-plans-collection (Rate Plans List)
-    (await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)).map((r) => {
-      const a = obj(obj(r).attributes);
-      const rl = obj(obj(r).relationships);
-      return {
-        id: String(obj(r).id),
-        roomTypeId: String(obj(obj(rl.room_type).data).id ?? a.room_type_id),
-        title: String(a.title),
-        currency: String(a.currency),
-        parentRatePlanId: a.parent_rate_plan_id ? String(a.parent_rate_plan_id) : null,
-      };
-    });
+      (await this.listAll("rate_plans.list", "/api/v1/rate_plans", ref.id, meta)).map((r) => {
+        const a = obj(obj(r).attributes);
+        const rl = obj(obj(r).relationships);
+        return {
+          id: String(obj(r).id),
+          roomTypeId: String(obj(obj(rl.room_type).data).id ?? a.room_type_id),
+          title: String(a.title),
+          currency: String(a.currency),
+          parentRatePlanId: a.parent_rate_plan_id ? String(a.parent_rate_plan_id) : null,
+        };
+      });
     return {
       property: {
         id: ref.id,
