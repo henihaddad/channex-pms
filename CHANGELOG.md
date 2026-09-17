@@ -214,6 +214,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Calendar bulk edits (spec 06 BULK-1): "Set rate…" and "Adjust %" only ever produced the dry-run
+  preview, and the preview told the operator to re-run the operation, which produced another
+  preview; a price could never be changed from the toolbar. The preview now carries an "Apply to
+  N cells" button that runs the previewed operation for real, and Cancel closes it.
 - Mapping queue (spec 08 §8.5): the OTA room and rate codes of an unmapped Booking.com booking
   showed as "?" because Booking.com carries them in the room's `meta` (`room_type_code`,
   `rate_plan_code`), seen on the first live booking through the shared test hotel; the queue reads

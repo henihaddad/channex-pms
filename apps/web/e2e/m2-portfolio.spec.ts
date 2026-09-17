@@ -164,4 +164,24 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await expect(page.getByRole("status")).toContainText("Undone");
   await page.reload();
   await expect(page.locator(`[data-cell="${cellKey}"]`)).toContainText("100");
+
+  // a bulk price change (BULK-1): select a range, preview, then apply from the preview
+  await expect(page.getByTestId("grid-stats")).toContainText("loaded in");
+  const first = page.locator("[data-cell]").nth(3);
+  const firstKey = await first.getAttribute("data-cell");
+  await first.click();
+  await page
+    .locator("[data-cell]")
+    .nth(6)
+    .click({ modifiers: ["Shift"] });
+  page.once("dialog", (d) => void d.accept("130"));
+  await page.getByRole("button", { name: "Set rate…" }).click();
+  await expect(page.getByTestId("bulk-preview")).toContainText("cells would change");
+  await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("100");
+  await page.getByTestId("bulk-apply").click();
+  await expect(page.getByRole("status")).toContainText("Applied to");
+  await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("130");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toContainText("Undone");
+  await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("100");
 });

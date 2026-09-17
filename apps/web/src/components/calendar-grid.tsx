@@ -122,6 +122,8 @@ export function CalendarGrid({
   const [bulk, setBulk] = useState<{
     open: boolean;
     preview?: { cellCount: number; warnings: string[]; blocked: string[] };
+    /** The operation the preview was computed for; Apply re-runs exactly it (BULK-1). */
+    ops?: unknown[];
   }>({ open: false });
   const parentRef = useRef<HTMLDivElement>(null);
   const dates = useMemo(
@@ -426,7 +428,7 @@ export function CalendarGrid({
       setMessage(r.detail ?? `Bulk failed (${res.status})`);
       return;
     }
-    if (dryRun || !r.applied) setBulk({ open: true, preview: r });
+    if (dryRun || !r.applied) setBulk({ open: true, preview: r, ops });
     else {
       setBulk({ open: false });
       if (r.id) setUndoStack((s) => [...s, { id: r.id!, propertyId }]);
@@ -646,7 +648,9 @@ export function CalendarGrid({
           className="rounded-md border border-border-secondary bg-white p-3 text-sm"
           data-testid="bulk-preview"
         >
-          <p className="font-medium">Dry run: {bulk.preview.cellCount} cells would change.</p>
+          <p className="font-medium">
+            Preview: {bulk.preview.cellCount} cells would change. Nothing has changed yet.
+          </p>
           {bulk.preview.warnings.map((w) => (
             <p key={w} className="text-xs text-warning-soft-foreground">
               {w}
@@ -657,16 +661,24 @@ export function CalendarGrid({
               Blocked: {w}
             </p>
           ))}
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <Button
               className="h-7 px-2 text-xs"
-              disabled={bulk.preview.blocked.length > 0}
+              data-testid="bulk-apply"
+              disabled={bulk.preview.blocked.length > 0 || !bulk.ops}
+              onClick={() => void runBulk(false, bulk.ops ?? [])}
+            >
+              Apply to {bulk.preview.cellCount} cells
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-7 px-2 text-xs"
               onClick={() => setBulk({ open: false })}
             >
-              Close
+              Cancel
             </Button>
             <span className="text-xs text-muted">
-              Re-run the operation from the toolbar to apply; the preview is mandatory (BULK-1).
+              Applying sends the change to the calendar and the connected channels; Undo reverts it.
             </span>
           </div>
         </div>
