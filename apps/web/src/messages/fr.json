@@ -561,6 +561,8 @@
     "respondPlaceholder": "Remerciez le client…",
     "respond": "Répondre",
     "noResponseSupport": "Cette OTA n'accepte pas les réponses.",
+    "reviewHidden": "Masqué sur Airbnb tant que vous n'avez pas évalué le voyageur",
+    "replyExpired": "Délai de réponse dépassé",
     "via": "via",
     "dates": "Dates",
     "unit": "Unité",

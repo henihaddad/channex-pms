@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Messages Collection › Close Message Thread. No payload."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/message_threads/c1a2b3d4-0000-4000-8000-00000000c0de/close"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "c1a2b3d4-0000-4000-8000-00000000c0de",
+        "type": "message_thread",
+        "attributes": {
+          "title": "Sam",
+          "is_closed": true,
+          "provider": "BookingCom",
+          "message_count": 2
+        }
+      }
+    }
+  }
+}

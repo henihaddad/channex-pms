@@ -44,7 +44,7 @@ export default async function ReviewsPage({
           size="sm"
         >
           <option value="">{t("anyState")}</option>
-          {["pending", "queued", "responded", "failed", "not_supported"].map((s) => (
+          {["pending", "queued", "responded", "failed", "expired", "not_supported"].map((s) => (
             <option key={s} value={s}>
               {s}
             </option>
@@ -75,7 +75,17 @@ export default async function ReviewsPage({
             <p>
               <strong data-testid="rating">{r.rating}/10</strong> · {r.guestName} ·{" "}
               {providerLabel(r.provider)} · {r.propertyTitle} ·{" "}
-              <span className="text-xs text-muted">{r.insertedAt.slice(0, 10)}</span>
+              <span className="text-xs text-muted">{r.receivedAt.slice(0, 10)}</span>
+              {r.hidden ? (
+                <Chip size="sm" className="ms-2" data-testid="review-hidden">
+                  {t("reviewHidden")}
+                </Chip>
+              ) : null}
+              {r.responseState === "expired" ? (
+                <Chip size="sm" className="ms-2" data-testid="review-expired">
+                  {t("replyExpired")}
+                </Chip>
+              ) : null}
               {r.responseDueAt && r.responseState === "pending" ? (
                 <Chip color="warning" size="sm" className="ms-2">
                   {t("respondBy")} {r.responseDueAt.slice(0, 16).replace("T", " ")}

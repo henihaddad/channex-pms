@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Reviews Collection › Reply to Review: the payload is {reply: {reply: text}}."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/reviews/5d9aa0d9-a888-46b5-bde8-13cc7a15161c/reply"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "5d9aa0d9-a888-46b5-bde8-13cc7a15161c",
+        "type": "review",
+        "attributes": {
+          "id": "5d9aa0d9-a888-46b5-bde8-13cc7a15161c",
+          "is_hidden": true,
+          "is_replied": true,
+          "reply": "Thank you!",
+          "updated_at": "2026-09-11T05:00:41.020781"
+        }
+      }
+    }
+  }
+}

@@ -336,13 +336,22 @@ export interface ReviewPage {
   reviews: Array<{
     id: string;
     bookingId?: string;
+    /** The OTA's own reservation code, for stays we know only by that code. */
+    otaReservationCode?: string;
     rating: number;
     text: string;
     ota: string;
+    /** When the provider took the review in: the sync cursor. */
     insertedAt: string;
+    /** When the guest wrote it: the date to show. */
+    receivedAt?: string;
     guestName?: string;
     /** Whether the OTA accepts a response, and ours when one was posted. */
     canRespond?: boolean;
+    /** The end of the OTA's reply window, when it states one. */
+    replyExpiresAt?: string;
+    /** Airbnb: the review stays hidden until the host reviews the guest. */
+    hidden?: boolean;
     response?: string;
   }>;
 }

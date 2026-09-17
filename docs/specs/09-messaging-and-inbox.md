@@ -185,7 +185,8 @@ What the code does, where it refines the text above:
   slack) and upserts by provider message id, so duplicates and re-pulls add nothing (CXMSG-2/3).
   Channex answers a thread list with the thread's last message only, so the provider reads each
   changed thread's conversation from `GET /api/v1/message_threads/{id}/messages` (newest first,
-  paginated) and hands it over oldest first; an Airbnb thread's `title` is the guest's name.
+  paginated) and hands it over oldest first; an Airbnb thread's `title` is the guest's name and
+  its booking, when there is one, sits under `relationships.booking` (an inquiry has none).
   Guest names and bodies are sealed with the org key; the thread row keeps only counts and
   timestamps in the clear.
 - **Delivery.** The console never calls the provider inside a transaction (ADR-0007). A reply is
@@ -220,8 +221,19 @@ What the code does, where it refines the text above:
 - **Kill switch** lives in `property.settings.automation_kill_switch`.
 - **Capabilities** per channel are a static table in `core/messaging/capabilities.ts`: Booking.com
   has attachments, close and "no reply needed"; Airbnb attachments only; Expedia close only.
+  On Channex these are three different calls: `POST /message_threads/{id}/close` (no payload),
+  `POST /message_threads/{id}/no_reply_needed` (Booking.com only; the thread stays open and the
+  message stops counting against the response time), and for attachments `POST /attachments`
+  (base64 `file`, `file_name`, `file_type`) followed by one message per attachment carrying
+  `attachment_id` and no `message` field, since Channex ignores an attachment sent next to text.
 - **Reviews** sync hourly and on the `review` webhook; a response is queued and delivered by the
-  same worker step, with a 48-hour response-SLA marker.
+  same worker step (`POST /reviews/{id}/reply` with `{reply: {reply}}`). A review carries two
+  dates: `inserted_at`, when Channex took it in (the sync cursor), and `received_at`, when the
+  guest wrote it (the date shown). The OTA's reply window (`expired_at`, `is_expired`) closes
+  `can_respond` and puts the review in `expired`; the response is due at the earlier of our
+  48-hour SLA and that window. The stay is found by `relationships.booking`, else by
+  `ota_reservation_id`. Airbnb's `is_hidden` marks a review the guest cannot see until the host
+  reviews the guest.
 
 Deferred beyond v0.3: translation, AI-assisted drafts (`LlmProvider`), presence and unsent-draft
 collision warnings, rule-based assignment, attachment upload from the console and malware

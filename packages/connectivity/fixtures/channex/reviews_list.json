@@ -1,0 +1,131 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Shape verified against staging 2026-09-17 and docs.channex.io. Names and ids are invented. `received_at` is when the guest wrote it, `inserted_at` when Channex took it in; `expired_at`/`is_expired` close the reply window; Airbnb hides a review (`is_hidden`) until the host reviews the guest."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/reviews",
+    "query": {
+      "filter[property_id]": "716305c4-561a-4561-a187-7f5b8aeb5920",
+      "pagination[limit]": "100",
+      "pagination[page]": "1"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "95a0c8b4-d405-4e22-b4b8-a1457610d3e0",
+          "type": "review",
+          "attributes": {
+            "id": "95a0c8b4-d405-4e22-b4b8-a1457610d3e0",
+            "content": "Public review:\r\nSpotless flat, easy check-in.",
+            "guest_name": null,
+            "raw_content": {
+              "public_review": "Spotless flat, easy check-in."
+            },
+            "inserted_at": "2026-09-08T21:37:06.705728",
+            "updated_at": "2026-09-08T21:37:06.705728",
+            "received_at": "2026-06-06T04:22:57.510000",
+            "expired_at": "2026-07-06T04:22:57.510000",
+            "is_expired": true,
+            "is_hidden": false,
+            "is_replied": false,
+            "ota": "AirBNB",
+            "ota_reservation_id": "HMJSQQKHQ4",
+            "overall_score": 10.0,
+            "reply": null,
+            "reply_error": null,
+            "reply_failed_at": null,
+            "reply_scheduled_at": null,
+            "reply_sent_at": null,
+            "scores": [
+              {
+                "category": "clean",
+                "score": 10.0
+              },
+              {
+                "category": "accuracy",
+                "score": 10.0
+              }
+            ],
+            "tags": ["guest_review_host_positive_spotless_furniture_and_linens"],
+            "meta": {
+              "listing_id": "1629149422535053411"
+            }
+          },
+          "relationships": {
+            "property": {
+              "data": {
+                "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+                "type": "property"
+              }
+            },
+            "channel": {
+              "data": {
+                "id": "b73b10cd-17cd-4668-b3f6-7154f7d0a33e",
+                "type": "channel"
+              }
+            }
+          }
+        },
+        {
+          "id": "5d9aa0d9-a888-46b5-bde8-13cc7a15161c",
+          "type": "review",
+          "attributes": {
+            "id": "5d9aa0d9-a888-46b5-bde8-13cc7a15161c",
+            "content": "Guest review test",
+            "guest_name": "Guest Name",
+            "inserted_at": "2026-09-10T05:00:41.020781",
+            "updated_at": "2026-09-10T05:00:41.020781",
+            "received_at": "2026-09-10T05:45:23.000000",
+            "expired_at": "2099-01-01T00:00:00.000000",
+            "is_expired": false,
+            "is_hidden": true,
+            "is_replied": false,
+            "ota": "AirBNB",
+            "ota_reservation_id": "HM2ND0000A",
+            "overall_score": 8.0,
+            "reply": null,
+            "scores": [
+              {
+                "category": "clean",
+                "score": 8.0
+              }
+            ],
+            "tags": []
+          },
+          "relationships": {
+            "booking": {
+              "data": {
+                "id": "203f359b-08d6-4e5c-b64c-1aa67cfb775d",
+                "type": "booking"
+              }
+            },
+            "channel": {
+              "data": {
+                "id": "9d571186-b4d0-4792-84b7-af04ab1e28e1",
+                "type": "channel"
+              }
+            },
+            "property": {
+              "data": {
+                "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+                "type": "property"
+              }
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 2,
+        "limit": 100,
+        "order_by": "received_at",
+        "page": 1,
+        "order_direction": "desc"
+      }
+    }
+  }
+}

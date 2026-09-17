@@ -209,7 +209,8 @@ export async function syncReviews(
   let created = 0;
   await asSystem(deps.db, job.orgId, async (tx) => {
     const repo = repoFor(deps, tx, job.orgId);
-    for (const r of page.reviews) if (await repo.upsertReview(job.propertyId, r)) created++;
+    const now = deps.clock.now().toString();
+    for (const r of page.reviews) if (await repo.upsertReview(job.propertyId, r, now)) created++;
   });
   return { reviews: page.reviews.length, created };
 }

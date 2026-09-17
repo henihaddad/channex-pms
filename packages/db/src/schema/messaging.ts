@@ -218,8 +218,17 @@ export const review = pgTable(
     rating: integer("rating").notNull(),
     body: text("body").notNull(),
     guestNameEnc: text("guest_name_enc"),
+    /** When the provider took the review in: the sync cursor. */
     insertedAt: ts("inserted_at").notNull(),
+    /** When the guest wrote it: the date shown. */
+    receivedAt: ts("received_at"),
+    /** The OTA's reservation code, to find the stay when the booking link is missing. */
+    otaReservationCode: text("ota_reservation_code"),
     canRespond: boolean("can_respond").notNull().default(true),
+    /** The OTA's reply window, when it states one. */
+    replyExpiresAt: ts("reply_expires_at"),
+    /** Airbnb: hidden until the host reviews the guest. */
+    hidden: boolean("hidden").notNull().default(false),
     responseState: text("response_state").notNull().default("pending"), // pending|queued|responded|failed|not_supported
     responseDueAt: ts("response_due_at"),
     createdAt: ts("created_at").notNull().default(now()),

@@ -1,0 +1,25 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Messages Collection › Mark Thread as No Reply needed. Booking.com only; the thread stays open. No payload."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/message_threads/c1a2b3d4-0000-4000-8000-00000000c0de/no_reply_needed"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "c1a2b3d4-0000-4000-8000-00000000c0de",
+        "type": "message_thread",
+        "attributes": {
+          "title": "Sam",
+          "is_closed": false,
+          "provider": "BookingCom",
+          "message_count": 2
+        }
+      }
+    }
+  }
+}

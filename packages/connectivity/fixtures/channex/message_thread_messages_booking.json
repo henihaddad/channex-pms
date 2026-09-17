@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "Shape verified against staging 2026-09-17 and docs.channex.io. Names and ids are invented."
+  },
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/message_threads/c1a2b3d4-0000-4000-8000-00000000c0de/messages",
+    "query": {
+      "pagination[page]": "1",
+      "pagination[limit]": "100"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "9f0e1d2c-1111-4222-8333-444455556666",
+          "type": "message",
+          "attributes": {
+            "message": "What time is check-in?",
+            "sender": "guest",
+            "inserted_at": "2026-09-14T09:00:00.000000",
+            "updated_at": "2026-09-14T09:00:00.000000",
+            "attachments": []
+          },
+          "relationships": {
+            "message_thread": {
+              "data": {
+                "id": "c1a2b3d4-0000-4000-8000-00000000c0de",
+                "type": "message_thread"
+              }
+            }
+          }
+        }
+      ],
+      "meta": {
+        "total": 1,
+        "limit": 100,
+        "page": 1,
+        "order_by": "inserted_at"
+      }
+    }
+  }
+}

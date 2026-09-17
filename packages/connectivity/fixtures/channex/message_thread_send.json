@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Messages Collection › Send Message to Message Thread / Send attachment: one message carries text or one attachment_id, never both."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/message_threads/c1a2b3d4-0000-4000-8000-00000000c0de/messages"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "34849183-7c36-4ac4-9103-cfaeecbc2cc8",
+        "type": "message",
+        "attributes": {
+          "message": "Check-in is from 15:00.",
+          "sender": "property",
+          "inserted_at": "2026-09-14T09:05:00.000000",
+          "updated_at": "2026-09-14T09:05:00.000000",
+          "attachments": []
+        },
+        "relationships": {
+          "message_thread": {
+            "data": {
+              "id": "c1a2b3d4-0000-4000-8000-00000000c0de",
+              "type": "message_thread"
+            }
+          },
+          "user": {
+            "data": {
+              "id": "c9080091-6b9f-4868-a2ca-691036d29ed0",
+              "type": "user"
+            }
+          }
+        }
+      }
+    }
+  }
+}

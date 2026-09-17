@@ -561,6 +561,8 @@
     "respondPlaceholder": "Thank the guest…",
     "respond": "Respond",
     "noResponseSupport": "This OTA does not accept responses.",
+    "reviewHidden": "Hidden on Airbnb until you review the guest",
+    "replyExpired": "Reply window closed",
     "via": "via",
     "dates": "Dates",
     "unit": "Unit",

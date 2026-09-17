@@ -891,9 +891,12 @@ export class ChannexProvider implements ConnectivityProvider {
       const messages = inline.length
         ? inline.map(parseMessage)
         : await this.threadMessages(id, meta);
+      // the booking is a relationship of the thread (docs: Messages Collection); an inquiry has none
+      const bookingId =
+        relationshipId(t, "booking") ?? (a.booking_id ? String(a.booking_id) : undefined);
       threads.push({
         id,
-        ...(a.booking_id ? { bookingId: String(a.booking_id) } : {}),
+        ...(bookingId ? { bookingId } : {}),
         provider: String(a.provider ?? a.ota ?? "unknown"),
         ...(a.updated_at ? { updatedAt: String(a.updated_at) } : {}),
         // Channex titles an Airbnb thread with the guest's name
@@ -901,7 +904,7 @@ export class ChannexProvider implements ConnectivityProvider {
           ? { guestName: String(guest.name ?? a.guest_name ?? a.title) }
           : {}),
         ...(guest.language ? { guestLanguage: String(guest.language) } : {}),
-        kind: a.booking_id ? ("booking" as const) : ("inquiry" as const),
+        kind: bookingId ? ("booking" as const) : ("inquiry" as const),
         state: a.is_closed === true ? ("closed" as const) : ("open" as const),
         messages,
       });
@@ -939,29 +942,35 @@ export class ChannexProvider implements ConnectivityProvider {
     const path = m.threadId.startsWith("booking:")
       ? `/api/v1/bookings/${m.threadId.slice("booking:".length)}/messages`
       : `/api/v1/message_threads/${m.threadId}/messages`;
-    const body = await this.call(
-      "messages.send",
-      {
-        method: "POST",
-        path,
-        body: { message: { message: m.body, attachments: m.attachmentIds ?? [] } },
-      },
-      meta,
-    );
-    return { id: idOf(body) };
+    // Channex takes either text or one attachment per message, never both: with a `message`
+    // field present the attachment is ignored (docs: Messages Collection › Send attachment)
+    const bodies: Array<Record<string, string>> = [];
+    if (m.body.trim() !== "") bodies.push({ message: m.body });
+    for (const id of m.attachmentIds ?? []) bodies.push({ attachment_id: id });
+    if (bodies.length === 0) throw new ValidationError("messages.send: nothing to send");
+    let last: unknown;
+    for (const [i, message] of bodies.entries()) {
+      last = await this.call(
+        "messages.send",
+        { method: "POST", path, body: { message } },
+        i === 0 ? meta : { ...meta, dedupeKey: `${meta.dedupeKey}:${String(i)}` },
+      );
+    }
+    return { id: idOf(last) };
   }
 
+  /** `POST /attachments`: the file goes up first and is then sent as a message of its own. */
   async uploadAttachment(a: AttachmentUpload, meta: CallMeta): Promise<ProviderRef> {
     const body = await this.call(
       "attachments.upload",
       {
         method: "POST",
-        path: `/api/v1/message_threads/${a.threadId}/attachments`,
+        path: "/api/v1/attachments",
         body: {
           attachment: {
-            filename: a.filename,
-            content_type: a.contentType,
-            data: Buffer.from(a.bytes).toString("base64"),
+            file: Buffer.from(a.bytes).toString("base64"),
+            file_name: a.filename,
+            file_type: a.contentType,
           },
         },
       },
@@ -970,10 +979,15 @@ export class ChannexProvider implements ConnectivityProvider {
     return { id: idOf(body) };
   }
 
+  /**
+   * Two different calls: `close` ends the conversation; `no_reply_needed` (Booking.com only)
+   * keeps it open and tells Booking.com not to count it against the response time.
+   */
   async closeThread(ref: ProviderRef, reason: CloseReason, meta: CallMeta): Promise<void> {
+    const action = reason === "no_reply_needed" ? "no_reply_needed" : "close";
     await this.call(
-      "message_threads.close",
-      { method: "POST", path: `/api/v1/message_threads/${ref.id}/close`, body: { reason } },
+      `message_threads.${action}`,
+      { method: "POST", path: `/api/v1/message_threads/${ref.id}/${action}` },
       meta,
     );
   }
@@ -996,15 +1010,26 @@ export class ChannexProvider implements ConnectivityProvider {
     return {
       reviews: arr(obj(body).data).map((r) => {
         const a = obj(obj(r).attributes);
+        const bookingId = relationshipId(r, "booking");
+        const expiresAt = a.expired_at ? String(a.expired_at) : undefined;
+        // the reply window as the OTA reports it; its date is judged against our clock downstream
+        const expired = a.is_expired === true;
         return {
           id: String(obj(r).id),
-          ...(a.booking_id ? { bookingId: String(a.booking_id) } : {}),
+          ...(bookingId ? { bookingId } : {}),
+          ...(a.ota_reservation_id ? { otaReservationCode: String(a.ota_reservation_id) } : {}),
           rating: Number(a.overall_score ?? a.rating ?? 0),
           text: String(a.content ?? a.text ?? ""),
           ota: String(a.ota ?? ""),
+          // `inserted_at` is when Channex took the review in (our sync cursor); `received_at`
+          // is when the guest wrote it, which is the date a host wants to see
           insertedAt: String(a.inserted_at ?? ""),
+          receivedAt: String(a.received_at ?? a.inserted_at ?? ""),
           ...(a.guest_name ? { guestName: String(a.guest_name) } : {}),
-          canRespond: a.is_replied !== true && a.can_reply !== false,
+          canRespond: a.is_replied !== true && a.can_reply !== false && !expired,
+          ...(expiresAt ? { replyExpiresAt: expiresAt } : {}),
+          // Airbnb keeps a review hidden until the host has reviewed the guest
+          hidden: a.is_hidden === true,
           ...(a.reply ? { response: String(a.reply) } : {}),
         };
       }),
@@ -1014,7 +1039,8 @@ export class ChannexProvider implements ConnectivityProvider {
   async respondToReview(ref: ProviderRef, body: string, meta: CallMeta): Promise<void> {
     await this.call(
       "reviews.reply",
-      { method: "POST", path: `/api/v1/reviews/${ref.id}/reply`, body: { reply: body } },
+      // docs: Reviews Collection › Reply to Review
+      { method: "POST", path: `/api/v1/reviews/${ref.id}/reply`, body: { reply: { reply: body } } },
       meta,
     );
   }
@@ -1297,6 +1323,12 @@ function parseMessage(m: unknown): ThreadPage["threads"][number]["messages"][num
         }
       : {}),
   };
+}
+
+/** The id under `relationships.<name>.data`, where Channex links a resource to another. */
+function relationshipId(resource: unknown, name: string): string | undefined {
+  const data = obj(obj(obj(obj(resource).relationships)[name]).data);
+  return data.id !== undefined && data.id !== null ? String(data.id) : undefined;
 }
 
 function obj(v: unknown): Record<string, unknown> {

@@ -1,7 +1,7 @@
 {
   "meta": {
     "source": "docs",
-    "note": "Shape verified against staging 2026-09-16: a thread carries only its last message, the conversation lives at /message_threads/{id}/messages, and an Airbnb thread's `title` is the guest's name. Names and ids here are invented."
+    "note": "Shape verified against staging 2026-09-17 and docs.channex.io. Names and ids are invented. A thread's booking sits under relationships.booking (docs: Messages Collection); an Airbnb inquiry has none."
   },
   "request": {
     "method": "GET",
@@ -34,19 +34,71 @@
               "inserted_at": "2026-09-13T07:20:44.000000",
               "attachments": []
             },
-            "meta": { "listing_id": "1629149422535053411" }
+            "meta": {
+              "listing_id": "1629149422535053411"
+            }
           },
           "relationships": {
             "property": {
-              "data": { "id": "716305c4-561a-4561-a187-7f5b8aeb5920", "type": "property" }
+              "data": {
+                "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+                "type": "property"
+              }
             },
             "channel": {
-              "data": { "id": "b73b10cd-17cd-4668-b3f6-7154f7d0a33e", "type": "channel" }
+              "data": {
+                "id": "b73b10cd-17cd-4668-b3f6-7154f7d0a33e",
+                "type": "channel"
+              }
+            }
+          }
+        },
+        {
+          "id": "c1a2b3d4-0000-4000-8000-00000000c0de",
+          "type": "message_thread",
+          "attributes": {
+            "title": "Sam",
+            "provider": "BookingCom",
+            "is_closed": false,
+            "message_count": 1,
+            "inserted_at": "2026-09-14T09:00:00.000000",
+            "updated_at": "2026-09-14T09:00:00.000000",
+            "last_message_received_at": "2026-09-14T09:00:00.000000",
+            "last_message": {
+              "message": "What time is check-in?",
+              "sender": "guest",
+              "inserted_at": "2026-09-14T09:00:00.000000",
+              "attachments": []
+            }
+          },
+          "relationships": {
+            "booking": {
+              "data": {
+                "id": "4d8240fd-d709-454b-a866-08bca2a5a909",
+                "type": "booking"
+              }
+            },
+            "property": {
+              "data": {
+                "id": "716305c4-561a-4561-a187-7f5b8aeb5920",
+                "type": "property"
+              }
+            },
+            "channel": {
+              "data": {
+                "id": "351f145d-cb8c-4df7-9f12-2f6854991b91",
+                "type": "channel"
+              }
             }
           }
         }
       ],
-      "meta": { "total": 1, "limit": 100, "page": 1, "order_by": "last_message_received_at" }
+      "meta": {
+        "total": 2,
+        "limit": 100,
+        "page": 1,
+        "order_by": "last_message_received_at"
+      }
     }
   }
 }

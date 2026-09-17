@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "source": "docs",
+    "note": "docs: Messages Collection › Send Attachment to Booking: POST /attachments with a base64 file, then the id is sent as a message."
+  },
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/attachments"
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "c40a00f9-d3d3-4809-8d46-adc378c95f20",
+        "type": "attachment"
+      }
+    }
+  }
+}

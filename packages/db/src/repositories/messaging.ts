@@ -122,7 +122,11 @@ export interface ReviewRow {
   body: string;
   guestName: string;
   insertedAt: string;
+  /** When the guest wrote it. */
+  receivedAt: string;
   canRespond: boolean;
+  /** Airbnb: hidden on the OTA until the host reviews the guest. */
+  hidden: boolean;
   responseState: string;
   responseDueAt: string | null;
   response: { body: string; deliveryState: string; sentAt: string | null } | null;
@@ -1339,22 +1343,52 @@ export class DrizzleMessagingRepository {
     r: {
       id: string;
       bookingId?: string;
+      otaReservationCode?: string;
       rating: number;
       text: string;
       ota: string;
       insertedAt: string;
+      receivedAt?: string;
       guestName?: string;
       canRespond?: boolean;
+      replyExpiresAt?: string;
+      hidden?: boolean;
       response?: string;
     },
+    nowIso: string,
     responseSlaHours = 48,
   ): Promise<boolean> {
+    // the stay: by the provider's booking id, else by the OTA's own reservation code
     const [booking] = r.bookingId
       ? await rawRows<{ id: string }>(
           this.tx,
           sql`select id from booking where property_id = ${propertyId} and channex_booking_id = ${r.bookingId}`,
         )
-      : [];
+      : r.otaReservationCode
+        ? await rawRows<{ id: string }>(
+            this.tx,
+            sql`select id from booking where property_id = ${propertyId} and ota_reservation_code = ${r.otaReservationCode} limit 1`,
+          )
+        : [];
+    const receivedAt = r.receivedAt ?? r.insertedAt;
+    const expired =
+      r.replyExpiresAt !== undefined && Date.parse(r.replyExpiresAt) < Date.parse(nowIso);
+    const canRespond = (r.canRespond ?? true) && !expired;
+    const responseState = r.response
+      ? "responded"
+      : expired
+        ? "expired"
+        : canRespond
+          ? "pending"
+          : "not_supported";
+    // respond by our SLA, or by the OTA's window when that closes sooner
+    const sla = new Date(Date.parse(receivedAt) + responseSlaHours * 3_600_000).toISOString();
+    const responseDueAt =
+      responseState !== "pending"
+        ? null
+        : r.replyExpiresAt !== undefined && r.replyExpiresAt < sla
+          ? r.replyExpiresAt
+          : sla;
     const rows = await this.tx
       .insert(s.review)
       .values({
@@ -1363,25 +1397,34 @@ export class DrizzleMessagingRepository {
         propertyId,
         providerReviewId: r.id,
         bookingId: booking?.id ?? null,
+        otaReservationCode: r.otaReservationCode ?? null,
         ota: providerCode(r.ota),
         rating: Math.max(0, Math.min(10, Math.round(r.rating))),
         body: r.text,
         guestNameEnc: r.guestName ? await this.crypto.seal(r.guestName) : null,
         insertedAt: r.insertedAt,
-        canRespond: r.canRespond ?? true,
-        responseState: r.response
-          ? "responded"
-          : r.canRespond === false
-            ? "not_supported"
-            : "pending",
-        responseDueAt:
-          r.canRespond === false || r.response
-            ? null
-            : new Date(Date.parse(r.insertedAt) + responseSlaHours * 3_600_000).toISOString(),
+        receivedAt,
+        canRespond,
+        replyExpiresAt: r.replyExpiresAt ?? null,
+        hidden: r.hidden ?? false,
+        responseState,
+        responseDueAt,
       })
-      .onConflictDoNothing({ target: [s.review.propertyId, s.review.providerReviewId] })
-      .returning({ id: s.review.id });
-    return rows.length === 1;
+      .onConflictDoUpdate({
+        target: [s.review.propertyId, s.review.providerReviewId],
+        // what the OTA can change after the fact: the window closing, the review being
+        // revealed, a reply posted elsewhere, the stay turning up later
+        set: {
+          canRespond,
+          replyExpiresAt: r.replyExpiresAt ?? null,
+          hidden: r.hidden ?? false,
+          bookingId: sql`coalesce(${s.review.bookingId}, ${booking?.id ?? null}::uuid)`,
+          responseState: sql`case when ${s.review.responseState} = 'pending' and ${responseState} <> 'pending' then ${responseState} else ${s.review.responseState} end`,
+          responseDueAt: sql`case when ${s.review.responseState} = 'pending' and ${responseState} <> 'pending' then null else ${s.review.responseDueAt} end`,
+        },
+      })
+      .returning({ id: s.review.id, created: sql<boolean>`(xmax = 0)` });
+    return rows[0]?.created === true;
   }
 
   async listReviews(f: {
@@ -1408,7 +1451,9 @@ export class DrizzleMessagingRepository {
       body: string;
       guest_name_enc: string | null;
       inserted_at: string;
+      received_at: string | null;
       can_respond: boolean;
+      hidden: boolean;
       response_state: string;
       response_due_at: string | null;
       booking_id: string | null;
@@ -1417,11 +1462,11 @@ export class DrizzleMessagingRepository {
       resp_sent_at: string | null;
     }>(
       this.tx,
-      sql`select r.id, r.property_id, p.title as property_title, r.ota, r.rating, r.body, r.guest_name_enc, r.inserted_at::text, r.can_respond,
+      sql`select r.id, r.property_id, p.title as property_title, r.ota, r.rating, r.body, r.guest_name_enc, r.inserted_at::text, r.received_at::text, r.can_respond, r.hidden,
             r.response_state, r.response_due_at::text, r.booking_id, rr.body as resp_body, rr.delivery_state as resp_state, rr.sent_at::text as resp_sent_at
           from review r join property p on p.id = r.property_id
           left join lateral (select body, delivery_state, sent_at from review_response x where x.review_id = r.id order by created_at desc limit 1) rr on true
-          where ${sql.join(conds, sql` and `)} order by r.inserted_at desc limit 500`,
+          where ${sql.join(conds, sql` and `)} order by coalesce(r.received_at, r.inserted_at) desc limit 500`,
     );
     const out: ReviewRow[] = [];
     for (const r of rows)
@@ -1434,7 +1479,9 @@ export class DrizzleMessagingRepository {
         body: r.body,
         guestName: r.guest_name_enc ? await this.crypto.open(r.guest_name_enc) : "Guest",
         insertedAt: r.inserted_at,
+        receivedAt: r.received_at ?? r.inserted_at,
         canRespond: r.can_respond,
+        hidden: r.hidden,
         responseState: r.response_state,
         responseDueAt: r.response_due_at,
         response: r.resp_body

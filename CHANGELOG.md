@@ -31,6 +31,17 @@ All notable changes to this project are documented here. The format follows
   done, shown on the dashboard and condensed into every page header; Properties is a grid of
   photo cards with per-channel badges and the state; and direct bookings can be collected in
   instalments through named payment rules (spec 10 §10.4b) with a daily collection job.
+- Fixed against the Channex docs, read in full (spec 09): a thread's booking comes from
+  `relationships.booking`, so booked-guest conversations show the stay and stop counting as
+  inquiries; review replies are posted as `{reply: {reply}}`, the shape Channex accepts, so a reply
+  from the Reviews page reaches the OTA; "No reply needed" calls its own endpoint and leaves the
+  thread open, as Booking.com's response-time scoring expects, instead of closing it; attachments
+  go up through `POST /attachments` and are sent one per message with no text next to them, which
+  is the only way Channex delivers them. Reviews now show the date the guest wrote them, link to
+  the stay by the OTA's reservation code when the booking id is missing, say when the reply window
+  has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
+  hides until the host reviews the guest. Every one of these has a fixture recorded from the real
+  response shape and a contract test.
 - Fixed: Airbnb guest messages never reached the inbox. Channex hands back a thread with only
   its last message; the conversation lives at `GET /api/v1/message_threads/{id}/messages`, which
   we never called, so threads synced with no messages in them and the guest's name (Channex puts

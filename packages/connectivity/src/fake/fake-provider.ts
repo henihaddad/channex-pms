@@ -986,8 +986,10 @@ export class FakeProvider implements ConnectivityProvider {
           text: r.text,
           ota: r.ota,
           insertedAt: r.insertedAt,
+          receivedAt: r.insertedAt,
           guestName: r.guestName,
           canRespond: true,
+          hidden: false,
           ...(r.response !== undefined ? { response: r.response } : {}),
         })),
     };

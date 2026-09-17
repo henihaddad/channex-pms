@@ -7,6 +7,7 @@ import { loadFixtures, ReplayTransport } from "../transport/fixtures.js";
 const fixtures = loadFixtures(resolve(import.meta.dirname, "../../fixtures/channex"));
 const meta = { dedupeKey: "t", requestId: "r" };
 const PROPERTY = "716305c4-561a-4561-a187-7f5b8aeb5920";
+const THREAD = "c1a2b3d4-0000-4000-8000-00000000c0de";
 
 function provider() {
   const http = new ReplayTransport(fixtures);
@@ -377,7 +378,7 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
   it("reads a thread's conversation from its own collection, oldest first", async () => {
     const { p, http } = provider();
     const page = await p.listThreads({ propertyId: PROPERTY }, meta);
-    expect(page.threads).toHaveLength(1);
+    expect(page.threads).toHaveLength(2);
     const t = page.threads[0]!;
     // Channex titles an Airbnb thread with the guest's name and inlines no messages
     expect(t).toMatchObject({ guestName: "Alex", provider: "AirBNB", kind: "inquiry" });
@@ -388,5 +389,73 @@ describe("ChannexProvider Airbnb through Channex (docs fixtures)", () => {
       ["inbound", "guest", "Is early check-in possible?"],
       ["outbound", "staff", "Hi there"],
     ]);
+    // the booking is a relationship of the thread, not an attribute
+    expect(page.threads[1]).toMatchObject({
+      guestName: "Sam",
+      kind: "booking",
+      bookingId: "4d8240fd-d709-454b-a866-08bca2a5a909",
+    });
+  });
+
+  it("sends text and attachments as separate messages, uploads through /attachments", async () => {
+    const { p, http } = provider();
+    const up = await p.uploadAttachment(
+      {
+        threadId: THREAD,
+        filename: "plan.pdf",
+        contentType: "application/pdf",
+        bytes: new TextEncoder().encode("%PDF-1.4"),
+      },
+      meta,
+    );
+    expect(up.id).toBe("c40a00f9-d3d3-4809-8d46-adc378c95f20");
+    expect(http.calls[0]).toMatchObject({ method: "POST", path: "/api/v1/attachments" });
+    expect(http.calls[0]?.body).toEqual({
+      attachment: { file: "JVBERi0xLjQ=", file_name: "plan.pdf", file_type: "application/pdf" },
+    });
+    await p.sendMessage(
+      { threadId: THREAD, body: "Check-in is from 15:00.", attachmentIds: [up.id] },
+      meta,
+    );
+    // one message per part: the text, then the attachment on its own (docs: Send attachment)
+    expect(http.calls.slice(1).map((c) => c.body)).toEqual([
+      { message: { message: "Check-in is from 15:00." } },
+      { message: { attachment_id: "c40a00f9-d3d3-4809-8d46-adc378c95f20" } },
+    ]);
+  });
+
+  it("closes a thread with no payload and marks Booking.com 'no reply needed' on its own endpoint", async () => {
+    const { p, http } = provider();
+    await p.closeThread({ id: THREAD }, "resolved", meta);
+    await p.closeThread({ id: THREAD }, "no_reply_needed", meta);
+    expect(http.calls.map((c) => [c.path, c.body])).toEqual([
+      [`/api/v1/message_threads/${THREAD}/close`, undefined],
+      [`/api/v1/message_threads/${THREAD}/no_reply_needed`, undefined],
+    ]);
+  });
+
+  it("reads reviews with the guest's date, the stay, the reply window and Airbnb's hidden flag", async () => {
+    const { p, http } = provider();
+    const page = await p.listReviews({ propertyId: PROPERTY }, meta);
+    expect(page.reviews).toHaveLength(2);
+    expect(page.reviews[0]).toMatchObject({
+      ota: "AirBNB",
+      rating: 10,
+      receivedAt: "2026-06-06T04:22:57.510000",
+      insertedAt: "2026-09-08T21:37:06.705728",
+      otaReservationCode: "HMJSQQKHQ4",
+      canRespond: false,
+      replyExpiresAt: "2026-07-06T04:22:57.510000",
+      hidden: false,
+    });
+    expect(page.reviews[0]?.bookingId).toBeUndefined();
+    expect(page.reviews[1]).toMatchObject({
+      bookingId: "203f359b-08d6-4e5c-b64c-1aa67cfb775d",
+      guestName: "Guest Name",
+      canRespond: true,
+      hidden: true,
+    });
+    await p.respondToReview({ id: "5d9aa0d9-a888-46b5-bde8-13cc7a15161c" }, "Thank you!", meta);
+    expect(http.calls[1]?.body).toEqual({ reply: { reply: "Thank you!" } });
   });
 });
