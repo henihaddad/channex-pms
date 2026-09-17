@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolve } from "node:path";
-import { AuthError, ThrottleError, TransientError, ValidationError } from "@pms/core";
+import { AuthError, ThrottleError, TransientError } from "@pms/core";
 import { ChannexProvider, maskPan } from "./provider.js";
 import { loadFixtures, ReplayTransport } from "../transport/fixtures.js";
 
@@ -156,7 +156,7 @@ describe("ChannexProvider contract (fixtures)", () => {
         },
         meta,
       ),
-    ).rejects.toBeInstanceOf(ValidationError);
+    ).rejects.toThrow(/Validation Error \(count_of_rooms: can't be blank\)/);
     const throttle = p.ensureRatePlan(
       {
         propertyId: PROPERTY,

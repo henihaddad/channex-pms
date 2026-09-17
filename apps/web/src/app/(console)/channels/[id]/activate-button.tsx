@@ -19,7 +19,10 @@ export function ActivateButton({ connectionId, label }: { connectionId: string; 
         data-testid="activate-connection"
         onClick={() =>
           start(async () => {
-            const r = await activateAction({ connectionId });
+            const r = await activateAction({ connectionId }).catch((e: unknown) => ({
+              activated: false as const,
+              issues: [e instanceof Error ? e.message : String(e)],
+            }));
             // "not activated" is never a success, even when the provider names no gap
             setOutcome(
               r.activated

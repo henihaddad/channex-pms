@@ -1226,7 +1226,16 @@ export class ChannexProvider implements ConnectivityProvider {
 export function classify(op: string, res: HttpResponse): unknown {
   if (res.status >= 200 && res.status < 300) return res.body;
   const errors = obj(obj(res.body).errors);
-  const detail = String(errors.title ?? errors.code ?? `HTTP ${String(res.status)}`);
+  // Channex puts the reason under `details` ({field: [messages]}); the title alone says "Validation Error"
+  const reasons = Object.entries(obj(errors.details))
+    .map(
+      ([field, msgs]) =>
+        `${field}: ${(Array.isArray(msgs) ? msgs : [msgs]).map(String).join(", ")}`,
+    )
+    .join("; ");
+  const detail =
+    String(errors.title ?? errors.code ?? `HTTP ${String(res.status)}`) +
+    (reasons ? ` (${reasons})` : "");
   switch (res.status) {
     case 401:
       throw new AuthError();

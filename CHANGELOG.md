@@ -42,6 +42,10 @@ All notable changes to this project are documented here. The format follows
   has closed (`expired`) instead of asking for a reply Airbnb will refuse, and flag reviews Airbnb
   hides until the host reviews the guest. Every one of these has a fixture recorded from the real
   response shape and a contract test.
+- Fixed: a provider refusal during activation ("channel with the same settings already exists",
+  a rejected mapping) surfaced as a blank React error in production. Channex's `details` now
+  travel in the error message, the activate action returns the reason as a readiness issue and
+  stores it as the connection's last error, and the Activate button never swallows a failure.
 - Fixed: connecting Booking.com (and every other non-Airbnb channel) never created the connection
   on Channex. `POST /channels` requires `group_id` and takes the mapping structure under
   `rate_plans`, each entry with `occupancy`, `pricing_type`, `primary_occ` and `readonly` (docs:

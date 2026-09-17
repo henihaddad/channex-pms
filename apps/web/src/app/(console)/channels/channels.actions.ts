@@ -346,14 +346,25 @@ export const activateAction = withPermission<
   { scope: "organization", subject: (i) => ({ kind: "channel_connection", id: i.connectionId }) },
   async (ctx, { connectionId }) => {
     const c = await container();
-    const r = await activateConnection(
-      { provider: c.provider, clock: c.clock, log: c.log },
-      ctx.orgId,
-      connectionId,
-      (fn) => fn(ctx.tx),
-    );
-    revalidatePath("/channels");
-    return { activated: r.activated, issues: r.readiness.issues };
+    try {
+      const r = await activateConnection(
+        { provider: c.provider, clock: c.clock, log: c.log },
+        ctx.orgId,
+        connectionId,
+        (fn) => fn(ctx.tx),
+      );
+      revalidatePath("/channels");
+      return { activated: r.activated, issues: r.readiness.issues };
+    } catch (e) {
+      // the provider's refusal is the answer the operator needs (a hotel already connected
+      // elsewhere, a rejected mapping); production hides thrown server errors, so it is returned
+      const message = e instanceof Error ? e.message : String(e);
+      await new DrizzleChannelRepository(ctx.tx, ctx.orgId).updateConnection(connectionId, {
+        lastError: message,
+      });
+      revalidatePath("/channels");
+      return { activated: false, issues: [message] };
+    }
   },
 );
 
