@@ -214,6 +214,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Mapping queue (spec 08 §8.5): the OTA room and rate codes of an unmapped Booking.com booking
+  showed as "?" because Booking.com carries them in the room's `meta` (`room_type_code`,
+  `rate_plan_code`), seen on the first live booking through the shared test hotel; the queue reads
+  both places now.
 - Channex request-side audit (`docs/audits/2026-09-17-channex-request-audit.md`): every call of
   the Channex client was checked against the vendored docs by one agent per area and a refuter per
   finding, the open questions were settled by probes on staging, and the confirmed findings were

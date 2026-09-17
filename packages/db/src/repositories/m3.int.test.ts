@@ -459,8 +459,35 @@ describe("reservation list, detail, timeline, queue (spec 08 §8.1–8.5)", () =
         customer: { name: "Cy", surname: "Ng" },
       }),
     );
+    // Booking.com names the channel's room and rate in the room's meta (seen on a live booking:
+    // room_type_code / rate_plan_code), so the queue shows those too
+    await apply(
+      revision(5, {
+        bookingId: "cx-b4",
+        rooms: [{ ...revision(1).rooms[0]!, roomTypeId: null, ratePlanId: null }],
+        customer: { name: "Di", surname: "Ng" },
+        raw: {
+          attributes: {
+            rooms: [{ meta: { room_type_code: "651942002", rate_plan_code: 18527583 } }],
+          },
+        },
+      }),
+    );
     const q = await run((tx) => new DrizzleReservationRepository(tx, ORG, crypto).unmappedQueue());
-    expect(q).toHaveLength(1);
+    expect(q).toHaveLength(2);
+    expect(q.map((b) => b.rooms[0]?.otaRoomCode).sort()).toEqual(["651942002", "R1"]);
+    expect(q.map((b) => b.rooms[0]?.otaRateCode).sort()).toEqual(["18527583", "STD"]);
+    await run((tx) =>
+      new DrizzleReservationRepository(tx, ORG, crypto).resolveMapping(
+        q.find((b) => b.rooms[0]?.otaRoomCode === "651942002")!.id,
+        roomTypeId,
+        ratePlanId,
+      ),
+    );
+    q.splice(
+      q.findIndex((b) => b.rooms[0]?.otaRoomCode === "651942002"),
+      1,
+    );
     expect(q[0]?.rooms[0]).toMatchObject({
       otaRoomCode: "R1",
       otaRateCode: "STD",

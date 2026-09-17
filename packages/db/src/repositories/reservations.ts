@@ -359,7 +359,9 @@ export class DrizzleReservationRepository {
     }>(
       this.tx,
       sql`select b.id, b.property_id as "propertyId", p.title as "propertyTitle", b.ota_name as "otaName", b.ota_reservation_code as "otaReservationCode", b.arrival_date::text as "arrivalDate", b.departure_date::text as "departureDate", b.mapping_state as "mappingState",
-        (select json_agg(json_build_object('id', br.id, 'roomTypeId', br.room_type_id, 'ratePlanId', br.rate_plan_id, 'otaRoomCode', (r.raw_payload->'attributes'->'rooms'->0->>'ota_room_code'), 'otaRateCode', (r.raw_payload->'attributes'->'rooms'->0->>'ota_rate_code'))) from booking_room br where br.booking_id = b.id) as rooms
+        (select json_agg(json_build_object('id', br.id, 'roomTypeId', br.room_type_id, 'ratePlanId', br.rate_plan_id,
+          'otaRoomCode', coalesce(r.raw_payload->'attributes'->'rooms'->0->>'ota_room_code', r.raw_payload->'attributes'->'rooms'->0->'meta'->>'room_type_code'),
+          'otaRateCode', coalesce(r.raw_payload->'attributes'->'rooms'->0->>'ota_rate_code', r.raw_payload->'attributes'->'rooms'->0->'meta'->>'rate_plan_code'))) from booking_room br where br.booking_id = b.id) as rooms
         from booking b join property p on p.id = b.property_id left join booking_revision r on r.channex_revision_id = b.last_revision_id::text where b.mapping_state <> 'mapped' and b.status <> 'cancelled' order by b.arrival_date`,
     );
     const out = [];
