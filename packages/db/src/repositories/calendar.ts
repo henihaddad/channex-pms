@@ -32,6 +32,8 @@ export interface GridProperty {
   currency: string;
   state: string;
   groups: string[];
+  /** The listing's main photo (its own library first, else the content an import kept). */
+  photoUrl: string | null;
   roomTypes: GridRoomType[];
 }
 
@@ -62,10 +64,15 @@ export async function loadGrid(tx: Tx, q: GridQuery): Promise<GridProperty[]> {
     currency: string;
     state: string;
     groups: string[] | null;
+    photo_url: string | null;
   }>(
     tx,
     sql`select p.id, p.title, p.kind, p.currency, p.state,
-      (select array_agg(g.name order by g.name) from property_group g join property_group_membership m on m.group_id = g.id where m.property_id = p.id) as groups
+      (select array_agg(g.name order by g.name) from property_group g join property_group_membership m on m.group_id = g.id where m.property_id = p.id) as groups,
+      coalesce(
+        (select ph.storage_key from photo ph where ph.property_id = p.id order by ph.position, ph.id limit 1),
+        p.settings #>> '{content,photos,0}'
+      ) as photo_url
       from property p where p.archived_at is null and p.state <> 'archived' ${filter} order by p.title, p.id`,
   );
   if (props.length === 0) return [];
@@ -155,6 +162,7 @@ export async function loadGrid(tx: Tx, q: GridQuery): Promise<GridProperty[]> {
     currency: p.currency,
     state: p.state,
     groups: p.groups ?? [],
+    photoUrl: p.photo_url,
     roomTypes: rtByProp.get(p.id) ?? [],
   }));
 }

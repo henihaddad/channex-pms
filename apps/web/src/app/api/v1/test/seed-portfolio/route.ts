@@ -9,7 +9,14 @@ import { testHooksEnabled } from "@/server/test-hooks";
 export const POST = publicRoute("test_hook", async (req) => {
   if (!testHooksEnabled()) throw notFound();
   const c = await container();
-  const body = (await req.json()) as { orgId: string; count?: number; days?: number };
+  const body = (await req.json()) as {
+    orgId: string;
+    count?: number;
+    days?: number;
+    /** Optional per-listing titles and cover photos (cycled), for screenshots and photo-aware screens. */
+    titles?: string[];
+    photos?: string[];
+  };
   const count = Math.min(body.count ?? 200, 500);
   const days = Math.min(body.days ?? 120, 400);
   const today = c.clock.today("UTC").toString();
@@ -23,10 +30,13 @@ export const POST = publicRoute("test_hook", async (req) => {
         id: propertyId,
         orgId: body.orgId,
         kind: "single_unit",
-        title: `Perf Listing ${String(i + 1).padStart(3, "0")}`,
+        title: body.titles?.[i] ?? `Perf Listing ${String(i + 1).padStart(3, "0")}`,
         currency: "EUR",
         timezone: "UTC",
         state: "live",
+        ...(body.photos && body.photos.length > 0
+          ? { settings: { content: { photos: [body.photos[i % body.photos.length]] } } }
+          : {}),
       });
       await tx.insert(schema.roomType).values({
         id: rtId,

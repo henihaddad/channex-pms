@@ -77,8 +77,17 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   commit, `Esc` to cancel, `Shift`+arrows to range-select, `Cmd/Ctrl+C/V` to copy
   and paste blocks, `Cmd/Ctrl+Z` to undo. A revenue manager should never need the
   mouse.
-- **CAL-2** Drag-select a rectangle of cells → inline toolbar for set price,
-  adjust by %/amount, set restrictions, close/open.
+- **CAL-2** Click a night or drag across nights (Shift-click extends) → a side
+  panel for the selection: price per night, Open/Blocked, minimum stay, and under
+  "More settings" check-in/check-out closures and a percentage change that
+  previews before it applies (BULK-1). No dialogs, no toolbar of buttons: the
+  panel is the only place to act on a selection, and it names the nights and the
+  listing it will change.
+- **CAL-2a** Rows follow the portfolio shape: a single-unit listing with one rate
+  plan is one row that carries its cover photo (first library photo, else the
+  photo an import brought) and title, so a manager scans listings the way the
+  channels show them. Booked and blocked nights are hatched with the word.
+  Hotels keep property → room type → rate plan rows.
 - **CAL-3** Optimistic rendering: edits appear immediately, marked `pending`, with
   a per-cell state that resolves over the realtime channel.
 - **CAL-4** Undo/redo is server-backed (an inverse operation, not a UI trick), so

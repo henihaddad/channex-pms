@@ -165,7 +165,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.reload();
   await expect(page.locator(`[data-cell="${cellKey}"]`)).toContainText("100");
 
-  // a bulk price change (BULK-1): select a range, preview, then apply from the preview
+  // a range selection opens the side panel (CAL-2): click, shift-click, set a price, save
   await expect(page.getByTestId("grid-stats")).toContainText("loaded in");
   const first = page.locator("[data-cell]").nth(3);
   const firstKey = await first.getAttribute("data-cell");
@@ -174,9 +174,30 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
     .locator("[data-cell]")
     .nth(6)
     .click({ modifiers: ["Shift"] });
-  page.once("dialog", (d) => void d.accept("130"));
-  await page.getByRole("button", { name: "Set rate…" }).click();
-  await expect(page.getByTestId("bulk-preview")).toContainText("cells would change");
+  await expect(page.getByTestId("selection-panel")).toContainText("4 nights");
+  await page.getByTestId("panel-price").fill("130");
+  await page.getByTestId("panel-save-price").click();
+  await expect(page.getByRole("status")).toContainText("Saved");
+  await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("130");
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByRole("status")).toContainText("Undone");
+  await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("100");
+
+  // drag across nights selects them (CAL-2); cells are addressed by key because columns virtualise
+  const [planId, day0] = firstKey!.split(":") as [string, string];
+  const plusDays = (iso: string, n: number) =>
+    new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+  await page.locator(`[data-cell="${planId}:${day0}"]`).hover();
+  await page.mouse.down();
+  await page.locator(`[data-cell="${planId}:${plusDays(day0, 2)}"]`).hover();
+  await page.mouse.up();
+  await expect(page.getByTestId("selection-panel")).toContainText("3 nights");
+
+  // a percentage change previews first (BULK-1), then applies from the preview
+  await page.getByText("More settings").click();
+  await page.getByTestId("panel-pct").fill("30");
+  await page.getByTestId("panel-preview-pct").click();
+  await expect(page.getByTestId("bulk-preview")).toContainText("nights would change");
   await expect(page.locator(`[data-cell="${firstKey}"]`)).toContainText("100");
   await page.getByTestId("bulk-apply").click();
   await expect(page.getByRole("status")).toContainText("Applied to");

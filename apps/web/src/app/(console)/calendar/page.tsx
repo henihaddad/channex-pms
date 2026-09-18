@@ -3,6 +3,7 @@ import { PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listGroups } from "../properties/properties.actions";
 import { CalendarGrid } from "@/components/calendar-grid";
+import { CALENDAR_LABEL_KEYS, type CalendarLabels } from "@/components/calendar-labels";
 
 export default async function CalendarPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function CalendarPage({
   const t = await getTranslations("calendar");
   const groups = await guard(() => listGroups());
   const today = new Date().toISOString().slice(0, 10);
+  const labels = Object.fromEntries(CALENDAR_LABEL_KEYS.map((k) => [k, t(k)])) as CalendarLabels;
   return (
     <div className="space-y-4">
       <PageTitle>{t("title")}</PageTitle>
@@ -21,6 +23,7 @@ export default async function CalendarPage({
         days={Number(sp.days ?? 30)}
         propertyId={sp.propertyId}
         groups={groups}
+        labels={labels}
       />
     </div>
   );

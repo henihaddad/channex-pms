@@ -31,8 +31,8 @@ test("200 listings × 90 days grid loads under 2 s", async ({ page, request }) =
   const stats = await page.getByTestId("grid-stats").textContent();
   const loadMs = Number(/loaded in (\d+) ms/.exec(stats ?? "")?.[1] ?? "0");
   console.log(`grid: ${stats ?? ""}; page total ${String(total)} ms`);
-  // each single_unit listing is a property row plus its rate plan row
-  expect(stats).toContain("400 rows");
+  // a single_unit listing with one rate plan is one row
+  expect(stats).toContain("200 rows");
   expect(loadMs).toBeLessThan(2000);
   expect(total).toBeLessThan(4000);
   await expect(page.locator("[data-row-kind]").first()).toBeVisible();

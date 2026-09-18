@@ -184,6 +184,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Calendar rebuilt around a selection (spec 06 CAL-2, CAL-2a): click a night or drag across
+  nights and a side panel opens with the price per night, Open/Blocked, the minimum stay and,
+  under "More settings", check-in/check-out closures and a percentage change that previews
+  before it applies. Single-unit listings with one rate plan are one row with the listing's cover
+  photo and title; booked and blocked nights are hatched; today is marked in the header; the
+  horizon is a 2 weeks / 1 month / 2 months / 3 months switch. The "Set rate…" prompt dialog and
+  the toolbar of bulk buttons are gone; all labels are translated (en, fr, ar, es, pt).
 - The web app's components are HeroUI v3 (React Aria + Tailwind v4) behind the kit in
   `apps/web/src/components/ui` (ADR-0010): buttons, fields, selects, date pickers, cards, chips,
   alerts and server-rendered tables that reuse HeroUI's table styles. HeroUI's default theme is
