@@ -122,6 +122,8 @@ export {
 export {
   transitionTenant,
   choosePlan,
+  compTenant,
+  COMPLIMENTARY_PLAN_KEY,
   attachPaymentMethod,
   startCardSetup,
   meterUsage,

@@ -28,6 +28,7 @@ import {
   attachPaymentMethod,
   choosePlan,
   closeBillingPeriods,
+  compTenant,
   deliverPluginEvents,
   installPlugin,
   meterUsage,
@@ -306,6 +307,33 @@ describe("metering and plans (§12.5)", () => {
     await attachPaymentMethod(deps, ORG, "tok_visa_4242", run);
     expect(await orgState()).toBe("active");
     expect((await repo((r) => r.invoices()))[0]!.state).toBe("paid");
+  });
+
+  it("an operator grant of the complimentary plan makes the tenant active at zero, with no card and no dunning", async () => {
+    // a tenant that fell out of its trial (expired) has no subscription and only billing access
+    await run((tx) => tx.delete(schema.subscription));
+    await run((tx) => tx.update(schema.organization).set({ state: "expired" }));
+    clock.set("2026-08-10T09:00:00Z");
+    const r = await compTenant(deps, ORG, { type: "user", id: USER }, run);
+    expect(r).toEqual({ from: "expired", to: "active" });
+    const sub = await repo((x) => x.subscription());
+    expect(sub?.plan.key).toBe("complimentary");
+    expect(sub?.plan.quotas.properties).toBeNull();
+    expect(sub?.customerRef).toBeNull();
+    expect(sub?.periodFrom).toBe("2026-08-10");
+    expect(sub?.periodTo).toBe("2026-09-10");
+    // the period closes at zero: the invoice is paid without a provider call, nothing starts dunning
+    const invoicesBefore = (await repo((x) => x.invoices())).length;
+    clock.set("2026-09-11T03:00:00Z");
+    expect(await closeBillingPeriods(deps, ORG)).toEqual({ invoiced: 1, failed: 0 });
+    const invoices = await repo((x) => x.invoices());
+    expect(invoices.length).toBe(invoicesBefore + 1);
+    expect(invoices[0]).toMatchObject({ state: "paid", totalMinor: 0 });
+    expect(await orgState()).toBe("active");
+    expect((await repo((x) => x.subscription()))?.periodFrom).toBe("2026-09-10");
+    // granting again is harmless: same plan, still active, period untouched
+    expect(await compTenant(deps, ORG, { type: "user", id: USER }, run)).toBeNull();
+    expect((await repo((x) => x.subscription()))?.periodFrom).toBe("2026-09-10");
   });
 });
 

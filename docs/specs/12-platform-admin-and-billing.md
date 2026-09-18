@@ -99,6 +99,11 @@ ack are exempt. Losing a booking to a quota would be indefensible.
   per §12.3.
 - **Self-service** — plan changes with proration, payment method updates, invoice
   history, cancellation with an export prompt (never a retention dark pattern).
+- **Complimentary plan** — a zero-priced plan (`complimentary`, unlimited quotas, no trial)
+  that self-service never lists; the operator grants it from the tenants page ("Give free
+  plan") for developers and design partners. The grant moves the tenant to `active` from
+  trial, expired, past-due or suspended, clears dunning, and needs no billing customer: a
+  period that totals zero is recorded as paid without a provider call.
 - **BILL-1** Billing failures must never affect connectivity or data integrity.
 - **BILL-2** Every charge is explainable from usage records the customer can see.
 

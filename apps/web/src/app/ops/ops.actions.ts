@@ -3,7 +3,14 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { DrizzleAuditWriter, DrizzlePlatformRepository, rawRows, sql, type Tx } from "@pms/db";
-import { markAllPending, queueAriPush, transitionTenant, IMPERSONATION } from "@pms/jobs";
+import {
+  compTenant,
+  markAllPending,
+  queueAriPush,
+  transitionTenant,
+  COMPLIMENTARY_PLAN_KEY,
+  IMPERSONATION,
+} from "@pms/jobs";
 import type { TenantEvent } from "@pms/core";
 import { withOperator, IMPERSONATION_COOKIE } from "@/server/operator";
 import { container } from "@/server/container";
@@ -145,6 +152,23 @@ export const tenantEventAction = withOperator<[FormData], void>(
       event,
       result: r,
     });
+    revalidatePath("/ops/tenants");
+  },
+);
+
+/** Complimentary plan for developers and design partners (§12.5): zero-priced, tenant active. */
+export const compTenantAction = withOperator<[FormData], void>(
+  "tenant.comp",
+  {},
+  async (ctx, fd) => {
+    const orgId = str(fd, "orgId");
+    const c = await container();
+    const by = { type: "user" as const, id: ctx.operatorId };
+    const r = await compTenant(c, orgId, by, (fn) => fn(ctx.tx));
+    const subject = { kind: "organization", id: orgId };
+    const detail = { plan: COMPLIMENTARY_PLAN_KEY, result: r };
+    await tenantAudit(ctx.tx, orgId, ctx.operatorId, "tenant.comp", subject, detail);
+    await ctx.audit("tenant.comp", subject, orgId, detail);
     revalidatePath("/ops/tenants");
   },
 );

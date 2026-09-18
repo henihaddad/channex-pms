@@ -1706,6 +1706,12 @@
   },
   {
     "file": "src/app/ops/ops.actions.ts",
+    "export": "compTenantAction",
+    "kind": "action",
+    "wrapper": "withOperator"
+  },
+  {
+    "file": "src/app/ops/ops.actions.ts",
     "export": "dlqAction",
     "kind": "action",
     "wrapper": "withOperator"

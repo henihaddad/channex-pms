@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Button, Card, Input, PageTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
 import { withOperator } from "@/server/operator";
 import { guard } from "@/server/guard";
-import { tenantEventAction } from "../ops.actions";
+import { compTenantAction, tenantEventAction } from "../ops.actions";
 
 const loadTenants = withOperator<
   [string],
@@ -68,6 +68,20 @@ export default async function TenantsPage({
                   <Link href={`/ops/impersonation?orgId=${r.id}`} className="text-xs underline">
                     {t("impersonation")}
                   </Link>
+                  {r.planKey !== "complimentary" && r.state !== "offboarding" ? (
+                    <form action={compTenantAction} className="inline">
+                      <input type="hidden" name="orgId" value={r.id} />
+                      <Button
+                        type="submit"
+                        variant="secondary"
+                        className="ms-2"
+                        size="sm"
+                        data-testid="comp-tenant"
+                      >
+                        {t("comp")}
+                      </Button>
+                    </form>
+                  ) : null}
                   {r.state === "suspended" ? (
                     <form action={tenantEventAction} className="inline">
                       <input type="hidden" name="orgId" value={r.id} />

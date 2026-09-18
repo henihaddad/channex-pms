@@ -105,6 +105,12 @@ export class DrizzlePlatformRepository {
     return rows.map(planFrom).sort((a, b) => a.tiers[0]!.unitMinor - b.tiers[0]!.unitMinor);
   }
 
+  /** One plan by key, listed or not: operator grants reach plans self-service never shows. */
+  async planByKey(key: string): Promise<Plan | null> {
+    const [r] = await this.tx.select().from(s.plan).where(eq(s.plan.key, key));
+    return r ? planFrom(r) : null;
+  }
+
   async subscription(): Promise<SubscriptionRow | null> {
     const [r] = await this.tx
       .select()

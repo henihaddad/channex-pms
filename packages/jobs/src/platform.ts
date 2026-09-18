@@ -77,6 +77,60 @@ export async function transitionTenant(
   return { from: state, to };
 }
 
+/** The plan the operator grants developers and design partners (§12.5): zero-priced, never self-service. */
+export const COMPLIMENTARY_PLAN_KEY = "complimentary";
+
+/**
+ * Operator grant of the complimentary plan (§12.5): the subscription moves to the zero-priced
+ * plan and the tenant becomes active from trial, expired, past-due or suspended. No billing
+ * customer or card is needed: a zero-total period settles itself in `invoicePeriod`.
+ */
+export async function compTenant(
+  deps: { crypto: Crypto; clock: Clock },
+  orgId: string,
+  by: { type: "user" | "system"; id: string },
+  run: TxRunner,
+): Promise<{ from: string; to: string } | null> {
+  const today = deps.clock.today("UTC").toString();
+  return run(async (tx) => {
+    const repo = repoFor(deps, tx, orgId);
+    const plan = await repo.planByKey(COMPLIMENTARY_PLAN_KEY);
+    if (!plan) throw new Error("the complimentary plan is not in the catalogue");
+    const org = await repo.orgState();
+    const existing = await repo.subscription();
+    const current = existing !== null && existing.periodTo > today;
+    const periodFrom = current ? existing.periodFrom : today;
+    const periodTo = current
+      ? existing.periodTo
+      : LocalDate.parse(periodFrom).plusDays(monthDays(periodFrom)).toString();
+    await repo.saveSubscription({
+      planId: plan.id,
+      annual: false,
+      addOns: [],
+      country: org.country,
+      periodFrom,
+      periodTo,
+      trialEndsOn: null,
+    });
+    await repo.updateSubscription({
+      periodFrom,
+      periodTo,
+      paymentFailedOn: null,
+      dunningRetries: 0,
+      cancelAtPeriodEnd: false,
+    });
+    const event: TenantEvent | null =
+      org.state === "trial" || org.state === "expired"
+        ? "plan_chosen"
+        : org.state === "past_due"
+          ? "payment_recovered"
+          : org.state === "suspended"
+            ? "reactivated"
+            : null;
+    return event ? transitionTenant(deps, tx, orgId, event, by) : null;
+  });
+}
+
 /** Self-service plan choice (§12.5): the subscription row, the period, trial → active. */
 export async function choosePlan(
   deps: PlatformDeps,
@@ -328,14 +382,18 @@ export async function invoicePeriod(
   });
   let result: { invoiceRef: string; state: string; pdfUrl: string | null; failureReason?: string };
   try {
-    result = built.sub.customerRef
-      ? await deps.billing.charge({
-          customerRef: built.sub.customerRef,
-          draft: built.draft,
-          idempotencyKey: `invoice:${orgId}:${period.from}`,
-          description: `Channex PMS ${period.from} → ${period.to}`,
-        })
-      : { invoiceRef: "", state: "open", pdfUrl: null, failureReason: "no_payment_method" };
+    result =
+      built.draft.totalMinor === 0
+        ? // a zero-priced period (complimentary plan) settles itself: nothing to charge, nothing to dun
+          { invoiceRef: "", state: "paid", pdfUrl: null }
+        : built.sub.customerRef
+          ? await deps.billing.charge({
+              customerRef: built.sub.customerRef,
+              draft: built.draft,
+              idempotencyKey: `invoice:${orgId}:${period.from}`,
+              description: `Channex PMS ${period.from} → ${period.to}`,
+            })
+          : { invoiceRef: "", state: "open", pdfUrl: null, failureReason: "no_payment_method" };
   } catch (e) {
     // BILL-1: a billing outage leaves the invoice open and the tenant untouched
     deps.log.error(

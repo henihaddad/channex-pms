@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+
+- Complimentary plan (spec 12 §12.5): a zero-priced plan the operator grants from the tenants
+  page with "Give free plan", for developers and design partners. The tenant becomes active
+  from trial, expired, past-due or suspended, keeps unlimited quotas, needs no card, and its
+  periods close as paid at zero. Self-service never lists it.
 - Console navigation rebuilt from a UX audit (`docs/ux/2026-09-console-ux-audit.md`): sections
   with icons and their pages beneath them, a header search for guests and reservations, breadcrumbs on property pages. The
   dashboard opens with a Getting started card whose steps are the ones a manager does (add a
