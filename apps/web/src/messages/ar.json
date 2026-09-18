@@ -43,7 +43,9 @@
     "searchPlaceholder": "ابحث عن ضيف أو حجز",
     "maintenance": "الصيانة",
     "help": "مساعدة",
-    "togglePages": "صفحات {section}"
+    "menu": "القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "sectionPages": "صفحات هذا القسم"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -122,7 +124,11 @@
     "when": "متى",
     "channel": "القناة",
     "stay": "الإقامة",
-    "total": "الإجمالي"
+    "total": "الإجمالي",
+    "today": "اليوم",
+    "needsYou": "يحتاج إليك",
+    "allMetrics": "كل المؤشرات",
+    "moreAlerts": "{n} إضافية"
   },
   "members": {
     "title": "الأعضاء",
@@ -442,7 +448,8 @@
     "paymentTypes": {
       "credit_card": "بطاقة على الحجز",
       "bank_transfer": "تحويل بنكي من القناة"
-    }
+    },
+    "moreFilters": "مزيد من عوامل التصفية"
   },
   "operations": {
     "title": "لوحة التنظيف",
@@ -666,7 +673,8 @@
       "cleanliness": "النظافة",
       "respect_house_rules": "قواعد المنزل",
       "communication": "التواصل"
-    }
+    },
+    "connectChannel": "ربط قناة"
   },
   "owners": {
     "title": "المالكون",

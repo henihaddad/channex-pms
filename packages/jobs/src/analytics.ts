@@ -181,8 +181,20 @@ export async function computeAlerts(
   return asSystem(deps.db, orgId, async (tx) => {
     const repo = repoFor(tx, orgId);
     const candidates: AlertCandidate[] = [];
+    const byProperty = new Map<
+      string,
+      {
+        propertyTitle: string;
+        nights: Array<{ date: string; occupancyBps: number | null; daysOut: number }>;
+      }
+    >();
     for (const d of await repo.nearDates(today, 8)) {
-      const c = lowOccupancy({ ...d });
+      const e = byProperty.get(d.propertyId) ?? { propertyTitle: d.propertyTitle, nights: [] };
+      e.nights.push({ date: d.date, occupancyBps: d.occupancyBps, daysOut: d.daysOut });
+      byProperty.set(d.propertyId, e);
+    }
+    for (const [propertyId, e] of byProperty) {
+      const c = lowOccupancy({ propertyId, ...e });
       if (c) candidates.push(c);
     }
     for (const ch of await repo.channelSilence()) {

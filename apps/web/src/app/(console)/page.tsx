@@ -1,26 +1,20 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import {
-  Button,
-  Card,
-  Chip,
-  DataTable,
-  EmptyState,
-  LinkButton,
-  PageTitle,
-  Select,
-} from "@/components/ui";
+import { Button, Card, Chip, DataTable, EmptyState, PageTitle, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { currentOrgId, currentSession } from "@/server/session";
 import { consoleContext } from "@/server/console-context";
-import { AutoRefresh } from "./auto-refresh";
 import { GettingStarted } from "./getting-started";
 import { startLabels } from "./start-labels";
 import { memberships } from "@/server/auth-flows";
 import { loadDashboard, refreshRollupsAction } from "./reports/reports.actions";
 import { Kpi, money, pct } from "./reports/kpi";
 
-/** Spec 11 §11.2: one dashboard per persona, every number from the KPI dictionary, freshness on every card. */
+/**
+ * Spec 11 §11.2: one dashboard per persona. Today first, then the work waiting on
+ * you, then the month. Numbers a new account cannot have yet stay behind "All
+ * metrics" rather than filling the page with dashes.
+ */
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -45,13 +39,32 @@ export default async function DashboardPage({
     ["unassigned", d.queue.unassignedArrivals, "/reservations?view=unassigned"],
     ["breaching", d.queue.breachingMessages, "/inbox?view=breaching_sla"],
     ["unacked", d.queue.unackedRevisions, "/sync-health"],
-    ["alerts", d.queue.openAlerts, "/alerts"],
     ["disputes", d.queue.openDisputes, "/owners/statements"],
     ["expiringCards", d.queue.expiringCards, "/reservations?view=payment_action_needed"],
   ] as const;
   const showFinance = d.role === "finance" || d.role === "portfolio" || d.role === "viewer";
   const showOps = d.role !== "viewer";
   const open = queue.filter(([, n]) => n > 0);
+  const alerts = d.alerts.slice(0, 5);
+  const moreAlerts = d.alerts.length - alerts.length;
+  const today: Array<{ label: string; value: string; href?: string; testId?: string }> = [
+    {
+      label: t("arrivals"),
+      value: String(d.board.arrivals),
+      href: "/reservations?view=arrivals_today",
+    },
+    {
+      label: t("departures"),
+      value: String(d.board.departures),
+      href: "/reservations?view=departures_today",
+    },
+    { label: t("inHouse"), value: String(d.board.inHouse), href: "/reservations?view=in_stay" },
+    {
+      label: t("occupancyTonight"),
+      value: pct(d.board.occupancyTonightBps),
+      testId: "occupancy-tonight",
+    },
+  ];
   return (
     <div className="flex flex-col gap-5" data-testid="dashboard" data-role={d.role}>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -59,13 +72,13 @@ export default async function DashboardPage({
           <h2 className="text-sm text-muted">{t("welcome", { name: orgs[0]?.name ?? "" })}</h2>
           <PageTitle>{t(`titles.${d.role}`)}</PageTitle>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <form className="flex items-center gap-2">
             <Select
               name="property"
               defaultValue={sp.property ?? ""}
               aria-label={t("allProperties")}
-              className="w-56"
+              className="w-52"
             >
               <option value="">{t("allProperties")}</option>
               {d.properties.map((p) => (
@@ -74,11 +87,11 @@ export default async function DashboardPage({
                 </option>
               ))}
             </Select>
-            <Button type="submit" variant="secondary">
+            <Button type="submit" variant="ghost" size="sm">
               {t("filter")}
             </Button>
           </form>
-          <form action={refreshRollupsAction} className="flex items-center gap-2">
+          <form action={refreshRollupsAction} className="flex items-center gap-1.5">
             <span className="text-xs text-muted" data-testid="freshness">
               {t("freshness", { at: fresh })}
             </span>
@@ -92,127 +105,69 @@ export default async function DashboardPage({
       {setup ? <GettingStarted tracks={setup} labels={startLabels(tob)} /> : null}
 
       {showOps ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="today-board">
-          <Kpi
-            label={t("arrivals")}
-            value={String(d.board.arrivals)}
-            href="/reservations?view=arrivals_today"
-          />
-          <Kpi
-            label={t("departures")}
-            value={String(d.board.departures)}
-            href="/reservations?view=departures_today"
-          />
-          <Kpi
-            label={t("inHouse")}
-            value={String(d.board.inHouse)}
-            href="/reservations?view=in_stay"
-          />
-          <Kpi
-            label={t("occupancyTonight")}
-            value={pct(d.board.occupancyTonightBps)}
-            hint={d.dictionary.occupancy.formula}
-            testId="occupancy-tonight"
-          />
-        </div>
+        <section
+          className="grid grid-cols-2 divide-border rounded-2xl border border-border bg-surface sm:grid-cols-4 sm:divide-x"
+          data-testid="today-board"
+          aria-label={t("today")}
+        >
+          {today.map((k) => {
+            const body = (
+              <div className="flex flex-col gap-1 px-5 py-4">
+                <span className="text-xs font-medium text-muted">{k.label}</span>
+                <span
+                  className="text-3xl font-semibold tracking-tight tabular-nums"
+                  data-testid={k.testId}
+                >
+                  {k.value}
+                </span>
+              </div>
+            );
+            return k.href ? (
+              <Link key={k.label} href={k.href} className="transition-colors hover:bg-default">
+                {body}
+              </Link>
+            ) : (
+              <div key={k.label}>{body}</div>
+            );
+          })}
+        </section>
       ) : null}
 
-      <Card title={t("thisMonth")} description={t("freshness", { at: fresh })}>
-        <div
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
-          data-testid="month-kpis"
-        >
-          <Kpi
-            label={d.dictionary.occupancy.name}
-            value={pct(m.occupancyBps)}
-            delta={d.month.previous.occupancyBps}
-            current={m.occupancyBps}
-            hint={d.dictionary.occupancy.formula}
-            testId="occupancy-mtd"
-          />
-          <Kpi
-            label={d.dictionary.adr.name}
-            value={money(m.adrMinor, cur)}
-            delta={d.month.previous.adrMinor}
-            current={m.adrMinor}
-            hint={d.dictionary.adr.formula}
-            testId="adr-mtd"
-          />
-          <Kpi
-            label={d.dictionary.revpar.name}
-            value={money(m.revparMinor, cur)}
-            delta={d.month.previous.revparMinor}
-            current={m.revparMinor}
-            hint={d.dictionary.revpar.formula}
-            testId="revpar-mtd"
-          />
-          <Kpi
-            label={t("revenueMtd")}
-            value={money(m.roomRevenueMinor, cur)}
-            delta={d.month.previous.roomRevenueMinor}
-            current={m.roomRevenueMinor}
-            hint={d.dictionary.rooms_sold.formula}
-          />
-          <Kpi
-            label={d.dictionary.direct_share.name}
-            value={pct(m.directShareBps)}
-            hint={d.dictionary.direct_share.formula}
-          />
-          <Kpi
-            label={d.dictionary.pickup.name}
-            value={`${String(d.month.pickup7.nights)} ${t("nights")}`}
-            hint={d.dictionary.pickup.formula}
-          />
-          {showFinance ? (
-            <>
-              <Kpi
-                label={d.dictionary.net_adr.name}
-                value={money(m.netAdrMinor, cur)}
-                hint={d.dictionary.net_adr.formula}
-              />
-              <Kpi
-                label={d.dictionary.commission_cost.name}
-                value={money(m.commissionMinor, cur)}
-                hint={d.dictionary.commission_cost.formula}
-              />
-              <Kpi
-                label={d.dictionary.trevpar.name}
-                value={money(m.trevparMinor, cur)}
-                hint={d.dictionary.trevpar.formula}
-              />
-            </>
-          ) : null}
-          <Kpi
-            label={d.dictionary.cancellation_rate.name}
-            value={pct(m.cancellationRateBps)}
-            hint={d.dictionary.cancellation_rate.formula}
-          />
-          <Kpi
-            label={d.dictionary.alos.name}
-            value={d.month.alos === null ? "—" : `${String(d.month.alos)} ${t("nights")}`}
-            hint={d.dictionary.alos.formula}
-          />
-          <Kpi
-            label={d.dictionary.pace.name}
-            value={d.month.pace.available ? pct(d.month.pace.deltaBps) : t("paceUnavailable")}
-            hint={`${d.dictionary.pace.formula}${d.month.pace.available ? "" : ` · ${d.month.pace.reason ?? ""}`}`}
-            testId="pace"
-          />
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {showOps ? (
-          <Card title={t("actionQueue")} data-testid="action-queue">
-            {open.length === 0 && d.inbox.needsReply === 0 ? (
+          <Card
+            title={t("needsYou")}
+            data-testid="action-queue"
+            actions={
+              d.alerts.length > 0 ? (
+                <Link className="text-sm text-accent hover:underline" href="/alerts">
+                  {t("allAlerts")}
+                </Link>
+              ) : null
+            }
+          >
+            {open.length === 0 && d.inbox.needsReply === 0 && alerts.length === 0 ? (
               <EmptyState title={t("queueEmpty")} className="py-2" />
             ) : null}
-            <ul className="flex flex-col">
+            <ul className="flex flex-col" data-testid="alerts-widget">
+              {d.inbox.needsReply > 0 ? (
+                <li>
+                  <Link
+                    href="/inbox"
+                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-default"
+                  >
+                    <span>{t("queue.needsReply")}</span>
+                    <Chip color="accent" size="sm">
+                      {d.inbox.needsReply}
+                    </Chip>
+                  </Link>
+                </li>
+              ) : null}
               {open.map(([k, n, href]) => (
                 <li key={k}>
                   <Link
                     href={href}
-                    className="flex items-center justify-between rounded-xl px-2 py-2 text-sm hover:bg-default"
+                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 text-sm hover:bg-default"
                   >
                     <span>{t(`queue.${k}`)}</span>
                     <Chip color="danger" size="sm">
@@ -221,16 +176,28 @@ export default async function DashboardPage({
                   </Link>
                 </li>
               ))}
-              {d.inbox.needsReply > 0 ? (
+              {alerts.map((a) => (
+                <li key={a.id}>
+                  <Link
+                    href={a.link}
+                    className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm hover:bg-default"
+                    data-testid="alert-row"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${a.severity === "critical" ? "bg-danger" : "bg-warning"}`}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{a.title}</span>
+                  </Link>
+                </li>
+              ))}
+              {moreAlerts > 0 ? (
                 <li>
                   <Link
-                    href="/inbox"
-                    className="flex items-center justify-between rounded-xl px-2 py-2 text-sm hover:bg-default"
+                    href="/alerts"
+                    className="block rounded-xl px-2 py-2 text-sm text-muted hover:bg-default hover:text-foreground"
                   >
-                    <span>{t("queue.needsReply")}</span>
-                    <Chip color="accent" size="sm">
-                      {d.inbox.needsReply}
-                    </Chip>
+                    {t("moreAlerts", { n: moreAlerts })}
                   </Link>
                 </li>
               ) : null}
@@ -271,34 +238,95 @@ export default async function DashboardPage({
               .join(" · ") || "—"}
           </p>
         </Card>
-        <Card
-          title={t("alerts")}
-          actions={
-            <Link className="text-sm text-accent hover:underline" href="/alerts">
-              {t("allAlerts")}
-            </Link>
-          }
-          data-testid="alerts-widget"
-        >
-          {d.alerts.length === 0 ? <EmptyState title={t("noAlerts")} className="py-2" /> : null}
-          <ul className="flex flex-col">
-            {d.alerts.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={a.link}
-                  className="flex items-start gap-2 rounded-xl px-2 py-2 text-sm hover:bg-default"
-                  data-testid="alert-row"
-                >
-                  <Chip color={a.severity === "critical" ? "danger" : "warning"} size="sm">
-                    {a.severity}
-                  </Chip>
-                  <span className="min-w-0 flex-1">{a.title}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
       </div>
+
+      <Card title={t("thisMonth")} description={t("freshness", { at: fresh })}>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="month-kpis">
+          <Kpi
+            label={d.dictionary.occupancy.name}
+            value={pct(m.occupancyBps)}
+            delta={d.month.previous.occupancyBps}
+            current={m.occupancyBps}
+            hint={d.dictionary.occupancy.formula}
+            testId="occupancy-mtd"
+          />
+          <Kpi
+            label={d.dictionary.adr.name}
+            value={money(m.adrMinor, cur)}
+            delta={d.month.previous.adrMinor}
+            current={m.adrMinor}
+            hint={d.dictionary.adr.formula}
+            testId="adr-mtd"
+          />
+          <Kpi
+            label={d.dictionary.revpar.name}
+            value={money(m.revparMinor, cur)}
+            delta={d.month.previous.revparMinor}
+            current={m.revparMinor}
+            hint={d.dictionary.revpar.formula}
+            testId="revpar-mtd"
+          />
+          <Kpi
+            label={t("revenueMtd")}
+            value={money(m.roomRevenueMinor, cur)}
+            delta={d.month.previous.roomRevenueMinor}
+            current={m.roomRevenueMinor}
+            hint={d.dictionary.rooms_sold.formula}
+          />
+        </div>
+        <details className="group mt-3">
+          <summary className="cursor-pointer select-none text-sm text-muted hover:text-foreground">
+            {t("allMetrics")}
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <Kpi
+              label={d.dictionary.direct_share.name}
+              value={pct(m.directShareBps)}
+              hint={d.dictionary.direct_share.formula}
+            />
+            <Kpi
+              label={d.dictionary.pickup.name}
+              value={`${String(d.month.pickup7.nights)} ${t("nights")}`}
+              hint={d.dictionary.pickup.formula}
+            />
+            {showFinance ? (
+              <>
+                <Kpi
+                  label={d.dictionary.net_adr.name}
+                  value={money(m.netAdrMinor, cur)}
+                  hint={d.dictionary.net_adr.formula}
+                />
+                <Kpi
+                  label={d.dictionary.commission_cost.name}
+                  value={money(m.commissionMinor, cur)}
+                  hint={d.dictionary.commission_cost.formula}
+                />
+                <Kpi
+                  label={d.dictionary.trevpar.name}
+                  value={money(m.trevparMinor, cur)}
+                  hint={d.dictionary.trevpar.formula}
+                />
+              </>
+            ) : null}
+            <Kpi
+              label={d.dictionary.cancellation_rate.name}
+              value={pct(m.cancellationRateBps)}
+              hint={d.dictionary.cancellation_rate.formula}
+            />
+            <Kpi
+              label={d.dictionary.alos.name}
+              value={d.month.alos === null ? "—" : `${String(d.month.alos)} ${t("nights")}`}
+              hint={d.dictionary.alos.formula}
+            />
+            <Kpi
+              label={d.dictionary.pace.name}
+              value={d.month.pace.available ? pct(d.month.pace.deltaBps) : t("paceUnavailable")}
+              hint={`${d.dictionary.pace.formula}${d.month.pace.available ? "" : ` · ${d.month.pace.reason ?? ""}`}`}
+              testId="pace"
+            />
+          </div>
+        </details>
+      </Card>
 
       {d.role === "portfolio" || d.role === "viewer" || d.role === "finance" ? (
         <Card
@@ -350,35 +378,27 @@ export default async function DashboardPage({
         </Card>
       ) : null}
 
-      {showOps ? (
+      {showOps && d.board.recentBookings.length > 0 ? (
         <Card title={t("recentBookings")}>
-          {d.board.recentBookings.length === 0 ? (
-            <EmptyState title={t("noRecent")} className="py-2" />
-          ) : (
-            <DataTable
-              columns={[
-                t("when"),
-                t("property"),
-                t("channel"),
-                t("stay"),
-                { label: t("total"), align: "end" },
-              ]}
-              rows={d.board.recentBookings.map((b) => [
-                <Link
-                  key="l"
-                  href={`/reservations/${b.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {b.createdAt.slice(11, 16)}
-                </Link>,
-                b.propertyTitle,
-                b.channel,
-                `${b.arrivalDate} → ${b.departureDate}`,
-                money(b.totalMinor, b.currency),
-              ])}
-              dense
-            />
-          )}
+          <DataTable
+            columns={[
+              t("when"),
+              t("property"),
+              t("channel"),
+              t("stay"),
+              { label: t("total"), align: "end" },
+            ]}
+            rows={d.board.recentBookings.map((b) => [
+              <Link key="l" href={`/reservations/${b.id}`} className="font-medium hover:underline">
+                {b.createdAt.slice(11, 16)}
+              </Link>,
+              b.propertyTitle,
+              b.channel,
+              `${b.arrivalDate} → ${b.departureDate}`,
+              money(b.totalMinor, b.currency),
+            ])}
+            dense
+          />
         </Card>
       ) : null}
     </div>

@@ -47,6 +47,7 @@ export default async function ReservationsPage({
   const qs = new URLSearchParams(
     Object.entries(sp).filter(([, v]) => v) as [string, string][],
   ).toString();
+  const advanced = Boolean(sp.dateType ?? sp.from ?? sp.to ?? sp.channel);
   const pill = (active: boolean) =>
     cn(
       "rounded-full px-3 py-1 text-xs font-medium transition-colors",
@@ -70,9 +71,16 @@ export default async function ReservationsPage({
           </>
         }
       >
-        <div className="flex flex-wrap gap-1.5" data-testid="shipped-views">
+        <div
+          className="scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+          data-testid="shipped-views"
+        >
           {Object.keys(SHIPPED_VIEWS).map((v) => (
-            <Link key={v} href={`/reservations?view=${v}`} className={pill(sp.view === v)}>
+            <Link
+              key={v}
+              href={`/reservations?view=${v}`}
+              className={cn(pill(sp.view === v), "whitespace-nowrap")}
+            >
               {t(`views.${v}`)}
             </Link>
           ))}
@@ -89,59 +97,71 @@ export default async function ReservationsPage({
       </PageHeader>
 
       <Card>
-        <form method="get">
-          <FormRow>
-            <Select
-              name="dateType"
-              label={t("dateType")}
-              defaultValue={sp.dateType ?? "arrival"}
-              className="w-40"
-            >
-              <option value="arrival">{t("dateTypes.arrival")}</option>
-              <option value="departure">{t("dateTypes.departure")}</option>
-              <option value="stay">{t("dateTypes.stay")}</option>
-              <option value="booked">{t("dateTypes.booked")}</option>
-            </Select>
-            <DateInput name="from" label={t("from")} defaultValue={sp.from} className="w-44" />
-            <DateInput name="to" label={t("to")} defaultValue={sp.to} className="w-44" />
-            <Input
-              name="channel"
-              placeholder={t("channel")}
-              aria-label={t("channel")}
-              defaultValue={sp.channel}
-              className="w-40"
-            />
+        <form method="get" className="flex flex-col gap-3">
+          {sp.view ? <input type="hidden" name="view" value={sp.view} /> : null}
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               name="q"
               placeholder={t("search")}
               aria-label={t("search")}
               defaultValue={sp.q}
               data-testid="search"
-              className="w-64"
+              className="w-full sm:w-80"
             />
             <Button type="submit" variant="secondary">
               {t("filter")}
             </Button>
-            <AnchorButton href={`/api/v1/reservations/export?${qs}`}>CSV</AnchorButton>
-          </FormRow>
+            <AnchorButton href={`/api/v1/reservations/export?${qs}`} className="ms-auto">
+              CSV
+            </AnchorButton>
+          </div>
+          <details open={advanced} className="text-sm">
+            <summary className="cursor-pointer select-none text-muted hover:text-foreground">
+              {t("moreFilters")}
+            </summary>
+            <FormRow className="mt-3">
+              <Select
+                name="dateType"
+                label={t("dateType")}
+                defaultValue={sp.dateType ?? "arrival"}
+                className="w-40"
+              >
+                <option value="arrival">{t("dateTypes.arrival")}</option>
+                <option value="departure">{t("dateTypes.departure")}</option>
+                <option value="stay">{t("dateTypes.stay")}</option>
+                <option value="booked">{t("dateTypes.booked")}</option>
+              </Select>
+              <DateInput name="from" label={t("from")} defaultValue={sp.from} className="w-44" />
+              <DateInput name="to" label={t("to")} defaultValue={sp.to} className="w-44" />
+              <Input
+                name="channel"
+                placeholder={t("channel")}
+                aria-label={t("channel")}
+                defaultValue={sp.channel}
+                className="w-40"
+              />
+            </FormRow>
+          </details>
         </form>
-        <form action={saveViewAction} className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            type="hidden"
-            name="filters"
-            value={JSON.stringify(Object.fromEntries(Object.entries(sp).filter(([, v]) => v)))}
-          />
-          <Input
-            name="name"
-            placeholder={t("saveViewAs")}
-            aria-label={t("saveViewAs")}
-            className="w-64"
-            variant="secondary"
-          />
-          <Button type="submit" variant="ghost" size="sm">
-            {t("saveView")}
-          </Button>
-        </form>
+        {Object.keys(filters).length > 0 ? (
+          <form action={saveViewAction} className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              type="hidden"
+              name="filters"
+              value={JSON.stringify(Object.fromEntries(Object.entries(sp).filter(([, v]) => v)))}
+            />
+            <Input
+              name="name"
+              placeholder={t("saveViewAs")}
+              aria-label={t("saveViewAs")}
+              className="w-64"
+              variant="secondary"
+            />
+            <Button type="submit" variant="ghost" size="sm">
+              {t("saveView")}
+            </Button>
+          </form>
+        ) : null}
       </Card>
 
       <Card>

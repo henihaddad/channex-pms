@@ -43,7 +43,9 @@
     "searchPlaceholder": "Search guests and reservations",
     "maintenance": "Maintenance",
     "help": "Help",
-    "togglePages": "Pages of {section}"
+    "menu": "Menu",
+    "closeMenu": "Close menu",
+    "sectionPages": "Pages in this section"
   },
   "auth": {
     "signIn": "Sign in",
@@ -122,7 +124,11 @@
     "when": "When",
     "channel": "Channel",
     "stay": "Stay",
-    "total": "Total"
+    "total": "Total",
+    "today": "Today",
+    "needsYou": "Needs you",
+    "allMetrics": "All metrics",
+    "moreAlerts": "{n} more"
   },
   "members": {
     "title": "Members",
@@ -442,7 +448,8 @@
     "paymentTypes": {
       "credit_card": "card on the booking",
       "bank_transfer": "bank transfer from the channel"
-    }
+    },
+    "moreFilters": "More filters"
   },
   "operations": {
     "title": "Turnover board",
@@ -666,7 +673,8 @@
       "cleanliness": "Cleanliness",
       "respect_house_rules": "House rules",
       "communication": "Communication"
-    }
+    },
+    "connectChannel": "Connect a channel"
   },
   "owners": {
     "title": "Owners",

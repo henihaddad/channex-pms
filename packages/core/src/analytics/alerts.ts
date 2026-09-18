@@ -31,30 +31,41 @@ export const ALERT_DEFAULTS = {
   reviewDropPoints: 1,
 };
 
+/**
+ * One alert per property for the whole near window, never one per night: a manager
+ * opens the calendar for a listing once, and eight listings must not become sixty
+ * rows that bury every other signal (spec 11 ALRT-1).
+ */
 export function lowOccupancy(i: {
   propertyId: string;
   propertyTitle: string;
-  date: string;
-  occupancyBps: number | null;
-  daysOut: number;
+  nights: Array<{ date: string; occupancyBps: number | null; daysOut: number }>;
   thresholdBps?: number;
 }): AlertCandidate | null {
   const threshold = i.thresholdBps ?? ALERT_DEFAULTS.lowOccupancyBps;
-  if (
-    i.occupancyBps === null ||
-    i.daysOut > ALERT_DEFAULTS.lowOccupancyDaysOut ||
-    i.daysOut < 0 ||
-    i.occupancyBps >= threshold
-  )
-    return null;
+  const weak = i.nights
+    .filter(
+      (n) =>
+        n.occupancyBps !== null &&
+        n.daysOut >= 0 &&
+        n.daysOut <= ALERT_DEFAULTS.lowOccupancyDaysOut &&
+        n.occupancyBps < threshold,
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const first = weak[0];
+  if (!first) return null;
+  const pctText = `${String(threshold / 100)}%`;
   return {
     type: "low_occupancy",
     propertyId: i.propertyId,
-    key: `${i.propertyId}:${i.date}`,
+    key: i.propertyId,
     severity: "warning",
-    title: `${i.propertyTitle}: ${i.date} at ${String(Math.round(i.occupancyBps / 100))}%, ${String(i.daysOut)} days out`,
-    detail: `Occupancy below ${String(threshold / 100)}% for a date within ${String(ALERT_DEFAULTS.lowOccupancyDaysOut)} days. Consider a rate or restriction change.`,
-    link: `/calendar?property=${i.propertyId}&date=${i.date}`,
+    title:
+      weak.length === 1
+        ? `${i.propertyTitle}: ${first.date} under ${pctText}`
+        : `${i.propertyTitle}: ${String(weak.length)} of the next ${String(ALERT_DEFAULTS.lowOccupancyDaysOut)} nights under ${pctText}`,
+    detail: `Occupancy below ${pctText} on ${weak.map((n) => n.date).join(", ")}. Consider a rate or restriction change.`,
+    link: `/calendar?property=${i.propertyId}&date=${first.date}`,
   };
 }
 

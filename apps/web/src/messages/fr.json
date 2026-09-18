@@ -43,7 +43,9 @@
     "searchPlaceholder": "Rechercher un client ou une réservation",
     "maintenance": "Maintenance",
     "help": "Aide",
-    "togglePages": "Pages de {section}"
+    "menu": "Menu",
+    "closeMenu": "Fermer le menu",
+    "sectionPages": "Pages de cette section"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -122,7 +124,11 @@
     "when": "Quand",
     "channel": "Canal",
     "stay": "Séjour",
-    "total": "Total"
+    "total": "Total",
+    "today": "Aujourd’hui",
+    "needsYou": "À traiter",
+    "allMetrics": "Tous les indicateurs",
+    "moreAlerts": "{n} de plus"
   },
   "members": {
     "title": "Membres",
@@ -442,7 +448,8 @@
     "paymentTypes": {
       "credit_card": "carte sur la réservation",
       "bank_transfer": "virement du canal"
-    }
+    },
+    "moreFilters": "Plus de filtres"
   },
   "operations": {
     "title": "Tableau des rotations",
@@ -666,7 +673,8 @@
       "cleanliness": "Propreté",
       "respect_house_rules": "Règlement intérieur",
       "communication": "Communication"
-    }
+    },
+    "connectChannel": "Connecter un canal"
   },
   "owners": {
     "title": "Propriétaires",

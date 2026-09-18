@@ -40,8 +40,8 @@ test("onboarding → billing → plugins → operator console → impersonation 
   test.skip(hooks.status() === 404, "test hooks disabled");
 
   // onboarding programme (spec 12 §12.3): the first track is unlocked, the property step not done,
-  // later tracks locked until it is; the header carries the next step of the same programme
-  await expect(page.getByTestId("onboarding-checklist")).toBeVisible();
+  // later tracks locked until it is
+  await expect(page.getByTestId("getting-started")).toBeVisible();
   await expect(
     page.locator('[data-testid="getting-started"] [data-step="property"]'),
   ).toHaveAttribute("data-done", "0");

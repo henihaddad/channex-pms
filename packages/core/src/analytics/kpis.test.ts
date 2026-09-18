@@ -166,18 +166,22 @@ describe("KPI dictionary as code", () => {
       lowOccupancy({
         propertyId: "p",
         propertyTitle: "P",
-        date: "2026-05-09",
-        occupancyBps: 3000,
-        daysOut: 6,
-      })?.type,
-    ).toBe("low_occupancy");
+        nights: [
+          { date: "2026-05-09", occupancyBps: 3000, daysOut: 6 },
+          { date: "2026-05-10", occupancyBps: 3000, daysOut: 7 },
+          { date: "2026-05-11", occupancyBps: 9000, daysOut: 8 },
+        ],
+      }),
+    ).toMatchObject({
+      type: "low_occupancy",
+      key: "p",
+      title: "P: 2 of the next 7 nights under 40%",
+    });
     expect(
       lowOccupancy({
         propertyId: "p",
         propertyTitle: "P",
-        date: "2026-05-30",
-        occupancyBps: 3000,
-        daysOut: 20,
+        nights: [{ date: "2026-05-30", occupancyBps: 3000, daysOut: 20 }],
       }),
     ).toBeNull();
     expect(

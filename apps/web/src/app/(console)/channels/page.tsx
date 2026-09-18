@@ -46,9 +46,16 @@ export default async function ChannelsPage({
           </Link>
         </Alert>
       ) : null}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <PageTitle>{t("title")}</PageTitle>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/channels/connect"
+            className="text-sm text-muted hover:text-foreground hover:underline"
+            data-testid="connect-via-channex"
+          >
+            {t("connectViaChannex")}
+          </Link>
           <LinkButton href="/channels/new" variant="secondary" data-testid="connect-channel">
             {t("connect")}
           </LinkButton>
@@ -61,14 +68,7 @@ export default async function ChannelsPage({
           </AnchorButton>
         </div>
       </div>
-      <Card
-        title={t("health")}
-        description={
-          <Link href="/channels/connect" className="underline" data-testid="connect-via-channex">
-            {t("connectViaChannex")}
-          </Link>
-        }
-      >
+      <Card title={t("health")}>
         {board.connections.length === 0 ? (
           <EmptyState
             title={t("emptyTitle")}
@@ -138,44 +138,46 @@ export default async function ChannelsPage({
           ))}
         </div>
       </Card>
-      <Card title={t("events")}>
-        {board.events.length === 0 ? <p className="text-sm text-muted">—</p> : null}
-        <ul className="space-y-1 text-sm">
-          {board.events.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-start justify-between gap-2 border-t border-border py-1"
-            >
-              <span>
-                <span
-                  className={`me-2 rounded px-1.5 text-xs uppercase ${e.severity === "p1" ? "bg-danger-soft text-danger" : e.severity === "p2" ? "bg-warning-soft text-warning-soft-foreground" : "bg-background"}`}
-                >
-                  {e.severity}
+      {board.events.length > 0 ? (
+        <Card title={t("events")}>
+          <ul className="space-y-1 text-sm">
+            {board.events.map((e) => (
+              <li
+                key={e.id}
+                className="flex items-start justify-between gap-2 border-t border-border py-1"
+              >
+                <span>
+                  <span
+                    className={`me-2 rounded px-1.5 text-xs uppercase ${e.severity === "p1" ? "bg-danger-soft text-danger" : e.severity === "p2" ? "bg-warning-soft text-warning-soft-foreground" : "bg-background"}`}
+                  >
+                    {e.severity}
+                  </span>
+                  {e.message}
                 </span>
-                {e.message}
-              </span>
-              <form action={acknowledgeEventAction}>
-                <input type="hidden" name="eventId" value={e.id} />
-                <button className="text-xs underline">{t("ack")}</button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      </Card>
-      <Card title={t("accounts")}>
-        {board.accounts.length === 0 ? <p className="text-sm text-muted">—</p> : null}
-        <ul className="space-y-2 text-sm" data-testid="accounts">
-          {board.accounts.map((a) => (
-            <li key={a.id} className="border-t border-border py-2">
-              <span className="font-medium">{a.label}</span>{" "}
-              <span className="text-xs text-muted">
-                · {a.adapterCode} · {a.state} · token{" "}
-                {a.oauthExpiresAt ? `expires ${a.oauthExpiresAt.slice(0, 10)}` : "n/a"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+                <form action={acknowledgeEventAction}>
+                  <input type="hidden" name="eventId" value={e.id} />
+                  <button className="text-xs underline">{t("ack")}</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+      {board.accounts.length > 0 ? (
+        <Card title={t("accounts")}>
+          <ul className="space-y-2 text-sm" data-testid="accounts">
+            {board.accounts.map((a) => (
+              <li key={a.id} className="border-t border-border py-2">
+                <span className="font-medium">{a.label}</span>{" "}
+                <span className="text-xs text-muted">
+                  · {a.adapterCode} · {a.state} · token{" "}
+                  {a.oauthExpiresAt ? `expires ${a.oauthExpiresAt.slice(0, 10)}` : "n/a"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
     </div>
   );
 }

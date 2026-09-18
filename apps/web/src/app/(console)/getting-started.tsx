@@ -180,37 +180,3 @@ export function GettingStarted({
     </Card>
   );
 }
-
-/** The same programme, condensed: one line in the header of every console page. */
-export function StartWidget({
-  tracks,
-  labels: L,
-}: {
-  tracks: OnboardingTrack[];
-  labels: StartLabels;
-}) {
-  const hidden = useStartHidden();
-  const next = nextStep(tracks);
-  if (hidden || !next) return null;
-  const total = tracks.reduce((n, t) => n + t.steps.length, 0);
-  const done = tracks.reduce((n, t) => n + t.steps.filter((s) => s.done).length, 0);
-  return (
-    <span className="flex shrink-0 items-center gap-2 text-sm" data-testid="onboarding-checklist">
-      <span className="text-muted tabular-nums">{fill(L.progress, { done, total })}</span>
-      <span className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-default sm:flex">
-        <span
-          className="bridge-rail h-full rounded-full"
-          style={{ width: `${(done / total) * 100}%` }}
-        />
-      </span>
-      <Link
-        href={next.step.href}
-        className="font-medium text-accent underline-offset-4 hover:underline"
-        data-step={next.step.key}
-        data-done="0"
-      >
-        {L.steps[next.step.key] ?? next.step.key} →
-      </Link>
-    </span>
-  );
-}

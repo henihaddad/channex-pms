@@ -189,6 +189,24 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Console frame rebuilt for a first-time user: one flat list of twelve destinations that never
+  folds, a section's own pages as tabs on the section, and below `lg` the list moves into a
+  drawer behind a menu button, so a phone shows the work instead of the navigation. The
+  onboarding progress that repeated in every page header is gone; the dashboard card is the one
+  place it lives.
+- Dashboard reordered around what a manager does: today's four numbers first, then "Needs you"
+  (the queue, the messages waiting, the first five alerts and a link to the rest), then the
+  month. The month leads with occupancy, ADR, RevPAR and revenue; the other eight metrics sit
+  behind "All metrics" so a young account is not a wall of dashes. Empty sections are left out
+  rather than drawn empty.
+- Low-occupancy alerts are one per property for the whole near window ("3 of the next 7 nights
+  under 40%"), not one per property per night: eight listings used to raise sixty rows and bury
+  every other signal (spec 11 ALRT-1).
+- Reservations keeps its saved views on one scrolling row and puts the date, channel and
+  property filters behind "More filters", with the search and the CSV export always in reach.
+  The inbox, before a single conversation exists, is one card with one action instead of an
+  empty three-column workspace. Channels offers one place to connect and hides the cards that
+  have nothing in them yet.
 - Calendar rebuilt around a selection (spec 06 CAL-2, CAL-2a): click a night or drag across
   nights and a side panel opens with the price per night, Open/Blocked, the minimum stay and,
   under "More settings", check-in/check-out closures and a percentage change that previews
