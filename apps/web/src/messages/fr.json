@@ -45,7 +45,9 @@
     "help": "Aide",
     "menu": "Menu",
     "closeMenu": "Fermer le menu",
-    "sectionPages": "Pages de cette section"
+    "sectionPages": "Pages de cette section",
+    "integrations": "Intégrations",
+    "financials": "Finances"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -1492,5 +1494,75 @@
     "readColumns": "Colonnes lues",
     "before": "de",
     "after": "à"
+  },
+  "integrations": {
+    "title": "Intégrations",
+    "lead": "Tout ce à quoi ce produit se connecte, et l'état d'avancement de chacun. Pas de logos que nous ne pouvons pas assumer : quand seule l'interface existe, c'est dit, et quand une clé est nécessaire, nous disons si ce déploiement en a une.",
+    "status": {
+      "built": "Opérationnel",
+      "partial": "Partiellement",
+      "port": "Interface seule",
+      "planned": "Prévu"
+    },
+    "heading": {
+      "built": "Opérationnel aujourd'hui",
+      "partial": "Partiellement construit",
+      "port": "Une interface qui attend votre code",
+      "planned": "Dans la feuille de route"
+    },
+    "blurb": {
+      "built": "Un vrai adaptateur est livré avec le produit et couvert par des tests.",
+      "partial": "Une partie fonctionne sans fournisseur ; le reste demande un adaptateur.",
+      "port": "L'interface et un substitut fonctionnel existent. Un adaptateur fournisseur est un plugin — le vôtre, ou le nôtre plus tard.",
+      "planned": "Mentionné dans la feuille de route, pas écrit. Listé pour éviter la surprise."
+    },
+    "configured": "Configuré ici",
+    "notConfigured": "Non configuré ici",
+    "openSettings": "Configurer",
+    "specRef": "Spéc. {spec}",
+    "writeOne": "Tout ce qui manque peut déjà réagir à vos événements via les",
+    "plugins": "webhooks sortants"
+  },
+  "financials": {
+    "title": "Finances",
+    "lead": "Ce que l'argent attend de vous aujourd'hui. Les folios appartiennent à un séjour et les relevés à un propriétaire ; voici la page qui interroge les deux.",
+    "toApprove": "Relevés à approuver",
+    "toSend": "Relevés à envoyer",
+    "toPay": "Propriétaires à payer",
+    "owedByGuests": "Dû par les voyageurs",
+    "statementsToApprove": "Relevés en attente d'approbation",
+    "statementsToApproveHint": "Un brouillon n'atteint aucun propriétaire avant d'avoir été lu.",
+    "statementsToSend": "Approuvés, pas encore envoyés",
+    "statementsToSendHint": "Approuvé le mois dernier et toujours ici : c'est la réclamation du mois prochain.",
+    "payoutsToRecord": "Propriétaires à qui l'on doit",
+    "payoutsToRecordHint": "Un relevé que le propriétaire a vu, sans rien d'enregistré en face.",
+    "expensesToApprove": "Dépenses en attente d'approbation",
+    "expensesToApproveHint": "Une dépense n'atteint un relevé qu'une fois approuvée.",
+    "instalmentsDue": "Échéances dues",
+    "instalmentsDueHint": "Réservations directes que les règles de paiement veulent débiter aujourd'hui ou avant.",
+    "unpaidFolios": "Séjours encore débiteurs",
+    "unpaidFoliosHint": "Des charges au folio sans paiement en face.",
+    "nothingWaiting": "Rien en attente.",
+    "owner": "Propriétaire",
+    "period": "Période",
+    "net": "Net dû",
+    "amount": "Montant",
+    "balance": "Solde",
+    "state": "État",
+    "property": "Logement",
+    "what": "Objet",
+    "reference": "Référence",
+    "due": "Échéance",
+    "attempts": "Essais",
+    "review": "Relire",
+    "open": "Ouvrir",
+    "rules": "Règles",
+    "payoutState": {
+      "pending": "À initier",
+      "awaiting_approval": "En attente d'un second regard",
+      "failed": "Échoué",
+      "unrecorded": "Rien d'enregistré"
+    },
+    "across": "{n} séjours"
   }
 }

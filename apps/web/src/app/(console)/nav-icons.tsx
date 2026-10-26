@@ -72,6 +72,12 @@ export const navIcons = {
       <path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 1 0 0-6M18 20a6 6 0 0 0-3-5.2" />
     </>,
   ),
+  financials: wrap(
+    <>
+      <path d="M3 7h18v12H3zM3 11h18" />
+      <circle cx="8" cy="15" r="1.2" />
+    </>,
+  ),
   reports: wrap(
     <>
       <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />

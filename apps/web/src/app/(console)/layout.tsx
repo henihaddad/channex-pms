@@ -78,6 +78,15 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       tabs: [{ href: "/booking-engine/payments", label: tpay("title") }],
     },
     {
+      item: { href: "/financials", label: t("financials"), icon: navIcons.financials },
+      tabs: [
+        { href: "/booking-engine/payments", label: tpay("title") },
+        { href: "/owners/statements", label: to2("statements") },
+        { href: "/owners/payouts", label: to2("payouts") },
+        { href: "/owners/expenses", label: to2("expenses") },
+      ],
+    },
+    {
       item: { href: "/owners", label: t("owners"), icon: navIcons.owners },
       tabs: [
         { href: "/owners/expenses", label: to2("expenses") },
@@ -103,6 +112,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         { href: "/settings/organization", label: t("organization") },
         { href: "/settings/members", label: t("members") },
         { href: "/settings/billing", label: t("billing") },
+        { href: "/settings/integrations", label: t("integrations") },
         { href: "/settings/plugins", label: t("plugins") },
         { href: "/settings/audit", label: t("audit") },
         { href: "/settings/support", label: t("support") },

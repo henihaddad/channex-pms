@@ -8,6 +8,23 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Financials as its own console section (spec 11 §11.5b, item 5 of the Guesty Lite walk in
+  `docs/research/2026-09-competitors.md`): folios belong to a stay and statements belong to
+  an owner, which left nowhere to ask what money needs from you today. `/financials` is six
+  action queues — statements to approve, approved but not sent, owners owed, expenses to
+  approve, instalments due, stays that still owe — each row linking to the page that clears
+  it. No second source of truth: a statement's net is its own `netDue` and a folio balance is
+  charged minus received with the guest portal's arithmetic, and a mixed-currency portfolio
+  gets a count rather than a sum, because adding EUR to GBP is the bug integer minor units
+  exist to prevent. A statement the owner has seen with no payout row at all is listed as
+  loudly as one that failed.
+
+- An integrations directory (spec 12 §12.7b, item 6 of the same walk): every vendor and
+  extension point with how far it is built — `built`, `partly built`, `interface only` or
+  `planned` — and, for the ones needing configuration, whether this deployment has it.
+  A port listed as a port costs a logo and buys the trust that the built ones are true. The
+  list lives in core so the console, the site and the docs cannot drift apart.
+
 - A console that works on a phone (gap 7 of `docs/research/2026-09-competitors.md`): the
   calendar gets the day view spec 06 promised in CAL-9 — one night, every listing's price,
   rooms left, minimum stay, restriction flags and sync state in a list, with "close this

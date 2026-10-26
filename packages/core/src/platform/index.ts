@@ -27,6 +27,12 @@ export {
   type BillingInvoiceState,
 } from "./billing-port.js";
 export {
+  INTEGRATIONS,
+  integrationsByStatus,
+  type IntegrationEntry,
+  type IntegrationStatus,
+} from "./integrations.js";
+export {
   DEFAULT_PLUGIN_POLICY,
   PLUGIN_ISOLATION_NOTE,
   pluginWants,

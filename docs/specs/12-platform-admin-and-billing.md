@@ -134,6 +134,21 @@ The pressure valve that keeps core small ([01 §1.4](./01-vision-and-scope.md#14
 - Reference plugins we ship: accounting export (Xero/QuickBooks CSV), Slack
   notifications, door-lock integration example, competitor rate shopper stub,
   LLM reply assistant.
+- **The directory (§12.7b).** Every extension point and vendor we connect to, listed with
+  how far it is built, so a prospect can tell what is real before they buy.
+
+### 12.7b The integrations directory
+
+Every competitor's integrations page is a wall of logos a manager cannot verify. Ours
+names each connection and its state — `built` (a real adapter ships, covered by tests),
+`partial` (some of it works without a vendor), `port` (the interface and a working
+stand-in exist; a vendor adapter is a plugin) or `planned` (named in the roadmap, not
+written) — and for the ones that need configuration it reads the running container and
+says whether *this deployment* has it. Honesty is the differentiator here: a port listed
+as a port costs us a logo and buys the trust that the `built` ones are true.
+
+The list lives in `packages/core/src/platform/integrations.ts`, so the console, the
+marketing site and the docs cannot drift from each other.
 
 ## 12.8 Upgrades and operations
 

@@ -65,7 +65,10 @@ product rather than across third-party logins.
 7. **Mobile.** Every competitor's weakest reviews mention the mobile app. The cleaner app is a
    PWA already; the console is not designed for phones. Not for this round.
 
-Items 1 to 3 are implemented in this round. Items 4 to 7 go to the roadmap after v1.0.
+Items 1 to 3 are implemented in this round. Items 4 to 7 went to the roadmap after v1.0 and
+are now all shipped: the guest guide (spec 10 §10.6b), suggested replies drafted from it
+(spec 09 §9.3), the rate-import port (spec 06 §6.5b) and the calendar's day view with the
+console's forms made to fit a phone (spec 06 CAL-9).
 
 ## Sources
 
@@ -132,5 +135,7 @@ section** (we scatter folios, invoices and payouts across reservations and owner
 2. Getting-started card with per-step durations and a widget that follows the user.
 3. Properties overview as photo cards with per-channel badges.
 4. Payment rules (collect X at booking, remainder N days before arrival, deposit hold).
-5. Financials as its own console section, gathering folios, invoices, payments and payouts.
-6. Integrations directory listing the plugin interface and what is built.
+5. ~~Financials as its own console section, gathering folios, invoices, payments and payouts.~~
+   **Shipped** — spec 11 §11.5b, as an action queue rather than a report.
+6. ~~Integrations directory listing the plugin interface and what is built.~~ **Shipped** —
+   spec 12 §12.7b, honest about which are ports.

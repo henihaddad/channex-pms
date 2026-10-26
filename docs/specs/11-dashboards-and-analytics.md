@@ -156,6 +156,36 @@ Deliberately unfashionable, because a hotel is small data:
 - **Extension point**: a documented read-only reporting schema so an operator can
   point Metabase or Superset at it. We do not try to be a BI tool.
 
+## 11.5b The Financials page
+
+**Persona:** `finance` and `portfolio_manager` (spec 02); a one-person manager wearing
+both hats.
+
+Folios belong to a stay and statements belong to an owner, which is the right place for
+each — and it left a manager with nowhere to ask "what does money need from me today".
+From the Guesty Lite walk ([research](../research/2026-09-competitors.md)), where
+Financials is a section of its own; we have more to put in it than they do, and it was
+scattered.
+
+- **FIN-1 An action queue, not a dashboard.** Six lists, each one thing waiting on a
+  person: statements to approve, statements approved but not sent, owners owed money,
+  expenses to approve, instalments due today or earlier, and stays whose folio still owes.
+  Every row links to the page that clears it; nothing is actioned from here, so there is
+  one place each decision is made.
+- **FIN-2 No second source of truth.** Every figure is read from the repository the linked
+  page reads — a statement's net is its own `netDue`, a folio balance is charged minus
+  received with the same arithmetic as the guest portal. A number here can disagree with
+  its own page only if the page is wrong.
+- **FIN-3 Currencies are not added.** A portfolio in one currency gets a total; a mixed
+  one gets a count of stays, because adding EUR to GBP is the bug rule 4 exists to
+  prevent.
+- **FIN-4 "Owed" includes nothing recorded.** A statement the owner has seen with no
+  payout row at all is listed as loudly as one that failed. The common way to not pay
+  someone is to never start.
+
+Acceptance: a manager opens one page on the first of the month and knows every statement,
+expense and payout that needs them, and every guest who still owes.
+
 ## 11.6 Acceptance criteria
 
 - Occupancy for any date is identical on every screen and in every export.

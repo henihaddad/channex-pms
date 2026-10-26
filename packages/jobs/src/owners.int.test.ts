@@ -33,6 +33,7 @@ import {
   pollPayouts,
   sendStatement,
 } from "./owners.js";
+import { moneyQueue } from "./financials.js";
 import { textPdf } from "./statement-pdf.js";
 
 /**
@@ -461,5 +462,115 @@ describe("closing April for one owner", () => {
     expect(Object.keys(bookings[0]!)).not.toContain("totalMinor");
     const dash = await repo((r) => r.portalDashboard(ownerId, "2026-04-01", "2026-05-01"));
     expect(dash.nightsSold).toBe(3);
+  });
+});
+
+/** Spec 11 §11.6: the money queue reads the same rows these tests just created. */
+describe("what money needs from a person today", () => {
+  const queue = () => asSystem(handle.db, ORG, (tx) => moneyQueue({ crypto, clock }, tx, ORG));
+
+  it("lists every statement by the state it is actually in, with the statement's own net", async () => {
+    const q = await queue();
+    const all = await repo((r) => r.statements({}));
+    const byState = (state: string) => all.filter((s) => s.state === state);
+    expect(q.statementsToApprove.map((s) => s.id).sort()).toEqual(
+      byState("draft")
+        .map((s) => s.id)
+        .sort(),
+    );
+    expect(q.statementsToSend.map((s) => s.id).sort()).toEqual(
+      byState("approved")
+        .map((s) => s.id)
+        .sort(),
+    );
+    for (const row of [...q.statementsToApprove, ...q.statementsToSend]) {
+      const source = all.find((s) => s.id === row.id)!;
+      expect(row.netMinor).toBe(Number(source.totals.netDue ?? 0));
+      expect(row.currency).toBe(source.currency);
+      expect(row.period).toBe(source.periodFrom.slice(0, 7));
+    }
+  });
+
+  it("stops asking about an owner once a payout is recorded against their statement", async () => {
+    const q = await queue();
+    const paid = await repo((r) => r.payouts({ state: "paid" }));
+    expect(paid.length).toBeGreaterThan(0);
+    for (const p of paid) expect(q.payoutsToRecord.map((x) => x.id)).not.toContain(p.statementId);
+    // and a sent statement with nothing against it is still asked about
+    const sentStatements = await repo((r) => r.statements({ state: "sent" }));
+    const settled = new Set(
+      (
+        await Promise.all(
+          ["paid", "pending", "awaiting_approval", "failed"].map((st) =>
+            repo((r) => r.payouts({ state: st })),
+          ),
+        )
+      )
+        .flat()
+        .map((p) => p.statementId),
+    );
+    for (const st of sentStatements.filter((x) => !settled.has(x.id)))
+      expect(q.payoutsToRecord.find((x) => x.id === st.id)).toMatchObject({
+        state: "unrecorded",
+        amountMinor: Number(st.totals.netDue ?? 0),
+      });
+  });
+
+  it("finds a folio that has been charged and not paid, and drops it once it is", async () => {
+    const [b] = await asSystem(handle.db, ORG, (tx) =>
+      rawRows<{ id: string; currency: string }>(
+        tx,
+        sql`select id, currency from booking where status <> 'cancelled' limit 1`,
+      ),
+    );
+    const folioId = Id.next();
+    await asSystem(handle.db, ORG, (tx) =>
+      rawRows(
+        tx,
+        sql`insert into folio (id, org_id, property_id, booking_id, label, currency)
+            select ${folioId}, ${ORG}, property_id, id, 'Main', ${b!.currency} from booking where id = ${b!.id}`,
+      ),
+    );
+    await asSystem(handle.db, ORG, (tx) =>
+      rawRows(
+        tx,
+        sql`insert into folio_line (id, org_id, folio_id, kind, description, date, amount_minor)
+            values (${Id.next()}, ${ORG}, ${folioId}, 'extra', 'Late checkout', '2026-05-02', 4500)`,
+      ),
+    );
+    const owing = (await queue()).unpaidFolios.find((f) => f.bookingId === b!.id);
+    expect(owing).toMatchObject({ balanceMinor: 4500, currency: b!.currency });
+
+    // paying it clears the row; a refund row is negative, so counting it would put it back
+    await asSystem(handle.db, ORG, (tx) =>
+      rawRows(
+        tx,
+        sql`insert into payment (id, org_id, folio_id, method, amount_minor, state)
+            values (${Id.next()}, ${ORG}, ${folioId}, 'card', 4500, 'captured')`,
+      ),
+    );
+    expect((await queue()).unpaidFolios.find((f) => f.bookingId === b!.id)).toBeUndefined();
+  });
+
+  it("lists an instalment due today and ignores one due later", async () => {
+    const [b] = await asSystem(handle.db, ORG, (tx) =>
+      rawRows<{ id: string }>(tx, sql`select id from booking limit 1`),
+    );
+    const add = (dueOn: string, amount: number) =>
+      asSystem(handle.db, ORG, (tx) =>
+        rawRows(
+          tx,
+          sql`insert into payment_schedule (id, org_id, booking_id, rule_id, name, due_on, amount_minor, currency, state)
+              values (${Id.next()}, ${ORG}, ${b!.id}, null, 'Balance', ${dueOn}, ${amount}, 'EUR', 'scheduled')`,
+        ),
+      );
+    const today = clock.today("UTC").toString();
+    await add(today, 1200);
+    await add("2099-01-01", 9900);
+    const due = (await queue()).instalmentsDue;
+    expect(due.map((d) => d.amountMinor)).toContain(1200);
+    expect(due.map((d) => d.amountMinor)).not.toContain(9900);
+    expect(due.every((d) => d.dueOn <= today)).toBe(true);
+    expect(due.find((d) => d.amountMinor === 1200)?.currency).toBe("EUR");
   });
 });

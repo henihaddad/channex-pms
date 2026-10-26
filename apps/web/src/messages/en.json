@@ -45,7 +45,9 @@
     "help": "Help",
     "menu": "Menu",
     "closeMenu": "Close menu",
-    "sectionPages": "Pages in this section"
+    "sectionPages": "Pages in this section",
+    "integrations": "Integrations",
+    "financials": "Financials"
   },
   "auth": {
     "signIn": "Sign in",
@@ -1492,5 +1494,75 @@
     "readColumns": "Columns read",
     "before": "from",
     "after": "to"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "lead": "Everything this product connects to, and how far each one is built. No logos we cannot stand behind: where only the interface exists, it says so, and where a key is needed it says whether this deployment has one.",
+    "status": {
+      "built": "Built",
+      "partial": "Partly built",
+      "port": "Interface only",
+      "planned": "Planned"
+    },
+    "heading": {
+      "built": "Working now",
+      "partial": "Partly built",
+      "port": "An interface waiting for your code",
+      "planned": "On the roadmap"
+    },
+    "blurb": {
+      "built": "A real adapter ships with the product and is covered by tests.",
+      "partial": "Some of it works without a vendor; the rest needs an adapter.",
+      "port": "The interface and a working stand-in exist. A vendor adapter is a plugin — yours or ours, later.",
+      "planned": "Named in the roadmap, not written. Listed so you are not surprised."
+    },
+    "configured": "Configured here",
+    "notConfigured": "Not configured here",
+    "openSettings": "Set up",
+    "specRef": "Spec {spec}",
+    "writeOne": "Anything missing can react to your events today through",
+    "plugins": "outbound webhooks"
+  },
+  "financials": {
+    "title": "Financials",
+    "lead": "What money needs from you today. Folios belong to a stay and statements belong to an owner; this is the one page that asks across both.",
+    "toApprove": "Statements to approve",
+    "toSend": "Statements to send",
+    "toPay": "Owners to pay",
+    "owedByGuests": "Owed by guests",
+    "statementsToApprove": "Statements waiting for approval",
+    "statementsToApproveHint": "A draft reaches no owner until someone has read it.",
+    "statementsToSend": "Approved, not yet sent",
+    "statementsToSendHint": "Approved last month and still sitting here is the complaint you get next month.",
+    "payoutsToRecord": "Owners owed money",
+    "payoutsToRecordHint": "A statement an owner has seen, with nothing recorded against it.",
+    "expensesToApprove": "Expenses waiting for approval",
+    "expensesToApproveHint": "An expense reaches a statement only once it is approved.",
+    "instalmentsDue": "Instalments due",
+    "instalmentsDueHint": "Direct bookings the payment rules say to charge today or earlier.",
+    "unpaidFolios": "Stays that still owe",
+    "unpaidFoliosHint": "Charges on the folio with no payment against them.",
+    "nothingWaiting": "Nothing waiting.",
+    "owner": "Owner",
+    "period": "Period",
+    "net": "Net due",
+    "amount": "Amount",
+    "balance": "Balance",
+    "state": "State",
+    "property": "Property",
+    "what": "What",
+    "reference": "Reference",
+    "due": "Due",
+    "attempts": "Tries",
+    "review": "Review",
+    "open": "Open",
+    "rules": "Rules",
+    "payoutState": {
+      "pending": "To initiate",
+      "awaiting_approval": "Awaiting a second pair of eyes",
+      "failed": "Failed",
+      "unrecorded": "Nothing recorded"
+    },
+    "across": "{n} stays"
   }
 }

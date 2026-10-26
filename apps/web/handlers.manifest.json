@@ -219,6 +219,14 @@
     "permission": "channel:create"
   },
   {
+    "file": "src/app/(console)/financials/financials.actions.ts",
+    "export": "loadFinancials",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
     "export": "addNoteAction",
     "kind": "action",
