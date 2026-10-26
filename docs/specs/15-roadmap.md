@@ -201,4 +201,6 @@ Ordered by how often the market rewards them (`docs/research/2026-09-competitors
 3. ~~Dynamic pricing connector (PriceLabs, Wheelhouse) through a rate-import port.~~
    **Shipped** — spec 06 §6.5b; the port, the CSV path, guard rails and the scheduled pull.
    A vendor's HTTP adapter remains a plugin.
-4. A console that works on a phone; the cleaner app already does.
+4. ~~A console that works on a phone; the cleaner app already does.~~ **Shipped** — the
+   calendar's day view (spec 06 CAL-9) and the forms and filter bars that used to hold six
+   columns at phone width.

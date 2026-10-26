@@ -41,5 +41,19 @@ export const CALENDAR_LABEL_KEYS = [
   "editFailed",
   "invalidPrice",
   "today",
+  // CAL-9: the day view a phone gets instead of a 400-cell grid
+  "dayView",
+  "gridView",
+  "prevDay",
+  "nextDay",
+  "closeOut",
+  "closeOutConfirm",
+  "closedOut",
+  "reopen",
+  "reopened",
+  "noProperties",
+  "roomsLeft",
+  "stopSold",
+  "loading",
 ] as const;
 export type CalendarLabels = Record<(typeof CALENDAR_LABEL_KEYS)[number], string>;

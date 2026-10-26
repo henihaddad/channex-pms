@@ -15,7 +15,10 @@ export default async function CrewsPage() {
     <div className="space-y-4">
       <PageTitle>{t("crews")}</PageTitle>
       <Card>
-        <form action={createCrewAction} className="grid grid-cols-5 items-end gap-2">
+        <form
+          action={createCrewAction}
+          className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 lg:grid-cols-5"
+        >
           <Field label="Crew name" name="name" />
           <Field label="Service area" name="serviceArea" required={false} />
           <Field label="Base lat" name="lat" required={false} defaultValue="38.72" />
@@ -59,7 +62,7 @@ export default async function CrewsPage() {
         </ul>
         <form
           action={createChecklistAction}
-          className="grid grid-cols-3 items-end gap-2"
+          className="grid grid-cols-1 items-end gap-2 sm:grid-cols-3"
           data-testid="checklist-form"
         >
           <Field label="Checklist name" name="checklistName" />
@@ -72,7 +75,7 @@ export default async function CrewsPage() {
               <option value="deep">deep</option>
             </Select>
           </div>
-          <div className="col-span-3">
+          <div className="sm:col-span-3">
             <Label>Items, one per line; end with * when a photo is required</Label>
             <Textarea
               name="items"

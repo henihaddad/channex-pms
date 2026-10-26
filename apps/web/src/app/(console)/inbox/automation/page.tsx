@@ -42,7 +42,7 @@ export default async function AutomationPage({
     <div className="space-y-4">
       <PageTitle>{t("automation")}</PageTitle>
       <p className="text-sm text-muted">{t("automationHint")}</p>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="space-y-3">
           {view.rules.length === 0 ? <p className="text-sm text-muted">{t("noRules")}</p> : null}
           {view.rules.map((r) => (
@@ -158,7 +158,7 @@ export default async function AutomationPage({
                   ))}
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Field label={t("offsetDays")} name="offsetDays" type="number" required={false} />
                 <Field
                   label={t("atLocalTime")}

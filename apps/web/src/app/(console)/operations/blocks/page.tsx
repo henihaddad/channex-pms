@@ -30,10 +30,10 @@ export default async function BlocksPage() {
       <Card>
         <form
           action={createBlockAction}
-          className="grid grid-cols-6 items-end gap-2 text-sm"
+          className="grid grid-cols-1 items-end gap-2 text-sm sm:grid-cols-2 lg:grid-cols-6"
           data-testid="block-form"
         >
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Label>Unit</Label>
             <Select name="unitId" required>
               {units.map((u) => (
@@ -57,7 +57,7 @@ export default async function BlocksPage() {
           <Button type="submit">{t("addBlock")}</Button>
           <input type="hidden" name="propertyId" value={units[0]?.propertyId ?? ""} />
           <input type="hidden" name="roomTypeId" value={units[0]?.roomTypeId ?? ""} />
-          <p className="col-span-6 text-xs text-muted">{t("blockHint")}</p>
+          <p className="text-xs text-muted sm:col-span-2 lg:col-span-6">{t("blockHint")}</p>
         </form>
       </Card>
       <Card>

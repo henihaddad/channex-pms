@@ -1,6 +1,6 @@
 # 06 — Inventory, Rates & the Calendar
 
-**Status:** `accepted` (2026-09-02) — implemented in M2: property wizard with `kind`, templates, clone and CSV import; derived plans recomputed in the same transaction as the parent edit; the portfolio grid (virtualised rows and columns, keyboard editing, range toolbar, `expected_version` conflicts, server-backed undo, SSE cell states); bulk update with mandatory dry run and inverse-operation undo; rolling 730-day horizon. Not yet built: year heatmap, presence avatars (CAL-6), history popover UI (the audit-backed endpoint exists), mobile day view (CAL-9), yield rules (§6.5) and promotions (§6.6), which M6/M7 pick up.
+**Status:** `accepted` (2026-09-02) — implemented in M2: property wizard with `kind`, templates, clone and CSV import; derived plans recomputed in the same transaction as the parent edit; the portfolio grid (virtualised rows and columns, keyboard editing, range toolbar, `expected_version` conflicts, server-backed undo, SSE cell states); bulk update with mandatory dry run and inverse-operation undo; rolling 730-day horizon. Not yet built: year heatmap, presence avatars (CAL-6), history popover UI (the audit-backed endpoint exists), yield rules (§6.5) and promotions (§6.6), which M6/M7 pick up. The mobile day view (CAL-9) and rate import (§6.5b) shipped after v1.0.
 
 **Primary personas:** `revenue_manager`, `property_manager`, `portfolio_manager`.
 
@@ -103,6 +103,11 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   and the sync result — sourced from the audit log.
 - **CAL-9** Mobile: read-optimised with a single-day column view and a quick
   "close out today" action. We do not pretend a 400-cell grid works on a phone.
+  **Shipped:** the day view is what a phone gets by default and either view is one press
+  away on any screen, because closing a night out is useful at a desk too. It lists every
+  listing's price, rooms left, minimum stay, restriction flags and per-cell sync state for
+  one night, and "close this night" stop-sells a property's plans through the ordinary bulk
+  path, with the undo it returns.
 
 ## 6.3 Bulk update
 

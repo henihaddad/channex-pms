@@ -29,9 +29,13 @@ export function StaffBookingForm({
   }, [propertyId]);
   if (state.bookingId) router.push(`/reservations/${state.bookingId}`);
   return (
-    <form action={action} className="grid grid-cols-2 gap-4" data-testid="staff-booking-form">
+    <form
+      action={action}
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      data-testid="staff-booking-form"
+    >
       {state.error ? (
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <Alert>
             {state.error}
             {state.reasons?.length ? ` — ${state.reasons.join("; ")}` : ""}
@@ -93,7 +97,7 @@ export function StaffBookingForm({
       <Field label="Guest surname" name="surname" />
       <Field label="Email" name="email" type="email" required={false} />
       <Field label="Phone" name="phone" required={false} />
-      <div className="col-span-2">
+      <div className="sm:col-span-2">
         <Button type="submit" disabled={pending} data-testid="create-booking">
           Create booking
         </Button>

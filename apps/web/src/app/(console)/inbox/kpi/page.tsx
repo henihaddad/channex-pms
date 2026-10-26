@@ -23,7 +23,7 @@ export default async function KpiPage({
         <p className="text-sm" data-testid="kpi-overall">
           {t("medianFirstResponse", { days })}: <strong>{min(kpi.overall)}</strong>
         </p>
-        <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
+        <div className="mt-3 grid grid-cols-1 gap-4 text-xs lg:grid-cols-3">
           <Table>
             <TBody>
               {kpi.byProperty.map((r) => (

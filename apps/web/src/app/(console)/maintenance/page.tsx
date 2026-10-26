@@ -14,10 +14,10 @@ export default async function MaintenancePage() {
       <Card>
         <form
           action={createIssueAction}
-          className="grid grid-cols-6 items-end gap-2 text-sm"
+          className="grid grid-cols-1 items-end gap-2 text-sm sm:grid-cols-2 lg:grid-cols-6"
           data-testid="issue-form"
         >
-          <div className="col-span-2">
+          <div className="lg:col-span-2">
             <Label>Unit</Label>
             <Select name="unitId">
               {units.map((u) => (
@@ -43,7 +43,7 @@ export default async function MaintenancePage() {
             <Input name="blockDays" type="number" defaultValue={3} className="h-6 w-14" /> days)
           </Label>
           <Button type="submit">{t("reportIssue")}</Button>
-          <div className="col-span-6">
+          <div className="sm:col-span-2 lg:col-span-6">
             <Field label="Description" name="description" />
           </div>
         </form>

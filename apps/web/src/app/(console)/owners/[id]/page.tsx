@@ -38,7 +38,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-4" data-testid="owner-detail">
       <PageTitle>{v.owner.name}</PageTitle>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="space-y-3 text-sm">
           <p>
             {v.owner.type} · {v.owner.email ?? "—"} · {v.owner.phone ?? "—"} · {v.owner.locale}
@@ -160,11 +160,11 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
       <Card>
         <form
           action={saveAgreementAction}
-          className="grid grid-cols-3 gap-3 text-sm"
+          className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3"
           data-testid="agreement-form"
         >
           <input type="hidden" name="ownerId" value={v.owner.id} />
-          <p className="col-span-3 font-medium">{t("newAgreement")}</p>
+          <p className="font-medium sm:col-span-2 lg:col-span-3">{t("newAgreement")}</p>
           <div>
             <Select label={t("property")} name="propertyId" required>
               {v.properties.map((p) => (
@@ -212,7 +212,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
           <Field label={t("tier1Upto")} name="tier1Upto" type="number" required={false} />
           <Field label={t("tier1Rate")} name="tier1Rate" type="number" required={false} />
           <Field label={t("tier2Rate")} name="tier2Rate" type="number" required={false} />
-          <fieldset className="col-span-3 grid grid-cols-5 gap-2 text-xs">
+          <fieldset className="grid grid-cols-2 gap-2 text-xs sm:col-span-2 sm:grid-cols-3 lg:col-span-3 lg:grid-cols-5">
             <legend className="font-medium">{t("deductibles")}</legend>
             {EXPENSE_CATEGORIES.map((c) => (
               <div key={c}>
@@ -287,7 +287,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
             </Label>
             <Input name="vatRate" type="number" placeholder="VAT %" className="w-20" />
           </div>
-          <fieldset className="col-span-3 text-xs">
+          <fieldset className="text-xs sm:col-span-2 lg:col-span-3">
             <legend className="font-medium">{t("units")}</legend>
             {v.units.map((u) => (
               <Label key={u.id}>
@@ -295,7 +295,7 @@ export default async function OwnerPage({ params }: { params: Promise<{ id: stri
               </Label>
             ))}
           </fieldset>
-          <div className="col-span-3">
+          <div className="sm:col-span-2 lg:col-span-3">
             <Button type="submit" data-testid="save-agreement">
               {t("saveAgreement")}
             </Button>

@@ -8,6 +8,17 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- A console that works on a phone (gap 7 of `docs/research/2026-09-competitors.md`): the
+  calendar gets the day view spec 06 promised in CAL-9 — one night, every listing's price,
+  rooms left, minimum stay, restriction flags and sync state in a list, with "close this
+  night" stop-selling a property's plans through the ordinary bulk path and the undo it
+  returns. A phone gets it by default and either view is one press away on any screen,
+  because closing a night out is useful at a desk too. The forms and filter bars that held
+  two to six columns at any width — new reservation, blocks, maintenance, crews, the channel
+  wizard, owner agreements, templates, automation, the response-time report and the CSV
+  import — now stack on a phone and spread out when there is room. English, French and
+  Arabic.
+
 - Rate import from an external pricing engine (spec 06 §6.5b, gap 6 of
   `docs/research/2026-09-competitors.md`): prices computed in PriceLabs, Wheelhouse or a
   spreadsheet come in through one port and are treated as a proposal, not an instruction.

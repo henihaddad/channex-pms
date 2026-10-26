@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listGroups } from "../properties/properties.actions";
-import { CalendarGrid } from "@/components/calendar-grid";
+import { CalendarView } from "@/components/calendar-view";
 import { CALENDAR_LABEL_KEYS, type CalendarLabels } from "@/components/calendar-labels";
 
 export default async function CalendarPage({
@@ -18,7 +18,7 @@ export default async function CalendarPage({
   return (
     <div className="space-y-4">
       <PageTitle>{t("title")}</PageTitle>
-      <CalendarGrid
+      <CalendarView
         start={sp.from ?? today}
         days={Number(sp.days ?? 30)}
         propertyId={sp.propertyId}
