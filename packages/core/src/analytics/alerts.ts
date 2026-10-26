@@ -8,7 +8,9 @@ export type AlertType =
   | "unacked_bookings"
   | "sla_breaches"
   | "review_score_drop"
-  | "statement_mismatch";
+  | "statement_mismatch"
+  /** A scheduled rate import has something for a human to look at (spec 06 §6.5b, YR-4). */
+  | "rate_import_pending";
 
 export interface AlertCandidate {
   type: AlertType;

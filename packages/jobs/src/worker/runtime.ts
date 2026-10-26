@@ -8,6 +8,7 @@ import type {
   Mailer,
   PaymentProvider,
   PayoutProvider,
+  RateImportProvider,
 } from "@pms/core";
 import { withIdMap } from "@pms/connectivity";
 import { asSystem, DrizzlePropertyRepository, rawRows, sql, withoutTenant, type Db } from "@pms/db";
@@ -24,6 +25,7 @@ import { expireHolds, sendAbandonmentMails } from "../booking-engine.js";
 import { collectDuePayments } from "../payments.js";
 import { pollChannelHealth } from "../channels.js";
 import { extendHorizons } from "../horizon.js";
+import { runScheduledRateImports } from "../pricing.js";
 import {
   closeThreadRemote,
   deliverOutbound,
@@ -95,6 +97,11 @@ export interface WorkerWiring {
   sellerCountry: string;
   /** Realtime fan-out to the console; null when there is none (the grid polls). */
   realtime: RealtimePublisher | null;
+  /**
+   * Rate-import adapters by name (spec 06 §6.5b). Empty on a stock deployment, so a
+   * scheduled pull records "no adapter installed" rather than silently doing nothing.
+   */
+  rateImporters?: Readonly<Record<string, RateImportProvider>>;
 }
 
 export interface EnqueueOptions {
@@ -395,6 +402,16 @@ export async function runSystemJob(
     case "horizon.extend":
       await extendHorizons({ db, clock: w.clock, log });
       return;
+    case "rates.import": {
+      const runs = await runScheduledRateImports({
+        db,
+        clock: w.clock,
+        log,
+        providers: w.rateImporters ?? {},
+      });
+      if (runs.length > 0) log.info({ runs: runs.length }, "rate_import.swept");
+      return;
+    }
     case "channel.health_poll":
       await pollChannelHealth(d.channel);
       return;
@@ -571,6 +588,8 @@ export const SCHEDULE: ReadonlyArray<{ name: string; every?: number; pattern?: s
   { name: "heartbeat", every: 60_000 },
   { name: "provisioning.sweep", every: 30_000 },
   { name: "horizon.extend", pattern: "15 2 * * *" },
+  // after the horizon is extended, so an engine's prices land on nights that exist
+  { name: "rates.import", pattern: "40 2 * * *" },
   { name: "channel.health_poll", every: 300_000 },
   { name: "ops.escalate", every: 60_000 },
   { name: "messages.poll", every: 120_000 },

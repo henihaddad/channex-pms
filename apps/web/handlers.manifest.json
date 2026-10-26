@@ -746,6 +746,27 @@
     "permission": "property:publish_content"
   },
   {
+    "file": "src/app/(console)/properties/[id]/pricing/pricing.actions.ts",
+    "export": "importRatesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:bulk_execute"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/pricing/pricing.actions.ts",
+    "export": "saveRateImportAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "yield_rule:update"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/pricing/pricing.actions.ts",
+    "export": "undoImportAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:bulk_execute"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "addDerivedPlanAction",
     "kind": "action",

@@ -96,6 +96,7 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   payment_schedule: "org",
   extra: "org",
   property_guide: "org",
+  rate_import_settings: "org",
   guest_session: "org",
   pre_checkin: "org",
   user: "global",

@@ -176,6 +176,46 @@ guard_rails: { rate_floor: 90.00, rate_ceiling: 400.00, max_daily_change_pct: 25
 - **YR-7** Every automated change is audited with the rule id and version, and
   appears in the cell history as an `automation` actor.
 
+## 6.5b Rate import (an external pricing engine)
+
+**Persona:** the `revenue_manager` of [spec 02](./02-personas-and-rbac.md); the
+`property_manager` of a small portfolio.
+
+PriceLabs and Wheelhouse are the integrations hosts ask for most
+([research](../research/2026-09-competitors.md), gap 6). Rather than reimplement anyone's
+revenue model, prices computed elsewhere come in through one port and are treated as a
+**proposal**, not an instruction: local state stays authoritative (rule 6), and an import
+goes through the same guard rails, dry run, undo and push path as a bulk edit.
+
+- **RI-1 One port.** `RateImportProvider.fetchRates({ propertyRef, from, to })` returns a
+  price (and optionally a minimum stay) per night per listing. A vendor's HTTP client is a
+  plugin; the CSV reader needs no vendor at all and is what most properties actually use,
+  since every engine exports one and §6.7 already promised it. Column names are matched by
+  alias, money is read as minor units (rule 4) in both European and Anglo notation, and
+  every unusable line is reported with its number instead of being skipped quietly.
+- **RI-2 The engine's listings are mapped, never guessed.** A listing reference the
+  property has no rate plan for is reported as unmapped, and a dry run is where the manager
+  discovers and fixes it.
+- **RI-3 Guard rails are absolute (YR-2).** Floor, ceiling and largest allowed move are
+  per property. A recommendation outside them is refused **with its reason**, never clamped
+  into something plausible; applying it anyway is an explicit override, recorded as a
+  warning on the operation.
+- **RI-4 Hand edits win (YR-5).** A night a person priced is left alone for the configured
+  hold (default 48 h). Every `rate_day.source` that is not one of ours counts as a hand
+  edit, so a new automated writer must be added to `AUTOMATED_RATE_SOURCES` or it will
+  fight itself.
+- **RI-5 Shadow mode is the default (YR-4).** A scheduled pull records what it would change
+  and raises one `rate_import_pending` alert linking to the page; a human applies it. Only
+  an explicit "apply without review" writes straight through.
+- **RI-6 Nothing is unrecoverable.** An applied import is one reversible operation: the
+  plan's inverse restores every night exactly, and the import is pushed to channels by the
+  ordinary ARI queue, marked `source = rate_import` so the calendar says where the price
+  came from.
+
+Acceptance: a PriceLabs CSV moves 90 nights in one dry run and one apply; a price below the
+floor is named and refused rather than sold; last night's hand-typed New Year price is still
+there after the morning pull.
+
 ## 6.6 Promotions and pricing tools
 
 - **Seasons** — named date ranges that colour the calendar and act as bulk-edit
@@ -193,7 +233,8 @@ guard_rails: { rate_floor: 90.00, rate_ceiling: 400.00, max_daily_change_pct: 25
 
 - CSV/XLSX import of rates and restrictions with column mapping, validation report,
   and dry run before commit. Realistically, most properties arrive with a
-  spreadsheet.
+  spreadsheet. **Shipped for rates in §6.5b**; restrictions beyond minimum stay, and XLSX,
+  are still to come.
 - Export of any calendar view, plus an iCal feed per room type for owners.
 - **Rolling horizon job** extends the seeded date range daily so the far edge never
   runs out; new dates inherit from the same weekday pattern of the prior year, or a

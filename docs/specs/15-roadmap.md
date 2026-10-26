@@ -198,5 +198,7 @@ Ordered by how often the market rewards them (`docs/research/2026-09-competitors
    portal and as template variables.~~ **Shipped** — spec 10 §10.6b.
 2. ~~Suggested replies drafted from the guide and the booking, behind an AI port with a fake.~~
    **Shipped** — spec 09 §9.3; the guide answers without a model, the port is the opt-in.
-3. Dynamic pricing connector (PriceLabs, Wheelhouse) through a rate-import port.
+3. ~~Dynamic pricing connector (PriceLabs, Wheelhouse) through a rate-import port.~~
+   **Shipped** — spec 06 §6.5b; the port, the CSV path, guard rails and the scheduled pull.
+   A vendor's HTTP adapter remains a plugin.
 4. A console that works on a phone; the cleaner app already does.

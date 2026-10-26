@@ -1,8 +1,11 @@
 import {
   Id,
   planBulkUpdate,
+  planRateImport,
   type BulkInput,
+  type PricingGuardRails,
   type RateCell,
+  type RateImportRow,
   type RestrictionValues,
 } from "@pms/core";
 import { queueAriPush } from "@pms/jobs";
@@ -105,6 +108,75 @@ export async function runBulk(
   });
   await queueAriPush(ctx.tx, ctx.orgId, propertyId, Date.now(), "bulk");
   return { ...summary, applied: true, id };
+}
+
+/**
+ * A rate import (spec 06 §6.5b): dry run or apply, through the same ARI path, undo record
+ * and push queue as a bulk edit. Local state stays authoritative (rule 6) — the import is
+ * a proposal, and the guard rails refuse rather than clamp.
+ */
+export async function runRateImport(
+  ctx: ActorCtx,
+  propertyId: string,
+  args: {
+    rows: readonly RateImportRow[];
+    /** The engine's listing reference → one of this property's rate plans. */
+    mapping: ReadonlyMap<string, string>;
+    guardRails?: PricingGuardRails;
+    holdHours?: number;
+    override?: boolean;
+    nowIso: string;
+  },
+  dryRun: boolean,
+) {
+  const ratePlanIds = [...new Set(args.mapping.values())];
+  await assertPlansInProperty(ctx, propertyId, ratePlanIds);
+  const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
+  const dates = args.rows.map((r) => r.date).sort();
+  const from = dates[0] ?? args.nowIso.slice(0, 10);
+  const to = dates.at(-1) ?? from;
+  const current = new Map<string, RestrictionValues>();
+  for (const id of ratePlanIds)
+    for (const c of await repo.rateCells(id, from, to)) current.set(`${id}|${c.date}`, c.values);
+  const plan = planRateImport(
+    {
+      ...args,
+      horizonEnd: await horizonEnd(ctx, propertyId),
+      manualEditedAt: await repo.manualEditedAt(ratePlanIds, from, to),
+    },
+    current,
+  );
+  const summary = {
+    cellCount: plan.cellCount,
+    samples: plan.samples.slice(0, 5),
+    warnings: plan.warnings,
+    refused: plan.refused,
+    unmapped: plan.unmapped,
+    held: plan.held,
+    outsideHorizon: plan.outsideHorizon,
+  };
+  if (dryRun || plan.cellCount === 0) return { ...summary, applied: false, id: null };
+  await repo.applyRateCells(propertyId, plan.changes, "rate_import", ctx.userId);
+  const id = Id.next();
+  await repo.insertBulkOperation({
+    id,
+    propertyId,
+    input: { kind: "rate_import", rows: plan.cellCount, guardRails: args.guardRails ?? {} },
+    cellCount: plan.cellCount,
+    inverse: plan.inverse,
+    createdBy: ctx.userId,
+  });
+  await queueAriPush(ctx.tx, ctx.orgId, propertyId, Date.now(), "rate_import");
+  return { ...summary, applied: true, id };
+}
+
+/** The furthest night the horizon job has seeded for this property. */
+async function horizonEnd(ctx: ActorCtx, propertyId: string): Promise<string> {
+  const [r] = await rawRows<{ horizon_end: string | null }>(
+    ctx.tx,
+    sql`select max(date)::text as horizon_end from availability_day where property_id = ${propertyId}`,
+  );
+  return r?.horizon_end ?? new Date().toISOString().slice(0, 10);
 }
 
 /** CAL-4 / BULK-2: apply the recorded inverse; the undo is itself a new, reversible operation. */

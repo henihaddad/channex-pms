@@ -1,5 +1,6 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import {
+  AUTOMATED_RATE_SOURCES,
   deriveCells,
   descendants,
   derivationChain,
@@ -488,6 +489,35 @@ export class DrizzlePropertyRepository implements PropertyRepository {
         ${dateFrom ? sql`and date >= ${dateFrom}` : sql``} ${dateTo ? sql`and date <= ${dateTo}` : sql``} order by date`,
     );
     return rows.map((r) => ({ ratePlanId, date: r.date, values: r.values }));
+  }
+
+  /**
+   * YR-5: when each cell was last written by a hand rather than by automation, keyed
+   * `${ratePlanId}|${date}`. Anything that is not one of our own automated sources counts
+   * as a human, so an unknown source holds the cell rather than losing someone's decision.
+   */
+  async manualEditedAt(
+    ratePlanIds: readonly string[],
+    from: string,
+    to: string,
+  ): Promise<Map<string, string>> {
+    const ids = [...new Set(ratePlanIds)];
+    if (ids.length === 0) return new Map();
+    const rows = await rawRows<{ rate_plan_id: string; date: string; updated_at: string }>(
+      this.tx,
+      sql`select rate_plan_id, date::text, updated_at::text
+          from rate_day
+          where date between ${from} and ${to}
+            and source not in (${sql.join(
+              AUTOMATED_RATE_SOURCES.map((x) => sql`${x}`),
+              sql`, `,
+            )})
+            and rate_plan_id in (${sql.join(
+              ids.map((i) => sql`${i}`),
+              sql`, `,
+            )})`,
+    );
+    return new Map(rows.map((r) => [`${r.rate_plan_id}|${r.date}`, r.updated_at]));
   }
 
   /**

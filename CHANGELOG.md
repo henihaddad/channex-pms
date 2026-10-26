@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Rate import from an external pricing engine (spec 06 §6.5b, gap 6 of
+  `docs/research/2026-09-competitors.md`): prices computed in PriceLabs, Wheelhouse or a
+  spreadsheet come in through one port and are treated as a proposal, not an instruction.
+  `/properties/<id>/pricing` reads a pasted export — columns matched by alias, money as minor
+  units in both European and Anglo notation, every unusable line reported with its number —
+  dry runs it, and applies it as one reversible operation pushed by the ordinary ARI queue.
+  Guard rails are per property and absolute: a price below the floor, above the ceiling or
+  moving further than allowed is refused with its reason rather than quietly flattened into
+  something plausible, and applying it anyway is an explicit override. A night someone priced
+  by hand is left alone for 48 hours, so the morning pull does not overwrite last night's
+  decision. A scheduled pull defaults to shadow mode — it records what it would change and
+  raises one alert linking to the page — and does nothing at all until an operator installs
+  an adapter, which it says rather than failing silently. English, French and Arabic.
+
 - Suggested replies (spec 09 §9.3, gap 5 of `docs/research/2026-09-competitors.md`): "Suggest a
   reply" in the inbox drafts an answer to the last thing the guest asked, out of the property's
   guest guide — the manager's own words, in the guest's language. It needs no AI, because the
