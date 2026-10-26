@@ -1,8 +1,10 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   firstResponseDue,
+  guestGuideVariables,
   Id,
   matchesView,
+  normaliseSections,
   providerCode,
   slaState,
   type AutomationRule,
@@ -15,7 +17,9 @@ import {
   type TemplateContext,
   type Thread,
   type GuestReview,
+  type GuideSection,
   type LiveFeedEvent,
+  type PropertyGuide,
   type ThreadPage,
 } from "@pms/core";
 import * as s from "../schema/index.js";
@@ -1314,6 +1318,7 @@ export class DrizzleMessagingRepository {
       currency: string;
       ota_reservation_code: string | null;
       channex_booking_id: string;
+      property_id: string;
       name_enc: string | null;
       surname_enc: string | null;
       language: string | null;
@@ -1329,7 +1334,7 @@ export class DrizzleMessagingRepository {
     }>(
       this.tx,
       sql`select b.arrival_date::text, b.departure_date::text, b.total_amount_minor, b.currency, b.ota_reservation_code, b.channex_booking_id,
-            g.name_enc, g.surname_enc, g.language, p.title as property_title, p.address, p.settings,
+            p.id as property_id, g.name_enc, g.surname_enc, g.language, p.title as property_title, p.address, p.settings,
             u.name as unit_name, u.access as unit_access, u.attributes as unit_attributes,
             ac.value_enc as code_enc, ac.valid_from::text, ac.valid_to::text
           from booking b join property p on p.id = b.property_id
@@ -1347,6 +1352,24 @@ export class DrizzleMessagingRepository {
     const access = b.unit_access ?? {};
     const attrs = b.unit_attributes ?? {};
     const settings = b.settings;
+    // The guest guide as `{{guide.*}}` (spec 10 §10.6b). Only a published guide feeds a
+    // template: GUIDE-1 holds whether the words reach the guest through the portal or a
+    // message. The guest's own language first, then the org's fallback.
+    const guide = guestGuideVariables(
+      (
+        await rawRows<{ locale: string; sections: GuideSection[]; published: boolean }>(
+          this.tx,
+          sql`select locale, sections, published from property_guide where property_id = ${b.property_id}`,
+        )
+      ).map((g): PropertyGuide => ({
+        propertyId: b.property_id,
+        locale: g.locale,
+        sections: normaliseSections(g.sections),
+        published: g.published,
+        updatedAt: null,
+      })),
+      b.language,
+    );
     const ctx: TemplateContext = {
       guest: {
         first_name: b.name_enc ? await this.crypto.open(b.name_enc) : "Guest",
@@ -1384,6 +1407,7 @@ export class DrizzleMessagingRepository {
         ...(b.valid_from ? { valid_from: b.valid_from } : {}),
         ...(b.valid_to ? { valid_to: b.valid_to } : {}),
       },
+      ...(Object.keys(guide).length > 0 ? { guide } : {}),
     };
     return ctx;
   }

@@ -146,6 +146,44 @@ Magic-link authenticated, scoped to one booking, no account required.
 Security: single-use, short-lived, rate-limited links; no enumeration of other
 bookings; every portal action audited as an `actor_type = guest` entry.
 
+## 10.6b Guest guide
+
+**Persona:** the `property_manager` writes it; the guest reads it.
+
+The guide is the eight questions every guest asks, answered once per property instead of
+once per guest: the Wi-Fi, how to get in, where to park, the house rules, how the place
+works, what is worth going to, how to check out, who to call. It is the cheapest thing a
+PMS can do about repetitive guest messages, and it needs no AI: the guide *is* the answer
+([research](../research/2026-09-competitors.md), gap 4).
+
+- **One guide per property and per locale.** A guest reads it in their own language, and a
+  locale that is not written falls back exactly as a message template's variant does
+  ([09 §9.3](./09-messaging-and-inbox.md)): the guest's language, then the org default, then
+  whatever exists.
+- **Sections are the product's, not the tenant's.** The set is fixed and ordered, each
+  carrying the question it answers, so writing a guide is answering eight prompts rather
+  than facing an empty editor. `wifi` and `emergency` also hold structured fields
+  (network, password, phone); the rest are prose. A manager may retitle any section.
+- **GUIDE-1 — publishing is a deliberate act.** A guide reaches no guest, through the portal
+  or a template, until the manager publishes it. Saving never publishes; a draft in the
+  guest's language never shadows a published guide in another.
+- **GUIDE-2 — the Wi-Fi follows the door code.** A section marked sensitive (the Wi-Fi by
+  default) appears only once the access window is open — the window that reveals the code
+  (§10.6). A stay with no access credential uses the stay's own window instead, opening
+  `access_reveal_hours` before arrival and closing at departure, so the guest is never
+  left without the network.
+- **The guide is template variables.** Every section is readable from any message template
+  as `{{guide.<section>}}`, and every field as `{{guide.<section>_<field>}}`, so the
+  pre-arrival message answers the question before it is asked. Unwritten sections are
+  reported as missing by the interpolator, never sent as a blank line
+  ([09 §9.3](./09-messaging-and-inbox.md)).
+- **Completeness is a list, not a score.** The editor leads with the questions the guide
+  does *not* answer, because those are the ones the inbox will still get by hand.
+
+Acceptance: a manager fills the guide in under ten minutes; a guest arriving at an empty
+flat finds the code, the Wi-Fi and the bins without messaging anyone; the pre-arrival
+template carries the same words as the portal.
+
 ## 10.7 Roadmap beyond v1
 
 Metasearch and Google Hotel Ads free booking links (via the Channex adapters where
@@ -214,4 +252,14 @@ What v0.6 ships, where it lives, and where it deliberately stops short of the te
   messages land as inbound entries on the booking's `direct` thread; cancellation follows the
   property policy with the fee shown first and the card refunded through the provider.
   *Deferred:* ID upload, invoice download, the review link.
+- **Guest guide (§10.6b).** `packages/core/src/guides` holds the section list, the
+  completeness measure, the variable projection and the two guest-facing readers —
+  `guestGuide` for the portal and `guestGuideVariables` for templates, both applying
+  GUIDE-1 before the locale choice. Stored in `property_guide` keyed by
+  `(property_id, locale)`, sections as written JSON because the set is ours and a guide is
+  always read and written whole. The editor is `/properties/<id>/guide`
+  (`property:publish_content`); the portal renders it under the access card; the variables
+  reach every automated message through `templateContext`. *Deferred:* photos and map pins
+  per section, a printable version, and AI-drafted first versions from the property's
+  content.
 

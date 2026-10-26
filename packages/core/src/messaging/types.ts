@@ -113,6 +113,8 @@ export interface TemplateContext {
     contact_phone?: string;
   };
   access?: { code?: string; valid_from?: string; valid_to?: string };
+  /** The property's guest guide, flattened by `guideVariables` (spec 10 §10.6b). */
+  guide?: Readonly<Record<string, string>>;
 }
 
 export type AutomationTrigger =

@@ -8,6 +8,18 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Guest guide per property (spec 10 §10.6b, gap 4 of `docs/research/2026-09-competitors.md`):
+  the eight questions every guest asks — the Wi-Fi, how to get in, parking, house rules, how
+  the place works, local tips, checking out, who to call — answered once per property instead
+  of once per guest, in each guest's language. `/properties/<id>/guide` leads with the
+  questions the guide does *not* answer yet, because those are the ones the inbox still gets
+  by hand. A guide reaches nobody until it is published (GUIDE-1), and the Wi-Fi follows the
+  door code: a sensitive section appears only inside the access window, falling back to the
+  stay's own window when there is no code to issue (GUIDE-2). Every section is a message
+  variable — `{{guide.parking}}`, `{{guide.wifi_password}}` — so the pre-arrival message
+  answers the question before it is asked, with the same words the portal shows; an unwritten
+  section is reported as missing rather than sent as a blank line. English, French and Arabic.
+
 - Complimentary plan (spec 12 §12.5): a zero-priced plan the operator grants from the tenants
   page with "Give free plan", for developers and design partners. The tenant becomes active
   from trial, expired, past-due or suspended, keeps unlimited quotas, needs no card, and its

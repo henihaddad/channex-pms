@@ -12,6 +12,7 @@ import { createTestDb } from "@pms/db/testing";
 import {
   asSystem,
   DrizzleBookingEngineRepository,
+  DrizzleGuideRepository,
   DrizzlePropertyRepository,
   rawRows,
   schema,
@@ -312,6 +313,56 @@ describe("confirm (BE-6, BE-7)", () => {
     expect(audit.map((a) => a.action)).toEqual(
       expect.arrayContaining(["booking_engine:hold", "booking:create"]),
     );
+  });
+
+  it("shows the guest guide in their language, holding the Wi-Fi back until the access window (spec 10 §10.6b)", async () => {
+    const guideRepo = (tx: Parameters<Parameters<typeof asSystem>[2]>[0]) =>
+      new DrizzleGuideRepository(tx, ORG);
+    await run(async (tx) => {
+      await guideRepo(tx).save(
+        propertyId,
+        "en",
+        {
+          sections: [
+            { kind: "wifi", body: "", fields: { name: "Loft-Guest", password: "tejo2026" } },
+            { kind: "parking", body: "Space 4, under the block." },
+          ],
+        },
+        null,
+      );
+      await guideRepo(tx).save(
+        propertyId,
+        "pt",
+        { sections: [{ kind: "parking", body: "Lugar 4, na garagem." }] },
+        null,
+      );
+    });
+
+    // GUIDE-1: nothing is published yet, so the portal shows no guide at all
+    expect((await run((tx) => guestPortal(deps, tx, ORG, bookingId)))?.guide).toEqual([]);
+
+    await run((tx) => guideRepo(tx).setPublished(propertyId, "en", true));
+    // GUIDE-2: the code is still hidden, so the Wi-Fi is too — the parking is not
+    const closed = await run((tx) => guestPortal(deps, tx, ORG, bookingId));
+    expect(closed?.access.state).toBe("hidden");
+    expect(closed?.guide.map((g) => g.kind)).toEqual(["parking"]);
+
+    // the guest booked in Portuguese: once a pt guide is published, that is the one they read
+    await run((tx) => guideRepo(tx).setPublished(propertyId, "pt", true));
+    const pt = await run((tx) => guestPortal(deps, tx, ORG, bookingId));
+    expect(pt?.guide.find((g) => g.kind === "parking")?.body).toBe("Lugar 4, na garagem.");
+
+    // inside the window the code appears, and the English guide's Wi-Fi with it
+    clock.set("2026-05-09T15:00:00Z");
+    await run((tx) => guideRepo(tx).setPublished(propertyId, "pt", false));
+    const open = await run((tx) => guestPortal(deps, tx, ORG, bookingId));
+    expect(open?.access.state).toBe("revealed");
+    expect(open?.guide.find((g) => g.kind === "wifi")?.fields).toEqual({
+      name: "Loft-Guest",
+      password: "tejo2026",
+    });
+    clock.set("2026-05-03T09:00:00Z");
+    await run((tx) => guideRepo(tx).setPublished(propertyId, "en", false));
   });
 
   it("the portal hides the code until the window, takes a message into the inbox and cancels under the policy with a refund", async () => {

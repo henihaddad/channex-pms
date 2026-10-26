@@ -1,3 +1,4 @@
+import { GUIDE_VARIABLES } from "../guides/index.js";
 import type { MessageTemplate, TemplateContext } from "./types.js";
 
 const VAR = /\{\{\s*([a-z_]+)\.([a-z_]+)\s*\}\}/g;
@@ -56,8 +57,7 @@ export function promotionalWarnings(body: string): string[] {
   );
 }
 
-/** Variables a template may use, for the editor's help panel. */
-export const TEMPLATE_VARIABLES = [
+const STAY_VARIABLES = [
   "guest.first_name",
   "guest.last_name",
   "booking.arrival",
@@ -79,3 +79,10 @@ export const TEMPLATE_VARIABLES = [
   "access.valid_from",
   "access.valid_to",
 ] as const;
+
+/**
+ * Variables a template may use, for the editor's help panel. The guide's own variables
+ * come from `GUIDE_VARIABLES` rather than being spelled again here, so a section added
+ * to the guide is offered in the editor the same day (spec 10 §10.6b).
+ */
+export const TEMPLATE_VARIABLES: readonly string[] = [...STAY_VARIABLES, ...GUIDE_VARIABLES];

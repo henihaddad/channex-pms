@@ -724,6 +724,20 @@
     "permission": "channel:activate"
   },
   {
+    "file": "src/app/(console)/properties/[id]/guide/guide.actions.ts",
+    "export": "publishGuideAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:publish_content"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/guide/guide.actions.ts",
+    "export": "saveGuideAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:publish_content"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "addDerivedPlanAction",
     "kind": "action",

@@ -43,6 +43,7 @@ export {
   type CellEditOutcome,
 } from "./calendar.js";
 export { DrizzleOperationsRepository, type TaskRow } from "./operations.js";
+export { DrizzleGuideRepository } from "./guides.js";
 export { DrizzleBillingRepository, type FolioView } from "./billing.js";
 export {
   DrizzleReservationRepository,

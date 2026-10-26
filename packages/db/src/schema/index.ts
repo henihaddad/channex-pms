@@ -10,4 +10,5 @@ export * from "./messaging.js";
 export * from "./owners.js";
 export * from "./analytics.js";
 export * from "./booking-engine.js";
+export * from "./guides.js";
 export * from "./platform-m8.js";

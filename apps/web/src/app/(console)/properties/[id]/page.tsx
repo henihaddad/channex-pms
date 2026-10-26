@@ -71,6 +71,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {t("openCalendar")}
             </LinkButton>
             <LinkButton
+              href={`/properties/${d.property.id}/guide`}
+              variant="secondary"
+              data-testid="open-guide"
+            >
+              {t("guestGuide")}
+            </LinkButton>
+            <LinkButton
               href={`/properties/${d.property.id}/booking-engine`}
               variant="secondary"
               data-testid="open-booking-engine"

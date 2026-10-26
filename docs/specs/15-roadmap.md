@@ -194,8 +194,8 @@ paying tenants.
 
 Ordered by how often the market rewards them (`docs/research/2026-09-competitors.md`):
 
-1. Guest guide per property (Wi-Fi, check-in, house rules, parking, local tips) in the guest
-   portal and as template variables.
+1. ~~Guest guide per property (Wi-Fi, check-in, house rules, parking, local tips) in the guest
+   portal and as template variables.~~ **Shipped** — spec 10 §10.6b.
 2. Suggested replies drafted from the guide and the booking, behind an AI port with a fake.
 3. Dynamic pricing connector (PriceLabs, Wheelhouse) through a rate-import port.
 4. A console that works on a phone; the cleaner app already does.

@@ -87,6 +87,12 @@ internal note to a guest.** Therefore:
   sending.
 - **Multi-language templates** — a locale variant is auto-selected from the guest's
   language, with a manual override.
+- **Guest guide variables** — every section of the property's guest guide
+  ([10 §10.6b](./10-booking-engine.md)) is readable as `{{guide.<section>}}` and every
+  structured field as `{{guide.<section>_<field>}}`, so a pre-arrival template answers the
+  Wi-Fi and parking questions with the same words the portal shows. Only a published guide
+  resolves (GUIDE-1), in the guest's language by the same rule as a locale variant; an
+  unwritten section is reported as missing, never sent as a blank line.
 - **Snippets** for `/`-triggered quick insertion.
 - **Translation** — inbound messages can be translated for staff and outbound
   drafts translated to the guest's language, always showing both versions before

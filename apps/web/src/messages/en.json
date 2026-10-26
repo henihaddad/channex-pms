@@ -277,7 +277,8 @@
       "hotel": "Hotel"
     },
     "noChannelsShort": "No channel",
-    "removalDate": "Channex removes this property on"
+    "removalDate": "Channex removes this property on",
+    "guestGuide": "Guest guide"
   },
   "calendar": {
     "title": "Calendar",
@@ -1371,5 +1372,53 @@
     "example": "On a 1 000.00 stay arriving in 60 days",
     "exampleHint": "What your rules would collect, and when.",
     "uncovered": "Not covered by any rule"
+  },
+  "guides": {
+    "title": "Guest guide",
+    "intro": "The questions every guest asks, answered once. Shown in the guest portal and usable in any message template.",
+    "published": "Published",
+    "draft": "Draft",
+    "publish": "Publish to guests",
+    "unpublish": "Unpublish",
+    "locale": "Language",
+    "answered": "{written} of {total} questions answered",
+    "stillAsked": "Still left to the inbox:",
+    "allAnswered": "Every question a guest asks is answered here.",
+    "partialTitle": "Published with gaps",
+    "partialBody": "Guests can read the guide now. The questions it does not answer will still reach your inbox.",
+    "heading": "Your own heading",
+    "body": "What the guest reads",
+    "sensitive": "Hold back until the access window opens",
+    "save": "Save guide",
+    "updated": "Saved {when}",
+    "variablesTitle": "Variables this guide fills",
+    "variablesBody": "Use these in a message template; the pre-arrival message can answer the question before it is asked.",
+    "variablesEmpty": "Nothing written yet, so no variable resolves.",
+    "sections": {
+      "wifi": "Wi-Fi",
+      "arrival": "Getting in",
+      "parking": "Parking",
+      "house_rules": "House rules",
+      "amenities": "How the place works",
+      "local_tips": "Local tips",
+      "departure": "Checking out",
+      "emergency": "If something goes wrong"
+    },
+    "questions": {
+      "wifi": "What is the Wi-Fi?",
+      "arrival": "How do I get in?",
+      "parking": "Where do I park?",
+      "house_rules": "What are the rules?",
+      "amenities": "How does the place work?",
+      "local_tips": "What is worth going to?",
+      "departure": "How do I check out?",
+      "emergency": "Who do I call?"
+    },
+    "fields": {
+      "wifi_name": "Network name",
+      "wifi_password": "Password",
+      "emergency_phone": "Phone number"
+    },
+    "guestTitle": "Guide"
   }
 }

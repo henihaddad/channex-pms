@@ -277,7 +277,8 @@
       "hotel": "Hôtel"
     },
     "noChannelsShort": "Aucun canal",
-    "removalDate": "Channex retire cette propriété le"
+    "removalDate": "Channex retire cette propriété le",
+    "guestGuide": "Livret d'accueil"
   },
   "calendar": {
     "title": "Calendrier",
@@ -1371,5 +1372,53 @@
     "example": "Sur un séjour de 1 000,00 arrivant dans 60 jours",
     "exampleHint": "Ce que vos règles encaisseraient, et quand.",
     "uncovered": "Non couvert par une règle"
+  },
+  "guides": {
+    "title": "Livret d'accueil",
+    "intro": "Les questions que tous les voyageurs posent, répondues une fois. Affiché dans l'espace voyageur et utilisable dans tout modèle de message.",
+    "published": "Publié",
+    "draft": "Brouillon",
+    "publish": "Publier pour les voyageurs",
+    "unpublish": "Dépublier",
+    "locale": "Langue",
+    "answered": "{written} questions sur {total} répondues",
+    "stillAsked": "Restent à traiter par la messagerie :",
+    "allAnswered": "Toutes les questions des voyageurs sont répondues ici.",
+    "partialTitle": "Publié avec des manques",
+    "partialBody": "Les voyageurs peuvent lire le livret. Les questions sans réponse arriveront toujours dans votre messagerie.",
+    "heading": "Votre propre titre",
+    "body": "Ce que lit le voyageur",
+    "sensitive": "Masquer jusqu'à l'ouverture de la fenêtre d'accès",
+    "save": "Enregistrer le livret",
+    "updated": "Enregistré le {when}",
+    "variablesTitle": "Variables remplies par ce livret",
+    "variablesBody": "Utilisez-les dans un modèle de message : le message avant l'arrivée peut répondre avant qu'on demande.",
+    "variablesEmpty": "Rien d'écrit pour l'instant, donc aucune variable ne se résout.",
+    "sections": {
+      "wifi": "Wi-Fi",
+      "arrival": "Entrer dans le logement",
+      "parking": "Stationnement",
+      "house_rules": "Règles de la maison",
+      "amenities": "Comment fonctionne le logement",
+      "local_tips": "Bonnes adresses",
+      "departure": "Le départ",
+      "emergency": "En cas de problème"
+    },
+    "questions": {
+      "wifi": "Quel est le Wi-Fi ?",
+      "arrival": "Comment entrer ?",
+      "parking": "Où se garer ?",
+      "house_rules": "Quelles sont les règles ?",
+      "amenities": "Comment fonctionne le logement ?",
+      "local_tips": "Qu'est-ce qui vaut le détour ?",
+      "departure": "Comment faire le départ ?",
+      "emergency": "Qui appeler ?"
+    },
+    "fields": {
+      "wifi_name": "Nom du réseau",
+      "wifi_password": "Mot de passe",
+      "emergency_phone": "Numéro de téléphone"
+    },
+    "guestTitle": "Livret d'accueil"
   }
 }

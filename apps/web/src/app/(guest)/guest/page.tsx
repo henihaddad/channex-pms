@@ -22,6 +22,7 @@ export default async function GuestPortalPage({
   const sp = await searchParams;
   if (sp.token) redirect(`/api/v1/guest/enter?token=${encodeURIComponent(sp.token)}`);
   const t = await getTranslations("guest");
+  const tg = await getTranslations("guides");
   const guest = await currentGuest();
   if (!guest)
     return (
@@ -79,6 +80,28 @@ export default async function GuestPortalPage({
           </details>
         ) : null}
       </Card>
+      {p.guide.length > 0 ? (
+        <Card title={tg("guestTitle")} data-testid="guest-guide">
+          <dl className="divide-y divide-border">
+            {p.guide.map((section) => (
+              <div key={section.kind} className="py-3 first:pt-0 last:pb-0">
+                <dt className="text-sm font-medium">
+                  {section.heading ?? tg(`sections.${section.kind}`)}
+                </dt>
+                <dd className="mt-1 space-y-1 text-sm">
+                  {Object.entries(section.fields).map(([field, value]) => (
+                    <p key={field}>
+                      <span className="text-muted">{tg(`fields.${section.kind}_${field}`)}:</span>{" "}
+                      <code className="rounded bg-background px-1.5 py-0.5">{value}</code>
+                    </p>
+                  ))}
+                  {section.body ? <p className="whitespace-pre-wrap">{section.body}</p> : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      ) : null}
       {p.status !== "cancelled" ? (
         <Card title={t("preCheckin")}>
           {p.preCheckin.completedAt ? (

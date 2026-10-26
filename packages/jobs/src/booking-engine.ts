@@ -26,6 +26,8 @@ import {
   type Quote,
   type SearchQuery,
   planPayments,
+  guestGuide,
+  type GuestGuideSection,
 } from "@pms/core";
 import {
   asSystem,
@@ -34,6 +36,7 @@ import {
   DrizzleBookingEngineRepository,
   DrizzleBookingRepository,
   DrizzleChannelRepository,
+  DrizzleGuideRepository,
   DrizzleMessagingRepository,
   DrizzleOperationsRepository,
   DrizzleReservationRepository,
@@ -845,6 +848,8 @@ export interface GuestPortal {
     completedAt: string | null;
   };
   extras: Array<{ id: string; name: string; priceMinor: number; per: string }>;
+  /** The guest guide in the guest's language (spec 10 §10.6b); empty until it is published. */
+  guide: readonly GuestGuideSection[];
   messages: Array<{ direction: string; body: string; sentAt: string }>;
   cancellation: { policy: CancellationPolicy; feeNowMinor: number; allowed: boolean };
 }
@@ -919,6 +924,25 @@ export async function guestPortal(
   const policy = parsePolicy(prop?.cancellation ?? null);
   const room = detail.rooms[0];
   const today = deps.clock.today(detail.timezone).toString();
+  /**
+   * GUIDE-2's window. A door code has its own: the guide follows it exactly. A stay with
+   * no code still needs the Wi-Fi, so the guide falls back to the stay's own window,
+   * opening `accessRevealHours` (in whole days, as nights are dates) before arrival and
+   * closing at departure.
+   */
+  const guideWindowOpen =
+    access.state === "revealed" ||
+    (access.state === "none" &&
+      today >=
+        LocalDate.parse(detail.arrivalDate)
+          .minusDays(Math.ceil(settings.accessRevealHours / 24))
+          .toString() &&
+      today <= detail.departureDate);
+  const guide = guestGuide(
+    await new DrizzleGuideRepository(tx, orgId).forProperty(detail.propertyId),
+    detail.guest?.language,
+    { accessOpen: guideWindowOpen },
+  );
   const feeNowMinor = cancellationFee(
     policy,
     {
@@ -959,6 +983,7 @@ export async function guestPortal(
     extras: (await repo.extras(detail.propertyId))
       .filter((e) => e.active)
       .map((e) => ({ id: e.id, name: e.name, priceMinor: e.priceMinor, per: e.per })),
+    guide,
     messages,
     cancellation: {
       policy,
