@@ -20,11 +20,13 @@ import {
   FakeLockProvider,
   FakePaymentProvider,
   FakePayoutProvider,
+  NoLlmProvider,
   type BillingProvider,
   type PaymentProvider,
   type PayoutProvider,
   type ConnectivityProvider,
   type Crypto,
+  type LlmProvider,
   type LockProvider,
   type Mailer,
   type PasswordHasher,
@@ -66,6 +68,12 @@ export interface WebContainer {
   payments: PaymentProvider;
   /** Subscriptions (spec 12 §12.5): Stripe Billing with STRIPE_SECRET_KEY, the fake otherwise. */
   billing: BillingProvider;
+  /**
+   * Reply drafting (spec 09 §9.3, Q12): off by default and `NoLlmProvider` until an
+   * operator installs a plugin for it, in which case the property guide alone answers.
+   * Nothing here ever sends; a human presses send.
+   */
+  llm: LlmProvider;
   /** Hosted mode has plans and quotas; self-hosted has neither (parity guarantee). */
   hosted: boolean;
 }
@@ -118,6 +126,7 @@ async function build(): Promise<WebContainer> {
     billing: process.env.STRIPE_SECRET_KEY
       ? new StripeBillingProvider(stripeTransport(), process.env.STRIPE_SECRET_KEY)
       : new FakeBillingProvider(),
+    llm: new NoLlmProvider(),
     hosted: process.env.PMS_MODE === "hosted" || testHooksEnabled(),
     crypto: createCrypto(config.PMS_MASTER_KEY ?? DEV_MASTER_KEY),
     hasher: argon2Hasher,

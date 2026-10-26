@@ -9,6 +9,8 @@ import {
   type AutomationTrigger,
   type InboxView,
   type MessageTemplate,
+  type ReplyDraft,
+  type ReplyPhrases,
 } from "@pms/core";
 import {
   DrizzleChannelRepository,
@@ -19,7 +21,12 @@ import {
   type ThreadDetail,
   type ThreadRow,
 } from "@pms/db";
-import { firstResponseKpi, renderTemplate, type FirstResponseKpi } from "@pms/jobs";
+import {
+  firstResponseKpi,
+  renderTemplate,
+  suggestThreadReply,
+  type FirstResponseKpi,
+} from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -261,6 +268,36 @@ export const previewTemplateAction = withPermission<
   const c = await container();
   return renderTemplate(ctx.tx, ctx.orgId, c.crypto, i.templateId, i.bookingId);
 });
+
+/**
+ * Draft a reply to the last thing the guest asked, from the property's guest guide
+ * (spec 09 §9.3). Labelled, never sent: the composer fills with it and a human presses
+ * send. The glue phrases come from the caller because core holds no copy.
+ */
+export const suggestReplyAction = withPermission<
+  [{ threadId: string; propertyId: string; phrases: ReplyPhrases }],
+  (ReplyDraft & { question: string }) | null
+>(
+  "message:send",
+  {
+    scope: "property",
+    resolveScope: (i) => ({ kind: "property", id: i.propertyId }),
+    audit: false,
+  },
+  async (ctx, i) => {
+    const c = await container();
+    await assertThreadInProperty(ctx, i.threadId, i.propertyId);
+    return suggestThreadReply(
+      ctx.tx,
+      ctx.orgId,
+      c.crypto,
+      i.threadId,
+      i.phrases,
+      c.clock.now().toString(),
+      c.llm,
+    );
+  },
+);
 
 // ---- templates ------------------------------------------------------------------------------
 

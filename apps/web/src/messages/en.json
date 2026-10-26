@@ -675,7 +675,17 @@
       "respect_house_rules": "House rules",
       "communication": "Communication"
     },
-    "connectChannel": "Connect a channel"
+    "connectChannel": "Connect a channel",
+    "suggest": "Suggest a reply",
+    "suggesting": "Drafting…",
+    "draftedFromGuide": "Drafted from the guest guide",
+    "draftedByModel": "Drafted by a model — read it before sending",
+    "warnSensitive": "This quotes the Wi-Fi, which the guest portal is still holding back.",
+    "warnUnanswered": "Your guide does not answer this yet. Write it once and the question stops coming back.",
+    "warnUnrecognised": "Could not tell what was asked, so this is only an opening.",
+    "draftGuideLink": "Open the guide",
+    "draftGreeting": "Hi {name},",
+    "draftClosing": "Let me know if you need anything else."
   },
   "owners": {
     "title": "Owners",

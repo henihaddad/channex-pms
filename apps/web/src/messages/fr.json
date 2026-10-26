@@ -675,7 +675,17 @@
       "respect_house_rules": "Règlement intérieur",
       "communication": "Communication"
     },
-    "connectChannel": "Connecter un canal"
+    "connectChannel": "Connecter un canal",
+    "suggest": "Proposer une réponse",
+    "suggesting": "Rédaction…",
+    "draftedFromGuide": "Rédigé depuis le livret d'accueil",
+    "draftedByModel": "Rédigé par un modèle — relisez avant d'envoyer",
+    "warnSensitive": "Ceci cite le Wi-Fi, que l'espace voyageur masque encore.",
+    "warnUnanswered": "Votre livret ne répond pas encore à ceci. Écrivez-le une fois et la question ne revient plus.",
+    "warnUnrecognised": "Impossible de déterminer la question : ceci n'est qu'un début.",
+    "draftGuideLink": "Ouvrir le livret",
+    "draftGreeting": "Bonjour {name},",
+    "draftClosing": "Dites-moi si vous avez besoin d'autre chose."
   },
   "owners": {
     "title": "Propriétaires",

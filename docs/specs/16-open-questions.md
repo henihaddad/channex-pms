@@ -113,6 +113,12 @@ Spec stance: opt-in reply drafting behind an `LlmProvider` port, human always
 sends, off by default, self-hostable models supported. Confirm or extend
 (review responses? pricing suggestions?).
 
+**Partly answered by shipping it** (2026-10-26): the port exists with
+`NoLlmProvider` as the default, and reply drafting works without any model at all because
+the guest guide ([10 §10.6b](./10-booking-engine.md)) is the answer. What is left to confirm
+is which concrete adapter ships as the reference plugin, and whether review responses and
+pricing suggestions go the same way.
+
 ### Q13 — Mobile
 
 PWA-only for v1 (assumed), including the cleaner app. Native shells post-v1 if

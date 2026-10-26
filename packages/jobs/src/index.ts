@@ -56,6 +56,7 @@ export {
   runAutomation,
   orgsWithAutomation,
   messagingProperties,
+  suggestThreadReply,
   renderTemplate,
   firstResponseKpi,
   type MessagingDeps,

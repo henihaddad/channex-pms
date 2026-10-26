@@ -382,6 +382,14 @@
   },
   {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "suggestReplyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
     "export": "tagThreadAction",
     "kind": "action",
     "wrapper": "withPermission",

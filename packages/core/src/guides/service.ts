@@ -211,9 +211,7 @@ export function normaliseSections(
       heading: clean(s?.heading) || null,
       body: clean(s?.body),
       fields: Object.fromEntries(
-        spec.fields
-          .map((f) => [f, clean(s?.fields?.[f])] as const)
-          .filter(([, v]) => v !== ""),
+        spec.fields.map((f) => [f, clean(s?.fields?.[f])] as const).filter(([, v]) => v !== ""),
       ),
       ...(s?.sensitive === undefined ? {} : { sensitive: s.sensitive }),
     } satisfies GuideSection;

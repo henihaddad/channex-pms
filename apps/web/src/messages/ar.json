@@ -675,7 +675,17 @@
       "respect_house_rules": "قواعد المنزل",
       "communication": "التواصل"
     },
-    "connectChannel": "ربط قناة"
+    "connectChannel": "ربط قناة",
+    "suggest": "اقترح ردًا",
+    "suggesting": "جارٍ الصياغة…",
+    "draftedFromGuide": "مصوغ من دليل الضيف",
+    "draftedByModel": "صاغه نموذج — اقرأه قبل الإرسال",
+    "warnSensitive": "هذا يذكر الواي فاي، وبوابة الضيف ما زالت تخفيه.",
+    "warnUnanswered": "دليلك لا يجيب على هذا بعد. اكتبه مرة واحدة ولن يعود السؤال.",
+    "warnUnrecognised": "لم نتبيّن السؤال، فهذه بداية فقط.",
+    "draftGuideLink": "افتح الدليل",
+    "draftGreeting": "مرحبًا {name}،",
+    "draftClosing": "أخبرني إن احتجت أي شيء آخر."
   },
   "owners": {
     "title": "المالكون",

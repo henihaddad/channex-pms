@@ -4,6 +4,7 @@ import {
   AuthorizationError,
   createProperty,
   FakeClock,
+  FakeLlmProvider,
   FakeLockProvider,
   Id,
   ingestProperty,
@@ -17,6 +18,7 @@ import {
   asSystem,
   BookingRepositoryPerCall,
   DrizzleChannelRepository,
+  DrizzleGuideRepository,
   DrizzleMessagingRepository,
   DrizzlePropertyRepository,
   rawRows,
@@ -36,6 +38,7 @@ import {
   syncRequests,
   deliverRequestDecision,
   pollThreads,
+  suggestThreadReply,
   syncThreads,
 } from "./messaging.js";
 
@@ -227,6 +230,71 @@ describe("thread sync (CXMSG-2/3)", () => {
       }),
     );
     expect(rows).toHaveLength(0);
+  });
+
+  it("drafts a reply from the property's guest guide, and says when the guide has no answer (spec 09 §9.3)", async () => {
+    const phrases = {
+      greeting: "Olá Ana,",
+      closing: "Diga-me se precisar de mais alguma coisa.",
+      fieldLabels: { wifi_name: "Rede", wifi_password: "Senha" },
+    };
+    const guideRepo = <T>(fn: (r: DrizzleGuideRepository) => Promise<T>) =>
+      asSystem(handle.db, ORG, (tx) => fn(new DrizzleGuideRepository(tx, ORG)));
+    const suggest = (llm?: Parameters<typeof suggestThreadReply>[6]) =>
+      asSystem(handle.db, ORG, (tx) =>
+        suggestThreadReply(tx, ORG, crypto, threadId, phrases, clock.now().toString(), llm),
+      );
+    const arrival = {
+      kind: "arrival" as const,
+      body: "Lockbox to the left of the door; code in the portal.",
+    };
+    const wifi = {
+      kind: "wifi" as const,
+      body: "",
+      fields: { name: "Loft-Guest", password: "tejo2026" },
+    };
+
+    // GUIDE-1: an unpublished guide answers nothing, and the draft says exactly that
+    await guideRepo((r) => r.save(propertyId, "en", { sections: [arrival, wifi] }, null));
+    const draft = await suggest();
+    expect(draft?.question).toBe("Hi! Can we check in early, around 11?");
+    expect(draft?.intents[0]).toBe("arrival");
+    expect(draft?.sources).toEqual([]);
+    expect(draft?.warnings).toEqual(["unanswered_question"]);
+
+    // published: the manager's own words answer it, and no other section is quoted
+    await guideRepo((r) => r.setPublished(propertyId, "en", true));
+    const answered = await suggest();
+    expect(answered?.origin).toBe("guide");
+    expect(answered?.sources).toEqual(["arrival"]);
+    expect(answered?.body).toContain("Lockbox to the left of the door");
+    expect(answered?.body).toContain("Olá Ana,");
+    expect(answered?.body).not.toContain("tejo2026");
+    expect(answered?.requiresHuman).toBe(true);
+
+    // GUIDE-2: marked sensitive, and the stay is months out, so the draft warns
+    await guideRepo((r) =>
+      r.save(
+        propertyId,
+        "en",
+        { sections: [{ ...arrival, sensitive: true }, wifi], published: true },
+        null,
+      ),
+    );
+    const guarded = await suggest();
+    expect(guarded?.sources).toEqual(["arrival"]);
+    expect(guarded?.warnings).toEqual(["sensitive_before_window"]);
+
+    // a model, when one is wired, is handed the question and the guide — and no guest PII
+    const llm = new FakeLlmProvider();
+    const byModel = await suggest(llm);
+    expect(byModel?.origin).toBe("llm");
+    expect(byModel?.warnings).toEqual(["sensitive_before_window"]);
+    expect(llm.calls[0]?.question).toBe("Hi! Can we check in early, around 11?");
+    expect(llm.calls[0]?.guide.map((g) => g.kind)).toEqual(["arrival"]);
+    expect(JSON.stringify(llm.calls[0])).not.toContain("Ana");
+
+    await guideRepo((r) => r.setPublished(propertyId, "en", false));
   });
 
   it("a reply typed in the OTA's own app answers the guest: no needs-reply, no breach", async () => {

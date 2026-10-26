@@ -1,9 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { MessageTemplate } from "@pms/core";
+import type { MessageTemplate, ReplyDraft, ReplyPhrases } from "@pms/core";
 import { Button, Select, Textarea } from "@/components/ui";
-import { addNoteAction, previewTemplateAction, sendReplyAction } from "./inbox.actions";
+import {
+  addNoteAction,
+  previewTemplateAction,
+  sendReplyAction,
+  suggestReplyAction,
+} from "./inbox.actions";
 
 interface Props {
   threadId: string;
@@ -15,6 +20,10 @@ interface Props {
   templates: Array<MessageTemplate & { warnings: string[] }>;
   provider: string;
   canSend: boolean;
+  /** Glue text for a drafted reply, already localised (spec 09 §9.3). */
+  replyPhrases: ReplyPhrases;
+  /** True when the thread has something from the guest to answer. */
+  canSuggest: boolean;
   labels: {
     replyMode: string;
     noteMode: string;
@@ -25,6 +34,14 @@ interface Props {
     noteHint: string;
     missing: string;
     switchConfirm: string;
+    suggest: string;
+    suggesting: string;
+    draftedFromGuide: string;
+    draftedByModel: string;
+    warnSensitive: string;
+    warnUnanswered: string;
+    warnUnrecognised: string;
+    guideLink: string;
   };
 }
 
@@ -39,7 +56,9 @@ export function Composer(p: Props) {
   const [text, setText] = useState("");
   const [templateId, setTemplateId] = useState("");
   const [missing, setMissing] = useState<string[]>([]);
+  const [draft, setDraft] = useState<ReplyDraft | null>(null);
   const [pending, start] = useTransition();
+  const [suggesting, startSuggest] = useTransition();
   const switchTo = (m: "guest" | "note") => {
     if (m === mode) return;
     if (text.trim() !== "" && !window.confirm(p.labels.switchConfirm)) return;
@@ -56,8 +75,29 @@ export function Composer(p: Props) {
       if (r) {
         setText(r.text);
         setMissing(r.missing);
+        setDraft(null);
       }
     });
+  };
+  /** MSG-6 still holds: this only fills the box. The send button is the one that sends. */
+  const suggest = () => {
+    startSuggest(async () => {
+      const r = await suggestReplyAction({
+        threadId: p.threadId,
+        propertyId: p.propertyId,
+        phrases: p.replyPhrases,
+      });
+      if (!r) return;
+      setDraft(r);
+      setTemplateId("");
+      setMissing([]);
+      if (r.body.trim()) setText(r.body);
+    });
+  };
+  const warningLabel: Record<string, string> = {
+    sensitive_before_window: p.labels.warnSensitive,
+    unanswered_question: p.labels.warnUnanswered,
+    unrecognised_question: p.labels.warnUnrecognised,
   };
   return (
     <div className="space-y-2" data-testid="composer" data-mode={mode}>
@@ -108,6 +148,18 @@ export function Composer(p: Props) {
                 </option>
               ))}
             </Select>
+            {p.canSuggest ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={suggest}
+                disabled={suggesting}
+                data-testid="suggest-reply"
+              >
+                {suggesting ? p.labels.suggesting : p.labels.suggest}
+              </Button>
+            ) : null}
             {pending ? <span className="text-muted">{p.labels.preview}</span> : null}
             {missing.length ? (
               <span className="text-danger" data-testid="missing-vars">
@@ -115,6 +167,39 @@ export function Composer(p: Props) {
               </span>
             ) : null}
           </div>
+          {draft ? (
+            <div
+              className="rounded border border-accent/30 bg-surface px-2 py-1.5 text-xs"
+              data-testid="reply-draft"
+              data-origin={draft.origin}
+            >
+              <p className="font-medium">
+                {draft.origin === "llm" ? p.labels.draftedByModel : p.labels.draftedFromGuide}
+                {draft.sources.length > 0 ? ` · ${draft.sources.join(", ")}` : ""}
+              </p>
+              {draft.warnings.map((w) => (
+                <p
+                  key={w}
+                  className="mt-1 text-warning-soft-foreground"
+                  data-testid={`draft-warning-${w}`}
+                >
+                  {warningLabel[w] ?? w}
+                  {w === "unanswered_question" ? (
+                    <>
+                      {" "}
+                      <a
+                        href={`/properties/${p.propertyId}/guide`}
+                        className="underline"
+                        data-testid="draft-guide-link"
+                      >
+                        {p.labels.guideLink}
+                      </a>
+                    </>
+                  ) : null}
+                </p>
+              ))}
+            </div>
+          ) : null}
           <Textarea
             name="body"
             value={text}

@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Suggested replies (spec 09 §9.3, gap 5 of `docs/research/2026-09-competitors.md`): "Suggest a
+  reply" in the inbox drafts an answer to the last thing the guest asked, out of the property's
+  guest guide — the manager's own words, in the guest's language. It needs no AI, because the
+  guide is the answer; keyword intents in English, French, Arabic, Spanish and Portuguese decide
+  which sections were asked about, with accents and Arabic diacritics folded first. The composer
+  labels what the draft used and warns on the two things worth knowing: that it quotes a section
+  the guest portal is still holding back, and that the guide does not answer a question we
+  recognised — the second links to the guide, because writing the section once stops the question
+  coming back. Nothing is sent: the draft fills the box and a human presses send. The
+  `LlmProvider` port is there for an operator who wants a model, off by default
+  (`NoLlmProvider`), and its input type carries the question, the guide text and dateless stay
+  facts with no field for a name, a contact or the thread's history — so "no guest PII leaves the
+  deployment" holds by construction rather than by review.
+
 - Guest guide per property (spec 10 §10.6b, gap 4 of `docs/research/2026-09-competitors.md`):
   the eight questions every guest asks — the Wi-Fi, how to get in, parking, house rules, how
   the place works, local tips, checking out, who to call — answered once per property instead

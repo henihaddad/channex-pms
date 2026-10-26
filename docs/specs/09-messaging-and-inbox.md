@@ -97,11 +97,22 @@ internal note to a guest.** Therefore:
 - **Translation** — inbound messages can be translated for staff and outbound
   drafts translated to the guest's language, always showing both versions before
   send. Never send a translation the sender has not seen.
+- **Suggested replies** — "Suggest a reply" drafts an answer to the last thing the guest
+  asked, from the property's guest guide ([10 §10.6b](./10-booking-engine.md)). Keywords in
+  the launch locales decide which sections were asked about; the draft is the manager's own
+  words, in the guest's language, and the composer labels what it used. Two things the
+  manager needs to know travel with it: that the draft quotes a section the portal is still
+  holding back (GUIDE-2), and that the guide does not answer a question we recognised — the
+  second links to the guide, because writing the section once stops the question coming back.
+  Nothing is sent: the draft fills the box and a human presses send.
 - **AI-assisted drafts** — **optional, opt-in, off by default**, implemented as a
   plugin behind the `LlmProvider` port so a self-hoster can point it at a local
   model or nothing at all. A generated draft is always clearly labelled and always
   requires a human to press send. No guest PII leaves the deployment unless the
-  operator explicitly configures an external provider and accepts it in writing.
+  operator explicitly configures an external provider and accepts it in writing: the port's
+  input type carries the question, the guide text and dateless stay facts, and has no field
+  for a name, a contact or the thread's history, so this holds by construction. With no
+  provider configured the guide alone answers, which is the useful default.
 - **Scheduled send** with quiet hours (§9.5).
 
 ## 9.4 Assignment, collision and SLA
@@ -266,7 +277,16 @@ What the code does, where it refines the text above:
   which the guest's review is shown as revealed. It goes out once; a transient failure stays
   queued for the next delivery pass.
 
-Deferred beyond v0.3: translation, AI-assisted drafts (`LlmProvider`), presence and unsent-draft
+- **Suggested replies (§9.3).** `packages/core/src/replies` holds the keyword intents (English,
+  French, Arabic, Spanish and Portuguese, with accents and Arabic diacritics folded before
+  matching), the draft composition and the `LlmProvider` port with `NoLlmProvider` as the
+  default. `suggestThreadReply` in `packages/jobs` reads the thread's last inbound message, the
+  property's published guides and the same access window the portal uses, and returns text for
+  the composer. Glue phrases are passed in from the web layer's i18n, so core holds no copy.
+  *Deferred:* a concrete model adapter (it is a plugin, per the bullet above), ranking by past
+  replies, and drafting for a thread with no inbound message.
+
+Deferred beyond v0.3: translation, presence and unsent-draft
 collision warnings, rule-based assignment, attachment upload from the console and malware
 scanning, retention purge and the per-guest transcript export. Airbnb requests (inquiries, reservation and
 alteration requests) shipped after v1.0 through the Channex live feed, see above.

@@ -1,4 +1,5 @@
 import {
+  accessRevealOpen,
   assertSendable,
   AuthorizationError,
   channelCapabilities,
@@ -11,6 +12,7 @@ import {
   pickVariant,
   ruleApplies,
   scheduledAt,
+  suggestReply,
   ThrottleError,
   TransientError,
   type AutomationRule,
@@ -18,7 +20,10 @@ import {
   type ConnectivityProvider,
   type Crypto,
   type GuardContext,
+  type LlmProvider,
   type Mailer,
+  type ReplyDraft,
+  type ReplyPhrases,
   type SlaTargets,
   type ThreadPage,
   type LiveFeedEvent,
@@ -27,6 +32,7 @@ import {
 import {
   asSystem,
   DrizzleChannelRepository,
+  DrizzleGuideRepository,
   DrizzleMessagingRepository,
   rawRows,
   sql,
@@ -793,6 +799,65 @@ export async function renderTemplate(
     ctx ?? { guest: { first_name: "Guest" }, property: { name: "" } },
   );
   return { text: rendered.text, missing: rendered.missing, templateName: tpl.name };
+}
+
+/**
+ * A reply drafted for the last thing the guest asked (spec 09 §9.3).
+ *
+ * The guide answers it where it can, in the guest's language and the manager's own words.
+ * An `LlmProvider` is consulted only when one is wired, and never sees a guest's name,
+ * contacts or message history — only the question, the guide text and dateless stay facts.
+ * The result is text for the composer: this function sends nothing.
+ */
+export async function suggestThreadReply(
+  tx: Tx,
+  orgId: string,
+  crypto: Crypto,
+  threadId: string,
+  phrases: ReplyPhrases,
+  nowIso: string,
+  llm?: LlmProvider | null,
+): Promise<(ReplyDraft & { question: string }) | null> {
+  const repo = new DrizzleMessagingRepository(tx, orgId, crypto);
+  const detail = await repo.detail(threadId, nowIso);
+  if (!detail) return null;
+  const question = [...detail.messages]
+    .reverse()
+    .find((m) => m.kind === "guest_message" && m.direction === "inbound")?.body;
+  if (!question) return null;
+  const guides = await new DrizzleGuideRepository(tx, orgId).forProperty(detail.propertyId);
+  // GUIDE-2: the same window the portal uses, so a draft never quotes what the portal hides
+  const ctx = detail.booking ? await repo.templateContext(detail.booking.id) : null;
+  const [settings] = await rawRows<{ access_reveal_hours: number }>(
+    tx,
+    sql`select access_reveal_hours from booking_engine_settings where property_id = ${detail.propertyId}`,
+  );
+  const draft = await suggestReply(
+    {
+      question,
+      guides,
+      guestLanguage: detail.guestLanguage,
+      accessOpen: accessRevealOpen(
+        nowIso,
+        ctx?.access?.valid_from ?? null,
+        ctx?.access?.valid_to ?? null,
+        Number(settings?.access_reveal_hours ?? 24),
+      ),
+      phrases,
+      ...(detail.booking
+        ? {
+            stay: {
+              arrival: detail.booking.arrivalDate,
+              departure: detail.booking.departureDate,
+              nights: ctx?.booking?.nights ?? 0,
+              propertyName: detail.propertyTitle,
+            },
+          }
+        : {}),
+    },
+    llm,
+  );
+  return { ...draft, question };
 }
 
 export interface FirstResponseKpi {

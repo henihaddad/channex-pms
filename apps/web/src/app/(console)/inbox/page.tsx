@@ -51,6 +51,7 @@ export default async function InboxPage({
 }) {
   const sp = await searchParams;
   const t = await getTranslations("inbox");
+  const tg = await getTranslations("guides");
   const listing = await guard(() =>
     listInbox({
       view: sp.view,
@@ -332,6 +333,20 @@ export default async function InboxPage({
                   provider={open.detail.provider}
                   templates={open.templates}
                   canSend={open.capabilities.messaging && open.detail.state !== "closed"}
+                  canSuggest={open.detail.messages.some(
+                    (m) => m.kind === "guest_message" && m.direction === "inbound",
+                  )}
+                  replyPhrases={{
+                    greeting: t("draftGreeting", {
+                      name: open.detail.guestName.split(" ")[0] ?? "",
+                    }),
+                    closing: t("draftClosing"),
+                    fieldLabels: {
+                      wifi_name: tg("fields.wifi_name"),
+                      wifi_password: tg("fields.wifi_password"),
+                      emergency_phone: tg("fields.emergency_phone"),
+                    },
+                  }}
                   labels={{
                     replyMode: t("replyMode"),
                     noteMode: t("noteMode"),
@@ -342,6 +357,14 @@ export default async function InboxPage({
                     noteHint: t("noteHint"),
                     missing: t("missing"),
                     switchConfirm: t("switchConfirm"),
+                    suggest: t("suggest"),
+                    suggesting: t("suggesting"),
+                    draftedFromGuide: t("draftedFromGuide"),
+                    draftedByModel: t("draftedByModel"),
+                    warnSensitive: t("warnSensitive"),
+                    warnUnanswered: t("warnUnanswered"),
+                    warnUnrecognised: t("warnUnrecognised"),
+                    guideLink: t("draftGuideLink"),
                   }}
                 />
               </Card>
