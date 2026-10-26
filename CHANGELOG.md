@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"
+  step exited 0 when `CLOUDFLARE_API_TOKEN` or `NEON_DIRECT_URL` was unset, and every step
+  below it was conditioned on those secrets, so fifty runs between 2026-09-17 and 2026-10-26
+  went green having skipped install, migrate, build and deploy. It now fails with an error
+  naming the missing secrets. A deploy that cannot deploy must not look like one that did.
+
 ### Added
 
 - Financials as its own console section (spec 11 §11.5b, item 5 of the Guesty Lite walk in

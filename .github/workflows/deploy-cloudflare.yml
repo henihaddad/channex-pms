@@ -35,9 +35,15 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # A deploy workflow that no-ops and reports success is worse than one that fails:
+      # fifty green runs between 2026-09-17 and 2026-10-26 deployed nothing at all, because
+      # this step exited 0 and every step below it was skipped. Fail loudly instead.
       - name: Check secrets
         if: env.CLOUDFLARE_API_TOKEN == '' || env.NEON_DIRECT_URL == ''
-        run: echo "::notice::Cloudflare or Neon secrets missing; skipping deploy" && exit 0
+        run: |
+          echo "::error::CLOUDFLARE_API_TOKEN or NEON_DIRECT_URL is not set; nothing was deployed."
+          echo "Set both as repository secrets (Settings -> Secrets and variables -> Actions)."
+          exit 1
       - name: Build packages
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
         run: pnpm turbo run build --filter=@pms/jobs --filter=@pms/cloudflare
