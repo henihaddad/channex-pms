@@ -146,7 +146,43 @@
     "today": "Today",
     "needsYou": "Needs you",
     "allMetrics": "All metrics",
-    "moreAlerts": "{n} more"
+    "moreAlerts": "{n} more",
+    "inSync": "All channels in sync",
+    "syncIssues": "{n} nights need a look",
+    "revenueToday": "Revenue today",
+    "unitsTonight": "{sold} of {total} units",
+    "arrivingToday": "Arriving today",
+    "noArrivalsToday": "Nobody arrives today.",
+    "activity": "Activity",
+    "allActivity": "All",
+    "nothingYet": "Nothing yet today. New bookings, changes and alerts show up here.",
+    "booked": "New booking",
+    "things": "{n} things",
+    "balanceDue": "{amount} due",
+    "needsRoomChip": "Needs a room",
+    "paid": "Paid",
+    "actions": {
+      "unmapped": "Assign a room",
+      "failedSync": "Open sync health",
+      "unassigned": "Assign",
+      "breaching": "Open inbox",
+      "unacked": "Look",
+      "disputes": "Review",
+      "expiringCards": "Review",
+      "needsReply": "Reply"
+    },
+    "person": {
+      "title": "A person answers you",
+      "lead": "Replies within one working day",
+      "body": "No bot, no ticket queue. During your trial and after it, you write to a human who knows the product and your account. If a channel disagrees with your calendar, we look at it with you.",
+      "email": "Email",
+      "call": "Book a 20-minute call"
+    },
+    "importCard": {
+      "title": "Already on Airbnb?",
+      "body": "Connect it first and we import your listings, photos, prices and calendar, and show you every field before anything is written.",
+      "cta": "Import from Airbnb"
+    }
   },
   "members": {
     "title": "Members",

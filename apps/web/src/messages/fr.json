@@ -138,7 +138,43 @@
     "today": "Aujourd’hui",
     "needsYou": "À traiter",
     "allMetrics": "Tous les indicateurs",
-    "moreAlerts": "{n} de plus"
+    "moreAlerts": "{n} de plus",
+    "inSync": "Tous les canaux sont synchronisés",
+    "syncIssues": "{n} nuits à vérifier",
+    "revenueToday": "Revenu du jour",
+    "unitsTonight": "{sold} unités sur {total}",
+    "arrivingToday": "Arrivées du jour",
+    "noArrivalsToday": "Personne n'arrive aujourd'hui.",
+    "activity": "Activité",
+    "allActivity": "Tout",
+    "nothingYet": "Rien pour l'instant. Les nouvelles réservations, modifications et alertes apparaissent ici.",
+    "booked": "Nouvelle réservation",
+    "things": "{n} éléments",
+    "balanceDue": "{amount} à encaisser",
+    "needsRoomChip": "Chambre à attribuer",
+    "paid": "Payé",
+    "actions": {
+      "unmapped": "Attribuer une chambre",
+      "failedSync": "Voir la synchronisation",
+      "unassigned": "Attribuer",
+      "breaching": "Ouvrir la messagerie",
+      "unacked": "Voir",
+      "disputes": "Examiner",
+      "expiringCards": "Examiner",
+      "needsReply": "Répondre"
+    },
+    "person": {
+      "title": "Une personne vous répond",
+      "lead": "Réponse sous un jour ouvré",
+      "body": "Pas de robot, pas de file d'attente. Pendant et après l'essai, vous écrivez à quelqu'un qui connaît le produit et votre compte. Si un canal contredit votre calendrier, on regarde avec vous.",
+      "email": "E-mail",
+      "call": "Réserver un appel de 20 minutes"
+    },
+    "importCard": {
+      "title": "Déjà sur Airbnb ?",
+      "body": "Connectez-le d'abord : nous importons vos annonces, photos, prix et calendrier, et vous montrons chaque champ avant toute écriture.",
+      "cta": "Importer depuis Airbnb"
+    }
   },
   "members": {
     "title": "Membres",

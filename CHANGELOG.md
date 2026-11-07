@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Today (spec 11 §11.2) reads like the canvas: the day's four numbers including revenue today,
+  "Needs you" as rows with the action that clears each one, who arrives today with their balance
+  and room state, an activity feed of new bookings and alerts, and the week ahead. During the
+  first run the programme sits beside two cards hosts asked for in the research: a named person
+  who answers within a working day, and an import from Airbnb that shows every field before it
+  writes. The month's KPIs and the league table follow unchanged.
+
 - The console shell follows the November 2026 design canvas: a dark rail of ten destinations
   (Today, Inbox, Calendar, Reservations, Operations, Properties, Channels, Financials, Owners,
   Reports) with Settings and the signed-in person at its foot; a header with one search box that

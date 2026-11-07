@@ -138,7 +138,43 @@
     "today": "اليوم",
     "needsYou": "يحتاج إليك",
     "allMetrics": "كل المؤشرات",
-    "moreAlerts": "{n} إضافية"
+    "moreAlerts": "{n} إضافية",
+    "inSync": "كل القنوات متزامنة",
+    "syncIssues": "{n} ليالٍ تحتاج مراجعة",
+    "revenueToday": "إيراد اليوم",
+    "unitsTonight": "{sold} من {total} وحدات",
+    "arrivingToday": "الوصول اليوم",
+    "noArrivalsToday": "لا يصل أحد اليوم.",
+    "activity": "النشاط",
+    "allActivity": "الكل",
+    "nothingYet": "لا شيء بعد اليوم. تظهر هنا الحجوزات الجديدة والتغييرات والتنبيهات.",
+    "booked": "حجز جديد",
+    "things": "{n} عناصر",
+    "balanceDue": "{amount} مستحق",
+    "needsRoomChip": "بحاجة إلى غرفة",
+    "paid": "مدفوع",
+    "actions": {
+      "unmapped": "تعيين غرفة",
+      "failedSync": "فتح صحة المزامنة",
+      "unassigned": "تعيين",
+      "breaching": "فتح الرسائل",
+      "unacked": "عرض",
+      "disputes": "مراجعة",
+      "expiringCards": "مراجعة",
+      "needsReply": "رد"
+    },
+    "person": {
+      "title": "شخص حقيقي يرد عليك",
+      "lead": "رد خلال يوم عمل واحد",
+      "body": "لا روبوت ولا طابور تذاكر. أثناء التجربة وبعدها تراسل إنسانًا يعرف المنتج وحسابك. إذا اختلفت قناة مع تقويمك ننظر فيها معك.",
+      "email": "بريد",
+      "call": "حجز مكالمة 20 دقيقة"
+    },
+    "importCard": {
+      "title": "موجود على Airbnb؟",
+      "body": "اربطه أولًا ونستورد إعلاناتك وصورك وأسعارك وتقويمك، ونعرض لك كل حقل قبل كتابة أي شيء.",
+      "cta": "استيراد من Airbnb"
+    }
   },
   "members": {
     "title": "الأعضاء",
