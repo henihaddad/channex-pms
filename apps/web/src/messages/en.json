@@ -591,7 +591,8 @@
     "roomRack": "Room rack",
     "emptyTitle": "Turnovers, cleaners and maintenance",
     "empty": "Bookings create the cleaning and inspection tasks; your cleaners work from a phone, offline if they must.",
-    "emptyAction": "Add a property"
+    "emptyAction": "Add a property",
+    "noTurnovers": "No turnovers this day."
   },
   "inbox": {
     "title": "Inbox",

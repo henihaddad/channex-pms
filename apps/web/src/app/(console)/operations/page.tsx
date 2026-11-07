@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, EmptyState, PageTitle, Select } from "@/components/ui";
+import { Button, Card, EmptyState, LinkButton, PageTitle, Select } from "@/components/ui";
 import { OperationsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
 import {
@@ -35,28 +35,29 @@ export default async function OperationsPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PageTitle>{t("title")}</PageTitle>
-        <div className="flex items-center gap-2 text-sm">
-          <Link href={`/operations?date=${shift(date, -1)}`} className="underline">
-            ‹
-          </Link>
-          <span className="font-mono" data-testid="board-date">
-            {date}
-          </span>
-          <Link href={`/operations?date=${shift(date, 1)}`} className="underline">
-            ›
-          </Link>
-          <Link href="/operations/blocks" className="underline">
-            {t("blocks")}
-          </Link>
-          <Link href="/operations/crews" className="underline">
-            {t("crews")}
-          </Link>
-          <Link href="/maintenance" className="underline">
-            {t("maintenance")}
-          </Link>
-          <Link href="/cleaner" className="underline">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex items-center rounded-full border border-border bg-surface p-0.5">
+            <Link
+              href={`/operations?date=${shift(date, -1)}`}
+              className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-default hover:text-foreground"
+              aria-label={shift(date, -1)}
+            >
+              ‹
+            </Link>
+            <span className="px-2 font-mono text-xs" data-testid="board-date">
+              {date}
+            </span>
+            <Link
+              href={`/operations?date=${shift(date, 1)}`}
+              className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-default hover:text-foreground"
+              aria-label={shift(date, 1)}
+            >
+              ›
+            </Link>
+          </div>
+          <LinkButton href="/cleaner" variant="secondary" size="sm">
             {t("cleanerApp")}
-          </Link>
+          </LinkButton>
           <form action={suggestRouteAction}>
             <input type="hidden" name="date" value={date} />
             <Button type="submit" variant="secondary" size="sm">
@@ -65,6 +66,15 @@ export default async function OperationsPage({
           </form>
         </div>
       </div>
+      {board.departures.length + board.tasks.length + board.arrivals.length === 0 ? (
+        <Card>
+          <EmptyState
+            title={t("emptyTitle")}
+            description={t("empty")}
+            preview={<OperationsPreview />}
+          />
+        </Card>
+      ) : null}
       {board.escalations.length > 0 ? (
         <div
           className="rounded-md border border-danger/40 bg-danger-soft p-3 text-sm text-danger"
@@ -104,11 +114,7 @@ export default async function OperationsPage({
             {t("turnovers")} <span className="text-xs text-muted">{board.tasks.length}</span>
           </h2>
           {board.tasks.length === 0 ? (
-            <EmptyState
-              title={t("emptyTitle")}
-              description={t("empty")}
-              preview={<OperationsPreview />}
-            />
+            <p className="py-2 text-sm text-muted">{t("noTurnovers")}</p>
           ) : null}
           <ul className="space-y-2 text-sm" data-testid="turnover-lane">
             {board.tasks.map((x) => {

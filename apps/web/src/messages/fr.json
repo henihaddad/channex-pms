@@ -583,7 +583,8 @@
     "roomRack": "Plan des chambres",
     "emptyTitle": "Rotations, équipes de ménage et maintenance",
     "empty": "Les réservations créent les tâches de ménage et d'inspection ; vos équipes travaillent depuis un téléphone, hors ligne si nécessaire.",
-    "emptyAction": "Ajouter un bien"
+    "emptyAction": "Ajouter un bien",
+    "noTurnovers": "Aucun ménage ce jour-là."
   },
   "inbox": {
     "title": "Boîte de réception",
