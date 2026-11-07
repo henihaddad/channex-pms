@@ -30,6 +30,7 @@
     "@pms/sync": "workspace:*",
     "@tanstack/react-virtual": "^3.13.12",
     "clsx": "^2.1.1",
+    "cmdk": "1.1.1",
     "ioredis": "^6.0.0",
     "next": "^16.3.4",
     "next-intl": "^4.14.2",

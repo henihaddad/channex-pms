@@ -53,9 +53,32 @@
     "newReservation": "Nouvelle réservation",
     "helpCenter": "Centre d'aide",
     "operateGuide": "Guide d'exploitation",
-    "shortcuts": "Raccourcis clavier",
+    "shortcuts": {
+      "title": "Raccourcis clavier",
+      "lead": "Appuyez sur ? n'importe où pour voir ceci. Rien ne se déclenche pendant la saisie ; chaque raccourci existe aussi en bouton.",
+      "everywhere": "Partout",
+      "goto": "Aller à",
+      "palette": "Rechercher, naviguer, lancer une action",
+      "focusSearch": "Aller au champ de recherche",
+      "sheet": "Cette fiche",
+      "newReservation": "Nouvelle réservation",
+      "close": "Fermer",
+      "gThen": "puis"
+    },
     "contactSupport": "Écrire au support",
-    "account": "Compte"
+    "account": "Compte",
+    "palette": {
+      "placeholder": "Rechercher un client, une réservation, un logement, ou taper une page…",
+      "empty": "Aucun résultat. Essayez un nom de client, une référence ou une page.",
+      "reservations": "Clients et réservations",
+      "properties": "Logements",
+      "pages": "Aller à",
+      "actions": "Actions",
+      "footer": "↑↓ déplacer · ↵ ouvrir · Échap fermer · ⌘K partout"
+    },
+    "importAirbnb": "Importer depuis Airbnb",
+    "blockNights": "Bloquer des nuits…",
+    "addProperty": "Ajouter un logement"
   },
   "auth": {
     "signIn": "Se connecter",

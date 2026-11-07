@@ -10,7 +10,14 @@ import { currentUserProfile, memberships } from "@/server/auth-flows";
 import { logoutAction } from "../(auth)/auth.actions";
 import { setLocaleAction } from "./shell.actions";
 import { Logo } from "@/components/logo";
-import { Alert, LinkButton } from "@/components/ui";
+import {
+  Alert,
+  ConsoleHotkeys,
+  LinkButton,
+  type PaletteItem,
+  type ShortcutGroup,
+} from "@/components/ui";
+import { paletteSearch } from "./palette.actions";
 import { ConsoleShell, type NavSectionDef } from "./console-shell";
 import { BellLink, HeaderMenu, MenuButton, MenuLink } from "./header-menus";
 import { navIcons } from "./nav-icons";
@@ -215,7 +222,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           {t("operateGuide")}
         </MenuLink>
         <MenuLink href="/settings/support">{t("contactSupport")}</MenuLink>
-        <MenuLink href="/settings/support#shortcuts" hint="?">
+        <MenuLink href="#shortcuts" hint="?">
           {t("shortcuts")}
         </MenuLink>
       </HeaderMenu>
@@ -277,18 +284,91 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     </>
   );
 
+  const pages: PaletteItem[] = [...sections, ...footerSections].flatMap((s) => [
+    { id: s.item.href, title: s.item.label, href: s.item.href },
+    ...s.tabs.map((tab) => ({
+      id: tab.href,
+      title: `${s.item.label} · ${tab.label}`,
+      href: tab.href,
+    })),
+  ]);
+  const paletteActions: PaletteItem[] = [
+    { id: "new-reservation", title: t("newReservation"), href: "/reservations/new", hint: "N" },
+    { id: "import", title: t("importAirbnb"), href: "/properties/import" },
+    { id: "block", title: t("blockNights"), href: "/operations/blocks" },
+    { id: "new-property", title: t("addProperty"), href: "/properties/new" },
+  ];
+  const goTo = {
+    t: "/",
+    i: "/inbox",
+    c: "/calendar",
+    r: "/reservations",
+    o: "/operations",
+    p: "/properties",
+    s: "/settings",
+  };
+  const ts = await getTranslations("nav.shortcuts");
+  const sheet: { title: string; lead: string; groups: ShortcutGroup[] } = {
+    title: ts("title"),
+    lead: ts("lead"),
+    groups: [
+      {
+        title: ts("everywhere"),
+        items: [
+          { keys: ["⌘", "K"], label: ts("palette") },
+          { keys: ["/"], label: ts("focusSearch") },
+          { keys: ["?"], label: ts("sheet") },
+          { keys: ["N"], label: ts("newReservation") },
+          { keys: ["Esc"], label: ts("close") },
+        ],
+      },
+      {
+        title: ts("goto"),
+        items: [
+          { keys: ["G", ts("gThen"), "T"], label: t("dashboard") },
+          { keys: ["G", ts("gThen"), "I"], label: t("inbox") },
+          { keys: ["G", ts("gThen"), "C"], label: t("calendar") },
+          { keys: ["G", ts("gThen"), "R"], label: t("reservations") },
+          { keys: ["G", ts("gThen"), "O"], label: t("operations") },
+          { keys: ["G", ts("gThen"), "P"], label: t("properties") },
+          { keys: ["G", ts("gThen"), "S"], label: t("settings") },
+        ],
+      },
+    ],
+  };
+  const tp = await getTranslations("nav.palette");
+  const paletteLabels = {
+    placeholder: tp("placeholder"),
+    empty: tp("empty"),
+    reservations: tp("reservations"),
+    properties: tp("properties"),
+    pages: tp("pages"),
+    actions: tp("actions"),
+    footer: tp("footer"),
+  };
+
   return (
-    <ConsoleShell
-      sections={sections}
-      footerSections={footerSections}
-      brand={brand}
-      footer={footer}
-      search={search}
-      actions={actions}
-      banners={banners}
-      labels={{ menu: t("menu"), close: t("closeMenu"), sectionPages: t("sectionPages") }}
-    >
-      {children}
-    </ConsoleShell>
+    <>
+      <ConsoleHotkeys
+        search={paletteSearch}
+        pages={pages}
+        actions={paletteActions}
+        goTo={goTo}
+        labels={paletteLabels}
+        sheet={sheet}
+      />
+      <ConsoleShell
+        sections={sections}
+        footerSections={footerSections}
+        brand={brand}
+        footer={footer}
+        search={search}
+        actions={actions}
+        banners={banners}
+        labels={{ menu: t("menu"), close: t("closeMenu"), sectionPages: t("sectionPages") }}
+      >
+        {children}
+      </ConsoleShell>
+    </>
   );
 }

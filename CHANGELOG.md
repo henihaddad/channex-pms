@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- ⌘K (Ctrl+K) opens a command palette from anywhere in the console: it searches guests and
+  reservations by name, reference or property and properties by title on the server, lists the
+  sections and their pages, and runs the common actions (new reservation, import from Airbnb,
+  block nights, add a property). Clicking the header search opens the same palette; without
+  JavaScript the form still submits to Reservations. "?" opens a sheet of every shortcut that
+  works: "/" focuses the search, "N" starts a reservation, "G" then a letter goes to a section
+  (Gmail-style). Nothing fires while typing in a field. No channel manager hosts compared in
+  `docs/research/2026-11-social-listening.md` offers either.
+
 ### Changed
 
 - Today (spec 11 §11.2) reads like the canvas: the day's four numbers including revenue today,

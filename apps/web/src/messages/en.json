@@ -54,7 +54,18 @@
     "newReservation": "New reservation",
     "helpCenter": "Help center",
     "operateGuide": "Operating guide",
-    "shortcuts": "Keyboard shortcuts",
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "lead": "Press ? anywhere to see this. Nothing fires while you type in a field; every shortcut is also a button somewhere.",
+      "everywhere": "Everywhere",
+      "goto": "Go to",
+      "palette": "Search, jump anywhere, run an action",
+      "focusSearch": "Focus the search box",
+      "sheet": "This sheet",
+      "newReservation": "New reservation",
+      "close": "Close",
+      "gThen": "then"
+    },
     "contactSupport": "Email support",
     "account": "Account",
     "languages": {
@@ -63,7 +74,19 @@
       "ar": "العربية",
       "es": "Español",
       "pt": "Português"
-    }
+    },
+    "palette": {
+      "placeholder": "Search guests, reservations, properties, or type a page…",
+      "empty": "Nothing matches. Try a guest's name, a booking reference or a page.",
+      "reservations": "Guests and reservations",
+      "properties": "Properties",
+      "pages": "Go to",
+      "actions": "Actions",
+      "footer": "↑↓ move · ↵ open · Esc close · ⌘K from anywhere"
+    },
+    "importAirbnb": "Import from Airbnb",
+    "blockNights": "Block nights…",
+    "addProperty": "Add a property"
   },
   "auth": {
     "signIn": "Sign in",

@@ -914,3 +914,6 @@ export function Stat({
 }
 
 export { SectionTabs } from "./section-tabs";
+export { ConsoleHotkeys } from "./hotkeys";
+export type { PaletteItem, PaletteLabels } from "./command-palette";
+export type { ShortcutGroup } from "./shortcuts-sheet";

@@ -705,6 +705,14 @@
     "permission": "owner:update"
   },
   {
+    "file": "src/app/(console)/palette.actions.ts",
+    "export": "paletteSearch",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/properties/[id]/booking-engine/booking-engine.actions.ts",
     "export": "saveEngineSettingsAction",
     "kind": "action",
