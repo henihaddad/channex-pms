@@ -14,7 +14,10 @@ expire within hours. So the inbox is not a nice-to-have — it is revenue.
 
 ## 9.1 Inbox layout
 
-Three panes: **filters** · **thread list** · **conversation**.
+Two panes under one bar: the **views** as pills with their counts, the property
+and the search on the same line; then the **thread list** and the **conversation**
+side by side. The booking's facts sit in a strip above the messages rather than
+in a third column, so a 13-inch screen shows the whole conversation.
 
 Thread list rows show: guest name, channel badge, last message preview, unread
 count, stay dates, an **SLA chip** (time remaining to first response), assignee
@@ -25,7 +28,7 @@ Filters and views:
 | View | Definition |
 |---|---|
 | **Needs reply** *(default)* | Open, last message inbound, no staff reply since |
-| **Breaching SLA** | First-response due within 30 min, or already breached |
+| **Past target** | First-response due within 30 min, or already past the target |
 | **Assigned to me** | — |
 | **Unassigned** | Open with no assignee |
 | **Inquiries** | Threads with no booking (Airbnb pre-booking) |

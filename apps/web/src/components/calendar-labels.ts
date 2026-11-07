@@ -55,5 +55,20 @@ export const CALENDAR_LABEL_KEYS = [
   "roomsLeft",
   "stopSold",
   "loading",
+  // the toolbar legend, the tips sheet and the right-click menu
+  "tips",
+  "tipsTitle",
+  "tipDrag",
+  "tipType",
+  "tipRightClick",
+  "tipKeys",
+  "tipDouble",
+  "legend",
+  "legendSynced",
+  "legendSending",
+  "legendFailed",
+  "setPrice",
+  "newReservationHere",
+  "panelNote",
 ] as const;
 export type CalendarLabels = Record<(typeof CALENDAR_LABEL_KEYS)[number], string>;

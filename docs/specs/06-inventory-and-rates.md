@@ -82,7 +82,12 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   "More settings" check-in/check-out closures and a percentage change that
   previews before it applies (BULK-1). No dialogs, no toolbar of buttons: the
   panel is the only place to act on a selection, and it names the nights and the
-  listing it will change.
+  listing it will change. A right-click on a night opens the same verbs as a menu
+  (set price, block, open, minimum stay, new reservation on these dates), and one
+  letter each does the same from the keyboard: `P`, `B`, `O`, `M`, `R`; `T` jumps
+  to tonight. The toolbar carries a Today button, a legend for the sync dots and
+  hatching, and a "Tips" sheet that lists every trick; nothing in it is the only
+  way to do something.
 - **CAL-2a** Rows follow the portfolio shape: a single-unit listing with one rate
   plan is one row that carries its cover photo (first library photo, else the
   photo an import brought) and title, so a manager scans listings the way the

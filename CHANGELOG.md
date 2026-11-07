@@ -19,6 +19,19 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The calendar (spec 06 CAL-2) gained the tricks hosts know from Airbnb: a right-click menu on
+  any night (set price, block, open, minimum stay, new reservation on these dates, which opens
+  the staff booking form with the listing and nights filled in), one-letter keys for the same
+  verbs (`P` `B` `O` `M` `R`, `T` for today), a Today button, a legend for the sync dots and the
+  hatching, and a "Tips" sheet listing every gesture. The selection panel says what happens
+  next: changes reach the channels within a minute and ⌘Z undoes.
+
+- The inbox (spec 09 §9.1) is two panes under one bar instead of three columns: the views as
+  pills with their counts, property and search beside them, the thread list and the
+  conversation side by side, and the booking's facts in a strip above the messages. Close and
+  "No reply needed" sit in the conversation header; assign, snooze and tag under the composer.
+  "Breaching SLA" reads "Past target".
+
 - Today (spec 11 §11.2) reads like the canvas: the day's four numbers including revenue today,
   "Needs you" as rows with the action that clears each one, who arrives today with their balance
   and room state, an activity feed of new bookings and alerts, and the week ahead. During the

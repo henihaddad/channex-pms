@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { type CalendarLabels } from "@/components/calendar-labels";
 
@@ -145,8 +146,12 @@ export function CalendarGrid({
     /** The operation the preview was computed for; Apply re-runs exactly it (BULK-1). */
     ops?: unknown[];
   }>({});
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [tips, setTips] = useState(false);
   const dragging = useRef(false);
   const parentRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
   const dates = useMemo(
     () => Array.from({ length: days }, (_, i) => addDays(start, i)),
     [start, days],
@@ -180,6 +185,31 @@ export function CalendarGrid({
     window.addEventListener("mouseup", up);
     return () => window.removeEventListener("mouseup", up);
   }, []);
+
+  // the right-click menu closes on a press outside it, a scroll or a resize
+  useEffect(() => {
+    if (!menu) return;
+    const press = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenu(null);
+    };
+    const close = () => setMenu(null);
+    const scroller = parentRef.current;
+    // a reflow fires a scroll event with no movement; only a real scroll takes the menu away
+    const sx = scroller?.scrollLeft ?? 0;
+    const sy = scroller?.scrollTop ?? 0;
+    const onScroll = () => {
+      if (!scroller) return;
+      if (Math.abs(scroller.scrollLeft - sx) > 4 || Math.abs(scroller.scrollTop - sy) > 4) close();
+    };
+    window.addEventListener("pointerdown", press);
+    window.addEventListener("resize", close);
+    scroller?.addEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("pointerdown", press);
+      window.removeEventListener("resize", close);
+      scroller?.removeEventListener("scroll", onScroll);
+    };
+  }, [menu]);
 
   // realtime: cell states resolve over SSE (CAL-3)
   useEffect(() => {
@@ -479,7 +509,59 @@ export function CalendarGrid({
     }
   };
 
+  const todayIndex = dates.indexOf(today);
+  /** "T" and the Today button: scroll to tonight, or reload the calendar from today when it is off the range. */
+  const goToday = () => {
+    if (todayIndex < 0) {
+      router.push(`/calendar?days=${String(days)}`);
+      return;
+    }
+    colVirtualizer.scrollToIndex(todayIndex, { align: "start" });
+    if (focus) {
+      setFocus({ r: focus.r, c: todayIndex });
+      setAnchor(null);
+    }
+  };
+  /** "R" and the menu: a staff booking on the selected listing and nights, dates filled in. */
+  const newReservationHere = () => {
+    if (!selection) return;
+    const property = selectedPlans[0]?.property ?? rows[selection.r1]?.property;
+    const q = new URLSearchParams({
+      arrivalDate: dates[selection.c1]!,
+      departureDate: addDays(dates[selection.c2]!, 1),
+    });
+    if (property) q.set("propertyId", property.id);
+    router.push(`/reservations/new?${q.toString()}`);
+  };
+  const focusPanel = (id: string) => {
+    setMenu(null);
+    requestAnimationFrame(() => document.getElementById(id)?.focus());
+  };
+  const openMenu = (e: React.MouseEvent, r: number, c: number) => {
+    e.preventDefault();
+    const inside =
+      selection && r >= selection.r1 && r <= selection.r2 && c >= selection.c1 && c <= selection.c2;
+    if (!inside) {
+      setFocus({ r, c });
+      setAnchor({ r, c });
+    }
+    setIsEditing(false);
+    setMenu({ x: e.clientX, y: e.clientY });
+    parentRef.current?.focus({ preventScroll: true });
+  };
+
   const onKeyDown = async (e: React.KeyboardEvent) => {
+    if (
+      isEditing === false &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      e.key.toLowerCase() === "t"
+    ) {
+      e.preventDefault();
+      goToday();
+      return;
+    }
     if (!focus) return;
     const move = (dr: number, dc: number) => {
       const r = Math.max(0, Math.min(rows.length - 1, focus.r + dr));
@@ -511,11 +593,29 @@ export function CalendarGrid({
       e.preventDefault();
       move(-1, 0);
     } else if (e.key === "Escape") {
+      if (menu || tips) {
+        setMenu(null);
+        setTips(false);
+        return;
+      }
       setFocus(null);
       setAnchor(null);
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
       e.preventDefault();
       await undo();
+    } else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[bomrp]$/i.test(e.key)) {
+      // the same verbs as the right-click menu, one letter each
+      const k = e.key.toLowerCase();
+      if (k === "r") {
+        e.preventDefault();
+        newReservationHere();
+      } else if (selected.length > 0) {
+        e.preventDefault();
+        if (k === "b") await writeSelection("restrictions", { stopSell: true });
+        else if (k === "o") await writeSelection("restrictions", { stopSell: false });
+        else if (k === "m") focusPanel("panel-min-stay");
+        else focusPanel("panel-price");
+      }
     } else if (/^[0-9]$/.test(e.key) || e.key === "Enter") {
       const row = rows[focus.r];
       if (row?.kind === "rate_plan" && !row.derived) {
@@ -553,6 +653,9 @@ export function CalendarGrid({
             </button>
           ))}
         </div>
+        <Button variant="secondary" className="h-8 px-3" onClick={goToday} data-testid="go-today">
+          {L.today}
+        </Button>
         {groups.length > 0 ? (
           <select
             className="h-8 rounded-full border border-border bg-surface px-3 text-xs"
@@ -580,12 +683,75 @@ export function CalendarGrid({
             {message}
           </span>
         ) : null}
-        <span className="ms-auto text-xs text-muted" data-testid="grid-stats">
+        <ul
+          className="ms-auto hidden items-center gap-3 text-[11px] text-muted md:flex"
+          aria-label={L.legend}
+        >
+          <li className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
+            {L.legendSynced}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
+            {L.legendSending}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-danger" aria-hidden="true" />
+            {L.legendFailed}
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span
+              className="h-3 w-4 rounded-sm border border-border text-muted"
+              style={{ backgroundImage: HATCH }}
+              aria-hidden="true"
+            />
+            {L.blocked}
+          </li>
+        </ul>
+        <button
+          type="button"
+          onClick={() => setTips((v) => !v)}
+          aria-expanded={tips}
+          className={`h-7 rounded-full border px-2.5 text-xs font-semibold transition-colors ${tips ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground"}`}
+          data-testid="calendar-tips"
+        >
+          {L.tips}
+        </button>
+        <span className="sr-only" data-testid="grid-stats">
           {loadMs === null
             ? ""
             : fmt(L.loadedIn, { rows: rows.length, days: dates.length, ms: loadMs })}
         </span>
       </div>
+
+      {tips ? (
+        <div
+          className="rounded-2xl border border-border bg-surface p-4 shadow-surface"
+          data-testid="calendar-tips-sheet"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-display text-base font-bold">{L.tipsTitle}</p>
+            <button
+              type="button"
+              onClick={() => setTips(false)}
+              className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted hover:bg-default"
+            >
+              Esc
+            </button>
+          </div>
+          <ul className="mt-3 grid gap-2 text-sm text-foreground sm:grid-cols-2">
+            {[L.tipDrag, L.tipType, L.tipRightClick, L.tipKeys, L.tipDouble].map((tip) => (
+              <li key={tip} className="flex gap-2">
+                <span
+                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                  aria-hidden="true"
+                />
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {conflict ? (
         <div
@@ -780,6 +946,7 @@ export function CalendarGrid({
                           style={{ ...style, ...(booked ? { backgroundImage: HATCH } : {}) }}
                           onMouseDown={down}
                           onMouseEnter={enter}
+                          onContextMenu={(e) => openMenu(e, r, c)}
                         >
                           {booked ? L.booked : ""}
                         </div>
@@ -795,6 +962,7 @@ export function CalendarGrid({
                           style={style}
                           onMouseDown={down}
                           onMouseEnter={enter}
+                          onContextMenu={(e) => openMenu(e, r, c)}
                         >
                           {av ? (
                             <>
@@ -834,6 +1002,7 @@ export function CalendarGrid({
                         }}
                         onMouseDown={down}
                         onMouseEnter={enter}
+                        onContextMenu={(e) => openMenu(e, r, c)}
                         onDoubleClick={() => {
                           if (!row.derived) {
                             setEditing(String((cell?.[1].rate ?? 0) / 100));
@@ -879,6 +1048,58 @@ export function CalendarGrid({
             })}
           </div>
         </div>
+
+        {menu && selection ? (
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-50 w-60 overflow-hidden rounded-xl border border-border bg-surface p-1 text-sm shadow-float"
+            style={{
+              left: Math.min(menu.x, (typeof window === "undefined" ? 0 : window.innerWidth) - 252),
+              top: Math.min(menu.y, (typeof window === "undefined" ? 0 : window.innerHeight) - 232),
+            }}
+            data-testid="context-menu"
+          >
+            <p className="truncate px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
+              {(selectedPlans[0]?.property ?? rows[selection.r1]?.property)?.title} ·{" "}
+              {shortDate(dates[selection.c1]!)}
+              {nightsCount > 1 ? ` – ${shortDate(dates[selection.c2]!)}` : ""}
+            </p>
+            {(
+              [
+                ["price", L.setPrice, "P", selected.length > 0],
+                ["block", L.blocked, "B", selected.length > 0],
+                ["open", L.open, "O", selected.length > 0],
+                ["min", L.minStay, "M", selected.length > 0],
+                ["new", L.newReservationHere, "R", true],
+              ] as const
+            )
+              .filter(([, , , show]) => show)
+              .map(([id, label, key]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-start hover:bg-accent-soft/60"
+                  onClick={() => {
+                    setMenu(null);
+                    if (id === "price") focusPanel("panel-price");
+                    else if (id === "min") focusPanel("panel-min-stay");
+                    else if (id === "block")
+                      void writeSelection("restrictions", { stopSell: true });
+                    else if (id === "open")
+                      void writeSelection("restrictions", { stopSell: false });
+                    else newReservationHere();
+                  }}
+                >
+                  <span>{label}</span>
+                  <kbd className="rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                    {key}
+                  </kbd>
+                </button>
+              ))}
+          </div>
+        ) : null}
 
         {panelOpen && selection ? (
           <SelectionPanel
@@ -1189,6 +1410,7 @@ function SelectionPanel({
               ) : null}
             </div>
           </details>
+          <p className="text-[11px] text-muted">{L.panelNote}</p>
         </>
       )}
     </aside>

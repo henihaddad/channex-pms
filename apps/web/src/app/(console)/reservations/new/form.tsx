@@ -9,11 +9,16 @@ import { Alert, Button, Field, Select } from "@/components/ui";
 /** Staff booking (spec 08 §8.11): availability-checked, priced from the rate plan, one code path with the booking engine. */
 export function StaffBookingForm({
   properties,
+  initial = {},
 }: {
   properties: Array<{ id: string; title: string }>;
+  /** The calendar's "new reservation here" arrives with the listing and nights filled in. */
+  initial?: { propertyId?: string; arrivalDate?: string; departureDate?: string };
 }) {
   const router = useRouter();
-  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? "");
+  const [propertyId, setPropertyId] = useState(
+    properties.find((p) => p.id === initial.propertyId)?.id ?? properties[0]?.id ?? "",
+  );
   const [inventory, setInventory] = useState<{
     roomTypes: Array<{ id: string; title: string }>;
     ratePlans: Array<{ id: string; title: string; roomTypeId: string }>;
@@ -89,8 +94,13 @@ export function StaffBookingForm({
             ))}
         </Select>
       </div>
-      <Field label="Arrival" name="arrivalDate" type="date" />
-      <Field label="Departure" name="departureDate" type="date" />
+      <Field label="Arrival" name="arrivalDate" type="date" defaultValue={initial.arrivalDate} />
+      <Field
+        label="Departure"
+        name="departureDate"
+        type="date"
+        defaultValue={initial.departureDate}
+      />
       <Field label="Adults" name="adults" type="number" defaultValue="2" />
       <Field label="Children" name="children" type="number" defaultValue="0" required={false} />
       <Field label="Guest first name" name="name" />
