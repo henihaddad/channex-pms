@@ -10,7 +10,7 @@
     "footer": "Logiciel fair-code. Hébergez-le vous-même ou laissez-nous le faire."
   },
   "nav": {
-    "dashboard": "Tableau de bord",
+    "dashboard": "Aujourd'hui",
     "members": "Membres",
     "organization": "Organisation",
     "audit": "Journal d'audit",
@@ -27,7 +27,7 @@
     "owners": "Propriétaires",
     "reports": "Rapports",
     "alerts": "Alertes",
-    "bookingEngine": "Réservations directes",
+    "bookingEngine": "Site de réservation",
     "billing": "Facturation",
     "plugins": "Extensions",
     "support": "Assistance",
@@ -40,14 +40,22 @@
     "more": "Plus",
     "settings": "Paramètres",
     "search": "Rechercher des réservations",
-    "searchPlaceholder": "Rechercher un client ou une réservation",
+    "searchPlaceholder": "Rechercher ou aller n'importe où…",
     "maintenance": "Maintenance",
     "help": "Aide",
     "menu": "Menu",
     "closeMenu": "Fermer le menu",
     "sectionPages": "Pages de cette section",
     "integrations": "Intégrations",
-    "financials": "Finances"
+    "financials": "Finances",
+    "language": "Langue",
+    "activity": "Alertes",
+    "newReservation": "Nouvelle réservation",
+    "helpCenter": "Centre d'aide",
+    "operateGuide": "Guide d'exploitation",
+    "shortcuts": "Raccourcis clavier",
+    "contactSupport": "Écrire au support",
+    "account": "Compte"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -381,7 +389,7 @@
   "reservations": {
     "title": "Réservations",
     "newBooking": "Nouvelle réservation",
-    "unmappedQueue": "File de mappage",
+    "unmappedQueue": "Chambre à attribuer",
     "search": "Client, référence…",
     "filter": "Filtrer",
     "saveViewAs": "Enregistrer cette vue sous…",

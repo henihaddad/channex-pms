@@ -1309,6 +1309,13 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/shell.actions.ts",
+    "export": "setLocaleAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
     "file": "src/app/(console)/sync-health/sync-health.actions.ts",
     "export": "loadSyncHealth",
     "kind": "action",

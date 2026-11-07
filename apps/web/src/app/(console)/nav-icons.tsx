@@ -108,6 +108,33 @@ export const navIcons = {
       <path d="m20 20-4-4" />
     </>,
   ),
+  today: wrap(
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </>,
+  ),
+  bell: wrap(
+    <>
+      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+    </>,
+  ),
+  help: wrap(
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7" />
+      <path d="M12 17h.01" />
+    </>,
+  ),
+  globe: wrap(
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </>,
+  ),
+  plus: wrap(<path d="M12 5v14M5 12h14" />),
+  check: wrap(<path d="m5 12 4 4L19 6" />),
   chevron: wrap(<path d="m9 6 6 6-6 6" />),
 };
 

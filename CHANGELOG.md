@@ -8,6 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The console shell follows the November 2026 design canvas: a dark rail of ten destinations
+  (Today, Inbox, Calendar, Reservations, Operations, Properties, Channels, Financials, Owners,
+  Reports) with Settings and the signed-in person at its foot; a header with one search box that
+  announces ⌘K, a Help menu, a language switch that sets the per-user locale (spec 13 §13.8), an
+  alerts bell and the primary "New reservation" action. The booking site moved under Channels
+  (direct is a channel), the front desk under Reservations, reviews under Inbox. "Dashboard" is
+  now "Today", "Direct bookings" is "Booking site" and the mapping queue is "Needs a room":
+  the words hosts use, not ours (research: `docs/research/2026-11-social-listening.md`).
+
 - The console's component kit no longer sits on HeroUI (ADR-0011, superseding ADR-0010). Every
   control, surface and table in `apps/web/src/components/ui` is now the kit's own markup on the
   design tokens in `globals.css`, taken from the November 2026 design canvas: near-white ground,

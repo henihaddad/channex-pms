@@ -13,8 +13,8 @@ export function SectionTabs({
 }) {
   const pathname = usePathname();
   return (
-    <nav aria-label={ariaLabel} className="-mb-px overflow-x-auto">
-      <ul className="flex gap-1 border-b border-border">
+    <nav aria-label={ariaLabel} className="scrollbar-none -mb-1 overflow-x-auto">
+      <ul className="flex gap-0.5 border-b border-border">
         {items.map((it) => {
           const active = it.exact
             ? pathname === it.href
@@ -25,9 +25,9 @@ export function SectionTabs({
                 href={it.href}
                 aria-current={active ? "page" : undefined}
                 data-testid={it.testId}
-                className={`inline-block whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${
+                className={`-mb-px inline-block border-b-2 px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors ${
                   active
-                    ? "border-accent font-medium text-foreground"
+                    ? "border-accent font-semibold text-foreground"
                     : "border-transparent text-muted hover:border-border hover:text-foreground"
                 }`}
               >

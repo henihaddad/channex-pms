@@ -10,7 +10,7 @@
     "footer": "Fair-code software. Self-host it or let us run it."
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Today",
     "members": "Members",
     "organization": "Organization",
     "audit": "Audit log",
@@ -27,7 +27,7 @@
     "owners": "Owners",
     "reports": "Reports",
     "alerts": "Alerts",
-    "bookingEngine": "Direct bookings",
+    "bookingEngine": "Booking site",
     "billing": "Billing",
     "plugins": "Plugins",
     "support": "Support",
@@ -40,14 +40,30 @@
     "more": "More",
     "settings": "Settings",
     "search": "Search reservations",
-    "searchPlaceholder": "Search guests and reservations",
+    "searchPlaceholder": "Search or jump to anything…",
     "maintenance": "Maintenance",
     "help": "Help",
     "menu": "Menu",
     "closeMenu": "Close menu",
     "sectionPages": "Pages in this section",
     "integrations": "Integrations",
-    "financials": "Financials"
+    "financials": "Financials",
+    "searchHint": "⌘K",
+    "language": "Language",
+    "activity": "Alerts",
+    "newReservation": "New reservation",
+    "helpCenter": "Help center",
+    "operateGuide": "Operating guide",
+    "shortcuts": "Keyboard shortcuts",
+    "contactSupport": "Email support",
+    "account": "Account",
+    "languages": {
+      "en": "English",
+      "fr": "Français",
+      "ar": "العربية",
+      "es": "Español",
+      "pt": "Português"
+    }
   },
   "auth": {
     "signIn": "Sign in",
@@ -381,7 +397,7 @@
   "reservations": {
     "title": "Reservations",
     "newBooking": "New booking",
-    "unmappedQueue": "Mapping queue",
+    "unmappedQueue": "Needs a room",
     "search": "Guest, reference…",
     "filter": "Filter",
     "saveViewAs": "Save this view as…",

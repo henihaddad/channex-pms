@@ -279,6 +279,17 @@ export async function inviteInTx(
   return r.value;
 }
 
+/** The signed-in person's name and email, for the account row in the rail. */
+export async function currentUserProfile(
+  userId: Id,
+): Promise<{ name: string; email: string } | null> {
+  const c = await container();
+  const u = await withoutTenant(c.db.db, (tx) =>
+    new DrizzleIdentityRepository(tx).findUserById(userId),
+  );
+  return u ? { name: u.name, email: u.email } : null;
+}
+
 export async function memberships(
   userId: Id,
 ): Promise<Array<{ orgId: Id; name: string; slug: string }>> {

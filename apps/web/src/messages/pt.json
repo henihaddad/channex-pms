@@ -10,7 +10,7 @@
     "footer": "Software fair-code. Aloje-o você mesmo ou deixe-nos operá-lo."
   },
   "nav": {
-    "dashboard": "Painel",
+    "dashboard": "Hoje",
     "properties": "Propriedades",
     "calendar": "Calendário",
     "reservations": "Reservas",
@@ -27,7 +27,7 @@
     "organization": "Organização",
     "audit": "Registo de auditoria",
     "signOut": "Terminar sessão",
-    "bookingEngine": "Reservas diretas",
+    "bookingEngine": "Site de reservas",
     "billing": "Faturação",
     "plugins": "Extensões",
     "support": "Suporte",
@@ -36,7 +36,9 @@
       "portfolio": "Carteira",
       "insight": "Análise",
       "settings": "Definições"
-    }
+    },
+    "language": "Idioma",
+    "newReservation": "Nova reserva"
   },
   "auth": {
     "name": "O seu nome",

@@ -10,7 +10,7 @@
     "footer": "برمجيات fair-code. استضفها بنفسك أو دعنا نشغّلها."
   },
   "nav": {
-    "dashboard": "لوحة التحكم",
+    "dashboard": "اليوم",
     "members": "الأعضاء",
     "organization": "المؤسسة",
     "audit": "سجل التدقيق",
@@ -27,7 +27,7 @@
     "owners": "المالكون",
     "reports": "التقارير",
     "alerts": "التنبيهات",
-    "bookingEngine": "الحجوزات المباشرة",
+    "bookingEngine": "موقع الحجز",
     "billing": "الفوترة",
     "plugins": "الإضافات",
     "support": "الدعم",
@@ -40,14 +40,22 @@
     "more": "المزيد",
     "settings": "الإعدادات",
     "search": "البحث في الحجوزات",
-    "searchPlaceholder": "ابحث عن ضيف أو حجز",
+    "searchPlaceholder": "ابحث أو انتقل إلى أي مكان…",
     "maintenance": "الصيانة",
     "help": "مساعدة",
     "menu": "القائمة",
     "closeMenu": "إغلاق القائمة",
     "sectionPages": "صفحات هذا القسم",
     "integrations": "التكاملات",
-    "financials": "المالية"
+    "financials": "المالية",
+    "language": "اللغة",
+    "activity": "التنبيهات",
+    "newReservation": "حجز جديد",
+    "helpCenter": "مركز المساعدة",
+    "operateGuide": "دليل التشغيل",
+    "shortcuts": "اختصارات لوحة المفاتيح",
+    "contactSupport": "مراسلة الدعم",
+    "account": "الحساب"
   },
   "auth": {
     "signIn": "تسجيل الدخول",
@@ -381,7 +389,7 @@
   "reservations": {
     "title": "الحجوزات",
     "newBooking": "حجز جديد",
-    "unmappedQueue": "قائمة الربط",
+    "unmappedQueue": "بحاجة إلى غرفة",
     "search": "الضيف، المرجع…",
     "filter": "تصفية",
     "saveViewAs": "حفظ هذا العرض باسم…",
