@@ -1,60 +1,50 @@
 import type { ComponentProps, ReactNode } from "react";
 import { Children, isValidElement } from "react";
 import NextLink from "next/link";
+import { cn } from "./cn";
+import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button";
+import { controlClasses, controlHeight } from "./controls";
 import { DateInput as DateInputField } from "./date-input";
-import {
-  Alert as HAlert,
-  Button as HButton,
-  Card as HCard,
-  Checkbox as HCheckbox,
-  Chip as HChip,
-  Description,
-  EmptyState as HEmptyState,
-  FieldError,
-  Input as HInput,
-  Label as HLabel,
-  ListBox,
-  Select as HSelect,
-  Separator as HSeparator,
-  TextArea as HTextArea,
-  TextField,
-  cn,
-} from "@heroui/react";
 
 /**
- * The OTAbridge kit: a thin, opinionated layer over HeroUI. Pages import from
- * here and never from @heroui/react directly, so the component system can be
- * configured (or swapped) in one place. Props stay plain (strings, booleans,
- * elements) so server components can render every piece; the client boundary
- * lives inside HeroUI.
+ * The OTAbridge kit (ADR-0011). Every component is ours: native elements,
+ * Tailwind classes, the tokens in globals.css. Pages import from here and
+ * never from a component library, so the look is decided in one place and a
+ * server component can render every piece. Props are strings, booleans and
+ * elements; the few interactive pieces (tabs, dialogs, the palette) live in
+ * their own client files and are re-exported at the bottom.
  */
 
-export { cn, Description, FieldError, HSeparator as Separator };
+export { cn };
+export { buttonClasses };
 export { DateInput } from "./date-input";
-export { UiProvider } from "./provider";
 
 // ---------------------------------------------------------------- buttons
-
-type ButtonVariant = "primary" | "secondary" | "tertiary" | "outline" | "ghost" | "danger";
-type ButtonSize = "sm" | "md" | "lg";
 
 export function Button({
   variant = "primary",
   size = "md",
   disabled,
+  fullWidth,
   className,
+  type = "button",
   children,
   ...rest
-}: Omit<ComponentProps<typeof HButton>, "variant" | "size" | "isDisabled" | "children"> & {
+}: Omit<ComponentProps<"button">, "children"> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  disabled?: boolean;
+  fullWidth?: boolean;
   children?: ReactNode;
 }) {
   return (
-    <HButton variant={variant} size={size} isDisabled={disabled} className={className} {...rest}>
+    <button
+      type={type}
+      disabled={disabled}
+      className={buttonClasses(variant, size, className, fullWidth)}
+      {...rest}
+    >
       {children}
-    </HButton>
+    </button>
   );
 }
 
@@ -62,37 +52,56 @@ export function Button({
 export function LinkButton({
   variant = "secondary",
   size = "md",
+  fullWidth,
   className,
   ...rest
-}: ComponentProps<typeof NextLink> & { variant?: ButtonVariant; size?: ButtonSize }) {
-  return (
-    <NextLink
-      className={cn("button", `button--${variant}`, `button--${size}`, className)}
-      {...rest}
-    />
-  );
+}: ComponentProps<typeof NextLink> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+}) {
+  return <NextLink className={buttonClasses(variant, size, className, fullWidth)} {...rest} />;
 }
 
 /** A plain anchor that looks like a button, for downloads and API links. */
 export function AnchorButton({
   variant = "secondary",
   size = "md",
+  fullWidth,
   className,
   ...rest
-}: ComponentProps<"a"> & { variant?: ButtonVariant; size?: ButtonSize }) {
-  return (
-    <a className={cn("button", `button--${variant}`, `button--${size}`, className)} {...rest} />
-  );
+}: ComponentProps<"a"> & { variant?: ButtonVariant; size?: ButtonSize; fullWidth?: boolean }) {
+  return <a className={buttonClasses(variant, size, className, fullWidth)} {...rest} />;
 }
 
 // ---------------------------------------------------------------- fields
 
-export function Input({ className, ...props }: ComponentProps<typeof HInput>) {
-  return <HInput fullWidth className={className} {...props} />;
+export function Input({
+  className,
+  variant,
+  ...props
+}: ComponentProps<"input"> & { variant?: "primary" | "secondary" }) {
+  return (
+    <input
+      className={cn(
+        controlClasses,
+        controlHeight.md,
+        variant === "secondary" && "bg-surface-secondary",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
-export function Textarea({ className, ...props }: ComponentProps<typeof HTextArea>) {
-  return <HTextArea fullWidth className={className} {...props} />;
+export function Textarea({ className, rows = 4, ...props }: ComponentProps<"textarea">) {
+  return (
+    <textarea
+      rows={rows}
+      className={cn(controlClasses, "resize-y py-2.5 leading-relaxed", className)}
+      {...props}
+    />
+  );
 }
 
 export function Label({
@@ -105,10 +114,26 @@ export function Label({
   className?: string;
 }) {
   return (
-    <HLabel htmlFor={htmlFor} className={className}>
+    <label htmlFor={htmlFor} className={cn("text-sm font-semibold text-foreground", className)}>
       {children}
-    </HLabel>
+    </label>
   );
+}
+
+export function Description({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn("text-xs text-muted", className)}>{children}</p>;
+}
+
+export function FieldError({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <p role="alert" className={cn("text-xs font-medium text-danger", className)}>
+      {children}
+    </p>
+  );
+}
+
+export function Separator({ className }: { className?: string }) {
+  return <hr className={cn("border-0 border-t border-border", className)} />;
 }
 
 /** Label + input + optional hint and error, the one way a form field is built. */
@@ -161,20 +186,19 @@ export function Field({
         testId={testId}
       />
     );
+  const id = `field-${name}`;
   return (
-    <TextField
-      name={name}
-      type={type}
-      isRequired={required}
-      isDisabled={disabled}
-      isReadOnly={readOnly}
-      isInvalid={error ? true : undefined}
-      defaultValue={defaultValue == null ? undefined : String(defaultValue)}
-      className={cn("w-full", className)}
-      fullWidth
-    >
-      <HLabel>{label}</HLabel>
-      <HInput
+    <div className={cn("flex w-full flex-col gap-1.5", className)}>
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        name={name}
+        type={type}
+        required={required}
+        disabled={disabled}
+        readOnly={readOnly}
+        aria-invalid={error ? true : undefined}
+        defaultValue={defaultValue == null ? undefined : String(defaultValue)}
         placeholder={placeholder}
         autoComplete={autoComplete}
         min={min}
@@ -184,7 +208,7 @@ export function Field({
       />
       {description ? <Description>{description}</Description> : null}
       {error ? <FieldError>{error}</FieldError> : null}
-    </TextField>
+    </div>
   );
 }
 
@@ -208,18 +232,20 @@ export function TextareaField({
   rows?: number;
   className?: string;
 }) {
+  const id = `field-${name}`;
   return (
-    <TextField
-      name={name}
-      isRequired={required}
-      defaultValue={defaultValue ?? undefined}
-      className={cn("w-full", className)}
-      fullWidth
-    >
-      <HLabel>{label}</HLabel>
-      <HTextArea placeholder={placeholder} rows={rows} />
+    <div className={cn("flex w-full flex-col gap-1.5", className)}>
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea
+        id={id}
+        name={name}
+        required={required}
+        defaultValue={defaultValue ?? undefined}
+        placeholder={placeholder}
+        rows={rows}
+      />
       {description ? <Description>{description}</Description> : null}
-    </TextField>
+    </div>
   );
 }
 
@@ -254,11 +280,30 @@ function labelText(node: ReactNode): string {
   return "";
 }
 
+const chevron = (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 16 16"
+    width="14"
+    height="14"
+    className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted"
+  >
+    <path
+      d="M4 6l4 4 4-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 /**
- * A select that accepts the same `<option>` children as the native element (so
- * pages read naturally) and renders HeroUI's listbox. Submits `name=value`
- * with the form like a native select; the first option is selected by default
- * unless a placeholder is given.
+ * A select that accepts the same `<option>` children as the native element and
+ * renders the native element, styled. Submits `name=value` with the form; the
+ * first option is selected by default unless a placeholder is given. `onChange`
+ * receives the value, not the event.
  */
 export function Select({
   name,
@@ -276,7 +321,7 @@ export function Select({
   children,
   "aria-label": ariaLabel,
   testId,
-  ...rest
+  form,
 }: {
   name?: string;
   id?: string;
@@ -296,47 +341,50 @@ export function Select({
   form?: string;
 }) {
   const items = options ?? optionsFromChildren(children);
-  const first = items[0]?.value;
+  const selectId = id ?? (name ? `select-${name}` : undefined);
+  const controlled = value !== undefined;
   const initial =
-    defaultValue === undefined || defaultValue === null
-      ? placeholder
-        ? undefined
-        : first
-      : String(defaultValue);
+    defaultValue === undefined || defaultValue === null ? undefined : String(defaultValue);
+  const select = (
+    <div className={cn("relative", !label && className)}>
+      <select
+        id={selectId}
+        name={name}
+        form={form}
+        required={required}
+        disabled={disabled}
+        aria-label={label ? undefined : (ariaLabel ?? name)}
+        data-testid={testId}
+        {...(controlled
+          ? { value: value ?? "" }
+          : { defaultValue: initial ?? (placeholder ? "" : undefined) })}
+        onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+        className={cn(
+          controlClasses,
+          size === "sm" ? controlHeight.sm : controlHeight.md,
+          "appearance-none pe-9",
+        )}
+      >
+        {placeholder ? (
+          <option value="" disabled={required}>
+            {placeholder}
+          </option>
+        ) : null}
+        {items.map((i) => (
+          <option key={i.value} value={i.value} disabled={i.disabled}>
+            {labelText(i.label) || i.value}
+          </option>
+        ))}
+      </select>
+      {chevron}
+    </div>
+  );
+  if (!label) return select;
   return (
-    <HSelect
-      // Uncontrolled selects remount when their first option appears, so a
-      // list that loads later still starts on its first entry like a native select.
-      key={value === undefined ? (initial ?? "empty") : undefined}
-      name={name}
-      id={id}
-      {...(value !== undefined ? { value: value ?? null } : { defaultValue: initial ?? null })}
-      onChange={onChange ? (k) => onChange(k == null ? "" : String(k)) : undefined}
-      placeholder={placeholder}
-      isRequired={required}
-      isDisabled={disabled}
-      aria-label={label ? undefined : (ariaLabel ?? name)}
-      disabledKeys={items.filter((i) => i.disabled).map((i) => i.value)}
-      className={cn("min-w-0", size === "sm" ? "text-xs" : "", className)}
-      data-testid={testId}
-      {...rest}
-    >
-      {label ? <HLabel>{label}</HLabel> : null}
-      <HSelect.Trigger className={cn("w-full", size === "sm" ? "min-h-8 py-1 text-xs" : "")}>
-        <HSelect.Value />
-        <HSelect.Indicator />
-      </HSelect.Trigger>
-      <HSelect.Popover>
-        <ListBox>
-          {items.map((i) => (
-            <ListBox.Item key={i.value} id={i.value} textValue={labelText(i.label) || i.value}>
-              {i.label}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-          ))}
-        </ListBox>
-      </HSelect.Popover>
-    </HSelect>
+    <div className={cn("flex w-full flex-col gap-1.5", className)}>
+      <Label htmlFor={selectId}>{label}</Label>
+      {select}
+    </div>
   );
 }
 
@@ -361,20 +409,23 @@ export function Checkbox({
   disabled?: boolean;
 }) {
   return (
-    <HCheckbox
-      name={name}
-      value={value}
-      defaultSelected={defaultChecked}
-      isDisabled={disabled}
-      className={className}
+    <label
+      className={cn(
+        "inline-flex items-center gap-2.5 text-sm text-foreground",
+        disabled && "opacity-60",
+        className,
+      )}
     >
-      <HCheckbox.Content>
-        <HCheckbox.Control>
-          <HCheckbox.Indicator />
-        </HCheckbox.Control>
-        {children}
-      </HCheckbox.Content>
-    </HCheckbox>
+      <input
+        type="checkbox"
+        name={name}
+        value={value}
+        defaultChecked={defaultChecked}
+        disabled={disabled}
+        className="h-4.5 w-4.5 shrink-0 rounded-md border-border accent-accent"
+      />
+      {children}
+    </label>
   );
 }
 
@@ -396,7 +447,7 @@ export function Card({
   title,
   description,
   actions,
-  variant,
+  variant = "default",
   contentClassName,
   ...rest
 }: Omit<ComponentProps<"div">, "title"> & {
@@ -411,21 +462,29 @@ export function Card({
     /^(sm:|md:|lg:|xl:)?(grid|flex|inline-flex|grid-cols-|gap-|items-|justify-|space-y-|space-x-|divide-|columns-)/;
   const own = (className ?? "").split(/\s+/).filter((c) => c && !layout.test(c));
   const inner = (className ?? "").split(/\s+/).filter((c) => c && layout.test(c));
+  const frame = {
+    default: "border border-border bg-surface",
+    secondary: "border border-border bg-surface-secondary",
+    tertiary: "bg-default",
+    transparent: "",
+  }[variant];
   return (
-    <HCard className={cn("gap-4 p-5", own.join(" "))} variant={variant} {...rest}>
+    <section className={cn("flex flex-col gap-4 rounded-card p-5", frame, own.join(" "))} {...rest}>
       {title || actions ? (
-        <HCard.Header className="flex-row items-start justify-between gap-4">
+        <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            {title ? <HCard.Title className="text-base font-semibold">{title}</HCard.Title> : null}
-            {description ? <HCard.Description>{description}</HCard.Description> : null}
+            {title ? (
+              <h2 className="font-sans text-base font-bold text-foreground">{title}</h2>
+            ) : null}
+            {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
           </div>
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-        </HCard.Header>
+        </header>
       ) : null}
-      <HCard.Content className={cn(inner.length ? inner.join(" ") : "block", contentClassName)}>
+      <div className={cn(inner.length ? inner.join(" ") : "block", contentClassName)}>
         {children}
-      </HCard.Content>
-    </HCard>
+      </div>
+    </section>
   );
 }
 
@@ -433,7 +492,7 @@ export function PageTitle({ children, className }: { children: ReactNode; classN
   return (
     <h1
       className={cn(
-        "font-display text-2xl leading-tight font-semibold tracking-tight text-foreground",
+        "font-display text-[1.875rem] leading-tight font-bold tracking-tight text-foreground",
         className,
       )}
     >
@@ -459,7 +518,9 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <PageTitle>{title}</PageTitle>
-          {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
+          {description ? (
+            <p className="mt-1.5 max-w-2xl text-sm text-muted">{description}</p>
+          ) : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
@@ -503,8 +564,18 @@ export function Breadcrumbs({
 }
 
 export function SectionTitle({ children, className }: { children: ReactNode; className?: string }) {
-  return <h2 className={cn("text-base font-semibold text-foreground", className)}>{children}</h2>;
+  return (
+    <h2 className={cn("font-sans text-base font-bold text-foreground", className)}>{children}</h2>
+  );
 }
+
+const alertTones = {
+  error: "border-danger/30 bg-danger-soft text-danger-soft-foreground",
+  success: "border-success/30 bg-success-soft text-success-soft-foreground",
+  info: "border-accent/30 bg-accent-soft text-accent-soft-foreground",
+  warning: "border-warning/30 bg-warning-soft text-warning-soft-foreground",
+  default: "border-border bg-surface-secondary text-foreground",
+} as const;
 
 export function Alert({
   children,
@@ -512,33 +583,39 @@ export function Alert({
   title,
   className,
   ...rest
-}: {
+}: Omit<ComponentProps<"div">, "title"> & {
   children?: ReactNode;
-  tone?: "error" | "success" | "info" | "warning" | "default";
+  tone?: keyof typeof alertTones;
   title?: ReactNode;
-  className?: string;
 }) {
-  const status = (
-    {
-      error: "danger",
-      success: "success",
-      info: "accent",
-      warning: "warning",
-      default: "default",
-    } as const
-  )[tone];
   return (
-    <HAlert status={status} className={className} role="alert" {...rest}>
-      <HAlert.Indicator />
-      <HAlert.Content>
-        {title ? <HAlert.Title>{title}</HAlert.Title> : null}
-        {children ? <HAlert.Description>{children}</HAlert.Description> : null}
-      </HAlert.Content>
-    </HAlert>
+    <div
+      role="alert"
+      className={cn("rounded-control border px-4 py-3 text-sm", alertTones[tone], className)}
+      {...rest}
+    >
+      {title ? <p className="font-semibold">{title}</p> : null}
+      {children ? <div className={cn(title && "mt-0.5")}>{children}</div> : null}
+    </div>
   );
 }
 
 type ChipColor = "default" | "accent" | "success" | "warning" | "danger";
+
+const chipSoft: Record<ChipColor, string> = {
+  default: "bg-default text-muted",
+  accent: "bg-accent-soft text-accent-soft-foreground",
+  success: "bg-success-soft text-success-soft-foreground",
+  warning: "bg-warning-soft text-warning-soft-foreground",
+  danger: "bg-danger-soft text-danger-soft-foreground",
+};
+const chipSolid: Record<ChipColor, string> = {
+  default: "bg-foreground text-background",
+  accent: "bg-accent text-accent-foreground",
+  success: "bg-success text-white",
+  warning: "bg-warning text-white",
+  danger: "bg-danger text-white",
+};
 
 export function Chip({
   children,
@@ -547,17 +624,34 @@ export function Chip({
   size = "md",
   className,
   ...rest
-}: {
+}: Omit<ComponentProps<"span">, "children"> & {
   children: ReactNode;
   color?: ChipColor;
   variant?: "soft" | "primary" | "secondary" | "tertiary";
   size?: "sm" | "md" | "lg";
-  className?: string;
 }) {
+  const look =
+    variant === "primary"
+      ? chipSolid[color]
+      : variant === "secondary"
+        ? cn("border border-current bg-transparent", chipSoft[color].split(" ")[1])
+        : chipSoft[color];
   return (
-    <HChip color={color} variant={variant} size={size} className={className} {...rest}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full font-semibold whitespace-nowrap",
+        size === "sm"
+          ? "h-5 px-2 text-[11px]"
+          : size === "lg"
+            ? "h-7 px-3 text-sm"
+            : "h-6 px-2.5 text-xs",
+        look,
+        className,
+      )}
+      {...rest}
+    >
       {children}
-    </HChip>
+    </span>
   );
 }
 
@@ -574,9 +668,9 @@ export function StateChip({ state, children }: { state: string; children?: React
             ? "danger"
             : "default";
   return (
-    <HChip color={color} variant="soft" size="sm">
+    <Chip color={color} size="sm">
       {children ?? state}
-    </HChip>
+    </Chip>
   );
 }
 
@@ -592,12 +686,11 @@ export function EmptyState({
   preview,
   className,
   ...rest
-}: {
+}: ComponentProps<"div"> & {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   preview?: ReactNode;
-  className?: string;
 }) {
   if (preview)
     return (
@@ -609,12 +702,14 @@ export function EmptyState({
         {...rest}
       >
         <div>
-          <p className="text-lg font-semibold text-foreground">{title}</p>
-          {description ? <p className="mt-2 text-sm text-muted">{description}</p> : null}
+          <p className="font-display text-xl font-bold text-foreground">{title}</p>
+          {description ? (
+            <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>
+          ) : null}
           {action ? <div className="mt-4">{action}</div> : null}
         </div>
         <div
-          className="rounded-2xl border border-border bg-surface-secondary p-4"
+          className="rounded-card border border-border bg-surface-secondary p-4"
           aria-hidden="true"
         >
           {preview}
@@ -622,20 +717,20 @@ export function EmptyState({
       </div>
     );
   return (
-    <HEmptyState className={cn("flex flex-col items-start gap-1 px-1 py-4", className)} {...rest}>
-      <p className="text-sm font-medium text-foreground">{title}</p>
+    <div className={cn("flex flex-col items-start gap-1 px-1 py-4", className)} {...rest}>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? <p className="text-sm text-muted">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
-    </HEmptyState>
+    </div>
   );
 }
 
 // ---------------------------------------------------------------- tables
 
 /**
- * Tables are server-rendered markup carrying HeroUI's table classes: the same
- * look as HeroUI's Table with no client JavaScript and no collection
- * constraints, which suits lists that are rendered once per request.
+ * Tables are server-rendered markup: a bordered frame that scrolls sideways
+ * when it must, a quiet header row, hairlines between rows. No client
+ * JavaScript, so a list rendered once per request costs nothing more.
  */
 export function Table({
   children,
@@ -645,46 +740,62 @@ export function Table({
   ...rest
 }: ComponentProps<"table"> & { variant?: "primary" | "secondary"; dense?: boolean }) {
   return (
-    <div className={cn("table-root", `table-root--${variant}`, dense && "table--dense")}>
-      <div className="table__scroll-container">
-        <table className={cn("table__content", className)} {...rest}>
-          {children}
-        </table>
-      </div>
+    <div
+      className={cn(
+        "overflow-x-auto rounded-card border border-border",
+        variant === "secondary" ? "bg-surface-secondary" : "bg-surface",
+      )}
+    >
+      <table
+        className={cn(
+          "w-full border-collapse text-sm text-foreground",
+          dense ? "[&_td]:py-2 [&_th]:py-2" : "[&_td]:py-3.5 [&_th]:py-3",
+          className,
+        )}
+        {...rest}
+      >
+        {children}
+      </table>
     </div>
   );
 }
 export function THead({ children, className, ...rest }: ComponentProps<"thead">) {
   return (
-    <thead className={cn("table__header", className)} {...rest}>
+    <thead className={cn("bg-surface-secondary text-xs text-muted", className)} {...rest}>
       {children}
     </thead>
   );
 }
 export function TBody({ children, className, ...rest }: ComponentProps<"tbody">) {
   return (
-    <tbody className={cn("table__body", className)} {...rest}>
+    <tbody className={cn("[&_tr:last-child_td]:border-b-0", className)} {...rest}>
       {children}
     </tbody>
   );
 }
 export function Tr({ children, className, ...rest }: ComponentProps<"tr">) {
   return (
-    <tr className={cn("table__row", className)} {...rest}>
+    <tr className={cn("transition-colors hover:bg-surface-secondary/60", className)} {...rest}>
       {children}
     </tr>
   );
 }
 export function Th({ children, className, ...rest }: ComponentProps<"th">) {
   return (
-    <th className={cn("table__column", className)} {...rest}>
+    <th
+      className={cn(
+        "border-b border-border px-4 text-start font-semibold whitespace-nowrap",
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </th>
   );
 }
 export function Td({ children, className, ...rest }: ComponentProps<"td">) {
   return (
-    <td className={cn("table__cell", className)} {...rest}>
+    <td className={cn("border-b border-border/70 px-4 align-top", className)} {...rest}>
       {children}
     </td>
   );
@@ -720,7 +831,7 @@ export function DataTable({
   return (
     <Table className={className} variant={variant} dense={dense} data-testid={testId}>
       <THead>
-        <Tr>
+        <Tr className="hover:bg-transparent">
           {cols.map((c, i) => (
             <Th key={i} className={cn(align(c.align), c.className)}>
               {c.label}
@@ -771,7 +882,7 @@ export function Facts({
   );
 }
 
-/** A big number with a small label. */
+/** A big number with a small label, in its own card. */
 export function Stat({
   label,
   value,
@@ -786,9 +897,15 @@ export function Stat({
   testId?: string;
 }) {
   return (
-    <div className={cn("flex flex-col gap-0.5", className)} data-testid={testId}>
-      <span className="text-xs font-medium text-muted">{label}</span>
-      <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-1 rounded-card border border-border bg-surface px-4.5 py-4",
+        className,
+      )}
+      data-testid={testId}
+    >
+      <span className="text-xs font-semibold text-muted">{label}</span>
+      <span className="font-display text-[1.625rem] leading-none font-bold tracking-tight text-foreground tabular-nums">
         {value}
       </span>
       {hint ? <span className="text-xs text-muted">{hint}</span> : null}

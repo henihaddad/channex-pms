@@ -1,62 +1,55 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
- * Helpers for the kit's HeroUI controls. A Select is a button that opens a
- * listbox (options carry `data-key`); a DateInput is three typed segments
- * under `data-testid="date-<name>"`. Both retry once or twice so a click that
- * lands before hydration does not lose the interaction.
+ * Helpers for the kit's controls (ADR-0011). A Select is the native element,
+ * so Playwright's `selectOption` drives it; a DateInput is a native date input
+ * under `data-testid="date-<name>"` that takes an ISO value. Both keep the
+ * signatures the specs were written against, so a change of control never
+ * rewrites a test.
  */
 export async function pickOption(
   page: Page,
   target: { label?: string | RegExp; testId?: string; locator?: Locator },
   option: { value?: string; label?: string | RegExp; index?: number },
 ): Promise<void> {
-  // by label, only inside the page: the sidebar has its own buttons with section names
-  const trigger = target.locator
-    ? target.locator.getByRole("button").first()
+  const select = target.locator
+    ? target.locator.locator("select").first()
     : target.testId
-      ? page.getByTestId(target.testId).getByRole("button").first()
-      : page.getByRole("main").getByRole("button", {
+      ? page.getByTestId(target.testId).locator("select, [data-testid]").first()
+      : page.getByRole("main").getByRole("combobox", {
           name: typeof target.label === "string" ? new RegExp(target.label, "i") : target.label,
         });
-  const listbox = page.getByRole("listbox").last();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    await trigger.click();
-    if (await listbox.isVisible().catch(() => false)) break;
-    await page.waitForTimeout(300);
-    if (await listbox.isVisible().catch(() => false)) break;
+  await expect(select).toBeVisible();
+  if (option.value !== undefined) {
+    await select.selectOption({ value: option.value });
+    return;
   }
-  await expect(listbox).toBeVisible();
-  const item =
-    option.value !== undefined
-      ? listbox.locator(`[role="option"][data-key="${option.value}"]`)
-      : option.index !== undefined
-        ? listbox.getByRole("option").nth(option.index)
-        : listbox.getByRole("option", { name: option.label });
-  await item.click();
+  if (option.index !== undefined) {
+    await select.selectOption({ index: option.index });
+    return;
+  }
+  const label = option.label;
+  if (typeof label === "string") {
+    await select.selectOption({ label });
+    return;
+  }
+  // a regular expression: find the first matching option's value and select it
+  const options = select.locator("option");
+  const n = await options.count();
+  for (let i = 0; i < n; i++) {
+    const text = (await options.nth(i).textContent()) ?? "";
+    if (label && label.test(text)) {
+      await select.selectOption({ index: i });
+      return;
+    }
+  }
+  throw new Error(`no option matching ${String(label)}`);
 }
 
-/** Type an ISO date (YYYY-MM-DD) into a DateInput's segments, whatever their locale order. */
+/** Set an ISO date (YYYY-MM-DD) on a DateInput. */
 export async function fillDate(scope: Page | Locator, name: string, iso: string): Promise<void> {
-  const [y, m, d] = iso.split("-");
-  const group = scope.getByTestId(`date-${name}`);
-  const segments = group.getByRole("spinbutton");
-  await expect(segments.first()).toBeVisible();
-  const n = await segments.count();
-  for (let i = 0; i < n; i++) {
-    const seg = segments.nth(i);
-    const type = await seg.getAttribute("data-type");
-    const value = type === "month" ? m : type === "day" ? d : type === "year" ? y : null;
-    if (!value) continue;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await seg.click();
-      await seg.pressSequentially(value!);
-      const text = (await seg.textContent()) ?? "";
-      if (parseInt(text, 10) === parseInt(value!, 10)) break;
-      await seg.page().waitForTimeout(250);
-    }
-    await expect
-      .poll(async () => parseInt((await seg.textContent()) ?? "", 10))
-      .toBe(parseInt(value!, 10));
-  }
+  const input = scope.getByTestId(`date-${name}`);
+  await expect(input).toBeVisible();
+  await input.fill(iso.slice(0, 10));
+  await expect(input).toHaveValue(iso.slice(0, 10));
 }

@@ -1,12 +1,10 @@
-"use client";
-
-import { parseDate } from "@internationalized/date";
-import { Calendar, DateField, DatePicker, Label } from "@heroui/react";
+import { cn } from "./cn";
+import { controlClasses } from "./controls";
 
 /**
- * A date field that submits an ISO date (YYYY-MM-DD) under `name`, like the
- * native input it replaces, but with segmented typing and a calendar popover.
- * Values are plain strings so server components can render it.
+ * A date field that submits an ISO date (YYYY-MM-DD) under `name`. The native
+ * control: every browser ships a picker, it needs no JavaScript, it reads the
+ * user's locale, and a server component can render it. Values are strings.
  */
 export function DateInput({
   name,
@@ -31,52 +29,27 @@ export function DateInput({
   testId?: string;
   "aria-label"?: string;
 }) {
-  const parse = (v?: string | null) => (v ? parseDate(v.slice(0, 10)) : null);
-  return (
-    <DatePicker
+  const id = `date-${name}`;
+  const input = (
+    <input
+      id={id}
+      type="date"
       name={name}
-      defaultValue={parse(defaultValue)}
-      minValue={parse(min) ?? undefined}
-      maxValue={parse(max) ?? undefined}
-      isRequired={required}
-      isDisabled={disabled}
-      granularity="day"
-      className={className}
+      defaultValue={defaultValue?.slice(0, 10) ?? undefined}
+      min={min?.slice(0, 10) ?? undefined}
+      max={max?.slice(0, 10) ?? undefined}
+      required={required}
+      disabled={disabled}
       aria-label={label ? undefined : (ariaLabel ?? name)}
-      data-testid={testId ?? `date-${name}`}
-    >
-      {label ? <Label>{label}</Label> : null}
-      <DateField.Group fullWidth>
-        <DateField.Input>{(segment) => <DateField.Segment segment={segment} />}</DateField.Input>
-        <DateField.Suffix>
-          <DatePicker.Trigger>
-            <DatePicker.TriggerIndicator />
-          </DatePicker.Trigger>
-        </DateField.Suffix>
-      </DateField.Group>
-      <DatePicker.Popover>
-        <Calendar aria-label={label ?? ariaLabel ?? name}>
-          <Calendar.Header>
-            <Calendar.YearPickerTrigger>
-              <Calendar.YearPickerTriggerHeading />
-              <Calendar.YearPickerTriggerIndicator />
-            </Calendar.YearPickerTrigger>
-            <Calendar.NavButton slot="previous" />
-            <Calendar.NavButton slot="next" />
-          </Calendar.Header>
-          <Calendar.Grid>
-            <Calendar.GridHeader>
-              {(day) => <Calendar.HeaderCell>{day}</Calendar.HeaderCell>}
-            </Calendar.GridHeader>
-            <Calendar.GridBody>{(date) => <Calendar.Cell date={date} />}</Calendar.GridBody>
-          </Calendar.Grid>
-          <Calendar.YearPickerGrid>
-            <Calendar.YearPickerGridBody>
-              {({ year }) => <Calendar.YearPickerCell year={year} />}
-            </Calendar.YearPickerGridBody>
-          </Calendar.YearPickerGrid>
-        </Calendar>
-      </DatePicker.Popover>
-    </DatePicker>
+      data-testid={testId ?? id}
+      className={cn(controlClasses, "tabular-nums", !label && className)}
+    />
+  );
+  if (!label) return input;
+  return (
+    <label className={cn("flex w-full flex-col gap-1.5 text-sm font-semibold", className)}>
+      {label}
+      {input}
+    </label>
   );
 }

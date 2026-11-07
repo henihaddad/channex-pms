@@ -6,7 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    // The kit (src/components/ui) is the only place that talks to HeroUI: pages compose the kit.
+    // The kit (src/components/ui) owns every control (ADR-0011): pages compose the kit, never a component library.
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/components/ui/**"],
     rules: {
@@ -16,13 +16,20 @@ export default defineConfig([
           paths: [
             {
               name: "@heroui/react",
-              message: "Import from @/components/ui; the kit configures HeroUI in one place.",
+              message: "Removed (ADR-0011). Import from @/components/ui.",
             },
           ],
           patterns: [
             {
-              group: ["@heroui/*", "react-aria-components", "react-aria", "@react-aria/*"],
-              message: "Import from @/components/ui; the kit configures HeroUI in one place.",
+              group: [
+                "@heroui/*",
+                "react-aria-components",
+                "react-aria",
+                "@react-aria/*",
+                "@radix-ui/*",
+                "cmdk",
+              ],
+              message: "Import from @/components/ui; the kit owns every control (ADR-0011).",
             },
           ],
         },

@@ -19,8 +19,6 @@
     "deploy:cf": "wrangler deploy"
   },
   "dependencies": {
-    "@heroui/react": "3.2.4",
-    "@internationalized/date": "^3.12.4",
     "@opennextjs/cloudflare": "^1.20.6",
     "@pms/authz": "workspace:*",
     "@pms/cloudflare": "workspace:*",
@@ -30,17 +28,14 @@
     "@pms/jobs": "workspace:*",
     "@pms/runtime": "workspace:*",
     "@pms/sync": "workspace:*",
-    "@react-aria/i18n": "^3.13.1",
-    "@react-aria/ssr": "^3.10.1",
-    "@react-aria/utils": "^3.34.1",
     "@tanstack/react-virtual": "^3.13.12",
+    "clsx": "^2.1.1",
     "ioredis": "^6.0.0",
     "next": "^16.3.4",
     "next-intl": "^4.14.2",
     "react": "^19.2.8",
-    "react-aria": "^3.52.0",
-    "react-aria-components": "^1.21.0",
     "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.3.1",
     "zod": "^4.5.4"
   },
   "devDependencies": {

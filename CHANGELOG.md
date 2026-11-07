@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The console's component kit no longer sits on HeroUI (ADR-0011, superseding ADR-0010). Every
+  control, surface and table in `apps/web/src/components/ui` is now the kit's own markup on the
+  design tokens in `globals.css`, taken from the November 2026 design canvas: near-white ground,
+  white surfaces, teal as the one accent, soft state colours, Bricolage Grotesque titles. Forms
+  are native elements (`select`, `input type="date"`, checkboxes) that render on the server and
+  need no hydration; the sidebar badge and the inbox SLA chip lost their library classes. The
+  e2e helpers `pickOption` and `fillDate` keep their signatures and drive the native controls.
+  `@heroui/react`, `react-aria`, `react-aria-components`, `@react-aria/*` and
+  `@internationalized/date` leave the app; `clsx` and `tailwind-merge` arrive for `cn`. No
+  screen changed its data or its actions in this step; the redesign of each screen follows.
+
+
 ### Fixed
 
 - The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"

@@ -297,7 +297,7 @@ packages/
   db/             schema, migrations, repositories, RLS policies
   connectivity/   provider port + channex adapter + fake provider
   sync/           ARI diffing, coalescing, drift detection
-  ui/             design system, calendar grid, data table
+  ui/             (superseded: the kit lives in apps/web/src/components/ui, ADR-0011)
   sdk/            generated public API client (Apache-2.0)
   testkit/        fixtures, property-based generators, scenario runner
 docs/
