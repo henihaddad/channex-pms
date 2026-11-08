@@ -506,24 +506,27 @@ export function PageHeader({
   title,
   description,
   actions,
+  crumb,
   children,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  /** A breadcrumb above the title, for pages inside a section (design: "Reservations / Ana Silva"). */
+  crumb?: Array<{ href?: string; label: ReactNode }>;
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
+    <div className="flex flex-col gap-5">
+      {crumb ? <Breadcrumbs items={crumb} className="-mb-2 text-[13px]" /> : null}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
           <PageTitle>{title}</PageTitle>
-          {description ? (
-            <p className="mt-1.5 max-w-2xl text-sm text-muted">{description}</p>
-          ) : null}
+          {description ? <p className="max-w-[640px] text-sm text-muted">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
+      <SectionTabsSlot />
       {children}
     </div>
   );
@@ -913,7 +916,8 @@ export function Stat({
   );
 }
 
-export { SectionTabs } from "./section-tabs";
+export { SectionTabs, SectionTabsContext, SectionTabsSlot, type SectionTab } from "./section-tabs";
+import { SectionTabsSlot } from "./section-tabs";
 export { ConsoleHotkeys } from "./hotkeys";
 export type { PaletteItem, PaletteLabels } from "./command-palette";
 export type { ShortcutGroup } from "./shortcuts-sheet";

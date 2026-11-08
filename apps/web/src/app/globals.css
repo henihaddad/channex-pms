@@ -14,6 +14,18 @@
   --font-display: var(--font-display), var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
+  --shadow-surface: 0 1px 2px rgba(20, 23, 22, 0.06), 0 8px 24px rgba(20, 23, 22, 0.05);
+  --shadow-float: 0 12px 32px rgba(20, 23, 22, 0.14);
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+}
+
+/*
+ * Colour tokens are `inline` so a utility like `bg-background` reads `var(--background)` where
+ * it is used. Without it Tailwind resolves the value once at :root and the dark scope below
+ * never reaches the rail.
+ */
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
@@ -37,11 +49,6 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-soft-foreground: var(--danger-soft-foreground);
-
-  --shadow-surface: 0 1px 2px rgba(20, 23, 22, 0.06), 0 8px 24px rgba(20, 23, 22, 0.05);
-  --shadow-float: 0 12px 32px rgba(20, 23, 22, 0.14);
-  --radius-control: 0.75rem;
-  --radius-card: 1rem;
 }
 
 :root,
@@ -142,4 +149,9 @@
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* The section tabs move under the page title when the page has a header that hosts them. */
+.console-main:has(.section-tabs-slot) .section-tabs-top {
+  display: none;
 }

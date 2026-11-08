@@ -6,7 +6,7 @@ import { LOCALES } from "@/i18n/request";
 import { currentOrgId, currentSession } from "@/server/session";
 import { inboxBadge } from "@/server/inbox-badge";
 import { consoleContext } from "@/server/console-context";
-import { currentUserProfile, memberships } from "@/server/auth-flows";
+import { currentRoleKey, currentUserProfile, memberships } from "@/server/auth-flows";
 import { logoutAction } from "../(auth)/auth.actions";
 import { setLocaleAction } from "./shell.actions";
 import { Logo } from "@/components/logo";
@@ -42,6 +42,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     getLocale(),
   ]);
   const org = orgs.find((o) => o.orgId === orgId) ?? orgs[0];
+  const roleKey = org ? await currentRoleKey(session.userId, org.orgId) : null;
   const tb = await getTranslations("billing");
   const to = await getTranslations("ops");
   const t2 = await getTranslations("reservations");
@@ -51,16 +52,16 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const tpay = await getTranslations("payments");
 
   const sections: NavSectionDef[] = [
-    { item: { href: "/", label: t("dashboard"), icon: navIcons.today }, tabs: [] },
+    { item: { href: "/", label: t("dashboard") }, tabs: [] },
     {
       item: {
         href: "/inbox",
         label: t("inbox"),
-        icon: navIcons.inbox,
         badge: badge.unread,
         alert: badge.breaching > 0,
         testId: "nav-inbox",
       },
+      firstTab: t("tabs.conversations"),
       tabs: [
         { href: "/inbox/automation", label: ti("automation") },
         { href: "/inbox/templates", label: ti("templates") },
@@ -68,9 +69,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         { href: "/inbox/kpi", label: ti("kpi") },
       ],
     },
-    { item: { href: "/calendar", label: t("calendar"), icon: navIcons.calendar }, tabs: [] },
+    { item: { href: "/calendar", label: t("calendar") }, tabs: [] },
     {
-      item: { href: "/reservations", label: t("reservations"), icon: navIcons.reservations },
+      item: { href: "/reservations", label: t("reservations") },
+      firstTab: t("tabs.all"),
       tabs: [
         { href: "/front-desk", label: t("frontDesk") },
         { href: "/reservations/requests", label: ti("requests") },
@@ -78,23 +80,26 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ],
     },
     {
-      item: { href: "/operations", label: t("operations"), icon: navIcons.operations },
+      item: { href: "/operations", label: t("operations") },
+      firstTab: t("tabs.turnovers"),
       tabs: [
         { href: "/operations/blocks", label: top("blocks") },
         { href: "/operations/crews", label: top("crews") },
         { href: "/maintenance", label: t("maintenance") },
       ],
     },
-    { item: { href: "/properties", label: t("properties"), icon: navIcons.properties }, tabs: [] },
+    { item: { href: "/properties", label: t("properties") }, tabs: [] },
     {
-      item: { href: "/channels", label: t("channels"), icon: navIcons.channels },
+      item: { href: "/channels", label: t("channels") },
+      firstTab: t("tabs.connections"),
       tabs: [
         { href: "/booking-engine", label: t("bookingEngine") },
         { href: "/sync-health", label: t("syncHealth") },
       ],
     },
     {
-      item: { href: "/financials", label: t("financials"), icon: navIcons.financials },
+      item: { href: "/financials", label: t("financials") },
+      firstTab: t("tabs.overview"),
       tabs: [
         { href: "/booking-engine/payments", label: tpay("title") },
         { href: "/owners/statements", label: to2("statements") },
@@ -103,7 +108,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ],
     },
     {
-      item: { href: "/owners", label: t("owners"), icon: navIcons.owners },
+      item: { href: "/owners", label: t("owners") },
       tabs: [
         { href: "/owners/statements", label: to2("statements") },
         { href: "/owners/payouts", label: to2("payouts") },
@@ -111,7 +116,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       ],
     },
     {
-      item: { href: "/reports", label: t("reports"), icon: navIcons.reports },
+      item: { href: "/reports", label: t("reports") },
+      firstTab: t("tabs.overview"),
       tabs: [{ href: "/alerts", label: t("alerts") }],
     },
   ];
@@ -120,7 +126,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       item: {
         href: "/settings",
         label: t("settings"),
-        icon: navIcons.settings,
         testId: "nav-settings",
       },
       tabs: [
@@ -135,6 +140,12 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     },
   ];
 
+  const nameParts = (me?.name ?? "").trim().split(/\s+/).filter(Boolean);
+  // "Heni H.": first name and the initial of the last, as the design writes it
+  const shortName =
+    nameParts.length > 1
+      ? `${nameParts[0]} ${nameParts[nameParts.length - 1]![0]}.`
+      : (nameParts[0] ?? "");
   const initials = (me?.name ?? "?")
     .split(/\s+/)
     .map((w) => w[0] ?? "")
@@ -156,32 +167,52 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     </div>
   );
 
+  const roleLabel = roleKey ? t(`roles.${roleKey}` as never) : null;
   const footer = (
-    <div className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#34d399] to-[#22d3ee] text-[11px] font-bold text-[#0b1020]">
-        {initials}
-      </span>
-      <span className="min-w-0 flex-1 text-sm leading-tight">
-        <span className="block truncate font-medium text-foreground">{me?.name ?? ""}</span>
-        <span className="block truncate text-[11px] text-muted">
-          {cx?.isOperator ? (
-            <Link href="/ops" className="text-accent hover:underline" data-testid="ops-link">
-              {to("title")} →
-            </Link>
-          ) : (
-            (org?.name ?? "")
-          )}
+    <details className="group relative">
+      <summary
+        className="flex cursor-pointer list-none items-center gap-2.5 rounded-[10px] px-3 py-2.25 text-[#b6c0bd] hover:bg-surface-secondary [&::-webkit-details-marker]:hidden"
+        data-testid="account-menu"
+      >
+        <span className="grid h-6.5 w-6.5 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#34d399] to-[#22d3ee] text-[11px] font-bold text-[#0b1020]">
+          {initials}
         </span>
-      </span>
-      <form action={logoutAction}>
-        <button
-          type="submit"
-          className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-surface-secondary hover:text-foreground"
-        >
-          {t("signOut")}
-        </button>
-      </form>
-    </div>
+        <span className="min-w-0 flex-1 text-sm leading-tight font-medium">
+          <span className="block truncate">{shortName}</span>
+          <span className="block truncate text-[11px] font-normal text-muted">
+            {[roleLabel, org?.name].filter(Boolean).join(" · ")}
+          </span>
+        </span>
+      </summary>
+      <div className="absolute start-0 end-0 bottom-full mb-1 flex flex-col rounded-xl border border-border bg-surface p-1 text-sm shadow-float">
+        {cx?.isOperator ? (
+          <Link
+            href="/ops"
+            className="rounded-lg px-3 py-2 text-foreground hover:bg-default"
+            data-testid="ops-link"
+          >
+            {to("title")}
+          </Link>
+        ) : null}
+        {orgs.length > 1 ? (
+          <Link
+            href="/settings/organization"
+            className="rounded-lg px-3 py-2 text-foreground hover:bg-default"
+          >
+            {t("switchOrg")}
+          </Link>
+        ) : null}
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="w-full rounded-lg px-3 py-2 text-start text-foreground hover:bg-default"
+            data-testid="sign-out"
+          >
+            {t("signOut")}
+          </button>
+        </form>
+      </div>
+    </details>
   );
 
   const search = (
@@ -189,7 +220,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       action="/reservations"
       method="get"
       role="search"
-      className="relative w-full max-w-[460px] flex-1"
+      className="relative min-w-0 flex-[0_1_460px]"
     >
       <span className="pointer-events-none absolute inset-y-0 start-3.5 flex items-center text-muted">
         {navIcons.search}
@@ -200,7 +231,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         placeholder={t("searchPlaceholder")}
         aria-label={t("search")}
         data-testid="global-search"
-        className="h-9.5 w-full rounded-full border border-border bg-background ps-10 pe-14 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        className="h-9.5 w-full rounded-full border border-border bg-background ps-10 pe-13 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
       />
       <kbd
         aria-hidden="true"
@@ -226,7 +257,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           {t("shortcuts")}
         </MenuLink>
       </HeaderMenu>
-      <HeaderMenu label={locale.toUpperCase()} icon={navIcons.globe} testId="language-menu">
+      <HeaderMenu label={locale.toUpperCase()} testId="language-menu">
         <form action={setLocaleAction} className="flex flex-col">
           {LOCALES.map((l) => (
             <MenuButton key={l} name="locale" value={l} current={l === locale}>
@@ -237,7 +268,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       </HeaderMenu>
       <BellLink href="/alerts" count={badge.breaching} label={t("activity")} />
       <LinkButton href="/reservations/new" variant="primary" className="hidden sm:inline-flex">
-        {t("newReservation")}
+        + {t("newReservation")}
       </LinkButton>
     </>
   );

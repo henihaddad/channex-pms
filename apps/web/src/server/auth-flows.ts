@@ -290,6 +290,31 @@ export async function currentUserProfile(
   return u ? { name: u.name, email: u.email } : null;
 }
 
+/** The signed-in person's role in an organization, for the account line in the rail ("Owner · Coastal Stays"). */
+export async function currentRoleKey(userId: Id, orgId: Id): Promise<string | null> {
+  const c = await container();
+  const grants = await withoutTenant(c.db.db, (tx) =>
+    new DrizzleIdentityRepository(tx).listGrantsForSubject("user", userId),
+  );
+  const order = [
+    "org_owner",
+    "org_admin",
+    "portfolio_manager",
+    "property_manager",
+    "revenue_manager",
+    "finance",
+    "reservations_agent",
+    "guest_relations",
+    "ops_coordinator",
+    "maintenance_tech",
+    "cleaner",
+    "owner",
+    "viewer",
+  ];
+  const mine = grants.filter((g) => g.orgId === orgId && g.roleKey).map((g) => g.roleKey!);
+  return order.find((r) => mine.includes(r)) ?? mine[0] ?? null;
+}
+
 export async function memberships(
   userId: Id,
 ): Promise<Array<{ orgId: Id; name: string; slug: string }>> {

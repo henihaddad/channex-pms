@@ -86,7 +86,32 @@
     },
     "importAirbnb": "Import from Airbnb",
     "blockNights": "Block nights…",
-    "addProperty": "Add a property"
+    "addProperty": "Add a property",
+    "roles": {
+      "org_owner": "Owner",
+      "org_admin": "Admin",
+      "portfolio_manager": "Portfolio manager",
+      "property_manager": "Property manager",
+      "revenue_manager": "Revenue manager",
+      "reservations_agent": "Reservations",
+      "ops_coordinator": "Operations",
+      "cleaner": "Cleaner",
+      "maintenance_tech": "Maintenance",
+      "guest_relations": "Guest relations",
+      "finance": "Finance",
+      "owner": "Property owner",
+      "viewer": "Viewer",
+      "platform_operator": "Operator",
+      "service_account": "Integration"
+    },
+    "tabs": {
+      "conversations": "Conversations",
+      "all": "All",
+      "turnovers": "Turnovers",
+      "connections": "Connections",
+      "overview": "Overview"
+    },
+    "switchOrg": "Switch organization"
   },
   "auth": {
     "signIn": "Sign in",

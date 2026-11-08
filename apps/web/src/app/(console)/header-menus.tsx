@@ -106,7 +106,7 @@ export function BellLink({ href, count, label }: { href: string; count: number; 
     >
       {navIcons.bell}
       {count > 0 ? (
-        <span className="absolute -top-1 -end-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-bold text-white tabular-nums">
+        <span className="absolute -top-1 -end-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#f59e0b] px-1.25 text-[11px] font-bold text-[#141716] tabular-nums">
           {count > 99 ? "99+" : count}
         </span>
       ) : null}

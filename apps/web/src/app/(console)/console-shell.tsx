@@ -2,13 +2,15 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { SectionTabs } from "@/components/ui";
+import { SectionTabs, SectionTabsContext } from "@/components/ui";
 import { NavLink, type NavItem } from "./nav-link";
 
 export interface NavSectionDef {
   item: NavItem;
-  /** Destinations inside the section, shown as tabs under the header. Actions belong on the page. */
-  tabs: Array<{ href: string; label: string }>;
+  /** Destinations inside the section, shown as tabs under the page title. Actions belong on the page. */
+  tabs: Array<{ href: string; label: string; count?: number }>;
+  /** The first tab's label when it differs from the section's name ("Conversations" under Inbox). */
+  firstTab?: string;
 }
 
 function inSection(pathname: string, s: NavSectionDef): boolean {
@@ -61,14 +63,22 @@ export function ConsoleShell({
   const current = all.find((s) => inSection(pathname, s));
   const tabs =
     current && current.tabs.length > 0
-      ? [{ href: current.item.href, label: current.item.label, exact: true }, ...current.tabs]
+      ? [
+          {
+            href: current.item.href,
+            label: current.firstTab ?? current.item.label,
+            exact: true,
+          },
+          ...current.tabs,
+        ]
       : null;
+  const tabsEl = tabs ? <SectionTabs items={tabs} ariaLabel={labels.sectionPages} /> : null;
 
   const rail = (
     <>
       {brand}
-      <nav className="scrollbar flex-1 overflow-y-auto px-3 pb-4" aria-label="Main">
-        <ul className="space-y-0.5">
+      <nav className="scrollbar flex-1 overflow-y-auto px-3 pt-1 pb-4" aria-label="Main">
+        <ul className="flex flex-col gap-0.5">
           {sections.map((s) => (
             <li key={s.item.href}>
               <NavLink {...s.item} />
@@ -76,8 +86,8 @@ export function ConsoleShell({
           ))}
         </ul>
       </nav>
-      <div className="border-t border-white/10 px-3 pt-2 pb-3">
-        <ul className="space-y-0.5">
+      <div className="flex flex-col gap-0.5 border-t border-border px-3 pt-2.5 pb-4">
+        <ul className="flex flex-col gap-0.5">
           {footerSections.map((s) => (
             <li key={s.item.href}>
               <NavLink {...s.item} />
@@ -149,11 +159,11 @@ export function ConsoleShell({
             {actions}
           </div>
         </header>
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-7">
-          <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-5">
+        <main className="console-main flex-1 px-4 pt-6 pb-24 lg:px-8 lg:pt-7 lg:pb-10">
+          <div className="flex w-full max-w-[1200px] flex-col gap-5">
             {banners}
-            {tabs ? <SectionTabs items={tabs} ariaLabel={labels.sectionPages} /> : null}
-            {children}
+            {tabsEl ? <div className="section-tabs-top">{tabsEl}</div> : null}
+            <SectionTabsContext.Provider value={tabsEl}>{children}</SectionTabsContext.Provider>
           </div>
         </main>
       </div>

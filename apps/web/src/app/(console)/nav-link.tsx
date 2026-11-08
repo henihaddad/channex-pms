@@ -17,8 +17,8 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** A sidebar entry: icon plus label, filled when active so "you are here" never needs guessing. */
-export function NavLink({ href, label, icon, badge, alert, testId }: NavItem) {
+/** A rail entry: a label, filled when active so "you are here" never needs guessing. */
+export function NavLink({ href, label, badge, testId }: NavItem) {
   const pathname = usePathname();
   const active = isActive(pathname, href);
   return (
@@ -26,20 +26,15 @@ export function NavLink({ href, label, icon, badge, alert, testId }: NavItem) {
       href={href}
       aria-current={active ? "page" : undefined}
       data-testid={testId}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.25 text-sm font-medium transition-colors ${
+      className={`flex items-center gap-3 rounded-[10px] px-3 py-2.25 text-sm font-medium transition-colors ${
         active
-          ? "bg-surface text-foreground"
-          : "text-muted hover:bg-surface-secondary hover:text-foreground"
+          ? "bg-surface text-white"
+          : "text-[#b6c0bd] hover:bg-surface-secondary hover:text-white"
       }`}
     >
-      {icon}
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {badge && badge > 0 ? (
-        <span
-          className={`inline-flex h-5 min-w-5.5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${
-            alert ? "bg-warning text-white" : "bg-accent text-accent-foreground"
-          }`}
-        >
+        <span className="inline-flex h-5 min-w-5.5 items-center justify-center rounded-full bg-[#f59e0b] px-1.75 text-[11px] font-bold text-[#141716] tabular-nums">
           {badge}
         </span>
       ) : null}

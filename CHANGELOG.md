@@ -19,6 +19,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The console rail is near-black again, as the design canvas has it: Tailwind resolved the colour
+  tokens once at the root, so the rail's dark scope never reached its utilities. The tokens now
+  live in an inline theme block. The rail lists its ten destinations as text, its badges are
+  amber, and the account line reads "Heni H. · Owner · Coastal Stays" with sign-out in a menu.
+  A page's title, lead and actions now sit above its section tabs, and the first tab carries the
+  design's name (Conversations, All, Turnovers, Connections, Overview). Money, percentages and
+  dates have one formatter ("€1,640", "82%", "Fri 14 Nov"), covered by a property test.
+
 - The calendar (spec 06 CAL-2) gained the tricks hosts know from Airbnb: a right-click menu on
   any night (set price, block, open, minimum stay, new reservation on these dates, which opens
   the staff booking form with the listing and nights filled in), one-letter keys for the same

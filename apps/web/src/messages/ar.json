@@ -78,7 +78,32 @@
     },
     "importAirbnb": "استيراد من Airbnb",
     "blockNights": "حجب ليالٍ…",
-    "addProperty": "إضافة عقار"
+    "addProperty": "إضافة عقار",
+    "roles": {
+      "org_owner": "المالك",
+      "org_admin": "مسؤول",
+      "portfolio_manager": "مدير المحفظة",
+      "property_manager": "مدير العقار",
+      "revenue_manager": "مدير الإيرادات",
+      "reservations_agent": "الحجوزات",
+      "ops_coordinator": "العمليات",
+      "cleaner": "التنظيف",
+      "maintenance_tech": "الصيانة",
+      "guest_relations": "علاقات الضيوف",
+      "finance": "المالية",
+      "owner": "مالك العقار",
+      "viewer": "مشاهد",
+      "platform_operator": "مشغّل",
+      "service_account": "تكامل"
+    },
+    "tabs": {
+      "conversations": "المحادثات",
+      "all": "الكل",
+      "turnovers": "التجهيز",
+      "connections": "الاتصالات",
+      "overview": "نظرة عامة"
+    },
+    "switchOrg": "تبديل المؤسسة"
   },
   "auth": {
     "signIn": "تسجيل الدخول",

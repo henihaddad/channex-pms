@@ -78,7 +78,32 @@
     },
     "importAirbnb": "Importer depuis Airbnb",
     "blockNights": "Bloquer des nuits…",
-    "addProperty": "Ajouter un logement"
+    "addProperty": "Ajouter un logement",
+    "roles": {
+      "org_owner": "Propriétaire",
+      "org_admin": "Admin",
+      "portfolio_manager": "Gestionnaire de portefeuille",
+      "property_manager": "Gestionnaire",
+      "revenue_manager": "Revenue manager",
+      "reservations_agent": "Réservations",
+      "ops_coordinator": "Opérations",
+      "cleaner": "Ménage",
+      "maintenance_tech": "Maintenance",
+      "guest_relations": "Relation client",
+      "finance": "Finance",
+      "owner": "Propriétaire du bien",
+      "viewer": "Lecture seule",
+      "platform_operator": "Opérateur",
+      "service_account": "Intégration"
+    },
+    "tabs": {
+      "conversations": "Conversations",
+      "all": "Toutes",
+      "turnovers": "Ménages",
+      "connections": "Connexions",
+      "overview": "Vue d'ensemble"
+    },
+    "switchOrg": "Changer d'organisation"
   },
   "auth": {
     "signIn": "Se connecter",
