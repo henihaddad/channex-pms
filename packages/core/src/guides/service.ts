@@ -1,21 +1,27 @@
 import type { GuideSection, GuideSectionKind, GuideSectionSpec, PropertyGuide } from "./types.js";
 
 /**
- * The guide's sections, in the order a guest needs them, each naming the question it
- * answers. This list is the product: it is what turns "write a guide" into eight
- * answerable prompts, and what `guideCompleteness` measures against.
+ * The guide's sections, in the order a guest needs them (arriving first, leaving last),
+ * each naming the question it answers. This list is the product: it is what turns "write a
+ * guide" into nine answerable prompts, and what `guideCompleteness` measures against.
  */
 export const GUIDE_SECTIONS: readonly GuideSectionSpec[] = [
+  { kind: "arrival", fields: [], sensitive: false, answers: "How do I get in?" },
+  { kind: "parking", fields: [], sensitive: false, answers: "Where do I park?" },
   {
     kind: "wifi",
     fields: ["name", "password"],
     sensitive: true,
     answers: "What is the Wi-Fi?",
   },
-  { kind: "arrival", fields: [], sensitive: false, answers: "How do I get in?" },
-  { kind: "parking", fields: [], sensitive: false, answers: "Where do I park?" },
   { kind: "house_rules", fields: [], sensitive: false, answers: "What are the rules?" },
-  { kind: "amenities", fields: [], sensitive: false, answers: "How does the place work?" },
+  { kind: "amenities", fields: [], sensitive: false, answers: "How do the appliances work?" },
+  {
+    kind: "heating",
+    fields: [],
+    sensitive: false,
+    answers: "How do the heating and hot water work?",
+  },
   { kind: "local_tips", fields: [], sensitive: false, answers: "What is worth going to?" },
   { kind: "departure", fields: [], sensitive: false, answers: "How do I check out?" },
   { kind: "emergency", fields: ["phone"], sensitive: false, answers: "Who do I call?" },
@@ -217,4 +223,16 @@ export function normaliseSections(
     } satisfies GuideSection;
   });
   return [...known, ...given.values()];
+}
+
+/**
+ * The guide's sections with one section replaced, the rest kept as they are: what "Save
+ * section" writes, so editing the Wi-Fi never touches the house rules.
+ */
+export function withSection(
+  sections: readonly GuideSection[] | null | undefined,
+  section: GuideSection,
+): readonly GuideSection[] {
+  const rest = (sections ?? []).filter((s) => s.kind !== section.kind);
+  return normaliseSections([...rest, section]);
 }

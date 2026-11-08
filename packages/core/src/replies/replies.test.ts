@@ -49,6 +49,8 @@ describe("what was asked (spec 09 §9.3)", () => {
     expect(detectIntents("A que horas é a saída?")[0]).toBe("departure");
     expect(detectIntents("Where can I park?")[0]).toBe("parking");
     expect(detectIntents("The heating is not working")).toContain("emergency");
+    expect(detectIntents("How does the hot water work?")[0]).toBe("heating");
+    expect(detectIntents("Le chauffage, comment ça marche ?")[0]).toBe("heating");
     expect(detectIntents("Can you recommend a restaurant nearby?")[0]).toBe("local_tips");
   });
 

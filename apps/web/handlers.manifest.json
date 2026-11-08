@@ -756,7 +756,7 @@
   },
   {
     "file": "src/app/(console)/properties/[id]/guide/guide.actions.ts",
-    "export": "saveGuideAction",
+    "export": "saveGuideSectionAction",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "property:publish_content"

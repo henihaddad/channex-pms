@@ -1,27 +1,36 @@
 import { GUIDE_VARIABLES } from "../guides/index.js";
 import type { MessageTemplate, TemplateContext } from "./types.js";
 
-const VAR = /\{\{\s*([a-z_]+)\.([a-z_]+)\s*\}\}/g;
+/** `{{section.key}}`, or the single-brace `{section.key}` the guide editor shows (spec 09 §9.3). */
+const VAR = /\{\{\s*([a-z_]+)\.([a-z_]+)\s*\}\}|\{\s*([a-z_]+)\.([a-z_]+)\s*\}/g;
 
-/** Interpolate `{{section.key}}`; unknown or empty variables are reported, never silently blanked. */
+/**
+ * Interpolate `{{section.key}}` (or `{section.key}`); unknown or empty variables are reported,
+ * never silently blanked, and left in the text as they were written.
+ */
 export function interpolate(
   body: string,
   ctx: TemplateContext,
 ): { text: string; missing: string[] } {
   const missing: string[] = [];
-  const text = body.replace(VAR, (_m, section: string, key: string) => {
-    const s = (ctx as unknown as Record<string, Record<string, unknown> | undefined>)[section];
-    const v = s?.[key];
-    if (v === undefined || v === null || v === "") {
-      missing.push(`${section}.${key}`);
-      return `{{${section}.${key}}}`;
-    }
-    return typeof v === "string"
-      ? v
-      : typeof v === "number" || typeof v === "boolean"
-        ? String(v)
-        : JSON.stringify(v);
-  });
+  const text = body.replace(
+    VAR,
+    (m: string, s2?: string, k2?: string, s1?: string, k1?: string) => {
+      const section = (s2 ?? s1)!;
+      const key = (k2 ?? k1)!;
+      const s = (ctx as unknown as Record<string, Record<string, unknown> | undefined>)[section];
+      const v = s?.[key];
+      if (v === undefined || v === null || v === "") {
+        missing.push(`${section}.${key}`);
+        return m;
+      }
+      return typeof v === "string"
+        ? v
+        : typeof v === "number" || typeof v === "boolean"
+          ? String(v)
+          : JSON.stringify(v);
+    },
+  );
   return { text, missing: [...new Set(missing)] };
 }
 

@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { GUIDE_SECTIONS, type GuideSection } from "@pms/core";
+import { guideSectionSpec, withSection, type GuideSection } from "@pms/core";
 import { DrizzleGuideRepository } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
+import { HttpProblem } from "@/server/errors";
 
 const propertyScope = {
   scope: "property" as const,
@@ -14,25 +15,31 @@ const locale = (fd: FormData): string =>
   /^[a-z]{2}$/.test(str(fd, "locale")) ? str(fd, "locale") : "en";
 const back = (fd: FormData) => revalidatePath(`/properties/${str(fd, "propertyId")}/guide`);
 
-/** Read the sections off the form: one body, one heading and the spec's fields per section. */
-const sectionsFrom = (fd: FormData): GuideSection[] =>
-  GUIDE_SECTIONS.map((spec) => ({
-    kind: spec.kind,
-    heading: str(fd, `heading.${spec.kind}`) || null,
-    body: str(fd, `body.${spec.kind}`),
-    fields: Object.fromEntries(spec.fields.map((f) => [f, str(fd, `field.${spec.kind}.${f}`)])),
-    sensitive: fd.get(`sensitive.${spec.kind}`) === "on",
-  }));
-
-/** The guest guide (spec 10 §10.6b): property content, so `property:publish_content`. */
-export const saveGuideAction = withPermission<[FormData], void>(
+/**
+ * "Save section" (spec 10 §10.6b): one section off the form — its body, heading, the spec's
+ * fields and whether it waits for the access window — written into the guide with every other
+ * section left as it was. Property content, so `property:publish_content`.
+ */
+export const saveGuideSectionAction = withPermission<[FormData], void>(
   "property:publish_content",
   propertyScope,
   async (ctx, fd) => {
-    await new DrizzleGuideRepository(ctx.tx, ctx.orgId).save(
-      str(fd, "propertyId"),
+    const spec = guideSectionSpec(str(fd, "kind"));
+    if (!spec) throw new HttpProblem(422, "invalid", "Unknown guide section");
+    const section: GuideSection = {
+      kind: spec.kind,
+      heading: str(fd, "heading") || null,
+      body: str(fd, "body"),
+      fields: Object.fromEntries(spec.fields.map((f) => [f, str(fd, `field.${f}`)])),
+      sensitive: fd.get("sensitive") === "on",
+    };
+    const repo = new DrizzleGuideRepository(ctx.tx, ctx.orgId);
+    const propertyId = str(fd, "propertyId");
+    const existing = await repo.get(propertyId, locale(fd));
+    await repo.save(
+      propertyId,
       locale(fd),
-      { sections: sectionsFrom(fd) },
+      { sections: withSection(existing?.sections, section) },
       ctx.userId,
     );
     back(fd);

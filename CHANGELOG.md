@@ -38,6 +38,13 @@ All notable changes to this project are documented here. The format follows
   minimum stay; room name and units for several units or a hotel). A single rental now
   sleeps what the manager enters instead of always two. The name field is labelled
   "Property name" (was "Title").
+- The guest guide matches the design canvas: sections listed with Written/Empty and a
+  progress bar, one section edited and saved at a time, a guest preview and a publish card
+  that says what guests see. Sections follow a stay — Arrival & access, Parking, Wi-Fi, House
+  rules, Appliances, a new Heating & hot water section, Neighbourhood, Check-out, Emergencies
+  — and the reply assistant answers heating and hot-water questions from the new section.
+  Message templates accept `{guide.wifi_name}` as well as `{{guide.wifi_name}}`.
+
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
   failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,
@@ -102,6 +109,9 @@ All notable changes to this project are documented here. The format follows
 
 
 ### Fixed
+
+- The guest guide editor opened without a language when the URL had none, so it read and
+  showed an empty guide while saves went to English.
 
 - The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"
   step exited 0 when `CLOUDFLARE_API_TOKEN` or `NEON_DIRECT_URL` was unset, and every step

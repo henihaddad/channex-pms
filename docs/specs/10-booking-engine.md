@@ -150,9 +150,13 @@ bookings; every portal action audited as an `actor_type = guest` entry.
 
 **Persona:** the `property_manager` writes it; the guest reads it.
 
-The guide is the eight questions every guest asks, answered once per property instead of
-once per guest: the Wi-Fi, how to get in, where to park, the house rules, how the place
-works, what is worth going to, how to check out, who to call. It is the cheapest thing a
+The guide is the nine questions every guest asks, answered once per property instead of
+once per guest, in the order a stay meets them: how to get in, where to park, the Wi-Fi,
+the house rules, how the appliances work, how the heating and hot water work, what is worth
+going to, how to check out, who to call. The sections read "Arrival & access", "Parking",
+"Wi-Fi", "House rules", "Appliances", "Heating & hot water", "Neighbourhood", "Check-out"
+and "Emergencies" (`heating` was added in November 2026; a guide written before it gains it
+empty). It is the cheapest thing a
 PMS can do about repetitive guest messages, and it needs no AI: the guide *is* the answer
 ([research](../research/2026-09-competitors.md), gap 4).
 
@@ -161,7 +165,7 @@ PMS can do about repetitive guest messages, and it needs no AI: the guide *is* t
   ([09 §9.3](./09-messaging-and-inbox.md)): the guest's language, then the org default, then
   whatever exists.
 - **Sections are the product's, not the tenant's.** The set is fixed and ordered, each
-  carrying the question it answers, so writing a guide is answering eight prompts rather
+  carrying the question it answers, so writing a guide is answering nine prompts rather
   than facing an empty editor. `wifi` and `emergency` also hold structured fields
   (network, password, phone); the rest are prose. A manager may retitle any section.
 - **GUIDE-1 — publishing is a deliberate act.** A guide reaches no guest, through the portal
@@ -179,6 +183,15 @@ PMS can do about repetitive guest messages, and it needs no AI: the guide *is* t
   ([09 §9.3](./09-messaging-and-inbox.md)).
 - **Completeness is a list, not a score.** The editor leads with the questions the guide
   does *not* answer, because those are the ones the inbox will still get by hand.
+- **One section at a time.** The editor lists the sections with Written or Empty and a
+  progress bar, opens one section (the first empty one by default) and saves it alone
+  (`withSection`), so editing the Wi-Fi never rewrites the house rules. Beside it, a guest
+  preview of that section and the publish control. A guide has no separate draft copy:
+  once published, a saved section is live for guests at once, and the publish card says so.
+  The variable chips show the single-brace form `{guide.<section>}`, which the interpolator
+  accepts as well as `{{…}}` ([09 §9.3](./09-messaging-and-inbox.md)).
+- **The reply assistant** maps heating and hot-water questions to the `heating` section; a
+  heater that "is not working" still also raises `emergency`.
 
 Acceptance: a manager fills the guide in under ten minutes; a guest arriving at an empty
 flat finds the code, the Wi-Fi and the bins without messaging anyone; the pre-arrival

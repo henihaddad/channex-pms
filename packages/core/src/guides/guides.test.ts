@@ -12,6 +12,7 @@ import {
   pickGuide,
   sectionSensitive,
   sectionWritten,
+  withSection,
 } from "./service.js";
 import { interpolate } from "../messaging/templates.js";
 import type { GuideSection, PropertyGuide } from "./types.js";
@@ -32,7 +33,7 @@ const wifi: GuideSection = {
 };
 const parking: GuideSection = { kind: "parking", heading: null, body: "Space 4, under the block." };
 
-describe("a guide is eight answerable questions (spec 10 §10.6b)", () => {
+describe("a guide is nine answerable questions (spec 10 §10.6b)", () => {
   it("opens empty, with every section and nothing written", () => {
     const g = emptyGuide("p", "fr");
     expect(g.sections.map((s) => s.kind)).toEqual(GUIDE_SECTIONS.map((s) => s.kind));
@@ -51,6 +52,7 @@ describe("a guide is eight answerable questions (spec 10 §10.6b)", () => {
       "arrival",
       "house_rules",
       "amenities",
+      "heating",
       "local_tips",
       "departure",
       "emergency",
@@ -72,8 +74,8 @@ describe("GUIDE-1 / GUIDE-2: what the guest may see", () => {
     const closed = guideForGuest(guide([wifi, parking]), { accessOpen: false });
     expect(closed.map((s) => s.kind)).toEqual(["parking"]);
     const open = guideForGuest(guide([wifi, parking]), { accessOpen: true });
-    expect(open.map((s) => s.kind)).toEqual(["wifi", "parking"]);
-    expect(open[0]?.fields).toEqual({ name: "Villa-Guest", password: "sunset2026" });
+    expect(open.map((s) => s.kind)).toEqual(["parking", "wifi"]);
+    expect(open[1]?.fields).toEqual({ name: "Villa-Guest", password: "sunset2026" });
   });
 
   it("lets the manager override the default sensitivity either way", () => {
@@ -172,7 +174,7 @@ describe("guestGuide: the one way to read a guide for a guest", () => {
       published: false,
     });
     const read = guestGuide([en, ptDraft], "pt", { accessOpen: true });
-    expect(read.map((s) => s.kind)).toEqual(["wifi", "parking"]);
+    expect(read.map((s) => s.kind)).toEqual(["parking", "wifi"]);
     expect(read.find((s) => s.kind === "parking")?.body).toBe("Space 4, under the block.");
   });
 
@@ -248,5 +250,18 @@ describe("normaliseSections", () => {
       ),
       { numRuns: 200 },
     );
+  });
+});
+
+describe("withSection: saving one section", () => {
+  it("replaces that section and keeps every other one as it was", () => {
+    const next = withSection([wifi, parking], { kind: "parking", body: "Street, free after 7pm." });
+    expect(next.find((s) => s.kind === "parking")?.body).toBe("Street, free after 7pm.");
+    expect(next.find((s) => s.kind === "wifi")?.fields).toEqual(wifi.fields);
+    expect(next.map((s) => s.kind)).toEqual(GUIDE_SECTIONS.map((s) => s.kind));
+  });
+  it("starts from an empty guide when there is none", () => {
+    const next = withSection(null, { kind: "heating", body: "Boiler switch by the door." });
+    expect(guideCompleteness({ sections: next }).written).toBe(1);
   });
 });

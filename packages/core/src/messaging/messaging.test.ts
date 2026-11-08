@@ -145,6 +145,24 @@ describe("templates (spec 09 §9.3)", () => {
     );
     expect(r.text).toBe("Olá Ana, chegada 2026-10-04, wifi {{unit.wifi_name}}");
     expect(r.missing).toEqual(["unit.wifi_name"]);
+    // the single-brace form the guide editor shows works the same, and a miss is left as typed
+    const single = interpolate("Hi {guest.first_name}, the Wi-Fi is {guide.wifi_name}.", {
+      guest: { first_name: "Ana" },
+      booking: {
+        arrival: "2026-10-04",
+        departure: "2026-10-06",
+        nights: 2,
+        total: "€240",
+        reference: "ABC",
+      },
+      property: { name: "Alfama" },
+    });
+    expect(single.text).toBe("Hi Ana, the Wi-Fi is {guide.wifi_name}.");
+    expect(single.missing).toEqual(["guide.wifi_name"]);
+    // a brace that is not a variable is left alone
+    expect(interpolate("{not a var} and {x}", { guest: {} } as never).text).toBe(
+      "{not a var} and {x}",
+    );
     const variants = [
       {
         id: "1",
