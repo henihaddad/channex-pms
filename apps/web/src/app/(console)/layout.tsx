@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LOCALES } from "@/i18n/request";
 import { currentOrgId, currentSession } from "@/server/session";
 import { inboxBadge } from "@/server/inbox-badge";
+import { reservationBadges } from "@/server/reservation-badges";
 import { consoleContext } from "@/server/console-context";
 import { currentRoleKey, currentUserProfile, memberships } from "@/server/auth-flows";
 import { logoutAction } from "../(auth)/auth.actions";
@@ -35,6 +36,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const t = await getTranslations("nav");
   const orgId = await currentOrgId();
   const badge = orgId ? await inboxBadge(orgId, session.userId) : { unread: 0, breaching: 0 };
+  const resBadges = orgId ? await reservationBadges(orgId) : { requests: 0, needsRoom: 0 };
   const cx = orgId ? await consoleContext(orgId) : null;
   const [orgs, me, locale] = await Promise.all([
     memberships(session.userId),
@@ -73,10 +75,20 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     {
       item: { href: "/reservations", label: t("reservations") },
       firstTab: t("tabs.all"),
+      // Front desk (hotel-kind only, spec 08 §8.10) is reached from Check-in, not a tab of its own.
       tabs: [
-        { href: "/front-desk", label: t("frontDesk") },
-        { href: "/reservations/requests", label: ti("requests") },
-        { href: "/reservations/unmapped", label: t2("unmappedQueue") },
+        { href: "/reservations/check-in", label: t2("tabs.checkIn") },
+        { href: "/reservations/guests", label: t2("tabs.guests") },
+        {
+          href: "/reservations/requests",
+          label: t2("tabs.requests"),
+          count: resBadges.requests || undefined,
+        },
+        {
+          href: "/reservations/unmapped",
+          label: t2("unmappedQueue"),
+          count: resBadges.needsRoom || undefined,
+        },
       ],
     },
     {

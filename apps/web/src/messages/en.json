@@ -560,7 +560,10 @@
       "no_access_code": "No access code issued",
       "cancelled_this_week": "Cancelled this week",
       "modified_since_yesterday": "Modified since yesterday",
-      "payment_action_needed": "Payment action needed"
+      "payment_action_needed": "Payment action needed",
+      "arriving_this_week": "Arriving this week",
+      "balance_due": "Balance due",
+      "cancelled": "Cancelled"
     },
     "dateType": "Date",
     "dateTypes": {
@@ -580,7 +583,52 @@
       "credit_card": "card on the booking",
       "bank_transfer": "bank transfer from the channel"
     },
-    "moreFilters": "More filters"
+    "moreFilters": "More filters",
+    "newReservation": "New reservation",
+    "exportCsv": "Export CSV",
+    "stayColumn": "Stay",
+    "showing": "Showing {shown} of {total}",
+    "loadMore": "Load more",
+    "nights": "{n, plural, one {# night} other {# nights}}",
+    "tabs": {
+      "checkIn": "Check-in",
+      "guests": "Guests",
+      "requests": "Requests"
+    },
+    "pills": {
+      "arriving_this_week": "Arriving this week",
+      "in_stay": "In house",
+      "balance_due": "Balance due",
+      "cancelled": "Cancelled"
+    },
+    "stayStatus": {
+      "confirmed": "Confirmed",
+      "checked_in": "Checked in",
+      "checked_out": "Checked out",
+      "needs_room": "Assign a room",
+      "needs_room_short": "Needs a room",
+      "changed": "Changed · check",
+      "no_show": "No-show",
+      "cancelled": "Cancelled"
+    },
+    "balanceWords": {
+      "ota": "Paid by {ota}",
+      "paid": "Paid",
+      "due": "{amount} due"
+    },
+    "phase": {
+      "arrivesToday": "arrives today",
+      "arrivesTomorrow": "arrives tomorrow",
+      "arrivesIn": "arrives in {days} days",
+      "inHouse": "in house",
+      "departsToday": "leaves today",
+      "leftYesterday": "left yesterday",
+      "leftAgo": "left {days} days ago"
+    },
+    "party": {
+      "adults": "{n, plural, one {# adult} other {# adults}}",
+      "children": "{n, plural, one {# child} other {# children}}"
+    }
   },
   "operations": {
     "title": "Turnover board",

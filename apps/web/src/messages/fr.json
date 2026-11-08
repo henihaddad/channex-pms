@@ -552,7 +552,10 @@
       "no_access_code": "Sans code d'accès",
       "cancelled_this_week": "Annulées cette semaine",
       "modified_since_yesterday": "Modifiées depuis hier",
-      "payment_action_needed": "Action de paiement requise"
+      "payment_action_needed": "Action de paiement requise",
+      "arriving_this_week": "Arrivent cette semaine",
+      "balance_due": "Solde dû",
+      "cancelled": "Annulées"
     },
     "dateType": "Date",
     "dateTypes": {
@@ -572,7 +575,52 @@
       "credit_card": "carte sur la réservation",
       "bank_transfer": "virement du canal"
     },
-    "moreFilters": "Plus de filtres"
+    "moreFilters": "Plus de filtres",
+    "newReservation": "Nouvelle réservation",
+    "exportCsv": "Exporter en CSV",
+    "stayColumn": "Séjour",
+    "showing": "{shown} sur {total}",
+    "loadMore": "Afficher plus",
+    "nights": "{n, plural, one {# nuit} other {# nuits}}",
+    "tabs": {
+      "checkIn": "Enregistrement",
+      "guests": "Voyageurs",
+      "requests": "Demandes"
+    },
+    "pills": {
+      "arriving_this_week": "Arrivent cette semaine",
+      "in_stay": "Sur place",
+      "balance_due": "Solde dû",
+      "cancelled": "Annulées"
+    },
+    "stayStatus": {
+      "confirmed": "Confirmée",
+      "checked_in": "Arrivé",
+      "checked_out": "Parti",
+      "needs_room": "Attribuer un logement",
+      "needs_room_short": "Sans logement",
+      "changed": "Modifiée · à vérifier",
+      "no_show": "Non présenté",
+      "cancelled": "Annulée"
+    },
+    "balanceWords": {
+      "ota": "Payé via {ota}",
+      "paid": "Payé",
+      "due": "{amount} dû"
+    },
+    "phase": {
+      "arrivesToday": "arrive aujourd’hui",
+      "arrivesTomorrow": "arrive demain",
+      "arrivesIn": "arrive dans {days} jours",
+      "inHouse": "sur place",
+      "departsToday": "part aujourd’hui",
+      "leftYesterday": "parti hier",
+      "leftAgo": "parti il y a {days} jours"
+    },
+    "party": {
+      "adults": "{n, plural, one {# adulte} other {# adultes}}",
+      "children": "{n, plural, one {# enfant} other {# enfants}}"
+    }
   },
   "operations": {
     "title": "Tableau des rotations",

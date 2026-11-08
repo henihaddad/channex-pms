@@ -18,6 +18,7 @@ import {
   DrizzlePropertyRepository,
   DrizzleReservationRepository,
   type FolioView,
+  type ListPill,
   rawRows,
   type ReservationDetail,
   type ReservationFilters,
@@ -53,22 +54,33 @@ export const listReservations = withPermission<
   {
     rows: ReservationRow[];
     total: number;
+    /** The list's filter pills and how many bookings each holds. */
+    pills: Record<ListPill, number>;
+    /** Property-local today, for "arrives in 11 days". */
+    today: string;
     views: Array<{ id: string; name: string; filters: Record<string, unknown> }>;
   }
 >("booking:read", { scope: "organization", audit: false }, async (ctx, filters) => {
   const c = await container();
   const repo = reservations(ctx, c);
-  // "today" is a property-local date (spec 08): the portfolio list takes its oldest property's zone
+  const today = await portfolioToday(ctx);
+  return {
+    ...(await repo.list(filters, today)),
+    pills: await repo.pillCounts(today),
+    today,
+    views: await repo.savedViews(ctx.userId, "reservations"),
+  };
+});
+
+/** "Today" is a property-local date (spec 08): the portfolio takes its oldest property's zone. */
+async function portfolioToday(ctx: ActorCtx): Promise<string> {
+  const c = await container();
   const [tz] = await rawRows<{ timezone: string }>(
     ctx.tx,
     sql`select timezone from property where archived_at is null order by created_at limit 1`,
   );
-  const today = c.clock.today(tz?.timezone ?? "UTC").toString();
-  return {
-    ...(await repo.list(filters, today)),
-    views: await repo.savedViews(ctx.userId, "reservations"),
-  };
-});
+  return c.clock.today(tz?.timezone ?? "UTC").toString();
+}
 
 export const saveViewAction = withPermission<[FormData], void>(
   "booking:read",

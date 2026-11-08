@@ -33,11 +33,23 @@ export interface ReservationRow {
   currency: string;
   totalAmountMinor: number;
   mappingState: string;
+  /** "Ana S.": what the CSV export carries. */
   guestName: string;
+  /** "Ana Silva": what the list shows (the lead guest's name is on the booking already). */
+  guestFullName: string;
+  adults: number;
+  children: number;
   unitNames: string | null;
   unassignedRooms: number;
   credentials: number;
   balanceMinor: number;
+  /** For the balance in words (core `bookingBalance`). */
+  paymentCollect: string | null;
+  roomChargesMinor: number;
+  otherChargesMinor: number;
+  paidMinor: number;
+  /** One per room: expected | checked_in | checked_out | no_show. */
+  stayStates: string[];
   unacknowledged: boolean;
   createdAt: string;
   updatedAt: string;
@@ -46,7 +58,7 @@ export interface ReservationRow {
 export const SHIPPED_VIEWS: Record<string, (today: string) => Partial<ReservationFilters>> = {
   arrivals_today: (t) => ({ dateType: "arrival", from: t, to: t }),
   departures_today: (t) => ({ dateType: "departure", from: t, to: t }),
-  in_stay: (t) => ({ dateType: "stay", from: t, to: t }),
+  in_stay: (t) => ({ dateType: "stay", from: t, to: t, status: "active" }),
   same_day_changeovers: () => ({ view: "same_day_changeovers" }),
   unassigned: () => ({ unassigned: true }),
   unmapped: () => ({ mappingState: "unmapped" }),
@@ -54,12 +66,25 @@ export const SHIPPED_VIEWS: Record<string, (today: string) => Partial<Reservatio
   cancelled_this_week: (t) => ({ status: "cancelled", dateType: "booked", from: shift(t, -7) }),
   modified_since_yesterday: () => ({ view: "modified_since_yesterday" }),
   payment_action_needed: () => ({ view: "payment_action_needed" }),
+  arriving_this_week: (t) => ({ dateType: "arrival", from: t, to: shift(t, 6), status: "active" }),
+  balance_due: () => ({ view: "balance_due" }),
+  cancelled: () => ({ status: "cancelled" }),
 };
+/** The four filters the list leads with (design canvas, November 2026), each with its count. */
+export const LIST_PILLS = ["arriving_this_week", "in_stay", "balance_due", "cancelled"] as const;
+export type ListPill = (typeof LIST_PILLS)[number];
 function shift(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+// Money on the booking's folios, for the balance in words (core `bookingBalance`): one
+// definition for the list's columns and for its "Balance due" filter.
+const ROOM_CHARGES = sql`coalesce((select sum(l.amount_minor) from folio_line l join folio f on f.id = l.folio_id where f.booking_id = b.id and l.kind = 'room'), 0)`;
+const OTHER_CHARGES = sql`coalesce((select sum(l.amount_minor) from folio_line l join folio f on f.id = l.folio_id where f.booking_id = b.id and l.kind <> 'room'), 0)`;
+const PAID = sql`coalesce((select sum(case when pm.state = 'captured' then pm.amount_minor when pm.state = 'refunded' then -pm.amount_minor else 0 end) from payment pm join folio f on f.id = pm.folio_id where f.booking_id = b.id), 0)`;
+const DUE = sql`((case when b.payment_collect = 'ota' then 0 when b.status = 'cancelled' then ${ROOM_CHARGES} else greatest(b.total_amount_minor, ${ROOM_CHARGES}) end) + ${OTHER_CHARGES} - ${PAID})`;
 
 /** Reservation list, detail, timeline and actions (spec 08 §8.1–8.5). PII stays sealed until a `booking:read_pii` reader opens it. */
 export class DrizzleReservationRepository {
@@ -69,10 +94,7 @@ export class DrizzleReservationRepository {
     private readonly crypto: Crypto,
   ) {}
 
-  async list(
-    f: ReservationFilters,
-    today: string,
-  ): Promise<{ rows: ReservationRow[]; total: number }> {
+  private where(f: ReservationFilters, today: string) {
     const view =
       f.view && SHIPPED_VIEWS[f.view]
         ? { ...SHIPPED_VIEWS[f.view]!(today), ...f, view: f.view }
@@ -90,7 +112,9 @@ export class DrizzleReservationRepository {
         sql`exists (select 1 from property_group_membership m where m.property_id = b.property_id and m.group_id = ${view.groupId})`,
       );
     if (view.channel) where.push(sql`lower(b.ota_name) = lower(${view.channel})`);
-    if (view.status) where.push(sql`b.status = ${view.status}`);
+    // "active": everything still happening, whatever its last revision type
+    if (view.status === "active") where.push(sql`b.status <> 'cancelled'`);
+    else if (view.status) where.push(sql`b.status = ${view.status}`);
     if (view.mappingState === "unmapped") where.push(sql`b.mapping_state <> 'mapped'`);
     else if (view.mappingState) where.push(sql`b.mapping_state = ${view.mappingState}`);
     if (view.dateType === "stay") {
@@ -118,40 +142,73 @@ export class DrizzleReservationRepository {
       where.push(
         sql`exists (select 1 from payment_instrument pi where pi.booking_id = b.id and pi.vcc_effective_to is not null and pi.vcc_effective_to <= now() + interval '3 days') or (b.status <> 'cancelled' and b.departure_date < ${today} and (select coalesce(sum(l.amount_minor),0) from folio_line l join folio f on f.id = l.folio_id where f.booking_id = b.id) > (select coalesce(sum(pm.amount_minor),0) from payment pm join folio f on f.id = pm.folio_id where f.booking_id = b.id and pm.state = 'captured'))`,
       );
+    if (view.view === "balance_due") where.push(sql`${DUE} > 0`);
     if (view.q)
       where.push(
         sql`(b.ota_reservation_code ilike ${"%" + view.q + "%"} or g.dedupe_hash = ${this.crypto.sha256Hex(view.q.toLowerCase())} or exists (select 1 from booking_room br where br.booking_id = b.id and br.guest_names::text ilike ${"%" + view.q + "%"}))`,
       );
-    const cond = sql.join(where, sql` and `);
-    const rows = await rawRows<ReservationRow & { guestNameEnc: string; guestSurnameEnc: string }>(
+    return sql.join(where, sql` and `);
+  }
+
+  async count(f: ReservationFilters, today: string): Promise<number> {
+    const [count] = await rawRows<{ n: number }>(
+      this.tx,
+      sql`select count(*)::int as n from booking b join property p on p.id = b.property_id left join guest g on g.id = b.guest_id where ${this.where(f, today)}`,
+    );
+    return count?.n ?? 0;
+  }
+
+  /** The list's filter pills with their counts. */
+  async pillCounts(today: string): Promise<Record<ListPill, number>> {
+    const out = {} as Record<ListPill, number>;
+    for (const v of LIST_PILLS) out[v] = await this.count({ view: v }, today);
+    return out;
+  }
+
+  async list(
+    f: ReservationFilters,
+    today: string,
+  ): Promise<{ rows: ReservationRow[]; total: number }> {
+    const cond = this.where(f, today);
+    const rows = await rawRows<
+      Omit<ReservationRow, "guestName" | "guestFullName"> & {
+        guestNameEnc: string;
+        guestSurnameEnc: string;
+      }
+    >(
       this.tx,
       sql`select b.id, b.property_id as "propertyId", p.title as "propertyTitle", b.ota_name as "otaName", b.ota_reservation_code as "otaReservationCode", b.status, b.arrival_date::text as "arrivalDate", b.departure_date::text as "departureDate",
         (b.departure_date - b.arrival_date) as nights, b.currency, b.total_amount_minor as "totalAmountMinor", b.mapping_state as "mappingState", g.name_enc as "guestNameEnc", g.surname_enc as "guestSurnameEnc",
+        coalesce((select sum((br.occupancy->>'adults')::int) from booking_room br where br.booking_id = b.id), 0)::int as adults,
+        coalesce((select sum((br.occupancy->>'children')::int) from booking_room br where br.booking_id = b.id), 0)::int as children,
         (select string_agg(u.name, ', ') from booking_room br join unit u on u.id = br.assigned_unit_id where br.booking_id = b.id) as "unitNames",
         (select count(*)::int from booking_room br where br.booking_id = b.id and br.assigned_unit_id is null and p.kind <> 'single_unit') as "unassignedRooms",
         (select count(*)::int from access_credential c where c.booking_id = b.id and c.revoked_at is null) as credentials,
-        (coalesce((select sum(l.amount_minor) from folio_line l join folio f on f.id = l.folio_id where f.booking_id = b.id), 0) - coalesce((select sum(case when pm.state = 'captured' then pm.amount_minor when pm.state = 'refunded' then -pm.amount_minor else 0 end) from payment pm join folio f on f.id = pm.folio_id where f.booking_id = b.id), 0))::bigint as "balanceMinor",
+        (coalesce((select sum(l.amount_minor) from folio_line l join folio f on f.id = l.folio_id where f.booking_id = b.id), 0) - ${PAID})::bigint as "balanceMinor",
+        b.payment_collect as "paymentCollect", ${ROOM_CHARGES}::bigint as "roomChargesMinor", ${OTHER_CHARGES}::bigint as "otherChargesMinor", ${PAID}::bigint as "paidMinor",
+        coalesce((select json_agg(coalesce(ss.state, 'expected')) from booking_room br left join stay_state ss on ss.booking_room_id = br.id where br.booking_id = b.id), '[]'::json) as "stayStates",
         (b.status = 'modified' and not exists (select 1 from booking_acknowledgement a where a.booking_id = b.id and a.revision_id = b.last_revision_id::text)) as unacknowledged,
         b.created_at as "createdAt", b.updated_at as "updatedAt"
         from booking b join property p on p.id = b.property_id left join guest g on g.id = b.guest_id
-        where ${cond} order by b.arrival_date desc, b.id limit ${view.limit ?? 200} offset ${view.offset ?? 0}`,
+        where ${cond} order by b.arrival_date desc, b.id limit ${f.limit ?? 200} offset ${f.offset ?? 0}`,
     );
-    const [count] = await rawRows<{ n: number }>(
-      this.tx,
-      sql`select count(*)::int as n from booking b join property p on p.id = b.property_id left join guest g on g.id = b.guest_id where ${cond}`,
-    );
+    const total = await this.count(f, today);
     const out: ReservationRow[] = [];
     for (const r of rows) {
       const { guestNameEnc, guestSurnameEnc, ...rest } = r;
+      const name = guestNameEnc ? await this.crypto.open(guestNameEnc) : "";
+      const surname = guestSurnameEnc ? await this.crypto.open(guestSurnameEnc) : "";
       out.push({
         ...rest,
         balanceMinor: Number(rest.balanceMinor),
-        guestName: guestNameEnc
-          ? `${await this.crypto.open(guestNameEnc)} ${(await this.crypto.open(guestSurnameEnc)).slice(0, 1)}.`
-          : "—",
+        roomChargesMinor: Number(rest.roomChargesMinor),
+        otherChargesMinor: Number(rest.otherChargesMinor),
+        paidMinor: Number(rest.paidMinor),
+        guestName: guestNameEnc ? `${name} ${surname.slice(0, 1)}.` : "—",
+        guestFullName: guestNameEnc ? `${name} ${surname}`.trim() : "—",
       });
     }
-    return { rows: out, total: count?.n ?? 0 };
+    return { rows: out, total };
   }
 
   async detail(id: string): Promise<ReservationDetail | null> {

@@ -24,6 +24,24 @@ Shipped views: **Arrivals today**, **Departures today**, **In stay**,
 **Same-day changeovers**, **Unassigned**, **Unmapped**, **No access code issued**,
 **Cancelled this week**, **Modified since yesterday**, **Payment action needed**.
 
+The list leads with four filters and their counts: **Arriving this week**, **In house**,
+**Balance due** and **Cancelled**; the other shipped views, the date and channel filters,
+free-text search and saved views sit behind **More filters**, next to **Export CSV**. Each row
+reads in words, never in codes or ISO dates: the guest with "2 adults · reference", the
+property (or **Needs a room** in amber when the booking is unmapped or unassigned), the stay
+("Fri 14 → Mon 17 Nov" over "3 nights · arrives in 11 days"), the channel with its colour
+dot, one status word (**Confirmed**, **Checked in**, **Checked out**, **Assign a room**,
+**Changed · check** until acknowledged, **No-show**, **Cancelled**), the total and the balance
+in words (**Paid by Airbnb** when the channel collected, **Paid**, **€450 due**). The room is
+owed from the moment of booking, not from the daily close that posts it; a channel-collected
+booking owes only what was charged locally; a cancelled one only its fees (core
+`bookingBalance`, `stayStatus`, `stayPhase`). The list shows 50 rows and loads 50 more on
+request. Persona: `reservations_agent`, `property_manager`.
+
+The Reservations section's tabs are **All · Check-in · Guests · Requests · n · Needs a room ·
+n** (the counts are open Airbnb requests and unmapped bookings). The hotel front desk (§8.10)
+is reached from Check-in.
+
 - **RES-1** Bulk actions where safe: assign units, issue access codes, export, tag.
 - **RES-2** Every list exportable (CSV/XLSX) under `export:execute`.
 - **RES-3** A `modified` badge persists until a human acknowledges it — a silently

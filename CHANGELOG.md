@@ -19,6 +19,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The reservation list (spec 08 §8.1) reads in words, per the design canvas: four filter pills
+  with counts (Arriving this week, In house, Balance due, Cancelled), More filters and Export CSV
+  on the same row, the guest's full name over "2 adults · reference", the stay as "Fri 14 → Mon
+  17 Nov" over "3 nights · arrives in 11 days", the channel with its colour dot, one status word
+  and the balance as "Paid by Airbnb", "Paid" or "€450 due". Bookings that need a room are
+  highlighted in amber. 50 rows at a time with "Load more". The section's tabs are now All,
+  Check-in, Guests, Requests and Needs a room, with counts; the hotel front desk is reached from
+  Check-in. The "In stay" view no longer counts cancelled bookings.
+
 - The console rail is near-black again, as the design canvas has it: Tailwind resolved the colour
   tokens once at the root, so the rail's dark scope never reached its utilities. The tokens now
   live in an inline theme block. The rail lists its ten destinations as text, its badges are
