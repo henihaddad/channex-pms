@@ -128,7 +128,12 @@ covered by property tests; confirmation writes the instalments due after today i
 `payment_schedule`, and the daily `payments.collect` job charges each one through the
 `PaymentProvider` with `schedule:<id>` as the idempotency key, records it on the folio, and
 cancels the rest when a booking is cancelled. Attempts stop after six failures. The console page
-is Direct bookings → Payment rules, with a worked example on a 1 000.00 stay.
+is Financials → Payment rules (the design canvas puts it with money; `/booking-engine/payments`
+redirects there): what the rules collected and refunded in 30 days, failed charges and deposits
+held, the rules in the order they run with an editor under each row, and the rules worked on a
+1 000.00 stay and on the same stay grown to 1 500.00, instalment by instalment. Recomputing the
+schedule of a booking whose total changes after confirmation is not built yet; the page shows
+what the rules would ask for, not a recomputation that happened.
 
 ## 10.5 Direct-only commercial tools
 

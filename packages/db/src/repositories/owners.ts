@@ -1244,6 +1244,17 @@ export class DrizzleOwnerRepository {
     return r?.v !== null && r?.v !== undefined ? num(r.v) : 500_000;
   }
 
+  /** STMT-5: whether approved statements go out by themselves, and after how many days. */
+  async setStatementAutoSend(on: boolean, days: number): Promise<void> {
+    if (!Number.isInteger(days) || days < 0 || days > 60) throw new Error("days must be 0–60");
+    await this.tx.execute(
+      sql`update organization set settings = settings || jsonb_build_object(
+            'statement_auto_send', ${on ? "on" : "off"}::text,
+            'statement_auto_send_days', ${String(days)}::text), updated_at = now()
+          where id = ${this.orgId}`,
+    );
+  }
+
   async orgSetting(key: string): Promise<string | null> {
     const [r] = await rawRows<{ v: string | null }>(
       this.tx,

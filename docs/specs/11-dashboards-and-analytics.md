@@ -90,6 +90,19 @@ noise.
 ### `platform_operator` — "Is the platform healthy?"
 See [12](./12-platform-admin-and-billing.md).
 
+### 11.2b The Reports overview
+
+Reports opens (design canvas, November 2026) with the dictionary's occupancy, ADR, RevPAR,
+room revenue and median lead time for a trailing 7, 30, 90 or 365 days, each against the
+window before it; occupancy per ISO week for the last thirteen weeks; and revenue by
+channel. Then the reports a manager reaches for most as cards (KPI summary, channel
+performance, daily revenue, owner statement register, response time, pace, booking window,
+and the full data export), with the rest of the catalogue one click away. A card runs its
+report on the same page with the filters, CSV/PDF export and email schedule. This month's
+overview and the league table follow. All of it reads the rollups through `dashboardKpis`
+(`reportsOverview` in `@pms/jobs`, `weeklyOccupancy` in core), so the tiles agree with the
+exports.
+
 ## 11.3 Report catalogue
 
 Every report is filterable, saveable as a view, exportable (CSV/XLSX/PDF), and
@@ -182,6 +195,21 @@ scattered.
 - **FIN-4 "Owed" includes nothing recorded.** A statement the owner has seen with no
   payout row at all is listed as loudly as one that failed. The common way to not pay
   someone is to never start.
+
+- **FIN-5 How money is doing, first (design canvas, November 2026).** The page opens with
+  five tiles for the current month — room revenue for nights stayed (against the same days
+  of the previous month), payments received, balance due from guests, expenses and what
+  owners are owed — then revenue by month for seven months stacked by channel (Airbnb,
+  Booking.com, direct, the rest), the latest transactions (payments, refunds, expenses and
+  owner payouts, signed: money in positive), and on the right who owes what, the month's
+  tourist tax as charged on folios and the commission each channel took. The six lists of
+  FIN-1 follow under "Waiting on you". Revenue comes from `fact_room_night`, the same
+  rows as Reports; every sum is per currency (FIN-3). Composed in `@pms/jobs`
+  (`financialOverview`), bucketed in core (`revenueByMonth`, `sumByCurrency`).
+- **FIN-6 Tabs.** Overview, Transactions (every movement, newest first), Payment rules
+  (§10.4b, moved here from the booking site; the old address redirects), Payouts and
+  Expenses. Card processing fees are not recorded yet, so the fees card lists channel
+  commission only; a tax report per municipality is not built.
 
 Acceptance: a manager opens one page on the first of the month and knows every statement,
 expense and payout that needs them, and every guest who still owes.

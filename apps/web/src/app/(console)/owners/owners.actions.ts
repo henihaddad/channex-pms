@@ -16,7 +16,7 @@ import {
   type StatementLineRow,
   type StatementRow,
 } from "@pms/db";
-import { generateStatement, initiatePayout, sendStatement } from "@pms/jobs";
+import { generateDueStatements, generateStatement, initiatePayout, sendStatement } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
@@ -45,6 +45,76 @@ export const listOwners = withPermission<[], OwnerRow[]>(
   "owner:read",
   { ...org, audit: false },
   async (ctx) => (await owners(ctx)).listOwners(),
+);
+
+export interface OwnersBoard {
+  owners: OwnerRow[];
+  agreements: AgreementRow[];
+  statements: StatementRow[];
+  /** STMT-5: approved statements go out by themselves after `days` unless turned off. */
+  autoSend: { on: boolean; days: number };
+  today: string;
+}
+/** The Owners board: each owner with their agreements and statements, and the statement schedule. */
+export const loadOwnersBoard = withPermission<[], OwnersBoard>(
+  "owner:read",
+  { ...org, audit: false },
+  async (ctx) => {
+    const repo = await owners(ctx);
+    const [list, agreements, statements, on, days] = await Promise.all([
+      repo.listOwners(),
+      repo.listAgreements(),
+      repo.statements({}),
+      repo.orgSetting("statement_auto_send"),
+      repo.orgSetting("statement_auto_send_days"),
+    ]);
+    const today = (await container()).clock.today("UTC").toString();
+    return {
+      owners: list,
+      agreements,
+      statements,
+      autoSend: { on: on !== "off", days: Number(days ?? 7) },
+      today,
+    };
+  },
+);
+
+/** "Generate October statements": the nightly sweep (spec 17 §17.2), run now for this organisation. */
+export const generateDueStatementsAction = withPermission<[FormData], void>(
+  "statement:generate",
+  { ...org, subject: () => ({ kind: "organization", id: "statements" }) },
+  async (ctx) => {
+    const c = await container();
+    await generateDueStatements(
+      {
+        db: c.db.db,
+        clock: c.clock,
+        crypto: c.crypto,
+        log: c.log,
+        mailer: c.mailer,
+        payouts: c.payouts,
+        appUrl: c.config.NEXT_PUBLIC_APP_URL,
+      },
+      ctx.orgId,
+      (fn) => fn(ctx.tx),
+    );
+    revalidatePath("/owners", "layout");
+  },
+);
+
+const scheduleSchema = z.object({
+  send: z.enum(["auto", "manual"]),
+  days: z.coerce.number().int().min(0).max(60),
+});
+/** The statement schedule: send by hand only, or automatically N days after approval (STMT-5). */
+export const saveStatementScheduleAction = withPermission<[FormData], void>(
+  "statement:send",
+  { ...org, subject: () => ({ kind: "organization", id: "statement_schedule" }) },
+  async (ctx, fd) => {
+    const v = scheduleSchema.parse({ send: fd.get("send"), days: fd.get("days") ?? 7 });
+    await (await owners(ctx)).setStatementAutoSend(v.send === "auto", v.days);
+    revalidatePath("/owners");
+  },
 );
 
 export interface OwnerDetail {
@@ -324,6 +394,10 @@ export const listStatements = withPermission<[{ state?: string | null }], Statem
 export interface StatementView {
   statement: StatementRow & { lines: StatementLineRow[]; payouts: PayoutRow[] };
   previous: (StatementRow & { lines: StatementLineRow[] }) | null;
+  /** Earlier statements of the same agreement, newest first. */
+  history: StatementRow[];
+  /** The agreement version in force at the end of the period, for the split. */
+  agreement: AgreementRow | null;
   fourEyesThreshold: number;
   payoutProvider: string;
 }
@@ -338,9 +412,21 @@ export const loadStatement = withPermission<[{ id: string }], StatementView | nu
       ? await repo.statement(statement.previousStatementId)
       : null;
     const c = await container();
+    const history = (await repo.statements({ agreementKey: statement.agreementKey }))
+      .filter((x) => x.id !== statement.id && x.periodFrom < statement.periodFrom)
+      .sort((a, b) => (a.periodFrom < b.periodFrom ? 1 : -1))
+      .slice(0, 6);
+    const agreement =
+      (await repo.listAgreements({ ownerId: statement.ownerId }))
+        .filter(
+          (a) => a.agreementKey === statement.agreementKey && a.effectiveFrom < statement.periodTo,
+        )
+        .at(-1) ?? null;
     return {
       statement,
       previous,
+      history,
+      agreement,
       fourEyesThreshold: await repo.fourEyesThreshold(),
       payoutProvider: c.payouts.kind,
     };

@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { Id, planPayments, type PaymentRule } from "@pms/core";
-import { DrizzlePaymentRuleRepository, DrizzlePropertyRepository } from "@pms/db";
+import { Id } from "@pms/core";
+import { DrizzlePaymentRuleRepository } from "@pms/db";
+import { paymentRulesView, type PaymentRulesView } from "@pms/jobs";
 import { withPermission } from "@/server/with-permission";
+import { container } from "@/server/container";
 
 const ruleSchema = z.object({
   id: z.string().optional(),
@@ -20,41 +22,18 @@ const ruleSchema = z.object({
   position: z.coerce.number().int().min(0).max(99).default(0),
 });
 
-export interface PaymentRulesView {
-  rules: PaymentRule[];
-  properties: Array<{ id: string; title: string }>;
-  /** A worked example on a 1000.00 stay, so the effect of the rules is visible. */
-  example: Array<{ name: string; dueOn: string; amountMinor: number }>;
-  currency: string;
-}
+export type { PaymentRulesView };
 
+/** Spec 10 §10.4: the rules, what they collected and a worked example, composed in `@pms/jobs`. */
 export const loadPaymentRules = withPermission<[], PaymentRulesView>(
   "folio:read",
   { scope: "organization", audit: false },
-  async (ctx) => {
-    const repo = new DrizzlePaymentRuleRepository(ctx.tx, ctx.orgId);
-    const rules = await repo.listRules();
-    const properties = (await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list()).map((p) => ({
-      id: p.id,
-      title: p.title,
-    }));
-    const today = new Date().toISOString().slice(0, 10);
-    const arrival = new Date(Date.now() + 60 * 86_400_000).toISOString().slice(0, 10);
-    return {
-      rules,
-      properties,
-      currency: "EUR",
-      example: planPayments({
-        rules,
-        totalMinor: 100_000,
-        currency: "EUR",
-        propertyId: properties[0]?.id ?? "",
-        channel: "direct",
-        arrival,
-        bookedOn: today,
-      }),
-    };
-  },
+  async (ctx) =>
+    paymentRulesView(
+      { ...(await container()), stripeConfigured: Boolean(process.env.STRIPE_SECRET_KEY) },
+      ctx.tx,
+      ctx.orgId,
+    ),
 );
 
 export const savePaymentRule = withPermission<[z.input<typeof ruleSchema>], void>(
@@ -82,7 +61,7 @@ export const savePaymentRule = withPermission<[z.input<typeof ruleSchema>], void
       enabled: r.enabled,
       position: r.position,
     });
-    revalidatePath("/booking-engine/payments");
+    revalidatePath("/financials/payment-rules");
   },
 );
 
@@ -91,6 +70,6 @@ export const deletePaymentRule = withPermission<[{ id: string }], void>(
   { scope: "organization", subject: (i) => ({ kind: "payment_rule", id: i.id }) },
   async (ctx, { id }) => {
     await new DrizzlePaymentRuleRepository(ctx.tx, ctx.orgId).deleteRule(id);
-    revalidatePath("/booking-engine/payments");
+    revalidatePath("/financials/payment-rules");
   },
 );

@@ -18,8 +18,17 @@ export type IntegrationStatus =
   /** Named in the roadmap, not written. */
   | "planned";
 
+/** Where a connection sits on the page (design board "Settings — Integrations"). */
+export type IntegrationGroup = "distribution" | "money" | "guest_ops";
+export const INTEGRATION_GROUPS: readonly IntegrationGroup[] = [
+  "distribution",
+  "money",
+  "guest_ops",
+];
+
 export interface IntegrationEntry {
   key: string;
+  group: IntegrationGroup;
   /** The vendor or category, as a manager would say it. */
   name: string;
   /** What it does for them, in one sentence. */
@@ -42,6 +51,7 @@ export interface IntegrationEntry {
 export const INTEGRATIONS: readonly IntegrationEntry[] = [
   {
     key: "channex",
+    group: "distribution",
     name: "Channex",
     summary:
       "Every channel: availability and rates out, bookings, messages and reviews in. The one connection the product is built on.",
@@ -51,17 +61,38 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
     spec: "05",
   },
   {
+    key: "booking_engine",
+    group: "distribution",
+    name: "Booking site",
+    summary:
+      "Your own commission-free booking pages, one per property, with the same availability and rates every channel gets.",
+    status: "built",
+    href: "/booking-engine",
+    spec: "10",
+  },
+  {
+    key: "ical",
+    group: "distribution",
+    name: "iCal feeds",
+    summary:
+      "A calendar feed per unit for tools that only read iCal. Channex carries every channel that matters, so this waits.",
+    status: "planned",
+    spec: "15",
+  },
+  {
     key: "stripe_payments",
+    group: "money",
     name: "Stripe (guest payments)",
     summary: "Cards for direct bookings, deposits and instalments, with refunds on cancellation.",
     status: "built",
-    href: "/booking-engine/payments",
+    href: "/financials/payment-rules",
     port: "PaymentProvider",
     spec: "10 §10.4",
     configurable: true,
   },
   {
     key: "stripe_connect",
+    group: "money",
     name: "Stripe Connect (owner payouts)",
     summary: "Paying owners what a statement says they are owed, with the four-eyes step.",
     status: "built",
@@ -72,6 +103,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "stripe_billing",
+    group: "money",
     name: "Stripe Billing (your subscription)",
     summary: "Your own plan, metered on peak active units. Hosted mode only; self-hosting is free.",
     status: "built",
@@ -82,6 +114,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "mail",
+    group: "guest_ops",
     name: "Email (SMTP or Resend)",
     summary: "Confirmations, statements, scheduled reports and the guest's portal link.",
     status: "built",
@@ -91,6 +124,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "pricing",
+    group: "money",
     name: "Pricing engines (PriceLabs, Wheelhouse)",
     summary:
       "Prices computed elsewhere, through guard rails and a dry run. A CSV export works today; a scheduled pull needs an adapter.",
@@ -101,6 +135,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "locks",
+    group: "guest_ops",
     name: "Smart locks (Nuki, TTLock, Igloomome)",
     summary:
       "Door codes issued and revoked per stay. The built-in provider issues codes you set by hand; a lock vendor is a plugin.",
@@ -111,6 +146,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "llm",
+    group: "guest_ops",
     name: "Reply drafting (a model of your choice)",
     summary:
       "Optional and off by default. The guest guide drafts replies without any model; point this at a local one if you want more.",
@@ -122,6 +158,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "plugins",
+    group: "guest_ops",
     name: "Your own code (outbound webhooks)",
     summary:
       "Signed, retried deliveries of the events you choose, so anything you run can react to a booking.",
@@ -130,7 +167,25 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
     spec: "12 §12.6",
   },
   {
+    key: "whatsapp",
+    group: "guest_ops",
+    name: "WhatsApp",
+    summary: "Guest messaging on your own business number, in the same inbox as the channels.",
+    status: "planned",
+    spec: "09",
+  },
+  {
+    key: "home_assistant",
+    group: "guest_ops",
+    name: "Home Assistant",
+    summary:
+      "Arrival and departure events for your own automations. Outbound webhooks carry the same events today.",
+    status: "planned",
+    spec: "12 §12.7",
+  },
+  {
     key: "guest_registration",
+    group: "guest_ops",
     name: "Guest registration (Alloggiati, SES, AIMA)",
     summary: "Filing guest details where the law requires it, per country.",
     status: "planned",
@@ -138,6 +193,7 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   },
   {
     key: "accounting",
+    group: "money",
     name: "Accounting exports",
     summary: "Handing the ledger to the software your accountant already uses.",
     status: "planned",
@@ -155,4 +211,33 @@ export function integrationsByStatus(): Record<IntegrationStatus, readonly Integ
   };
   for (const i of INTEGRATIONS) out[i.status].push(i);
   return out;
+}
+
+/** Grouped for the page, in the registry's own order within each group. */
+export function integrationsByGroup(): Record<IntegrationGroup, readonly IntegrationEntry[]> {
+  const out: Record<IntegrationGroup, IntegrationEntry[]> = {
+    distribution: [],
+    money: [],
+    guest_ops: [],
+  };
+  for (const i of INTEGRATIONS) out[i.group].push(i);
+  return out;
+}
+
+/** What a manager sees on the card: running here, ready to set up, or not built yet. */
+export type IntegrationState = "connected" | "available" | "planned";
+
+/**
+ * The card's state. `planned` is planned whatever is configured; a built connection that
+ * needs no key, or has its key, and is in use by this organisation is `connected`;
+ * everything else can be set up and is `available`.
+ */
+export function integrationState(
+  entry: Pick<IntegrationEntry, "status" | "configurable">,
+  here: { configured?: boolean; inUse?: boolean },
+): IntegrationState {
+  if (entry.status === "planned") return "planned";
+  const keyed = !entry.configurable || here.configured === true;
+  const used = here.inUse ?? true;
+  return keyed && used && entry.status !== "port" ? "connected" : "available";
 }

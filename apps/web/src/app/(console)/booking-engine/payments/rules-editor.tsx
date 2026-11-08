@@ -1,40 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import type { PaymentRule } from "@pms/core";
-import { Button, Card, Input, Label, Select } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  Input,
+  Label,
+  Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/ui";
+import { channelLabel, money } from "@/lib/format";
 import { deletePaymentRule, savePaymentRule, type PaymentRulesView } from "./payments.actions";
-
-export interface RuleLabels {
-  add: string;
-  name: string;
-  when: string;
-  confirmation: string;
-  beforeArrival: string;
-  afterArrival: string;
-  days: string;
-  take: string;
-  percent: string;
-  fixed: string;
-  remainder: string;
-  value: string;
-  properties: string;
-  allProperties: string;
-  channels: string;
-  allChannels: string;
-  direct: string;
-  enabled: string;
-  save: string;
-  remove: string;
-  saved: string;
-  example: string;
-  exampleHint: string;
-  uncovered: string;
-}
-
-const money = (minor: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: "currency", currency }).format(minor / 100);
 
 const empty = (): PaymentRule => ({
   id: "",
@@ -52,14 +37,13 @@ const empty = (): PaymentRule => ({
 function RuleForm({
   rule,
   properties,
-  labels: L,
-  onSaved,
+  onDone,
 }: {
   rule: PaymentRule;
   properties: PaymentRulesView["properties"];
-  labels: RuleLabels;
-  onSaved: () => void;
+  onDone: () => void;
 }) {
+  const t = useTranslations("payments");
   const [r, setR] = useState(rule);
   const [pending, start] = useTransition();
   const value =
@@ -82,35 +66,35 @@ function RuleForm({
         enabled: r.enabled,
         position: r.position,
       });
-      onSaved();
+      onDone();
     });
   return (
     <div
-      className="grid items-end gap-3 rounded-xl border border-border p-4 sm:grid-cols-[2fr_1.4fr_1fr_1.4fr_1fr_auto]"
+      className="grid items-end gap-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-[2fr_1.4fr_1fr_1.4fr_1fr]"
       data-testid="payment-rule"
     >
       <div>
-        <Label>{L.name}</Label>
+        <Label>{t("name")}</Label>
         <Input
           value={r.name}
           onChange={(e) => setR({ ...r, name: e.target.value })}
-          placeholder="Balance before arrival"
+          placeholder={t("namePlaceholder")}
         />
       </div>
       <Select
-        label={L.when}
+        label={t("when")}
         value={r.trigger}
         onChange={(v) => setR({ ...r, trigger: v as PaymentRule["trigger"] })}
       >
-        <option value="confirmation">{L.confirmation}</option>
-        <option value="before_arrival">{L.beforeArrival}</option>
-        <option value="after_arrival">{L.afterArrival}</option>
+        <option value="confirmation">{t("confirmation")}</option>
+        <option value="before_arrival">{t("beforeArrival")}</option>
+        <option value="after_arrival">{t("afterArrival")}</option>
       </Select>
       {r.trigger === "confirmation" ? (
         <span />
       ) : (
         <div>
-          <Label>{L.days}</Label>
+          <Label>{t("days")}</Label>
           <Input
             type="number"
             min={0}
@@ -120,7 +104,7 @@ function RuleForm({
         </div>
       )}
       <Select
-        label={L.take}
+        label={t("take")}
         value={r.amount.kind}
         onChange={(v) =>
           setR({
@@ -134,15 +118,15 @@ function RuleForm({
           })
         }
       >
-        <option value="percent">{L.percent}</option>
-        <option value="fixed">{L.fixed}</option>
-        <option value="remainder">{L.remainder}</option>
+        <option value="percent">{t("percent")}</option>
+        <option value="fixed">{t("fixed")}</option>
+        <option value="remainder">{t("remainder")}</option>
       </Select>
       {r.amount.kind === "remainder" ? (
         <span />
       ) : (
         <div>
-          <Label>{L.value}</Label>
+          <Label>{t("value")}</Label>
           <Input
             type="number"
             min={0}
@@ -160,23 +144,8 @@ function RuleForm({
           />
         </div>
       )}
-      <div className="flex gap-2">
-        <Button onClick={submit} disabled={pending || r.name.trim() === ""} size="sm">
-          {L.save}
-        </Button>
-        {r.id ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            onClick={() => start(async () => (await deletePaymentRule({ id: r.id }), onSaved()))}
-          >
-            {L.remove}
-          </Button>
-        ) : null}
-      </div>
-      <div className="sm:col-span-6">
-        <Label>{L.properties}</Label>
+      <div className="sm:col-span-5">
+        <Label>{t("properties")}</Label>
         <div className="flex flex-wrap gap-3 text-sm">
           <Label>
             <input
@@ -185,7 +154,7 @@ function RuleForm({
               checked={r.propertyIds.length === 0}
               onChange={() => setR({ ...r, propertyIds: [] })}
             />
-            {L.allProperties}
+            {t("allProperties")}
           </Label>
           {properties.map((p) => (
             <Label key={p.id}>
@@ -205,61 +174,150 @@ function RuleForm({
               {p.title}
             </Label>
           ))}
+          <Label>
+            <input
+              type="checkbox"
+              className="me-1"
+              checked={r.enabled}
+              onChange={(e) => setR({ ...r, enabled: e.target.checked })}
+            />
+            {t("enabled")}
+          </Label>
         </div>
+      </div>
+      <div className="flex gap-2 sm:col-span-5">
+        <Button onClick={submit} disabled={pending || r.name.trim() === ""} size="sm">
+          {t("save")}
+        </Button>
+        <Button variant="ghost" size="sm" disabled={pending} onClick={onDone}>
+          {t("cancel")}
+        </Button>
+        {r.id ? (
+          <Button
+            variant="danger"
+            size="sm"
+            className="ms-auto"
+            disabled={pending}
+            onClick={() => start(async () => (await deletePaymentRule({ id: r.id }), onDone()))}
+          >
+            {t("remove")}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
 }
 
-/** The organisation's payment rules, with a worked example of what they collect. */
-export function RulesEditor({ view, labels: L }: { view: PaymentRulesView; labels: RuleLabels }) {
+/**
+ * The organisation's payment rules as the design lists them (board "Payment rules"): one row
+ * per rule in the order they run, with when, which channels and properties, how much and
+ * whether it is on. Editing opens the rule's form under its row.
+ */
+export function RulesTable({ view }: { view: PaymentRulesView }) {
+  const t = useTranslations("payments");
+  const locale = useLocale();
   const router = useRouter();
-  const [adding, setAdding] = useState(false);
-  const collected = view.example.reduce((n, i) => n + i.amountMinor, 0);
-  const refresh = () => {
-    setAdding(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const done = () => {
+    setEditing(null);
     router.refresh();
   };
+  const when = (r: PaymentRule) =>
+    r.trigger === "confirmation"
+      ? t("whenConfirmed")
+      : r.offsetDays === 0
+        ? t("whenArrival")
+        : t(r.trigger === "before_arrival" ? "whenBefore" : "whenAfter", { n: r.offsetDays });
+  const channels = (r: PaymentRule) =>
+    r.channels.length === 0
+      ? t("all")
+      : r.channels.map((c) => channelLabel(c, t("directShort"))).join(", ");
+  const properties = (r: PaymentRule) =>
+    r.propertyIds.length === 0
+      ? t("all")
+      : r.propertyIds
+          .map((id) => view.properties.find((p) => p.id === id)?.title ?? "—")
+          .join(", ");
+  const amount = (r: PaymentRule) =>
+    r.amount.kind === "percent"
+      ? t("amountPercent", { pct: r.amount.percentBps / 100 })
+      : r.amount.kind === "fixed"
+        ? money(r.amount.amountMinor, view.currency, locale)
+        : t("amountRemainder");
   return (
-    <div className="space-y-5">
-      <Card title={L.example} description={L.exampleHint}>
-        {view.example.length === 0 ? (
-          <p className="text-sm text-muted">{L.uncovered}</p>
-        ) : (
-          <ul className="text-sm">
-            {view.example.map((i, n) => (
-              <li key={n} className="flex justify-between border-t border-border py-1.5">
-                <span>
-                  {i.name} <span className="text-muted">· {i.dueOn}</span>
-                </span>
-                <span className="tabular-nums">{money(i.amountMinor, view.currency)}</span>
-              </li>
-            ))}
-            {collected < 100_000 ? (
-              <li className="flex justify-between border-t border-border py-1.5 text-warning">
-                <span>{L.uncovered}</span>
-                <span className="tabular-nums">{money(100_000 - collected, view.currency)}</span>
-              </li>
-            ) : null}
-          </ul>
-        )}
-      </Card>
-      <div className="space-y-3">
-        {view.rules.map((r) => (
-          <RuleForm key={r.id} rule={r} properties={view.properties} labels={L} onSaved={refresh} />
-        ))}
-        {adding ? (
-          <RuleForm rule={empty()} properties={view.properties} labels={L} onSaved={refresh} />
-        ) : (
-          <Button
-            variant="secondary"
-            onClick={() => setAdding(true)}
-            data-testid="add-payment-rule"
-          >
-            + {L.add}
-          </Button>
-        )}
-      </div>
-    </div>
+    <Card
+      title={t("title")}
+      description={t("order")}
+      actions={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setEditing("new")}
+          data-testid="add-payment-rule"
+        >
+          + {t("add")}
+        </Button>
+      }
+    >
+      <Table data-testid="payment-rules">
+        <THead>
+          <Tr className="hover:bg-transparent">
+            <Th>{t("rule")}</Th>
+            <Th>{t("when")}</Th>
+            <Th>{t("channels")}</Th>
+            <Th>{t("properties")}</Th>
+            <Th>{t("amount")}</Th>
+            <Th />
+          </Tr>
+        </THead>
+        <TBody>
+          {view.rules.length === 0 && editing !== "new" ? (
+            <Tr>
+              <Td colSpan={6} className="text-muted">
+                {t("noRules")}
+              </Td>
+            </Tr>
+          ) : null}
+          {view.rules.map((r) => (
+            <Fragment key={r.id}>
+              <Tr data-testid="payment-rule-row" data-enabled={r.enabled ? "1" : "0"}>
+                <Td className="font-semibold">{r.name}</Td>
+                <Td>{when(r)}</Td>
+                <Td>{channels(r)}</Td>
+                <Td>{properties(r)}</Td>
+                <Td>{amount(r)}</Td>
+                <Td className="text-end whitespace-nowrap">
+                  <Chip color={r.enabled ? "success" : "default"} size="sm">
+                    {r.enabled ? t("on") : t("off")}
+                  </Chip>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="ms-2"
+                    onClick={() => setEditing(editing === r.id ? null : r.id)}
+                  >
+                    {t("edit")}
+                  </Button>
+                </Td>
+              </Tr>
+              {editing === r.id ? (
+                <Tr className="hover:bg-transparent">
+                  <Td colSpan={6} className="bg-surface-secondary">
+                    <RuleForm rule={r} properties={view.properties} onDone={done} />
+                  </Td>
+                </Tr>
+              ) : null}
+            </Fragment>
+          ))}
+          {editing === "new" ? (
+            <Tr className="hover:bg-transparent">
+              <Td colSpan={6} className="bg-surface-secondary">
+                <RuleForm rule={empty()} properties={view.properties} onDone={done} />
+              </Td>
+            </Tr>
+          ) : null}
+        </TBody>
+      </Table>
+    </Card>
   );
 }

@@ -50,6 +50,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const tpay = await getTranslations("payments");
   const tch = await getTranslations("channels");
   const tprop = await getTranslations("properties");
+  const tfin = await getTranslations("financials");
 
   const sections: NavSectionDef[] = [
     { item: { href: "/", label: t("dashboard") }, tabs: [] },
@@ -119,19 +120,16 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       item: { href: "/financials", label: t("financials") },
       firstTab: t("tabs.overview"),
       tabs: [
-        { href: "/booking-engine/payments", label: tpay("title") },
-        { href: "/owners/statements", label: to2("statements") },
+        { href: "/financials/transactions", label: tfin("transactions") },
+        { href: "/financials/payment-rules", label: tpay("title") },
         { href: "/owners/payouts", label: to2("payouts") },
         { href: "/owners/expenses", label: to2("expenses") },
       ],
     },
     {
       item: { href: "/owners", label: t("owners") },
-      tabs: [
-        { href: "/owners/statements", label: to2("statements") },
-        { href: "/owners/payouts", label: to2("payouts") },
-        { href: "/owners/expenses", label: to2("expenses") },
-      ],
+      firstTab: to2("title"),
+      tabs: [{ href: "/owners/statements", label: to2("statements") }],
     },
     {
       item: { href: "/reports", label: t("reports") },
@@ -146,15 +144,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         label: t("settings"),
         testId: "nav-settings",
       },
-      tabs: [
-        { href: "/settings/organization", label: t("organization") },
-        { href: "/settings/members", label: t("members") },
-        { href: "/settings/billing", label: t("billing") },
-        { href: "/settings/integrations", label: t("integrations") },
-        { href: "/settings/plugins", label: t("plugins") },
-        { href: "/settings/audit", label: t("audit") },
-        { href: "/settings/support", label: t("support") },
-      ],
+      // the settings pages are a left sub-nav inside the section (settings/layout.tsx)
+      tabs: [],
     },
   ];
 

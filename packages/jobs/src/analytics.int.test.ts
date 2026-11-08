@@ -38,6 +38,7 @@ import {
   toCsv,
 } from "./analytics.js";
 import { generateStatement, sendStatement } from "./owners.js";
+import { reportsOverview } from "./reports-overview.js";
 
 /**
  * M6 exit (spec 15, spec 11 §11.6): occupancy is identical from the KPI
@@ -276,6 +277,21 @@ describe("KPI engine over the rollups", () => {
         (f) => f.roomsSold,
       ),
     ).toEqual(facts.map((f) => f.roomsSold));
+  });
+
+  it("the Reports overview reads the same rollups: its weeks add back up to the window's nights", async () => {
+    const o = await asSystem(handle.db, ORG, (tx) =>
+      reportsOverview(tx, ORG, { today: "2026-06-30", days: 30, propertyIds: null }),
+    );
+    expect(o.window).toEqual({ from: "2026-06-01", to: "2026-07-01", days: 30 });
+    const facts = await repo((x) => x.daily({ from: "2026-06-01", to: "2026-07-01" }));
+    expect(o.kpis.current.occupancyBps).toBe(kpis(facts).occupancyBps);
+    expect(o.weeks.length).toBeLessThanOrEqual(13);
+    expect(o.weeks.at(-1)?.monday).toBe("2026-06-29");
+    const inWeeks = await repo((x) => x.daily({ from: o.weeks[0]!.monday, to: "2026-07-06" }));
+    expect(o.weeks.reduce((a, w) => a + w.roomsSold, 0)).toBe(
+      inWeeks.reduce((a, f) => a + f.roomsSold, 0),
+    );
   });
 
   it("pace is marked unavailable without a year of snapshots; pickup counts what the snapshots gained", async () => {

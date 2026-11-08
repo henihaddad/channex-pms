@@ -913,6 +913,15 @@ export interface TenantRow {
   unackedBookings: number;
   openIncidents: number;
   createdAt: string;
+  /** Properties live on the channel manager (state `live`), out of `properties`. */
+  liveProperties: number;
+  /** Channel connections, of any state: "Airbnb connected" on a sign-up. */
+  channelConnections: number;
+  planName: string | null;
+  /** The plan's price list, for what the tenant pays a month (core `tieredAmount`). */
+  planCurrency: string | null;
+  planTiers: Array<{ fromUnits: number; unitMinor: number }> | null;
+  trialEndsOn: string | null;
 }
 
 export interface FleetHealth {
@@ -1089,10 +1098,20 @@ export class DrizzleOperatorRepository {
       unacked: number;
       incidents: number;
       created_at: string;
+      live_properties: number;
+      connections: number;
+      plan_name: string | null;
+      plan_currency: string | null;
+      plan_tiers: Array<{ fromUnits: number; unitMinor: number }> | null;
+      trial_ends_on: string | null;
     }>(
       this.tx,
       sql`select o.id, o.name, o.slug, o.country, o.state, pl.key as plan_key,
+            pl.name as plan_name, pl.currency as plan_currency, pl.tiers as plan_tiers,
+            sb.trial_ends_on::text as trial_ends_on,
             (select count(*)::int from property p where p.org_id = o.id and p.archived_at is null) as properties,
+            (select count(*)::int from property p where p.org_id = o.id and p.archived_at is null and p.state = 'live') as live_properties,
+            (select count(*)::int from channel_connection cc where cc.org_id = o.id) as connections,
             coalesce((select sum(rt.count_of_rooms) from room_type rt join property p on p.id = rt.property_id where p.org_id = o.id and p.state = 'live' and rt.archived_at is null), 0)::int as units,
             (select max(occurred_at)::text from audit_log a where a.org_id = o.id) as last_activity,
             (select count(*)::int from availability_day a where a.org_id = o.id and a.sync_state in ('pending', 'failed')) as pending,
@@ -1117,6 +1136,12 @@ export class DrizzleOperatorRepository {
       unackedBookings: num(r.unacked),
       openIncidents: num(r.incidents),
       createdAt: new Date(r.created_at).toISOString(),
+      liveProperties: num(r.live_properties),
+      channelConnections: num(r.connections),
+      planName: r.plan_name,
+      planCurrency: r.plan_currency,
+      planTiers: r.plan_tiers,
+      trialEndsOn: r.trial_ends_on,
     }));
   }
 
