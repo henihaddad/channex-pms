@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { Children, isValidElement } from "react";
+import { Children, isValidElement, useId } from "react";
 import NextLink from "next/link";
 import { cn } from "./cn";
 import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button";
@@ -347,7 +347,9 @@ export function Select({
   form?: string;
 }) {
   const items = options ?? optionsFromChildren(children);
-  const selectId = id ?? (name ? `select-${name}` : undefined);
+  const autoId = useId();
+  // a visible label always names its select, even without a name or id
+  const selectId = id ?? (name ? `select-${name}` : label ? autoId : undefined);
   const controlled = value !== undefined;
   const initial =
     defaultValue === undefined || defaultValue === null ? undefined : String(defaultValue);
