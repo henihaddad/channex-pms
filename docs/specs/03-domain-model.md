@@ -103,6 +103,22 @@ trimmed, de-duplicated ignoring case, at most 200). It is a plain list, not a ma
 vocabulary: channels that need their own amenity codes are mapped when that channel's content
 push is built.
 
+**One property** has its own tabs: Overview, Rooms & rates, Guide, Pricing, Photos, Rules &
+policies and Settings (rooms, photos, rules and settings are sections of the overview; the
+guide and pricing are pages). The overview shows four numbers over the coming 30 nights in
+the property's time zone: occupancy (with nights booked of sellable), ADR (`averageDailyRateMinor`:
+room revenue per sold night, with tonight's base rate beside it), the next arrival (guest
+and channel) and sync (OK, Sending, or the attention reason). Beside them: content status
+(guide published and how many sections, house rules written, photo count, price import
+schedule, booking page on or off), channels (each connection's state, Direct, and Connect
+for Airbnb and Booking.com when absent), the owner on the agreement in force with its split
+and statement frequency, and who cleans it most (last 60 days) with the turnovers ahead. The
+Details form edits the name, street, postcode and city, and the check-in and check-out times
+of the first policy (creating "Standard" when there is none); these are local fields and are
+not pushed to Channex. The property type is shown read-only: changing `kind` after creation
+would change MODEL-1's system-managed room type and is not offered. Photos are shown from the
+property's library or the content an import carried; uploading photos is not built yet.
+
 Templates, the CSV import and adopting an existing Channex property stay on the Properties
 tab under "Other ways to add properties"; the CSV import lives at `/properties/import/csv`,
 and `/properties/import` is the Airbnb import.

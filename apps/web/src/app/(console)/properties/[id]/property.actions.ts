@@ -2,15 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { Id } from "@pms/core";
+import {
+  averageDailyRateMinor,
+  guideCompleteness,
+  Id,
+  normaliseSections,
+  occupancyBps,
+  propertyAttention,
+  sectionWritten,
+  type GuideSection,
+  type PropertyAttention,
+} from "@pms/core";
 import {
   applyCountChange,
   DrizzleChannelRepository,
   DrizzlePropertyRepository,
+  DrizzleRateImportRepository,
   rawRows,
   sql,
   type ConnectionRow,
+  type PortfolioInventory,
   type PropertyDetail,
+  type PropertyOverviewExtras,
+  type PropertyVitals,
+  type RateImportSettings,
 } from "@pms/db";
 import { markAllPending, queueAriPush, reopenProvisioningForPlans } from "@pms/jobs";
 import { withPermission } from "@/server/with-permission";
@@ -44,6 +59,104 @@ export const loadProperty = withPermission<
     bulkOps: await repo.listBulkOperations(id, 10),
   };
 });
+
+const OVERVIEW_DAYS = 30;
+
+export interface PropertyOverview {
+  today: string;
+  vitals: PropertyVitals;
+  occupancyBps: number | null;
+  adrMinor: number | null;
+  attention: PropertyAttention;
+  inventory: PortfolioInventory;
+  extras: PropertyOverviewExtras;
+  pricing: RateImportSettings;
+  /** The guide in the locale with the most written, for the content list. */
+  guide: { published: boolean; written: number; total: number; houseRules: boolean } | null;
+}
+
+/** The numbers, people and content status on a property's overview (spec 03 §3.2a). */
+export const loadPropertyOverview = withPermission<[string], PropertyOverview>(
+  "property:read",
+  { ...byProperty, audit: false },
+  async (ctx, id) => {
+    const c = await container();
+    const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
+    const [p] = await rawRows<{ state: string; timezone: string; error: string | null }>(
+      ctx.tx,
+      sql`select p.state, p.timezone, pv.last_error as error from property p left join property_provisioning pv on pv.property_id = p.id where p.id = ${id}`,
+    );
+    if (!p) throw new HttpProblem(404, "not_found", "Property not found");
+    const today = c.clock.today(p.timezone).toString();
+    const [vitals] = await repo.vitals(today, OVERVIEW_DAYS, id);
+    if (!vitals) throw new HttpProblem(404, "not_found", "Property not found");
+    const guides = vitals.guides.map((g) => ({
+      published: g.published,
+      sections: normaliseSections(g.sections as GuideSection[]),
+    }));
+    const best = guides
+      .map((g) => ({ ...g, done: guideCompleteness(g) }))
+      .sort(
+        (a, b) => Number(b.published) - Number(a.published) || b.done.written - a.done.written,
+      )[0];
+    return {
+      today,
+      vitals,
+      occupancyBps: occupancyBps(vitals.nightsSold, vitals.nightsAvailable),
+      adrMinor: averageDailyRateMinor(vitals.roomRevenueMinor, vitals.nightsSold),
+      attention: propertyAttention({
+        state: p.state,
+        unmappedBookings: vitals.unmappedBookings,
+        failedCells: vitals.failedCells,
+        provisioningError: p.error,
+      }),
+      inventory: await repo.inventory(today, id),
+      extras: await repo.overviewExtras(id, today),
+      pricing: await new DrizzleRateImportRepository(ctx.tx, ctx.orgId).get(id),
+      guide: best
+        ? {
+            published: best.published,
+            written: best.done.written,
+            total: best.done.total,
+            houseRules: guides.some((g) =>
+              g.sections.some((s) => s.kind === "house_rules" && sectionWritten(s)),
+            ),
+          }
+        : null,
+    };
+  },
+);
+
+const detailsSchema = z.object({
+  propertyId: z.string().uuid(),
+  title: z.string().trim().min(1).max(200),
+  street: z.string().trim().max(200),
+  postcode: z.string().trim().max(20),
+  city: z.string().trim().max(100),
+  checkInTime: z.string().regex(/^\d{2}:\d{2}$/),
+  checkOutTime: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+/** The Details card: name, address and house times, kept locally (spec 03 §3.2a). */
+export const updateDetailsAction = withPermission<[FormData], void>(
+  "property:update",
+  {
+    scope: "property",
+    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+    subject: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+  },
+  async (ctx, fd) => {
+    const p = detailsSchema.safeParse(Object.fromEntries(fd.entries()));
+    if (!p.success)
+      throw new HttpProblem(422, "invalid", p.error.issues.map((i) => i.message).join("; "));
+    const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
+    const { propertyId, title, street, postcode, city, checkInTime, checkOutTime } = p.data;
+    await repo.updateDetails(propertyId, { title, address: { street, postcode, city } });
+    await repo.setHouseTimes(propertyId, { checkInTime, checkOutTime }, () => Id.next());
+    revalidatePath(`/properties/${propertyId}`);
+    revalidatePath("/properties");
+  },
+);
 
 const derivedSchema = z.object({
   propertyId: z.string(),

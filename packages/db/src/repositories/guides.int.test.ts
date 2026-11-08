@@ -256,4 +256,39 @@ describe("property vitals (spec 03 §3.2a)", () => {
     );
     expect(later!.nightsSold).toBe(0);
   });
+
+  it("names the next arrival and edits the details and house times in place", async () => {
+    const x = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).overviewExtras(propertyId, "2026-10-01"),
+    );
+    expect(x.nextArrival).toMatchObject({
+      date: "2026-10-04",
+      channel: "BookingCom",
+      guestName: "Ana Silva",
+    });
+    expect(x.owner).toBeNull();
+    expect(x.photos).toEqual([]);
+    const after = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).overviewExtras(propertyId, "2026-10-05"),
+    );
+    expect(after.nextArrival).toBeNull();
+    await run(async (tx) => {
+      const repo = new DrizzlePropertyRepository(tx, ORG);
+      await repo.updateDetails(propertyId, {
+        title: "Graça Studio II",
+        address: { street: "Rua da Graça 1", city: "Lisboa" },
+      });
+      await repo.setHouseTimes(propertyId, { checkInTime: "16:00", checkOutTime: "10:00" }, () =>
+        Id.next(),
+      );
+      await repo.setHouseTimes(propertyId, { checkInTime: "15:00", checkOutTime: "10:30" }, () =>
+        Id.next(),
+      );
+    });
+    const d = await run((tx) => new DrizzlePropertyRepository(tx, ORG).get(propertyId));
+    expect(d?.property.title).toBe("Graça Studio II");
+    expect(d?.property.address).toMatchObject({ street: "Rua da Graça 1", city: "Lisboa" });
+    expect(d?.policies).toHaveLength(1);
+    expect(d?.policies[0]).toMatchObject({ checkInTime: "15:00", checkOutTime: "10:30" });
+  });
 });

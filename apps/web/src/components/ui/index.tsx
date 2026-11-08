@@ -322,10 +322,13 @@ export function Select({
   "aria-label": ariaLabel,
   testId,
   form,
+  description,
 }: {
   name?: string;
   id?: string;
   label?: ReactNode;
+  /** A hint under the select, as a Field has. */
+  description?: ReactNode;
   defaultValue?: string | number | null;
   value?: string | null;
   onChange?: (value: string) => void;
@@ -384,6 +387,7 @@ export function Select({
     <div className={cn("flex w-full flex-col gap-1.5", className)}>
       <Label htmlFor={selectId}>{label}</Label>
       {select}
+      {description ? <Description>{description}</Description> : null}
     </div>
   );
 }

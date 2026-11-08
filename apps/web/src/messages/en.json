@@ -445,15 +445,18 @@
       "kinds": {
         "single_unit": {
           "title": "One rental",
-          "hint": "A house or apartment rented as a whole. Rooms are handled for you."
+          "hint": "A house or apartment rented as a whole. Rooms are handled for you.",
+          "option": "Apartment or house (one rental)"
         },
         "multi_unit": {
           "title": "Several units",
-          "hint": "Apartments or rooms of one or more types, each bookable on its own."
+          "hint": "Apartments or rooms of one or more types, each bookable on its own.",
+          "option": "Several units (apartments or rooms)"
         },
         "hotel": {
           "title": "Hotel",
-          "hint": "Room types with counts, and a front desk."
+          "hint": "Room types with counts, and a front desk.",
+          "option": "Guest house or hotel"
         }
       },
       "title": "Title",
@@ -483,7 +486,9 @@
       "templateName": "Template name",
       "saveTemplate": "Save as template",
       "create": "Create property",
-      "afterCreate": "Next: your calendar is sent to the channel manager, then you connect Airbnb or Booking.com."
+      "afterCreate": "Next: your calendar is sent to the channel manager, then you connect Airbnb or Booking.com.",
+      "street": "Street address",
+      "postcode": "Postcode"
     },
     "states": {
       "draft": "Draft",
@@ -608,7 +613,90 @@
     "editAmenities": "Edit amenities",
     "amenitiesLabel": "Amenities of {title}",
     "amenitiesHint": "One per line. Duplicates are dropped.",
-    "saveAmenities": "Save amenities"
+    "saveAmenities": "Save amenities",
+    "detailTabs": {
+      "label": "Property pages",
+      "overview": "Overview",
+      "rooms": "Rooms & rates",
+      "guide": "Guide",
+      "pricing": "Pricing",
+      "photos": "Photos",
+      "rules": "Rules & policies",
+      "settings": "Settings"
+    },
+    "detail": {
+      "viewBookingPage": "View booking page",
+      "setUpBookingPage": "Set up booking page",
+      "rulesTitle": "Rules & policies",
+      "rulesHint": "Check-in and check-out times and cancellation terms, per policy. House rules live in the guest guide.",
+      "noPolicies": "No policy yet. Check-in 15:00 and check-out 11:00 apply until you add one.",
+      "editHouseRules": "Edit the house rules in the guide",
+      "writeHouseRules": "Write the house rules in the guide",
+      "details": "Details",
+      "name": "Name",
+      "propertyType": "Property type",
+      "propertyTypeHint": "Set when the property was created. It decides how Channex bills it and whether rooms are managed for you.",
+      "checkInFrom": "Check-in from",
+      "checkOutBy": "Check-out by",
+      "timezoneLine": "Time zone: {tz}. Nights and turnovers follow it.",
+      "save": "Save",
+      "discard": "Discard",
+      "content": "Content",
+      "notStarted": "Not started",
+      "guidePublished": "Published · {written} of {total} sections",
+      "guideDraft": "Draft · {written} of {total} sections",
+      "complete": "Complete",
+      "missing": "Missing",
+      "pricingScheduled": "{provider} · scheduled",
+      "pricingManual": "Manual",
+      "bookingPage": "Booking page",
+      "off": "Off",
+      "connection": {
+        "active": "Live",
+        "mapped": "Connected · mapped",
+        "testing": "Testing",
+        "paused": "Paused",
+        "error": "Error",
+        "draft": "Not finished"
+      },
+      "turnOn": "Turn on",
+      "connect": "Connect",
+      "owner": "Owner",
+      "ownerSettings": "Owner settings",
+      "noOwner": "No owner agreement on this property.",
+      "addOwner": "Add an owner",
+      "team": "Team",
+      "cleaning": "Cleaning",
+      "turnoversAhead": "{count, plural, =0 {No turnovers in the next 30 days} one {# turnover in the next 30 days} other {# turnovers in the next 30 days}}",
+      "noCleaner": "{count, plural, =0 {No cleaner assigned yet.} one {No cleaner assigned to the # turnover ahead.} other {No cleaner assigned to the # turnovers ahead.}}",
+      "assignCrew": "Set up a crew",
+      "split": "{owner} / {us} split",
+      "fixedFee": "Fixed fee {amount}",
+      "guaranteedRent": "Guaranteed rent {amount}",
+      "tiered": "Tiered commission",
+      "statements": {
+        "monthly": "statements monthly",
+        "fortnightly": "statements fortnightly"
+      },
+      "noPhotos": "No photos yet · Import from Airbnb",
+      "morePhotos": "+ {count, plural, one {# photo} other {# photos}}",
+      "photosCount": "{count, plural, one {# photo} other {# photos}}",
+      "syncCheck": "Check",
+      "syncSending": "Sending",
+      "nightsWaiting": "{count, plural, one {# change waiting} other {# changes waiting}}",
+      "channexAgo": "Channex {ago} ago",
+      "inStep": "Channex in step",
+      "nightsBooked": "{sold} of {available} nights booked",
+      "adr30": "ADR 30 d",
+      "baseRate": "{rate} base rate",
+      "nextArrival": "Next arrival",
+      "noArrivals": "No arrivals booked",
+      "sync": "Sync",
+      "noPlans": "No rate plan on this room type.",
+      "roomsTitle": "Rooms and rate plans",
+      "addRatePlan": "Add rate plan",
+      "channexNow": "Channex just now"
+    }
   },
   "calendar": {
     "title": "Calendar",

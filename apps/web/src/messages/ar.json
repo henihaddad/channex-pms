@@ -437,15 +437,18 @@
       "kinds": {
         "single_unit": {
           "title": "وحدة واحدة",
-          "hint": "منزل أو شقة تُؤجر كاملة. الغرف تُدار عنك."
+          "hint": "منزل أو شقة تُؤجر كاملة. الغرف تُدار عنك.",
+          "option": "شقة أو منزل (تأجير واحد)"
         },
         "multi_unit": {
           "title": "عدة وحدات",
-          "hint": "شقق أو غرف من نوع أو أكثر، تُحجز كل واحدة على حدة."
+          "hint": "شقق أو غرف من نوع أو أكثر، تُحجز كل واحدة على حدة.",
+          "option": "عدة وحدات (شقق أو غرف)"
         },
         "hotel": {
           "title": "فندق",
-          "hint": "أنواع غرف بأعدادها، ومكتب استقبال."
+          "hint": "أنواع غرف بأعدادها، ومكتب استقبال.",
+          "option": "دار ضيافة أو فندق"
         }
       },
       "title": "الاسم",
@@ -475,7 +478,9 @@
       "templateName": "اسم القالب",
       "saveTemplate": "حفظ كقالب",
       "create": "إنشاء العقار",
-      "afterCreate": "التالي: يُرسل تقويمك إلى مدير القنوات، ثم تربط Airbnb أو Booking.com."
+      "afterCreate": "التالي: يُرسل تقويمك إلى مدير القنوات، ثم تربط Airbnb أو Booking.com.",
+      "street": "عنوان الشارع",
+      "postcode": "الرمز البريدي"
     },
     "states": {
       "draft": "مسودة",
@@ -600,7 +605,90 @@
     "editAmenities": "تعديل المرافق",
     "amenitiesLabel": "مرافق {title}",
     "amenitiesHint": "عنصر في كل سطر. تُحذف العناصر المكررة.",
-    "saveAmenities": "حفظ المرافق"
+    "saveAmenities": "حفظ المرافق",
+    "detailTabs": {
+      "label": "صفحات العقار",
+      "overview": "نظرة عامة",
+      "rooms": "الغرف والأسعار",
+      "guide": "الدليل",
+      "pricing": "التسعير",
+      "photos": "الصور",
+      "rules": "القواعد والسياسات",
+      "settings": "الإعدادات"
+    },
+    "detail": {
+      "viewBookingPage": "عرض صفحة الحجز",
+      "setUpBookingPage": "إعداد صفحة الحجز",
+      "rulesTitle": "القواعد والسياسات",
+      "rulesHint": "مواعيد الوصول والمغادرة وشروط الإلغاء لكل سياسة. قواعد المنزل موجودة في دليل الضيف.",
+      "noPolicies": "لا توجد سياسة بعد. يُطبق الوصول 15:00 والمغادرة 11:00 حتى تضيف واحدة.",
+      "editHouseRules": "تعديل قواعد المنزل في الدليل",
+      "writeHouseRules": "كتابة قواعد المنزل في الدليل",
+      "details": "التفاصيل",
+      "name": "الاسم",
+      "propertyType": "نوع العقار",
+      "propertyTypeHint": "يُحدد عند إنشاء العقار، ويحدد طريقة فوترة Channex وما إذا كانت الغرف تُدار تلقائيًا.",
+      "checkInFrom": "الوصول من",
+      "checkOutBy": "المغادرة قبل",
+      "timezoneLine": "المنطقة الزمنية: {tz}. الليالي ومهام التنظيف تتبعها.",
+      "save": "حفظ",
+      "discard": "تجاهل",
+      "content": "المحتوى",
+      "notStarted": "لم يبدأ",
+      "guidePublished": "منشور · {written} من {total} أقسام",
+      "guideDraft": "مسودة · {written} من {total} أقسام",
+      "complete": "مكتمل",
+      "missing": "ناقص",
+      "pricingScheduled": "{provider} · مجدول",
+      "pricingManual": "يدوي",
+      "bookingPage": "صفحة الحجز",
+      "off": "متوقفة",
+      "connection": {
+        "active": "نشط",
+        "mapped": "متصل · مربوط",
+        "testing": "قيد الاختبار",
+        "paused": "متوقف مؤقتًا",
+        "error": "خطأ",
+        "draft": "غير مكتمل"
+      },
+      "turnOn": "تشغيل",
+      "connect": "ربط",
+      "owner": "المالك",
+      "ownerSettings": "إعدادات المالك",
+      "noOwner": "لا توجد اتفاقية مالك على هذا العقار.",
+      "addOwner": "إضافة مالك",
+      "team": "الفريق",
+      "cleaning": "التنظيف",
+      "turnoversAhead": "{count, plural, =0 {لا مهام تنظيف في الثلاثين يومًا القادمة} one {مهمة تنظيف واحدة في الثلاثين يومًا القادمة} other {# مهام تنظيف في الثلاثين يومًا القادمة}}",
+      "noCleaner": "{count, plural, =0 {لم يُعيَّن عامل نظافة بعد.} one {لم يُعيَّن أحد لمهمة التنظيف القادمة.} other {لم يُعيَّن أحد لـ # مهام تنظيف قادمة.}}",
+      "assignCrew": "إعداد فريق",
+      "split": "تقسيم {owner} / {us}",
+      "fixedFee": "رسوم ثابتة {amount}",
+      "guaranteedRent": "إيجار مضمون {amount}",
+      "tiered": "عمولة متدرجة",
+      "statements": {
+        "monthly": "كشوف شهرية",
+        "fortnightly": "كشوف كل أسبوعين"
+      },
+      "noPhotos": "لا صور بعد · استيراد من Airbnb",
+      "morePhotos": "+ {count, plural, one {صورة واحدة} other {# صور}}",
+      "photosCount": "{count, plural, one {صورة واحدة} other {# صور}}",
+      "syncCheck": "تحقق",
+      "syncSending": "جارٍ الإرسال",
+      "nightsWaiting": "{count, plural, one {تغيير واحد بالانتظار} other {# تغييرات بالانتظار}}",
+      "channexAgo": "Channex منذ {ago}",
+      "inStep": "Channex متزامن",
+      "nightsBooked": "{sold} من {available} ليلة محجوزة",
+      "adr30": "متوسط السعر 30 يومًا",
+      "baseRate": "السعر الأساسي {rate}",
+      "nextArrival": "الوصول التالي",
+      "noArrivals": "لا وصول محجوز",
+      "sync": "المزامنة",
+      "noPlans": "لا توجد خطة سعر لهذا النوع من الغرف.",
+      "roomsTitle": "الغرف وخطط الأسعار",
+      "addRatePlan": "إضافة خطة سعر",
+      "channexNow": "Channex الآن"
+    }
   },
   "calendar": {
     "title": "التقويم",

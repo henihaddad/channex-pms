@@ -85,6 +85,28 @@ export interface PropertyVitals {
   }>;
 }
 
+/** The people and dates a property's overview shows beside its numbers. */
+export interface PropertyOverviewExtras {
+  nextArrival: {
+    bookingId: string;
+    date: string;
+    channel: string | null;
+    guestName: string | null;
+  } | null;
+  /** The owner on the agreement in force today, with its commercial model and payout terms. */
+  owner: {
+    id: string;
+    name: string;
+    model: Record<string, unknown>;
+    payout: Record<string, unknown>;
+  } | null;
+  /** Who cleaned it most over the last 60 days, and how many turnovers. */
+  cleaner: { name: string; tasks: number } | null;
+  upcomingTurnovers: number;
+  /** Photo URLs: the property's own library, else what an import carried over. */
+  photos: string[];
+}
+
 /** Room types and rate plans across the portfolio, for the inventory tabs. */
 export interface PortfolioInventory {
   roomTypes: Array<{
@@ -368,6 +390,112 @@ export class DrizzlePropertyRepository implements PropertyRepository {
         rateMinor: r.rateMinor === null ? null : Number(r.rateMinor),
       })),
     };
+  }
+
+  /**
+   * What the property's overview shows beside the numbers (spec 03 §3.2a): the next arrival,
+   * the owner on the agreement in force, who cleans it, and its photos.
+   */
+  async overviewExtras(propertyId: string, today: string): Promise<PropertyOverviewExtras> {
+    const [next] = await rawRows<{
+      id: string;
+      arrival_date: string;
+      ota_name: string | null;
+      names: Array<{ name?: string; surname?: string }> | null;
+    }>(
+      this.tx,
+      sql`select b.id, b.arrival_date::text, b.ota_name,
+          (select br.guest_names from booking_room br where br.booking_id = b.id order by br.id limit 1) as names
+          from booking b where b.property_id = ${propertyId} and b.status <> 'cancelled' and b.arrival_date >= ${today}::date
+          order by b.arrival_date, b.created_at limit 1`,
+    );
+    const [owner] = await rawRows<{
+      id: string;
+      name: string;
+      model: Record<string, unknown>;
+      payout: Record<string, unknown>;
+    }>(
+      this.tx,
+      sql`select o.id, o.name, a.model, a.payout from owner_agreement a join owner o on o.id = a.owner_id
+          where a.property_id = ${propertyId} and o.archived_at is null and a.effective_from <= ${today}::date
+            and (a.effective_to is null or a.effective_to > ${today}::date)
+          order by a.effective_from desc, a.version desc limit 1`,
+    );
+    const [cleaner] = await rawRows<{ name: string; tasks: number }>(
+      this.tx,
+      sql`select u.name, count(*)::int as tasks from turnover_task t join "user" u on u.id = t.assignee_id
+          where t.property_id = ${propertyId} and t.date >= ${today}::date - 60
+          group by u.name order by count(*) desc, u.name limit 1`,
+    );
+    const [upcoming] = await rawRows<{ n: number }>(
+      this.tx,
+      sql`select count(*)::int as n from turnover_task t
+          where t.property_id = ${propertyId} and t.date >= ${today}::date and t.date < ${today}::date + 30`,
+    );
+    const photos = await rawRows<{ url: string }>(
+      this.tx,
+      sql`select storage_key as url from photo where property_id = ${propertyId} order by position, id`,
+    );
+    const [content] = await rawRows<{ photos: unknown }>(
+      this.tx,
+      sql`select settings #> '{content,photos}' as photos from property where id = ${propertyId}`,
+    );
+    const imported = Array.isArray(content?.photos) ? content.photos.map(String) : [];
+    const first = next?.names?.[0];
+    return {
+      nextArrival: next
+        ? {
+            bookingId: next.id,
+            date: next.arrival_date,
+            channel: next.ota_name,
+            guestName: first ? [first.name, first.surname].filter(Boolean).join(" ") : null,
+          }
+        : null,
+      owner: owner
+        ? { id: owner.id, name: owner.name, model: owner.model, payout: owner.payout }
+        : null,
+      cleaner: cleaner ? { name: cleaner.name, tasks: cleaner.tasks } : null,
+      upcomingTurnovers: upcoming?.n ?? 0,
+      photos: photos.length > 0 ? photos.map((p) => p.url) : imported,
+    };
+  }
+
+  /** The property's name and address, edited from its overview. Provider ids are untouched. */
+  async updateDetails(
+    propertyId: string,
+    d: { title: string; address: Record<string, string> },
+  ): Promise<void> {
+    await this.tx.execute(
+      sql`update property set title = ${d.title}, address = coalesce(address, '{}'::jsonb) || ${JSON.stringify(d.address)}::jsonb,
+          updated_at = now() where id = ${propertyId}`,
+    );
+  }
+
+  /** Check-in and check-out times on the property's first policy, creating "Standard" when there is none. */
+  async setHouseTimes(
+    propertyId: string,
+    times: { checkInTime: string; checkOutTime: string },
+    newId: () => string,
+  ): Promise<void> {
+    const [p] = await this.tx
+      .select({ id: s.policy.id })
+      .from(s.policy)
+      .where(eq(s.policy.propertyId, propertyId))
+      .orderBy(asc(s.policy.title))
+      .limit(1);
+    if (p)
+      await this.tx
+        .update(s.policy)
+        .set({ checkInTime: times.checkInTime, checkOutTime: times.checkOutTime })
+        .where(eq(s.policy.id, p.id));
+    else
+      await this.insertPolicy({
+        id: newId(),
+        propertyId,
+        title: "Standard",
+        ...times,
+        cancellation: { type: "flexible" },
+      });
   }
 
   /** The amenities a property lists (`settings.content.amenities`), as an Airbnb import carries them. */

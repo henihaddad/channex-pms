@@ -437,15 +437,18 @@
       "kinds": {
         "single_unit": {
           "title": "Un logement",
-          "hint": "Une maison ou un appartement loué en entier. Les chambres sont gérées pour vous."
+          "hint": "Une maison ou un appartement loué en entier. Les chambres sont gérées pour vous.",
+          "option": "Appartement ou maison (une location)"
         },
         "multi_unit": {
           "title": "Plusieurs unités",
-          "hint": "Appartements ou chambres d'un ou plusieurs types, réservables séparément."
+          "hint": "Appartements ou chambres d'un ou plusieurs types, réservables séparément.",
+          "option": "Plusieurs unités (appartements ou chambres)"
         },
         "hotel": {
           "title": "Hôtel",
-          "hint": "Des types de chambres avec leur nombre, et une réception."
+          "hint": "Des types de chambres avec leur nombre, et une réception.",
+          "option": "Maison d'hôtes ou hôtel"
         }
       },
       "title": "Titre",
@@ -475,7 +478,9 @@
       "templateName": "Nom du modèle",
       "saveTemplate": "Enregistrer comme modèle",
       "create": "Créer le bien",
-      "afterCreate": "Ensuite : votre calendrier est envoyé au gestionnaire de canaux, puis vous connectez Airbnb ou Booking.com."
+      "afterCreate": "Ensuite : votre calendrier est envoyé au gestionnaire de canaux, puis vous connectez Airbnb ou Booking.com.",
+      "street": "Adresse",
+      "postcode": "Code postal"
     },
     "states": {
       "draft": "Brouillon",
@@ -600,7 +605,90 @@
     "editAmenities": "Modifier les équipements",
     "amenitiesLabel": "Équipements de {title}",
     "amenitiesHint": "Un par ligne. Les doublons sont retirés.",
-    "saveAmenities": "Enregistrer les équipements"
+    "saveAmenities": "Enregistrer les équipements",
+    "detailTabs": {
+      "label": "Pages du logement",
+      "overview": "Vue d'ensemble",
+      "rooms": "Chambres et tarifs",
+      "guide": "Guide",
+      "pricing": "Prix",
+      "photos": "Photos",
+      "rules": "Règles et conditions",
+      "settings": "Réglages"
+    },
+    "detail": {
+      "viewBookingPage": "Voir la page de réservation",
+      "setUpBookingPage": "Créer la page de réservation",
+      "rulesTitle": "Règles et conditions",
+      "rulesHint": "Heures d'arrivée et de départ et conditions d'annulation, par politique. Le règlement intérieur est dans le guide voyageur.",
+      "noPolicies": "Aucune politique. Arrivée 15:00 et départ 11:00 s'appliquent jusqu'à ce que vous en ajoutiez une.",
+      "editHouseRules": "Modifier le règlement dans le guide",
+      "writeHouseRules": "Rédiger le règlement dans le guide",
+      "details": "Détails",
+      "name": "Nom",
+      "propertyType": "Type de logement",
+      "propertyTypeHint": "Choisi à la création. Il décide de la facturation Channex et de la gestion automatique des chambres.",
+      "checkInFrom": "Arrivée à partir de",
+      "checkOutBy": "Départ avant",
+      "timezoneLine": "Fuseau horaire : {tz}. Les nuits et les ménages le suivent.",
+      "save": "Enregistrer",
+      "discard": "Annuler",
+      "content": "Contenu",
+      "notStarted": "Pas commencé",
+      "guidePublished": "Publié · {written} sur {total} sections",
+      "guideDraft": "Brouillon · {written} sur {total} sections",
+      "complete": "Complet",
+      "missing": "Manquant",
+      "pricingScheduled": "{provider} · planifié",
+      "pricingManual": "Manuel",
+      "bookingPage": "Page de réservation",
+      "off": "Désactivée",
+      "connection": {
+        "active": "En ligne",
+        "mapped": "Connecté · relié",
+        "testing": "En test",
+        "paused": "En pause",
+        "error": "Erreur",
+        "draft": "Non terminé"
+      },
+      "turnOn": "Activer",
+      "connect": "Connecter",
+      "owner": "Propriétaire",
+      "ownerSettings": "Réglages du propriétaire",
+      "noOwner": "Aucun contrat propriétaire sur ce logement.",
+      "addOwner": "Ajouter un propriétaire",
+      "team": "Équipe",
+      "cleaning": "Ménage",
+      "turnoversAhead": "{count, plural, =0 {Aucun ménage dans les 30 prochains jours} one {# ménage dans les 30 prochains jours} other {# ménages dans les 30 prochains jours}}",
+      "noCleaner": "{count, plural, =0 {Aucun agent de ménage assigné.} one {Personne n'est assigné au ménage à venir.} other {Personne n'est assigné aux # ménages à venir.}}",
+      "assignCrew": "Créer une équipe",
+      "split": "Partage {owner} / {us}",
+      "fixedFee": "Forfait {amount}",
+      "guaranteedRent": "Loyer garanti {amount}",
+      "tiered": "Commission par paliers",
+      "statements": {
+        "monthly": "relevés mensuels",
+        "fortnightly": "relevés bimensuels"
+      },
+      "noPhotos": "Aucune photo · Importer depuis Airbnb",
+      "morePhotos": "+ {count, plural, one {# photo} other {# photos}}",
+      "photosCount": "{count, plural, one {# photo} other {# photos}}",
+      "syncCheck": "À vérifier",
+      "syncSending": "Envoi",
+      "nightsWaiting": "{count, plural, one {# changement en attente} other {# changements en attente}}",
+      "channexAgo": "Channex il y a {ago}",
+      "inStep": "Channex à jour",
+      "nightsBooked": "{sold} nuits réservées sur {available}",
+      "adr30": "Prix moyen 30 j",
+      "baseRate": "Prix de base {rate}",
+      "nextArrival": "Prochaine arrivée",
+      "noArrivals": "Aucune arrivée réservée",
+      "sync": "Synchro",
+      "noPlans": "Aucun plan tarifaire sur ce type de chambre.",
+      "roomsTitle": "Chambres et plans tarifaires",
+      "addRatePlan": "Ajouter un plan tarifaire",
+      "channexNow": "Channex à l'instant"
+    }
   },
   "calendar": {
     "title": "Calendrier",

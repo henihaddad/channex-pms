@@ -815,6 +815,21 @@
   },
   {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "loadPropertyOverview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "updateDetailsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:update",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "updateRoomTypeCountAction",
     "kind": "action",
     "wrapper": "withPermission",

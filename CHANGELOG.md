@@ -26,6 +26,12 @@ All notable changes to this project are documented here. The format follows
   dashed "Add a property" card; and Content completeness across the portfolio (photos, guide,
   house rules, price guard rails). Templates, the CSV import and adopting a Channex property
   moved under "Other ways to add properties". The CSV import moved to `/properties/import/csv`.
+- A property's page matches the design canvas: its own tabs (Overview, Rooms & rates, Guide,
+  Pricing, Photos, Rules & policies, Settings), a photo mosaic, occupancy, ADR, next arrival
+  and sync over the coming 30 nights, a rooms-and-rate-plans table with tonight's rate,
+  minimum stay and mapped channels, and cards for content status, channels, owner and team.
+  A Details form edits the name, address and check-in/check-out times. "View booking page"
+  opens the public page once the booking site is on.
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
   failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,
