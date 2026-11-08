@@ -13,6 +13,7 @@ export {
   parsePercentBps,
   channelKey,
   guestPrice,
+  channelComparison,
   type OtaChannel,
   type ChannelKey,
   type PriceRounding,

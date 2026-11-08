@@ -38,6 +38,23 @@ export async function orgForHold(holdId: string): Promise<string | null> {
   return r?.org_id ?? null;
 }
 
+export async function orgForBooking(bookingId: string): Promise<string | null> {
+  const c = await container();
+  const [r] = await withoutTenant(c.db.db, (tx) =>
+    rawRows<{ org_id: string }>(tx, sql`select org_id from booking where id = ${bookingId}`),
+  );
+  return r?.org_id ?? null;
+}
+
+/** The organization a public page belongs to, for the booking site's header and footer. */
+export async function orgBrand(orgId: string): Promise<{ id: string; name: string }> {
+  const c = await container();
+  const [r] = await withoutTenant(c.db.db, (tx) =>
+    rawRows<{ name: string }>(tx, sql`select name from organization where id = ${orgId}`),
+  );
+  return { id: orgId, name: r?.name ?? "" };
+}
+
 export function money(minor: number, currency: string, locale = "en"): string {
   try {
     return new Intl.NumberFormat(locale, { style: "currency", currency }).format(minor / 100);

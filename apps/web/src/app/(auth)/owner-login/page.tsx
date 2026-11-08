@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Card } from "@/components/ui";
+import { AuthCard } from "../auth-card";
 import { OwnerLoginForm } from "./owner-login-form";
 
 /** Owner portal sign-in: magic link by default (spec 17 §17.5). */
@@ -11,11 +11,10 @@ export default async function OwnerLoginPage({
   const sp = await searchParams;
   const t = await getTranslations("owner");
   return (
-    <Card>
-      <h1 className="mb-2 text-xl font-bold">{t("loginTitle")}</h1>
-      <p className="mb-4 text-sm text-muted">{t("loginHint")}</p>
-      {sp.error ? <p className="mb-2 text-sm text-danger">{t("linkInvalid")}</p> : null}
+    <AuthCard title={t("loginTitle")}>
+      <p className="-mt-2 text-sm text-muted">{t("loginHint")}</p>
+      {sp.error ? <p className="text-sm text-danger">{t("linkInvalid")}</p> : null}
       <OwnerLoginForm labels={{ email: t("email"), submit: t("sendLink") }} />
-    </Card>
+    </AuthCard>
   );
 }

@@ -19,6 +19,21 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Sign-in, sign-up, the booking site, checkout, the guest portal and the owner portal match
+  the design canvas. Sign-in has "Forgot?" and "Email me a sign-in link" (the link stands in
+  for the password; TOTP still applies). Sign-up has its own panel (trial length and price
+  read from the plan catalogue), country and currency dropdowns from ISO lists, the slug
+  derived from the organization name, and "Start free". The booking site wears the
+  manager's brand: hero, search pill, cards with badge, rating, who it sleeps and the
+  nightly price struck against the OTA price when a channel markup makes it dearer there,
+  and a "why book direct" band. The property page has a photo mosaic, a month of nightly
+  prices from our own ARI, "good to know", and a booking card that prices the choice with
+  the same quote the hold uses. Checkout is numbered sections with a required acceptance of
+  the cancellation policy and "You save … vs Airbnb". The guest portal greets the guest,
+  counts down to arrival, offers directions and an .ics, and lays out the guide, bill and
+  messages as tiles. The owner portal leads with the month so far, occupancy, ADR, next
+  payout, statements, the next 60 nights and blocking nights.
+
 - Inbox, Automation and Reviews match the design canvas. The inbox is a list and a
   conversation: four views in front, rows that say how long the guest has waited, a
   one-line booking header, a chat, the time since the guest wrote against the target,
@@ -113,6 +128,9 @@ All notable changes to this project are documented here. The format follows
 
 
 ### Fixed
+
+- A TOTP challenge token was accepted by the magic-link landing, which signed the holder
+  in without the second factor. Challenge tokens are now refused there.
 
 - The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"
   step exited 0 when `CLOUDFLARE_API_TOKEN` or `NEON_DIRECT_URL` was unset, and every step

@@ -448,21 +448,45 @@ export class IdentityService {
     return { token };
   }
 
+  /**
+   * Consume a sign-in link. A TOTP challenge is stored as a `login` link too, but it is
+   * not a sign-in link: it only completes a password login. A console sign-in link
+   * (`login`) stands in for the password, never for the second factor, so a user with
+   * TOTP enabled gets the same challenge a password login gives (spec 02 §2.6).
+   */
   async consumeMagicLink(
     token: string,
     deviceFingerprint: string,
-  ): Promise<Result<{ tokens: IssuedTokens; user: User }>> {
+  ): Promise<Result<LoginResult & { purpose: MagicLink["purpose"] }>> {
     const link = await this.deps.repo.consumeMagicLink(
       this.deps.crypto.sha256Hex(token),
       this.now(),
     );
-    if (!link || link.purpose === "guest_portal")
-      return err(new DomainError("identity.magic_link_invalid", "Link is invalid or expired"));
+    const invalid = new DomainError("identity.magic_link_invalid", "Link is invalid or expired");
+    if (!link || link.purpose === "guest_portal" || link.payload.stage === "totp")
+      return err(invalid);
     const user = await this.deps.repo.findUserById(link.payload.userId as Id);
-    if (!user)
-      return err(new DomainError("identity.magic_link_invalid", "Link is invalid or expired"));
+    if (!user) return err(invalid);
+    if (link.purpose === "login" && user.totpEnabled) {
+      const challengeToken = this.deps.crypto.randomToken(32);
+      await this.deps.repo.createMagicLink({
+        id: Id.next(),
+        email: user.email,
+        purpose: "login",
+        tokenHash: this.deps.crypto.sha256Hex(challengeToken),
+        payload: { userId: user.id, stage: "totp", deviceFingerprint },
+        expiresAt: this.plus({ minutes: 5 }),
+        usedAt: null,
+      });
+      return ok({ kind: "totp_required", challengeToken, userId: user.id, purpose: link.purpose });
+    }
     await this.deps.repo.updateUser(user.id, { lastLoginAt: this.now() });
-    return ok({ tokens: await this.issueSession(user.id, deviceFingerprint), user });
+    return ok({
+      kind: "session",
+      tokens: await this.issueSession(user.id, deviceFingerprint),
+      user,
+      purpose: link.purpose,
+    });
   }
 
   private async issueSession(userId: Id, deviceFingerprint: string): Promise<IssuedTokens> {

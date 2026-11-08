@@ -212,6 +212,15 @@ access).
   claims may map to grants.
 - Owners and cleaners get **passwordless magic-link login** by default — they log in
   rarely, and a forgotten password is the main reason an owner portal goes unused.
+- Console users can ask for a **sign-in link** instead of typing the password ("Email
+  me a sign-in link"; "Forgot?" opens the link-only form). The answer never says
+  whether the address has an account. The link replaces the password, never the
+  second factor: a user with TOTP enabled lands on the TOTP step. A TOTP challenge
+  token is never accepted as a sign-in link. An owner-portal link lands in the owner
+  portal, a console link in the console.
+- Sign-up asks for the country and currency from ISO lists named in the visitor's
+  language (country guessed from the browser's language region, currency following
+  it), and derives the URL slug from the organization name, editable in place.
 - Sessions are short-lived JWT access tokens (≤15 min) with rotating refresh tokens
   bound to a device fingerprint; server-side revocation for "sign out everywhere".
 - **Step-up (`!`) actions** require re-authentication within the last 5 minutes and

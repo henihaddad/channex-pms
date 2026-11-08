@@ -19,9 +19,9 @@ test("sign up, invite a colleague, accept, and see it audited", async ({
   await page.getByLabel("Password").fill(owner.password);
   await page.getByLabel("Organization name").fill("Coastal Stays");
   await page.getByLabel("URL slug").fill(`coastal-${stamp}`);
-  await page.getByLabel("Country (ISO code)").fill("PT");
-  await page.getByLabel("Currency (ISO code)").fill("EUR");
-  await page.getByRole("button", { name: "Create your organization" }).click();
+  await page.getByLabel("Country", { exact: true }).selectOption("PT");
+  await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
+  await page.getByRole("button", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
 
   // invite a colleague as property_manager

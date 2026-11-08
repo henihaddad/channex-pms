@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import type { Id } from "@pms/core";
 import { publicAction } from "@/server/public";
@@ -109,6 +110,19 @@ export const requestMagicLinkAction = publicAction<[FormState, FormData], FormSt
       error: null,
       message: "If that address belongs to an owner, a sign-in link is on its way.",
     };
+  },
+);
+
+/** Console "Email me a sign-in link": the same no-enumeration answer; the link stands in for the password only. */
+export const requestSignInLinkAction = publicAction<[FormState, FormData], FormState>(
+  "auth",
+  async (_prev, fd) => {
+    const { requestMagicLinkFlow } = await import("@/server/auth-flows");
+    const t = await getTranslations("auth");
+    const email = field(fd, "email");
+    if (!z.string().email().safeParse(email).success) return { error: t("linkEmailInvalid") };
+    await requestMagicLinkFlow(email, await getLocale(), "login");
+    return { error: null, message: t("linkSent") };
   },
 );
 

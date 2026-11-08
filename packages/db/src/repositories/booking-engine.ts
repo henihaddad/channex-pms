@@ -1,6 +1,10 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import {
   activeHoldsByDate,
+  channelKey,
+  parsePricingDefaults,
+  type ChannelKey,
+  type PricingDefaults,
   Id,
   type Crypto,
   type Extra,
@@ -50,6 +54,16 @@ export interface StorefrontProperty {
     checkOutTime: string;
   } | null;
   minRateMinor: number | null;
+  /** What the booking site shows on a card (spec 10 §10.3): the kind, who it sleeps, the reviews. */
+  kind: string;
+  /** The largest room type's maximum occupancy; null when no room type says. */
+  sleeps: number | null;
+  /** Visible reviews: the count and the sum of their ratings out of ten (no float average stored). */
+  reviews: { count: number; ratingSum: number };
+  /** Per-channel markup and rounding (spec 06 §6.6), for the "€122 on Airbnb" comparison. */
+  pricing: Pick<PricingDefaults, "markupBps" | "rounding">;
+  /** The channels the property is live on, by channel key, direct excluded. */
+  listedOn: ChannelKey[];
 }
 
 export interface HoldRow {
@@ -193,10 +207,24 @@ export class DrizzleBookingEngineRepository {
       timezone: string;
       address: Record<string, string>;
       min_rate: number | null;
+      kind: string;
+      sleeps: number | null;
+      review_count: number;
+      rating_sum: number;
+      pricing: unknown;
+      content_photos: unknown;
+      channels: string[] | null;
     }>(
       this.tx,
-      sql`select p.id, p.title, p.currency, p.timezone, p.address,
-            (select min((rd.values->>'rate')::bigint) from rate_day rd join rate_plan rp on rp.id = rd.rate_plan_id where rp.property_id = p.id and rd.date >= current_date and rd.date < current_date + 60 and rd.values ? 'rate') as min_rate
+      sql`select p.id, p.title, p.currency, p.timezone, p.address, p.kind,
+            (select min((rd.values->>'rate')::bigint) from rate_day rd join rate_plan rp on rp.id = rd.rate_plan_id where rp.property_id = p.id and rd.date >= current_date and rd.date < current_date + 60 and rd.values ? 'rate') as min_rate,
+            (select max(rt.max_occupancy) from room_type rt where rt.property_id = p.id and rt.archived_at is null) as sleeps,
+            (select count(*)::int from review rv where rv.property_id = p.id and not rv.hidden) as review_count,
+            (select coalesce(sum(rv.rating), 0)::int from review rv where rv.property_id = p.id and not rv.hidden) as rating_sum,
+            p.settings -> 'pricing' as pricing,
+            p.settings #> '{content,photos}' as content_photos,
+            (select array_agg(distinct cc.adapter_code) from channel_connection cc
+              where cc.property_id = p.id and cc.archived_at is null and cc.adapter_code <> 'direct' and cc.state in ('active', 'mapped')) as channels
           from property p join booking_engine_settings bes on bes.property_id = p.id
           where p.org_id = ${this.orgId} and p.archived_at is null and p.state = 'live' and bes.enabled ${filter.propertyId ? sql`and p.id = ${filter.propertyId}` : sql``}
           order by p.title`,
@@ -230,7 +258,23 @@ export class DrizzleBookingEngineRepository {
         timezone: r.timezone,
         address: r.address,
         settings,
-        photos: photos.map((p) => ({ id: p.id, storageKey: p.storage_key, kind: p.kind })),
+        // uploaded photos first; a listing imported with photo URLs in its content uses those
+        photos:
+          photos.length > 0
+            ? photos.map((p) => ({ id: p.id, storageKey: p.storage_key, kind: p.kind }))
+            : (Array.isArray(r.content_photos) ? r.content_photos : [])
+                .filter((u): u is string => typeof u === "string" && u.length > 0)
+                .slice(0, 12)
+                .map((u, i) => ({ id: `content-${String(i)}`, storageKey: u, kind: "photo" })),
+        kind: r.kind,
+        sleeps: r.sleeps === null ? null : num(r.sleeps),
+        reviews: { count: num(r.review_count), ratingSum: num(r.rating_sum) },
+        pricing: (({ markupBps, rounding }) => ({ markupBps, rounding }))(
+          parsePricingDefaults(r.pricing),
+        ),
+        listedOn: [...new Set((r.channels ?? []).map((c) => channelKey(c)))].filter(
+          (c) => c !== "direct",
+        ),
         policy: policy
           ? {
               title: policy.title,
@@ -244,6 +288,19 @@ export class DrizzleBookingEngineRepository {
       });
     }
     return out;
+  }
+
+  /** The names a guest sees for a held room and rate, for the checkout summary. */
+  async labels(
+    roomTypeId: string,
+    ratePlanId: string,
+  ): Promise<{ roomType: string | null; ratePlan: string | null }> {
+    const [r] = await rawRows<{ room_type: string | null; rate_plan: string | null }>(
+      this.tx,
+      sql`select (select title from room_type where id = ${roomTypeId}) as room_type,
+                 (select title from rate_plan where id = ${ratePlanId}) as rate_plan`,
+    );
+    return { roomType: r?.room_type ?? null, ratePlan: r?.rate_plan ?? null };
   }
 
   /** Room types with their rate plans' cells and availability for a stay: the input to `searchOffers` (BE-2). */

@@ -1,25 +1,48 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Card } from "@/components/ui";
+import { AuthCard, AuthFootnote, authLinkClass } from "../auth-card";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+/**
+ * Sign in with a password, or have a sign-in link emailed (spec 02 §2.6). "Forgot?"
+ * opens the link-only form: the link signs you in, and a second factor still applies.
+ */
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ link?: string }>;
+}) {
+  const sp = await searchParams;
   const t = await getTranslations("auth");
+  const linkOnly = sp.link === "1";
   return (
-    <Card>
-      <h1 className="mb-5 font-display text-2xl font-bold tracking-tight text-foreground">
-        {t("signIn")}
-      </h1>
-      <LoginForm labels={{ email: t("email"), password: t("password"), submit: t("signIn") }} />
-      <p className="mt-5 text-sm text-muted">
-        {t("noAccount")}{" "}
-        <Link
-          className="font-medium text-foreground underline decoration-accent underline-offset-4"
-          href="/signup"
-        >
-          {t("signUp")}
-        </Link>
-      </p>
-    </Card>
+    <AuthCard title={linkOnly ? t("linkTitle") : t("signIn")}>
+      {linkOnly ? <p className="-mt-2 text-sm text-muted">{t("linkHint")}</p> : null}
+      <LoginForm
+        linkOnly={linkOnly}
+        labels={{
+          email: t("email"),
+          password: t("password"),
+          submit: t("signIn"),
+          forgot: t("forgot"),
+          or: t("or"),
+          emailLink: t("emailLink"),
+        }}
+      />
+      <AuthFootnote>
+        {linkOnly ? (
+          <Link className={authLinkClass} href="/login">
+            {t("backToPassword")}
+          </Link>
+        ) : (
+          <>
+            {t("noAccount")}{" "}
+            <Link className={authLinkClass} href="/signup">
+              {t("signUp")}
+            </Link>
+          </>
+        )}
+      </AuthFootnote>
+    </AuthCard>
   );
 }

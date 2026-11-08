@@ -246,3 +246,33 @@ export function accessRevealOpen(
   const now = Date.parse(nowIso);
   return now >= opens && now <= closes;
 }
+
+/**
+ * The booking site's "prices by night" (spec 10 §10.3): for each night, the lowest
+ * rate a party of this size could book that night, or null when the night is taken,
+ * stop-sold, unpriced or too small for the party. A night, not a stay: stay rules
+ * (min/max stay, CTA/CTD) are the search's job once dates are picked.
+ */
+export function nightlyPrices(
+  roomTypes: readonly SearchableRoomType[],
+  dates: readonly string[],
+  party: number,
+): Map<string, number | null> {
+  const out = new Map<string, number | null>();
+  for (const date of dates) {
+    let best: number | null = null;
+    for (const rt of roomTypes) {
+      if (party > rt.maxOccupancy || (rt.availability.get(date) ?? 0) < 1) continue;
+      for (const rp of rt.ratePlans) {
+        const cell = rp.cells.find((c) => c.date === date);
+        if (!cell || cell.values.stopSell) continue;
+        const rate =
+          cell.values.rates?.[party] ?? cell.values.rates?.[Math.min(party, 2)] ?? cell.values.rate;
+        if (rate === undefined) continue;
+        if (best === null || rate < best) best = rate;
+      }
+    }
+    out.set(date, best);
+  }
+  return out;
+}

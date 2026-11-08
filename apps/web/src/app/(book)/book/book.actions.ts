@@ -16,14 +16,16 @@ export const holdAction = publicAction<[FormData], void>("booking_engine", async
   if (!orgId) redirect("/book");
   const deps = await engineDeps();
   const locale = await currentLocale();
+  // the booking card sends its radio choice as "roomTypeId:ratePlanId"
+  const [pickedRoomType, pickedRatePlan] = str(fd, "offer").split(":");
   let holdId: string;
   try {
     holdId = (
       await asSystem(deps.db, orgId, (tx) =>
         createHold(deps, tx, orgId, {
           propertyId,
-          roomTypeId: str(fd, "roomTypeId"),
-          ratePlanId: str(fd, "ratePlanId"),
+          roomTypeId: pickedRoomType || str(fd, "roomTypeId"),
+          ratePlanId: pickedRatePlan || str(fd, "ratePlanId"),
           arrivalDate: str(fd, "arrival"),
           departureDate: str(fd, "departure"),
           adults: Number(str(fd, "adults") || 2),

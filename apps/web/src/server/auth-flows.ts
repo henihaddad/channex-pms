@@ -128,38 +128,63 @@ export async function loginFlow(email: string, password: string): Promise<LoginO
   return { kind: "session", orgId };
 }
 
-/** Owner portal sign-in (spec 17 §17.5): request a link by email; the answer never says whether the email exists. */
-export async function requestMagicLinkFlow(email: string, locale: string): Promise<void> {
+/**
+ * Request a sign-in link by email; the answer never says whether the email exists.
+ * `owner_portal` is the owner portal's only sign-in (spec 17 §17.5); `login` is the
+ * console's "Email me a sign-in link", which stands in for the password only.
+ */
+export async function requestMagicLinkFlow(
+  email: string,
+  locale: string,
+  purpose: "owner_portal" | "login" = "owner_portal",
+): Promise<void> {
   const c = await container();
   await withoutTenant(c.db.db, async (tx) =>
-    (await identity(tx)).requestMagicLink(email, "owner_portal", locale),
+    (await identity(tx)).requestMagicLink(email, purpose, locale),
   );
 }
 
-/** Consume a magic link: a session for the user and the organization their owner record lives in. */
-export async function magicLinkFlow(token: string): Promise<{ orgId: Id | null }> {
+/**
+ * Consume a sign-in link and say where to go next: the owner portal for an owner link,
+ * the console for a console link, the TOTP step when the user has a second factor.
+ */
+export async function magicLinkFlow(token: string): Promise<{ next: "/owner" | "/" | "/totp" }> {
   const c = await container();
   const fp = await deviceFingerprint();
   const r = await withoutTenant(c.db.db, async (tx) =>
     (await identity(tx)).consumeMagicLink(token, fp),
   );
   if (!r.ok) fail(r.error.code, r.error.message, 401);
+  const jar = await cookies();
+  const v = r.value;
+  if (v.kind === "totp_required") {
+    jar.set("pms_totp", v.challengeToken, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 300,
+    });
+    return { next: "/totp" };
+  }
+  const ownerLink = v.purpose === "owner_portal";
   // the owner's group scopes every portal permission check without a database read inside the transaction (ADR-0007)
-  const [ownerRow] = await withoutTenant(c.db.db, (tx) =>
-    rawRows<{ org_id: string; group_id: string | null }>(
-      tx,
-      sql`select org_id, group_id from owner where user_id = ${r.value.user.id} and archived_at is null order by created_at limit 1`,
-    ),
-  );
-  const orgId = (ownerRow?.org_id as Id | undefined) ?? (await pickOrg(r.value.user.id));
+  const [ownerRow] = ownerLink
+    ? await withoutTenant(c.db.db, (tx) =>
+        rawRows<{ org_id: string; group_id: string | null }>(
+          tx,
+          sql`select org_id, group_id from owner where user_id = ${v.user.id} and archived_at is null order by created_at limit 1`,
+        ),
+      )
+    : [];
+  const orgId = (ownerRow?.org_id as Id | undefined) ?? (await pickOrg(v.user.id));
   await setSessionCookies({
-    userId: r.value.user.id,
-    sessionId: r.value.tokens.sessionId,
-    refreshToken: r.value.tokens.refreshToken,
-    refreshExpiresAt: r.value.tokens.refreshExpiresAt,
+    userId: v.user.id,
+    sessionId: v.tokens.sessionId,
+    refreshToken: v.tokens.refreshToken,
+    refreshExpiresAt: v.tokens.refreshExpiresAt,
     ...(orgId ? { orgId } : {}),
   });
-  const jar = await cookies();
   if (ownerRow?.group_id)
     jar.set(OWNER_SCOPE_COOKIE, ownerRow.group_id, {
       httpOnly: true,
@@ -167,7 +192,7 @@ export async function magicLinkFlow(token: string): Promise<{ orgId: Id | null }
       secure: process.env.NODE_ENV === "production",
       path: "/",
     });
-  return { orgId };
+  return { next: ownerLink ? "/owner" : "/" };
 }
 
 export const OWNER_SCOPE_COOKIE = "pms_owner_scope";

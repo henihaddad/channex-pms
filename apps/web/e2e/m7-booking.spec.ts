@@ -18,9 +18,9 @@ async function signUp(page: Page, stamp: string): Promise<string> {
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Direct Co");
   await page.getByLabel("URL slug").fill(`direct-${stamp}`);
-  await page.getByLabel("Country (ISO code)").fill("PT");
-  await page.getByLabel("Currency (ISO code)").fill("EUR");
-  await page.getByRole("button", { name: "Create your organization" }).click();
+  await page.getByLabel("Country", { exact: true }).selectOption("PT");
+  await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
+  await page.getByRole("button", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
   return (await page.context().cookies()).find((c) => c.name === "pms_org")?.value ?? "";
 }
@@ -134,10 +134,12 @@ test("direct booking → OTA availability → door code → portal → owner sta
   await guest.getByLabel("Last name").fill("Silva");
   await guest.getByLabel("Email", { exact: true }).fill(guestEmail);
   await guest.getByLabel("Card").fill("tok_decline");
+  await guest.getByTestId("accept-terms").check();
   await guest.getByTestId("confirm-booking").click();
   await expect(guest.getByTestId("declined")).toBeVisible();
   await expect(guest.getByLabel("First name")).toHaveValue("Ana");
   await guest.getByLabel("Card").fill("tok_visa");
+  await guest.getByTestId("accept-terms").check();
   await guest.getByTestId("confirm-booking").click();
   await expect(guest.getByTestId("booking-confirmed")).toBeVisible();
   const reference = (await guest.getByTestId("booking-reference").textContent()) ?? "";

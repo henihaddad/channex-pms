@@ -29,6 +29,13 @@
   },
   {
     "file": "src/app/(auth)/auth.actions.ts",
+    "export": "requestSignInLinkAction",
+    "kind": "action",
+    "wrapper": "publicAction",
+    "publicReason": "auth"
+  },
+  {
+    "file": "src/app/(auth)/auth.actions.ts",
     "export": "signUpAction",
     "kind": "action",
     "wrapper": "publicAction",
@@ -1451,6 +1458,13 @@
   {
     "file": "src/app/(owner)/owner/portal.actions.ts",
     "export": "loadPortalStatements",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read_own"
+  },
+  {
+    "file": "src/app/(owner)/owner/portal.actions.ts",
+    "export": "loadPortalWho",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "statement:read_own"

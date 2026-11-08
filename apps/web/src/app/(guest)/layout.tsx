@@ -1,15 +1,14 @@
 import type React from "react";
-import { getTranslations } from "next-intl/server";
 
-/** The guest portal shell (spec 10 §10.6): one booking, no account, nothing from a third party. */
-export default async function GuestLayout({ children }: { children: React.ReactNode }) {
-  const t = await getTranslations("book");
+/**
+ * The guest portal shell (spec 10 §10.6): one booking, no account, nothing from a third
+ * party. The page draws the manager's branded header and footer, since the brand comes
+ * from the booking it shows.
+ */
+export default function GuestLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto min-h-screen max-w-2xl p-4" data-testid="guest-portal">
-      <main>{children}</main>
-      <footer className="mt-10 border-t border-border pt-3 text-xs text-muted">
-        {t("poweredBy")}
-      </footer>
+    <div className="flex min-h-screen flex-col bg-background" data-testid="guest-portal">
+      {children}
     </div>
   );
 }
