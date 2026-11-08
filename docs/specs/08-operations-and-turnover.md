@@ -220,6 +220,20 @@ plan, guest created or matched, availability pushed everywhere, confirmation
 emailed. Same domain path as the booking engine ([10](./10-booking-engine.md)) —
 one booking-creation code path, ever.
 
+The staff form (design canvas, November 2026) has three numbered sections, **1 · Where and
+when** (property, room / unit with its sleeping capacity, dates, party), **2 · Guest** (one
+**Full name** box split server-side into given name and surname, email, phone, language) and
+**3 · Price and payment** (rate plan, a **Total** that overrides the rate plan's price, spread
+over the nights in proportion and in whole minor units, the source, whether the money is
+already in, recorded on the folio as a payment, and an internal note), with a summary that
+stays in view: nightly lines, total, what the payment rules ask for now, **Create
+reservation** and **Cancel**. The availability check under section 1 is the same check the
+create runs ("Available. 3 nights · minimum stay 2 · …" or the reasons it is not). Typing a
+name looks up returning guests (sealed names, so `booking:read_pii`, audited) and picking one
+fills the contact and language. The form is prefilled from `propertyId`, `arrivalDate`,
+`departureDate` and `guest` in the URL (the calendar and the command palette), and a `guest`
+that matches exactly one returning guest selects them. Persona: `reservations_agent`.
+
 **Owner stays** are created as `UnitBlock`s of reason `owner_stay` (by staff or by
 the owner from their portal, subject to agreement terms), reduce availability, and
 appear on the statement per the agreement (free, at cost, or at a configured rate).

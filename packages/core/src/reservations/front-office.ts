@@ -155,3 +155,32 @@ export function revisionEvent(i: {
     return { kind: "amount_changed", fromMinor: i.previousAmountMinor, toMinor: i.amountMinor };
   return { kind: "updated" };
 }
+
+/**
+ * A total typed over the rate plan's price (the staff form's "Total" box): spread across the
+ * nights in proportion to their prices, in whole minor units, the remainder on the last night,
+ * so the nights always sum to exactly the total asked for.
+ */
+export function spreadTotal(
+  nightly: Readonly<Record<string, number>>,
+  totalMinor: number,
+): Record<string, number> {
+  const dates = Object.keys(nightly).sort();
+  if (dates.length === 0) return {};
+  const base = dates.reduce((a, d) => a + Math.max(0, nightly[d] ?? 0), 0);
+  const out: Record<string, number> = {};
+  let used = 0;
+  dates.forEach((d, i) => {
+    if (i === dates.length - 1) {
+      out[d] = totalMinor - used;
+      return;
+    }
+    const share =
+      base > 0
+        ? Math.floor((totalMinor * Math.max(0, nightly[d] ?? 0)) / base)
+        : Math.floor(totalMinor / dates.length);
+    out[d] = share;
+    used += share;
+  });
+  return out;
+}

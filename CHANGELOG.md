@@ -19,6 +19,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- New reservation (spec 08 §8.11) follows the design canvas: numbered sections, one Full name
+  box, a live availability check, a Total that overrides the rate plan's price, whether the
+  money is already in, an internal note and a summary with Create and Cancel that stays in
+  view. Typing a name finds returning guests and fills their details; `?guest=` from the
+  command palette prefills the name and selects an exact match.
+
 - The reservation detail (spec 08 §8.2) follows the design canvas: a header card with status
   chips and four tiles (check-in, check-out, room, door code), a Money card with the folio
   operations behind "Record payment", the booking's conversation with a reply box, the guest

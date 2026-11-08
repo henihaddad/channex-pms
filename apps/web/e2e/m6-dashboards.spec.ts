@@ -60,8 +60,7 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
     await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
     await fillDate(page, "arrivalDate", iso(new Date(now.getTime() + offset * 86_400_000)));
     await fillDate(page, "departureDate", iso(new Date(now.getTime() + (offset + 2) * 86_400_000)));
-    await page.getByLabel("Guest first name").fill(name);
-    await page.getByLabel("Guest surname").fill("Silva");
+    await page.getByLabel("Full name").fill(`${name} Silva`);
     await page.getByLabel("Email").fill(`${name.toLowerCase()}-${stamp}@example.com`);
     await page.getByTestId("create-booking").click();
     await expect(page.getByTestId("reservation-detail")).toBeVisible({ timeout: 60_000 });

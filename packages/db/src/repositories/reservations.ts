@@ -357,6 +357,71 @@ export class DrizzleReservationRepository {
       phone: g.phoneEnc ? await this.crypto.open(g.phoneEnc) : null,
     };
   }
+  /**
+   * Returning guests whose name or email contains `q` (accents and case ignored). Names are
+   * sealed, so this opens them in memory for the most recent guests; callers hold
+   * `booking:read_pii` and are audited.
+   */
+  async findGuests(
+    q: string,
+    limit: number,
+  ): Promise<
+    Array<{
+      guestId: string;
+      name: string;
+      surname: string;
+      email: string | null;
+      phone: string | null;
+      language: string | null;
+      country: string | null;
+      stays: number;
+    }>
+  > {
+    const fold = (x: string) =>
+      x
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .trim();
+    const needle = fold(q);
+    if (needle.length < 2) return [];
+    const rows = await rawRows<{
+      id: string;
+      name_enc: string;
+      surname_enc: string;
+      email_enc: string | null;
+      phone_enc: string | null;
+      language: string | null;
+      country: string | null;
+      stays: number;
+    }>(
+      this.tx,
+      sql`select g.id, g.name_enc, g.surname_enc, g.email_enc, g.phone_enc, g.language, g.country,
+          (select count(*)::int from booking b where b.guest_id = g.id and b.status <> 'cancelled') as stays
+        from guest g where g.erased_at is null order by g.created_at desc limit 2000`,
+    );
+    const out = [];
+    for (const r of rows) {
+      const name = await this.crypto.open(r.name_enc);
+      const surname = await this.crypto.open(r.surname_enc);
+      const email = r.email_enc ? await this.crypto.open(r.email_enc) : null;
+      if (!fold(`${name} ${surname}`).includes(needle) && !fold(email ?? "").includes(needle))
+        continue;
+      out.push({
+        guestId: r.id,
+        name,
+        surname,
+        email,
+        phone: r.phone_enc ? await this.crypto.open(r.phone_enc) : null,
+        language: r.language,
+        country: r.country,
+        stays: r.stays,
+      });
+      if (out.length >= limit) break;
+    }
+    return out;
+  }
+
   async acknowledge(bookingId: string, revisionId: string, userId: string): Promise<void> {
     await this.tx
       .insert(s.bookingAcknowledgement)

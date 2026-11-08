@@ -6,6 +6,7 @@ import {
   checkinFormState,
   revisionEvent,
   splitFullName,
+  spreadTotal,
   stayPhase,
   stayStatus,
 } from "./front-office.js";
@@ -210,5 +211,33 @@ describe("revisionEvent", () => {
       toMinor: 37_500,
     });
     expect(revisionEvent({ ...r, previousAmountMinor: 37_500, diff })).toEqual({ kind: "updated" });
+  });
+});
+
+describe("spreadTotal", () => {
+  it("keeps the nights' proportions and sums to the total exactly", () => {
+    expect(
+      spreadTotal({ "2026-11-21": 11_000, "2026-11-22": 11_000, "2026-11-23": 11_000 }, 37_500),
+    ).toEqual({ "2026-11-21": 12_500, "2026-11-22": 12_500, "2026-11-23": 12_500 });
+    expect(spreadTotal({}, 1_000)).toEqual({});
+  });
+  it("never loses or invents a minor unit", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.nat(100_000), { minLength: 1, maxLength: 30 }),
+        fc.nat(5_000_000),
+        (prices, total) => {
+          const nightly = Object.fromEntries(
+            prices.map((p, i) => [LocalDate.parse("2026-01-01").plusDays(i).toString(), p]),
+          );
+          const out = spreadTotal(nightly, total);
+          expect(Object.values(out).reduce((a, b) => a + b, 0)).toBe(total);
+          for (const v of Object.values(out)) {
+            expect(Number.isInteger(v)).toBe(true);
+            expect(v).toBeGreaterThanOrEqual(0);
+          }
+        },
+      ),
+    );
   });
 });

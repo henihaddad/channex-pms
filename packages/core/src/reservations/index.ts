@@ -24,6 +24,7 @@ export {
   checkinFormState,
   splitFullName,
   revisionEvent,
+  spreadTotal,
   type BalanceState,
   type BalanceInput,
   type StayStatus,

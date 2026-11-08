@@ -1044,6 +1044,14 @@
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "findReturningGuestsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_pii",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "issueCredentialAction",
     "kind": "action",
     "wrapper": "withPermission",
@@ -1095,6 +1103,14 @@
     "wrapper": "withPermission",
     "permission": "booking:read_pii",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "quoteStaffBookingAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:create",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",

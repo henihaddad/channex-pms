@@ -9,6 +9,9 @@ import {
   directBookingChange,
   directBookingRevision,
   Id,
+  planPayments,
+  splitFullName,
+  spreadTotal,
   type BookingRevisionPayload,
 } from "@pms/core";
 import {
@@ -17,6 +20,7 @@ import {
   DrizzleBookingEngineRepository,
   DrizzleMessagingRepository,
   DrizzleOperationsRepository,
+  DrizzlePaymentRuleRepository,
   DrizzlePropertyRepository,
   DrizzleReservationRepository,
   type FolioView,
@@ -612,10 +616,18 @@ const staffSchema = z.object({
   departureDate: z.string(),
   adults: z.coerce.number().int().min(1),
   children: z.coerce.number().int().min(0).default(0),
-  name: z.string().min(1),
-  surname: z.string().min(1),
+  /** One box on the form; split server-side (core `splitFullName`). */
+  fullName: z.string().optional(),
+  name: z.string().optional(),
+  surname: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
+  language: z.string().optional(),
+  /** A total typed over the rate plan's price, in major units ("375.00"). */
+  total: z.string().optional(),
+  /** Money already received at booking: recorded on the folio as a payment. */
+  payment: z.enum(["later", "card", "cash", "bank_transfer"]).default("later"),
+  note: z.string().optional(),
   source: z.enum(["staff", "phone", "walk_in", "direct"]).default("staff"),
 });
 
@@ -624,6 +636,118 @@ export interface StaffBookingState {
   bookingId?: string;
   reasons?: string[];
 }
+
+export interface StaffQuote {
+  ok: boolean;
+  reasons: string[];
+  currency: string;
+  nights: number;
+  totalMinor: number;
+  nightly: Array<{ date: string; amountMinor: number }>;
+  /** The longest minimum stay that applies on arrival, when one does. */
+  minStay: number | null;
+  /** What the payment rules ask for at booking (spec 10 §10.4), when they ask for anything. */
+  dueNow: { name: string; amountMinor: number } | null;
+}
+
+/** The sellability check and price the staff form shows before saving; the same check the create runs. */
+async function staffCheck(
+  ctx: ActorCtx,
+  i: {
+    propertyId: string;
+    roomTypeId: string;
+    ratePlanId: string;
+    arrivalDate: string;
+    departureDate: string;
+  },
+) {
+  const rateCells = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).rateCells(
+    i.ratePlanId,
+    i.arrivalDate,
+    i.departureDate,
+  );
+  const avail = await new DrizzleAriStore(ctx.tx).loadDesired(
+    i.propertyId,
+    i.arrivalDate,
+    i.departureDate,
+  );
+  const check = checkSellable({
+    arrivalDate: i.arrivalDate,
+    departureDate: i.departureDate,
+    rateCells,
+    availability: new Map(
+      avail.availability
+        .filter((a) => a.roomTypeId === i.roomTypeId)
+        .map((a) => [a.date, a.availability]),
+    ),
+  });
+  const [prop] = await rawRows<{ currency: string }>(
+    ctx.tx,
+    sql`select currency from property where id = ${i.propertyId}`,
+  );
+  const first = rateCells.find((c) => c.date === i.arrivalDate)?.values;
+  const longest = Math.max(first?.minStayArrival ?? 0, first?.minStay ?? 0);
+  const minStay = longest > 1 ? longest : null;
+  return { check, currency: prop?.currency ?? "EUR", minStay };
+}
+
+export const quoteStaffBookingAction = withPermission<
+  [
+    {
+      propertyId: string;
+      roomTypeId: string;
+      ratePlanId: string;
+      arrivalDate: string;
+      departureDate: string;
+      totalMinor?: number;
+    },
+  ],
+  StaffQuote
+>(
+  "booking:create",
+  {
+    scope: "property",
+    resolveScope: (i) => ({ kind: "property", id: i.propertyId }),
+    audit: false,
+  },
+  async (ctx, i) => {
+    const c = await container();
+    const { check, currency, minStay } = await staffCheck(ctx, i);
+    const nightly =
+      i.totalMinor !== undefined && check.ok
+        ? spreadTotal(check.nightly, i.totalMinor)
+        : check.nightly;
+    const totalMinor = Object.values(nightly).reduce((a, b) => a + b, 0);
+    const today = c.clock.today("UTC").toString();
+    const due = planPayments({
+      rules: await new DrizzlePaymentRuleRepository(ctx.tx, ctx.orgId).listRules(),
+      totalMinor,
+      currency,
+      propertyId: i.propertyId,
+      channel: "direct",
+      arrival: i.arrivalDate,
+      bookedOn: today,
+    }).filter((x) => x.dueOn <= today);
+    return {
+      ok: check.ok,
+      reasons: check.reasons,
+      currency,
+      nights: Object.keys(nightly).length,
+      totalMinor,
+      nightly: Object.entries(nightly)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, amountMinor]) => ({ date, amountMinor })),
+      minStay,
+      dueNow:
+        due.length > 0
+          ? {
+              name: due.map((x) => x.name).join(", "),
+              amountMinor: due.reduce((a, x) => a + x.amountMinor, 0),
+            }
+          : null,
+    };
+  },
+);
 
 export const createStaffBookingAction = withPermission<
   [StaffBookingState, FormData],
@@ -634,7 +758,7 @@ export const createStaffBookingAction = withPermission<
     scope: "property",
     resolveScope: (_p, fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
     subject: () => ({ kind: "booking", id: "new" }),
-    redact: ["email", "phone"],
+    redact: ["email", "phone", "fullName", "name", "surname", "note"],
   },
   async (ctx, _prev, fd) => {
     const c = await container();
@@ -642,31 +766,20 @@ export const createStaffBookingAction = withPermission<
     if (!p.success)
       return { error: p.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
     const input = p.data;
-    const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
-    const rateCells = await repo.rateCells(
-      input.ratePlanId,
-      input.arrivalDate,
-      input.departureDate,
-    );
-    const avail = await new DrizzleAriStore(ctx.tx).loadDesired(
-      input.propertyId,
-      input.arrivalDate,
-      input.departureDate,
-    );
-    const check = checkSellable({
-      arrivalDate: input.arrivalDate,
-      departureDate: input.departureDate,
-      rateCells,
-      availability: new Map(
-        avail.availability
-          .filter((a) => a.roomTypeId === input.roomTypeId)
-          .map((a) => [a.date, a.availability]),
-      ),
-    });
-    const [prop] = await rawRows<{ currency: string }>(
-      ctx.tx,
-      sql`select currency from property where id = ${input.propertyId}`,
-    );
+    const who = input.fullName
+      ? splitFullName(input.fullName)
+      : input.name && input.surname
+        ? { name: input.name, surname: input.surname }
+        : null;
+    if (!who) return { error: "Write the guest's full name: first name and surname." };
+    const { check, currency } = await staffCheck(ctx, input);
+    const totalMinor = input.total?.trim() ? Math.round(Number(input.total) * 100) : null;
+    if (totalMinor !== null && (!Number.isFinite(totalMinor) || totalMinor < 0))
+      return { error: "The total must be an amount, like 375.00." };
+    const priced =
+      totalMinor !== null && check.ok
+        ? { ...check, nightly: spreadTotal(check.nightly, totalMinor), totalMinor }
+        : check;
     const rev = directBookingRevision(
       {
         bookingId: Id.next(),
@@ -675,23 +788,59 @@ export const createStaffBookingAction = withPermission<
         ratePlanId: input.ratePlanId,
         arrivalDate: input.arrivalDate,
         departureDate: input.departureDate,
-        currency: prop?.currency ?? "EUR",
+        currency,
         occupancy: { adults: input.adults, children: input.children, infants: 0 },
         customer: {
-          name: input.name,
-          surname: input.surname,
+          ...who,
           ...(input.email ? { email: input.email } : {}),
           ...(input.phone ? { phone: input.phone } : {}),
+          ...(input.language ? { language: input.language } : {}),
         },
         source: input.source,
         nowIso: c.clock.now().toString(),
       },
-      check,
+      priced,
     );
     if (!rev.ok) return { error: rev.error.message, reasons: check.reasons };
     const id = await applyDirect(ctx, rev.value);
+    if (input.payment !== "later") {
+      const billing = new DrizzleBillingRepository(ctx.tx, ctx.orgId);
+      await billing.addPayment(
+        await billing.ensureFolio(id),
+        { method: input.payment, amountMinor: priced.totalMinor, state: "captured" },
+        ctx.userId,
+      );
+    }
+    if (input.note?.trim())
+      await new DrizzleOperationsRepository(ctx.tx, ctx.orgId).addNote({
+        subjectType: "booking",
+        subjectId: id,
+        body: input.note.trim(),
+        authorId: ctx.userId,
+      });
     revalidatePath("/reservations");
     return { bookingId: id };
+  },
+);
+
+export interface ReturningGuest {
+  guestId: string;
+  name: string;
+  surname: string;
+  email: string | null;
+  phone: string | null;
+  language: string | null;
+  country: string | null;
+  stays: number;
+}
+
+/** "Start typing to find a returning guest": opens sealed names, so `booking:read_pii`, audited. */
+export const findReturningGuestsAction = withPermission<[{ q: string }], ReturningGuest[]>(
+  "booking:read_pii",
+  { scope: "organization", subject: () => ({ kind: "guest", id: "search" }) },
+  async (ctx, { q }) => {
+    const c = await container();
+    return new DrizzleReservationRepository(ctx.tx, ctx.orgId, c.crypto).findGuests(q, 6);
   },
 );
 

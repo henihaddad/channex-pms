@@ -71,8 +71,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
     await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
     await fillDate(page, "arrivalDate", arr);
     await fillDate(page, "departureDate", dep);
-    await page.getByLabel("Guest first name").fill(name);
-    await page.getByLabel("Guest surname").fill("Silva");
+    await page.getByLabel("Full name").fill(`${name} Silva`);
     await page.getByLabel("Email").fill(`${name.toLowerCase()}-${stamp}@example.com`);
     await page.getByTestId("create-booking").click();
     await expect(page.getByTestId("reservation-detail")).toBeVisible();
