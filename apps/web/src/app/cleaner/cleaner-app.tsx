@@ -292,9 +292,12 @@ export function CleanerApp({ today }: { today: string }) {
         </p>
       ) : null}
       {tasks.map((t) => {
-        const done = t.checklist.filter(
-          (c) => t.progress.find((p) => p.key === c.key)?.done,
-        ).length;
+        // the server's rule (checklistBlockers): every item ticked, and a photo where one is required
+        const complete = (c: Task["checklist"][number]) => {
+          const p = t.progress.find((x) => x.key === c.key);
+          return Boolean(p?.done && (!c.requiresPhoto || p.photoRef));
+        };
+        const done = t.checklist.filter(complete).length;
         const left = t.checklist.length - done;
         const needed = restock(t);
         const extra = needed.filter((n) => !RESTOCK.includes(n));
@@ -481,6 +484,7 @@ export function CleanerApp({ today }: { today: string }) {
                       })
                     }
                     data-testid="done"
+                    disabled={left > 0}
                   >
                     {left > 0 ? `Mark clean · ${left} of ${t.checklist.length} left` : "Mark clean"}
                   </Button>

@@ -1,4 +1,5 @@
 import {
+  bookingReference,
   accessRevealOpen,
   cancellationFee,
   diffProjection,
@@ -488,7 +489,7 @@ async function bookingRef(tx: Tx, bookingId: string): Promise<string> {
     tx,
     sql`select ota_reservation_code as code from booking where id = ${bookingId}`,
   );
-  return r?.code ?? bookingId.slice(0, 8).toUpperCase();
+  return r?.code ?? bookingReference(bookingId);
 }
 
 async function finalize(
@@ -672,7 +673,7 @@ async function finalize(
     deps.crypto.sha256Hex(portalToken),
     new Date(Date.parse(`${hold.departureDate}T00:00:00Z`) + 30 * 86_400_000).toISOString(),
   );
-  const reference = b?.code ?? bookingId.slice(0, 8).toUpperCase();
+  const reference = b?.code ?? bookingReference(bookingId);
   const portalUrl = `${deps.appUrl ?? ""}/guest?token=${portalToken}`;
   const address = Object.values(prop?.address ?? {}).join(", ");
   await deps.mailer.send({
@@ -955,7 +956,7 @@ export async function guestPortal(
   const guestNames = room?.guestNames[0];
   return {
     bookingId,
-    reference: detail.otaReservationCode ?? bookingId.slice(0, 8).toUpperCase(),
+    reference: detail.otaReservationCode ?? bookingReference(bookingId),
     status: detail.status,
     property: {
       id: detail.propertyId,

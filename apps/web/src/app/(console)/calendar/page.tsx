@@ -56,7 +56,7 @@ export default async function CalendarPage({
   if (ctx.properties.length === 0)
     return (
       <div className="space-y-5">
-        <PageHeader title={t("title")} />
+        <PageHeader title={t("title")} titleOnPhone={false} />
         <Card>
           <EmptyState
             data-testid="calendar-empty"
@@ -75,7 +75,7 @@ export default async function CalendarPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t("title")} />
+      <PageHeader title={t("title")} titleOnPhone={false} />
       {view === "year" ? (
         <YearView
           propertyId={

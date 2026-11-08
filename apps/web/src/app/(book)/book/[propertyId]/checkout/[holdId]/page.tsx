@@ -17,6 +17,12 @@ import { EmbedResizer } from "../../embed-resizer";
  * per the guarantee policy, the terms accepted, and beside it the stay and the itemised
  * quote (BE-1) with what is due now and what booking direct saved.
  */
+/** "15:20" on the property's own clock: where the guest is going, and what the confirmation shows. */
+const clockIn = (iso: string, timeZone: string) =>
+  new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone }).format(
+    new Date(iso),
+  );
+
 export default async function CheckoutPage({
   params,
   searchParams,
@@ -107,7 +113,7 @@ export default async function CheckoutPage({
             <p className="-mt-3 text-sm text-muted" data-testid="hold-until">
               {expired
                 ? t("holdExpired")
-                : t("holdUntil", { time: `${hold.expiresAt.slice(11, 16)} UTC` })}
+                : t("holdUntil", { time: clockIn(hold.expiresAt, p?.timezone ?? "UTC") })}
             </p>
             {!expired ? (
               <CheckoutForm

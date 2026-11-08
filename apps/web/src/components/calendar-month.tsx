@@ -308,12 +308,13 @@ export function CalendarMonth({
             );
           })}
         </div>
-        <p className="text-xs text-muted">
-          {L.monthHint}{" "}
-          <Link href="/calendar?view=day" className="font-semibold">
-            {L.closeOutLink}
-          </Link>
-        </p>
+        <p className="text-xs text-muted">{L.monthHint}</p>
+        <Link
+          href="/calendar?view=day"
+          className="self-start text-xs font-semibold text-accent hover:underline"
+        >
+          {L.closeOutLink} →
+        </Link>
       </div>
       {picked.length > 0 && plan && property ? (
         <MonthSheet

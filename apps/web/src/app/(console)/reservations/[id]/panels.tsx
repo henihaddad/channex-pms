@@ -58,6 +58,16 @@ export function ReservationHotkeys() {
 }
 
 /** The door code tile: masked until revealed (audited per view), or issued here. */
+const KIND: Record<string, string> = {
+  door_code: "Door code",
+  smart_lock: "Smart lock",
+  lockbox: "Lockbox",
+  key_handover: "Key handover",
+};
+/** "14 Nov 15:00": the same reading as the server-rendered validity (UTC clock time). */
+const whenUtc = (iso: string) =>
+  `${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso))} ${iso.slice(11, 16)}`;
+
 export function DoorCodeTile({
   bookingId,
   propertyId,
@@ -121,18 +131,7 @@ export function DoorCodeTile({
         <>
           <strong className="font-display text-lg font-bold text-muted">{labels.notIssued}</strong>
           {status !== "cancelled" ? (
-            <div className="mt-1 flex flex-col items-stretch gap-1.5">
-              <Select
-                value={type}
-                onChange={(v) => setType(v)}
-                className="h-8 w-full text-xs"
-                aria-label={labels.issue}
-              >
-                <option value="door_code">door code</option>
-                <option value="smart_lock">smart lock</option>
-                <option value="lockbox">lockbox</option>
-                <option value="key_handover">key handover</option>
-              </Select>
+            <div className="mt-1 flex flex-col items-start gap-1.5">
               <Button
                 size="sm"
                 disabled={pending}
@@ -147,14 +146,30 @@ export function DoorCodeTile({
                     setIssued({
                       value: r.value,
                       validity: labels.validity
-                        .replace("{from}", r.validFrom.slice(0, 16).replace("T", " "))
-                        .replace("{to}", r.validTo.slice(0, 16).replace("T", " ")),
+                        .replace("{from}", whenUtc(r.validFrom))
+                        .replace("{to}", whenUtc(r.validTo)),
                     });
                   })
                 }
               >
                 {labels.issue}
               </Button>
+              <details className="text-xs text-muted">
+                <summary className="cursor-pointer hover:text-foreground">
+                  {KIND[type] ?? type} ▾
+                </summary>
+                <Select
+                  value={type}
+                  onChange={(v) => setType(v)}
+                  className="h-8 w-full text-xs"
+                  aria-label={labels.issue}
+                >
+                  <option value="door_code">Door code</option>
+                  <option value="smart_lock">Smart lock</option>
+                  <option value="lockbox">Lockbox</option>
+                  <option value="key_handover">Key handover</option>
+                </Select>
+              </details>
             </div>
           ) : null}
         </>

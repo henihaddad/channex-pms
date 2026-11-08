@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { AUTOMATED_RATE_SOURCES } from "@pms/core";
@@ -166,13 +165,6 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
           : (AUTOMATED_RATE_SOURCES as readonly string[]).includes(src)
             ? t("sourceDefault")
             : t("sourceHand");
-  const tabs = [
-    { href: `/properties/${id}`, label: t("tabOverview") },
-    { href: `/properties/${id}/guide`, label: t("tabGuide") },
-    { href: `/properties/${id}/pricing`, label: t("tabPricing"), active: true },
-    { href: `/properties/${id}/booking-engine`, label: t("tabBookingEngine") },
-    { href: `/calendar/settings?propertyId=${id}`, label: t("tabPricingSettings") },
-  ];
 
   return (
     <div className="space-y-5">
@@ -184,22 +176,6 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
         ]}
         title={t("tabPricing")}
       />
-      <nav
-        aria-label={d.title}
-        className="-mt-2 flex gap-1 overflow-x-auto border-b border-border text-sm"
-        data-testid="property-tabs"
-      >
-        {tabs.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            aria-current={tab.active ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3.5 py-2.5 whitespace-nowrap no-underline ${tab.active ? "border-accent font-semibold text-foreground" : "border-transparent text-muted hover:text-foreground"}`}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
 
       {s.lastError ? (
         <Alert tone="error" title={t("lastFailed")} data-testid="import-last-error">

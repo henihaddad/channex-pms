@@ -15,3 +15,12 @@ export const Id = {
     return typeof value === "string" && validate(value);
   },
 };
+
+/**
+ * The short code a guest reads for a booking we took ourselves (staff, phone, booking site).
+ * A UUIDv7 starts with its timestamp, so its first characters repeat for bookings made
+ * within the same minute; the last eight hex digits are random.
+ */
+export function bookingReference(id: string): string {
+  return id.replace(/-/g, "").slice(-8).toUpperCase();
+}

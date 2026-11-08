@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import fc from "fast-check";
 import { LocalDate } from "./local-date.js";
 import { DateRange } from "./date-range.js";
+import { bookingReference, Id } from "./id.js";
 
 const EPOCH = LocalDate.of(2020, 1, 1);
 const offset = fc.integer({ min: 0, max: 5000 });
@@ -104,5 +105,13 @@ describe("DateRange", () => {
         }
       }),
     );
+  });
+});
+
+describe("bookingReference", () => {
+  it("differs for bookings made in the same minute and reads as eight characters", () => {
+    const refs = new Set(Array.from({ length: 200 }, () => bookingReference(Id.next())));
+    expect(refs.size).toBe(200);
+    for (const r of refs) expect(r).toMatch(/^[0-9A-F]{8}$/);
   });
 });

@@ -397,7 +397,8 @@
         "get4": "Self-host it for free if you prefer",
         "byline": "Heni, founder · replies within one working day",
         "whatsapp": "WhatsApp"
-      }
+      },
+      "noChannel": "No channel connected yet"
     }
   },
   "members": {

@@ -65,7 +65,7 @@ export default async function TodayPage({
           okText={
             d.details.lastSyncAt
               ? tt("syncedAgo", { ago: elapsed(d.details.lastSyncAt) })
-              : t("inSync")
+              : tt("noChannel")
           }
         />
       </div>

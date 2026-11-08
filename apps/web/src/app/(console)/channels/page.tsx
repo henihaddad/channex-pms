@@ -61,13 +61,13 @@ export default async function ChannelsPage({
         title={t("title")}
         actions={
           <>
-            <Link
+            <LinkButton
               href="/channels/connect"
-              className="text-sm text-muted hover:text-foreground hover:underline"
+              variant="secondary"
               data-testid="connect-via-channex"
             >
               {tb("otherChannels")}
-            </Link>
+            </LinkButton>
             <LinkButton href="/channels/new" variant="primary" data-testid="connect-channel">
               {tb("connectChannel")}
             </LinkButton>
@@ -222,8 +222,8 @@ export default async function ChannelsPage({
             </Card>
           );
         })}
-        <div className="flex flex-wrap items-center justify-center gap-2 rounded-card border border-dashed border-[#d5d9d7] p-5 text-sm text-muted md:col-span-2 xl:col-span-1">
-          {tb("ical")} ·
+        <div className="flex flex-col items-center justify-center gap-3 rounded-card border border-dashed border-[#d5d9d7] p-5 text-center text-sm text-muted md:col-span-2 xl:col-span-1">
+          <span>{tb("ical")}</span>
           {o.ical.length ? (
             <IcalCopy
               feeds={o.ical.map((f) => ({
@@ -239,15 +239,16 @@ export default async function ChannelsPage({
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold">{tb("tableTitle")}</h2>
+      <Card
+        title={tb("tableTitle")}
+        actions={
           <Link href="/sync-health" className="text-sm font-semibold text-accent hover:underline">
             {tb("syncHealth")}
           </Link>
-        </div>
+        }
+      >
         <RoomsTable rooms={o.rooms} />
-      </section>
+      </Card>
 
       {board.events.length > 0 ? (
         <Card title={t("events")}>

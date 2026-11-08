@@ -537,7 +537,13 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
           <PageTitle className={titleOnPhone ? undefined : "hidden lg:block"}>{title}</PageTitle>
-          {description ? <p className="max-w-[640px] text-sm text-muted">{description}</p> : null}
+          {description ? (
+            <p
+              className={cn("max-w-[640px] text-sm text-muted", !titleOnPhone && "hidden lg:block")}
+            >
+              {description}
+            </p>
+          ) : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
@@ -731,7 +737,8 @@ export function EmptyState({
           {action ? <div className="mt-4">{action}</div> : null}
         </div>
         <div
-          className="rounded-card border border-border bg-surface-secondary p-4"
+          // an illustration, not data: dashed, faded and inert so nobody reads it as theirs
+          className="pointer-events-none select-none rounded-card border border-dashed border-border bg-surface-secondary p-4 opacity-70 grayscale-[30%]"
           aria-hidden="true"
         >
           {preview}

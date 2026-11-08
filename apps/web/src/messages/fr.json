@@ -389,7 +389,8 @@
         "get4": "Auto-hébergement gratuit si vous préférez",
         "byline": "Heni, fondateur · répond sous un jour ouvré",
         "whatsapp": "WhatsApp"
-      }
+      },
+      "noChannel": "Aucun canal connecté pour l’instant"
     }
   },
   "members": {

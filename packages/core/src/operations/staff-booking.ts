@@ -1,6 +1,6 @@
 import type { BookingRevisionPayload } from "../connectivity/port.js";
 import type { RateCell, RestrictionValues } from "../inventory/ari.js";
-import { Id } from "../shared/id.js";
+import { bookingReference, Id } from "../shared/id.js";
 import { LocalDate } from "../shared/local-date.js";
 import { DomainError, err, ok, type Result } from "../shared/result.js";
 
@@ -102,7 +102,7 @@ export function directBookingRevision(
     currency: input.currency,
     amount: check.totalMinor,
     otaName: input.source,
-    otaReservationCode: input.bookingId.slice(0, 8).toUpperCase(),
+    otaReservationCode: bookingReference(input.bookingId),
     insertedAt: input.nowIso,
     rooms: [
       {

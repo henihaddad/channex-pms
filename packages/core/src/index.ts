@@ -6,7 +6,7 @@ export { Money, CurrencyMismatchError, type Rounding } from "./shared/money.js";
 export { LocalDate } from "./shared/local-date.js";
 export { DateRange } from "./shared/date-range.js";
 export { Occupancy, type OccupancyLimits } from "./shared/occupancy.js";
-export { Id } from "./shared/id.js";
+export { bookingReference, Id } from "./shared/id.js";
 export { SystemClock, FakeClock, type Clock } from "./shared/clock.js";
 export { ok, err, DomainError, type Result } from "./shared/result.js";
 export type { DomainEvent } from "./shared/domain-event.js";

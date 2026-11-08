@@ -374,7 +374,7 @@ export function StaffBookingForm({
               </Select>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="field-total">
-                  {fill(l.total!, { currency: quote?.currency ?? "" })}
+                  {fill(l.total!, { currency: quote?.currency ?? "" }).replace(/\s*\(\)/, "")}
                 </Label>
                 <Input
                   id="field-total"

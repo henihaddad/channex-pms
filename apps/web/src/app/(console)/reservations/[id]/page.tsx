@@ -207,7 +207,15 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
   const tile = (label: string, value: string, sub: string) => (
     <div className="flex min-w-0 flex-col gap-1 rounded-card border border-border p-4">
       <span className="text-xs font-semibold text-muted">{label}</span>
-      <strong className="truncate font-display text-2xl font-bold tracking-tight">{value}</strong>
+      <strong
+        title={value}
+        className={cn(
+          "font-display font-bold tracking-tight",
+          value.length > 12 ? "line-clamp-2 text-lg leading-tight" : "truncate text-2xl",
+        )}
+      >
+        {value}
+      </strong>
       <span className="text-xs text-muted">{sub}</span>
     </div>
   );

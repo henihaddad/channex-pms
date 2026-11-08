@@ -221,6 +221,19 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Bookings taken by staff, by phone or on the booking site got a reference from the start of
+  their id, which is a timestamp, so two bookings made within the same minute shared a code.
+  New references come from the random end of the id. Existing codes are unchanged.
+- "Mark clean" in the cleaner app waits until every item is ticked and every required photo
+  is attached, as the server requires; before, a tap during a photo upload sent an update the
+  server refused.
+- The checkout says how long the room is held on the property's clock instead of in UTC; a
+  freshly issued door code shows its validity as "14 Nov 15:00" instead of an ISO timestamp.
+- Smaller fixes from the design re-audit: "Total ()" on a new reservation before a price is
+  known, a second tab bar on a property's pricing page, the phone calendar's doubled title,
+  "All channels in sync" on an account with no channel, empty-state samples that read as real
+  data (now dashed and faded), long room names cut off on the reservation page.
+
 - Messages for bookings taken by phone or walk-in (automations included) go to the guest by
   email like every other direct booking; they were sent to Channex, which does not know
   those bookings, and failed.
