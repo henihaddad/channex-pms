@@ -52,7 +52,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
     page.locator('[data-testid="getting-started"] [data-track="automate"]'),
   ).toHaveAttribute("data-unlocked", "0");
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("Platform Flat");
+  await page.getByLabel("Property name").fill("Platform Flat");
   await page.getByTestId("create-property").click();
   await expect(page.getByTestId("property-state")).toBeVisible({ timeout: 90_000 });
   const propertyId = page.url().split("/properties/")[1]!.split(/[/?]/)[0]!;

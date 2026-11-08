@@ -25,6 +25,11 @@ export interface PropertyInput {
     minStay?: number;
   }>;
   settings?: Record<string, unknown>;
+  /**
+   * For single_unit: how many guests the listing sleeps, which becomes the system-managed
+   * room type's adult occupancy (MODEL-1). Defaults to 2; ignored for other kinds.
+   */
+  sleeps?: number;
 }
 
 export interface PropertyRecord {

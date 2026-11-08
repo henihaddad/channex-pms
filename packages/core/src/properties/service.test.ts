@@ -53,6 +53,24 @@ const deps = (repo: PropertyRepository) => ({
 });
 
 describe("createProperty", () => {
+  it("single_unit: the listing sleeps what the manager said, two when unsaid or out of range", async () => {
+    const make = async (sleeps?: number) => {
+      const { repo } = memoryRepo();
+      const r = await createProperty(deps(repo), {
+        title: "Loft",
+        kind: "single_unit",
+        currency: "EUR",
+        timezone: "Europe/Lisbon",
+        ...(sleeps === undefined ? {} : { sleeps }),
+      });
+      if (!r.ok) throw r.error;
+      return r.value.roomTypes[0]!;
+    };
+    expect(await make(4)).toMatchObject({ occAdults: 4, maxOccupancy: 4, defaultOccupancy: 4 });
+    expect((await make()).occAdults).toBe(2);
+    expect((await make(0)).occAdults).toBe(2);
+    expect((await make(2.5)).occAdults).toBe(2);
+  });
   it("single_unit: exactly one system-managed room type and unit, seeded horizon (MODEL-1, INV-11)", async () => {
     const { repo, calls } = memoryRepo();
     const r = await createProperty(deps(repo), {

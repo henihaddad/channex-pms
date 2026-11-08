@@ -46,7 +46,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
 
   // a listing, provisioned and live on the FakeProvider
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("Ops Flat");
+  await page.getByLabel("Property name").fill("Ops Flat");
   await page.getByTestId("create-property").click();
   await expect(page.getByTestId("property-state")).toBeVisible();
   await request.post("/api/v1/test/drain", { data: { orgId } });

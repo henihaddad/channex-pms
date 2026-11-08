@@ -119,6 +119,16 @@ not pushed to Channex. The property type is shown read-only: changing `kind` aft
 would change MODEL-1's system-managed room type and is not offered. Photos are shown from the
 property's library or the content an import carried; uploading photos is not built yet.
 
+**Add a property** is one form beside a step rail (Basics, Rooms & rates, then Photos and
+Channels on the property's page) and an "Already on Airbnb?" shortcut to the import. Basics:
+name, property type (the MODEL-1 choice — one rental, several units, guest house or hotel —
+with how Channex bills each), country, city, street, postcode, currency, time zone. Then the
+first room or unit: for a single rental only how many it sleeps (`PropertyInput.sleeps`, the
+system-managed room type's occupancy, 1–50, default 2), the base rate per night and the
+minimum stay; for several units or a hotel also the room name and unit count, with more room
+types added on the same form, each with a Standard plan at its base rate. A cleaning fee is
+not asked for yet: the booking engine has no mandatory per-stay fee to carry it.
+
 Templates, the CSV import and adopting an existing Channex property stay on the Properties
 tab under "Other ways to add properties"; the CSV import lives at `/properties/import/csv`,
 and `/properties/import` is the Airbnb import.

@@ -147,7 +147,11 @@ export const createPropertyAction = withPermission<[CreateState, FormData], Crea
       kind: fd.get("kind"),
       currency: fd.get("currency"),
       timezone: fd.get("timezone"),
-      address: { city: String(fd.get("city") ?? ""), country: String(fd.get("country") ?? "") },
+      address: Object.fromEntries(
+        (["street", "postcode", "city", "country"] as const)
+          .map((k) => [k, String(fd.get(k) ?? "").trim()])
+          .filter(([, v]) => v !== ""),
+      ),
       groupIds: fd.getAll("groupIds").map(String).filter(Boolean),
       roomTypes: JSON.parse(String(fd.get("roomTypes") || "[]")) as unknown,
       ratePlans: JSON.parse(String(fd.get("ratePlans") || "[]")) as unknown,
@@ -158,7 +162,12 @@ export const createPropertyAction = withPermission<[CreateState, FormData], Crea
         error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
       };
     const { templateId, ...rest } = parsed.data;
-    const form: PropertyInput = { ...rest, groupIds: rest.groupIds as IdT[] | undefined };
+    const sleeps = Number(fd.get("sleeps") ?? "");
+    const form: PropertyInput = {
+      ...rest,
+      groupIds: rest.groupIds as IdT[] | undefined,
+      ...(Number.isInteger(sleeps) && sleeps > 0 ? { sleeps } : {}),
+    };
     let input: PropertyInput = form;
     if (templateId) {
       const t = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).getTemplate(templateId);

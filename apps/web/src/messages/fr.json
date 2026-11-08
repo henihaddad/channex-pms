@@ -451,7 +451,7 @@
           "option": "Maison d'hôtes ou hôtel"
         }
       },
-      "title": "Titre",
+      "title": "Nom du logement",
       "titlePlaceholder": "Loft Alfama",
       "city": "Ville",
       "country": "Pays",
@@ -459,7 +459,7 @@
       "timezone": "Fuseau horaire",
       "optional": "(facultatif)",
       "roomTypes": "Types de chambres",
-      "roomName": "Nom",
+      "roomName": "Nom de la chambre",
       "rooms": "Chambres",
       "adults": "Adultes",
       "children": "Enfants",
@@ -480,7 +480,33 @@
       "create": "Créer le bien",
       "afterCreate": "Ensuite : votre calendrier est envoyé au gestionnaire de canaux, puis vous connectez Airbnb ou Booking.com.",
       "street": "Adresse",
-      "postcode": "Code postal"
+      "postcode": "Code postal",
+      "pageTitle": "Ajouter un logement",
+      "crumb": "Nouveau",
+      "basics": "L'essentiel",
+      "firstRoom": "Première chambre ou unité",
+      "firstRoomHint": "Vous pourrez en ajouter plus tard. Un appartement = une unité.",
+      "kind": "Type de logement",
+      "kindHint": "Appartements et villas sont facturés par unité ; maisons d'hôtes par établissement.",
+      "units": "Unités",
+      "sleeps": "Couchages",
+      "baseRate": "Prix de base par nuit",
+      "baseRateHint": "Modifiable nuit par nuit dans le calendrier",
+      "minStay": "Séjour minimum",
+      "remove": "Retirer",
+      "cancel": "Annuler",
+      "rail": {
+        "label": "Étapes",
+        "basics": "L'essentiel",
+        "rooms": "Chambres et tarifs",
+        "photos": "Photos",
+        "channels": "Canaux",
+        "after": "Sur la page du logement"
+      },
+      "airbnb": {
+        "title": "Déjà sur Airbnb ?",
+        "body": "Importez l'annonce : nom, adresse, photos, tarifs et calendrier sont remplis pour vous."
+      }
     },
     "states": {
       "draft": "Brouillon",

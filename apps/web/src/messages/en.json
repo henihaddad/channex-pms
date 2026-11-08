@@ -459,15 +459,15 @@
           "option": "Guest house or hotel"
         }
       },
-      "title": "Title",
+      "title": "Property name",
       "titlePlaceholder": "Alfama Loft",
       "city": "City",
       "country": "Country",
       "currency": "Currency",
-      "timezone": "Time zone",
+      "timezone": "Timezone",
       "optional": "(optional)",
       "roomTypes": "Room types",
-      "roomName": "Name",
+      "roomName": "Room name",
       "rooms": "Rooms",
       "adults": "Adults",
       "children": "Children",
@@ -488,7 +488,33 @@
       "create": "Create property",
       "afterCreate": "Next: your calendar is sent to the channel manager, then you connect Airbnb or Booking.com.",
       "street": "Street address",
-      "postcode": "Postcode"
+      "postcode": "Postcode",
+      "pageTitle": "Add a property",
+      "crumb": "New",
+      "basics": "Basics",
+      "firstRoom": "First room or unit",
+      "firstRoomHint": "You can add more later. One apartment = one unit.",
+      "kind": "Property type",
+      "kindHint": "Apartments and villas are billed per unit; guest houses per property.",
+      "units": "Units",
+      "sleeps": "Sleeps",
+      "baseRate": "Base rate per night",
+      "baseRateHint": "You can change it per night on the calendar",
+      "minStay": "Minimum stay",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "rail": {
+        "label": "Steps",
+        "basics": "Basics",
+        "rooms": "Rooms & rates",
+        "photos": "Photos",
+        "channels": "Channels",
+        "after": "On the property's page"
+      },
+      "airbnb": {
+        "title": "Already on Airbnb?",
+        "body": "Import the listing and we fill in name, address, photos, rates and the calendar."
+      }
     },
     "states": {
       "draft": "Draft",

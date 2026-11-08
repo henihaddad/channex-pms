@@ -32,6 +32,12 @@ All notable changes to this project are documented here. The format follows
   minimum stay and mapped channels, and cards for content status, channels, owner and team.
   A Details form edits the name, address and check-in/check-out times. "View booking page"
   opens the public page once the booking site is on.
+- "Add a property" matches the design canvas: a step rail, an "Already on Airbnb?" shortcut,
+  Basics (property name, property type with its billing hint, country, city, street,
+  postcode, currency, timezone) and the first room or unit (sleeps, base rate per night,
+  minimum stay; room name and units for several units or a hotel). A single rental now
+  sleeps what the manager enters instead of always two. The name field is labelled
+  "Property name" (was "Title").
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
   failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,
