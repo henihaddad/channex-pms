@@ -73,11 +73,12 @@ export const INTEGRATIONS: readonly IntegrationEntry[] = [
   {
     key: "ical",
     group: "distribution",
-    name: "iCal feeds",
+    name: "iCal export",
     summary:
-      "A calendar feed per unit for tools that only read iCal. Channex carries every channel that matters, so this waits.",
-    status: "planned",
-    spec: "15",
+      "A read-only feed of each property's closed nights for any site that only reads iCal. Import from iCal is not built: Channex carries the channels that matter.",
+    status: "partial",
+    href: "/channels",
+    spec: "05 CX-9",
   },
   {
     key: "stripe_payments",

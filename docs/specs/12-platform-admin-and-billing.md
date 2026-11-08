@@ -156,7 +156,7 @@ act on: **Connected** (built, keyed on this deployment and in use by this organi
 a channel connection made, a booking site switched on, a pricing import set up, a plugin
 installed), **Available** (can be set up today, including interfaces whose only adapter is
 the built-in stand-in) or **Planned**. `integrationState()` decides; filter chips count each.
-iCal feeds, WhatsApp and Home Assistant are listed as planned.
+WhatsApp and Home Assistant are listed as planned; the iCal export (closed nights per property, CX-9) is listed as partly built, since importing from iCal is not.
 
 ## 12.8 Upgrades and operations
 
