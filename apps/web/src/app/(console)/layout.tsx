@@ -28,7 +28,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   if (!session) redirect("/login");
   const t = await getTranslations("nav");
   const orgId = await currentOrgId();
-  const badge = orgId ? await inboxBadge(orgId, session.userId) : { unread: 0, breaching: 0 };
+  const badge = orgId
+    ? await inboxBadge(orgId, session.userId)
+    : { unread: 0, breaching: 0, reviewsToAnswer: 0 };
   const cx = orgId ? await consoleContext(orgId) : null;
   const [orgs, me, locale] = await Promise.all([
     memberships(session.userId),
@@ -59,7 +61,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       tabs: [
         { href: "/inbox/automation", label: ti("automation") },
         { href: "/inbox/templates", label: ti("templates") },
-        { href: "/reviews", label: t("reviews") },
+        { href: "/reviews", label: t("reviews"), count: badge.reviewsToAnswer },
         { href: "/inbox/kpi", label: ti("kpi") },
       ],
     },

@@ -75,7 +75,7 @@ export function daysFrom(today: string, iso: string): number {
 
 /** "12 min", "1 h 12 min", "3 d": how long ago, as the inbox writes it. */
 export function elapsed(fromIso: string, now: Date = new Date()): string {
-  const min = Math.max(0, Math.round((now.getTime() - new Date(fromIso).getTime()) / 60_000));
+  const min = Math.max(1, Math.round((now.getTime() - new Date(fromIso).getTime()) / 60_000));
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return min % 60 ? `${h} h ${min % 60} min` : `${h} h`;

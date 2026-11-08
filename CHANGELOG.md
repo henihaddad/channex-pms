@@ -19,6 +19,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Inbox, Automation and Reviews match the design canvas. The inbox is a list and a
+  conversation: four views in front, rows that say how long the guest has waited, a
+  one-line booking header, a chat, the time since the guest wrote against the target,
+  and a composer with "Suggest a reply" and the guide-draft banner; J/K/R/S/E/A and ⌘↵
+  work. Automation is the guest journey as a timeline with the rule and its message edited
+  together, and 30-day numbers on top (a new repository query, tested). Reviews shows the
+  rating, reply rate and requests, stars, a started reply per review, and the rating by
+  property; the Inbox tab counts reviews waiting for a reply. The kill-switch label no
+  longer shows its spec code.
+
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
   failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,

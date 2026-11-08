@@ -1267,6 +1267,39 @@ export class DrizzleMessagingRepository {
     return rows.length === 1;
   }
 
+  /**
+   * The Automation board's numbers over a window: messages sent, failed and skipped by the
+   * guards (quiet hours, limits, a guest reply), review requests sent (after-departure rules),
+   * and reviews received, so a manager sees what the rules did, not only that they exist.
+   */
+  async automationStats(sinceIso: string): Promise<{
+    sent: number;
+    failed: number;
+    skipped: number;
+    reviewRequests: number;
+    reviewsReceived: number;
+  }> {
+    const [r] = await rawRows<Record<string, number>>(
+      this.tx,
+      sql`select
+        count(*) filter (where r.state = 'sent')::int as sent,
+        count(*) filter (where r.state = 'failed')::int as failed,
+        count(*) filter (where r.state = 'skipped')::int as skipped,
+        count(*) filter (where r.state = 'sent' and ar.trigger = 'after_departure')::int as review_requests,
+        (select count(*) from review where org_id = ${this.orgId} and received_at >= ${sinceIso}::timestamptz)::int as reviews_received
+        from automation_run r
+        left join automation_rule ar on ar.id = r.rule_id and ar.version = r.rule_version
+        where r.org_id = ${this.orgId} and coalesce(r.executed_at, r.scheduled_for) >= ${sinceIso}::timestamptz`,
+    );
+    return {
+      sent: Number(r?.sent ?? 0),
+      failed: Number(r?.failed ?? 0),
+      skipped: Number(r?.skipped ?? 0),
+      reviewRequests: Number(r?.review_requests ?? 0),
+      reviewsReceived: Number(r?.reviews_received ?? 0),
+    };
+  }
+
   async runs(limit = 50): Promise<
     Array<{
       id: string;

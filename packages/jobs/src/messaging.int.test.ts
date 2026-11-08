@@ -618,6 +618,10 @@ describe("thread sync (CXMSG-2/3)", () => {
     const runs = await repo((r) => r.runs());
     expect(runs[0]).toMatchObject({ ruleName: "Checkout info", state: "skipped" });
     expect(runs[0]!.reason).toContain("AUTO-3");
+    const stats = await repo((r) => r.automationStats("2026-01-01T00:00:00Z"));
+    expect(stats.skipped).toBe(runs.filter((x) => x.state === "skipped").length);
+    expect(stats.sent).toBe(runs.filter((x) => x.state === "sent").length);
+    expect(stats.reviewRequests).toBe(0);
     // AUTO-4: every automated message names its rule and version
     const detail = await repo((r) => r.detail(t2.id, clock.now().toString()));
     expect(

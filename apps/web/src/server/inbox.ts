@@ -1,4 +1,4 @@
-import { channelCapabilities, Id, type AutomationTrigger } from "@pms/core";
+import { channelCapabilities, Id, promotionalWarnings, type AutomationTrigger } from "@pms/core";
 import {
   DrizzleMessagingRepository,
   enqueueOutbox,
@@ -106,4 +106,27 @@ export async function currentUserEmail(ctx: ActorCtx): Promise<string | null> {
     sql`select email from "user" where id = ${ctx.userId}`,
   );
   return u?.email ?? null;
+}
+
+/** A rule's message edited beside the rule: when the body changed, the template is saved with it. */
+export async function saveTemplateBody(
+  repo: DrizzleMessagingRepository,
+  templateId: string,
+  body: FormDataEntryValue | null,
+  userId: string,
+): Promise<void> {
+  const text = typeof body === "string" ? body.trim() : "";
+  if (!text) return;
+  const tpl = (await repo.listTemplates()).find((x) => x.id === templateId);
+  if (!tpl || tpl.body.trim() === text) return;
+  await repo.saveTemplate({
+    id: tpl.id,
+    name: tpl.name,
+    category: tpl.category,
+    locale: tpl.locale,
+    channelScope: tpl.channelScope ?? null,
+    body: text,
+    warnings: promotionalWarnings(text),
+    createdBy: userId,
+  });
 }

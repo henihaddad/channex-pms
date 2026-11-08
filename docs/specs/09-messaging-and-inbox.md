@@ -14,10 +14,17 @@ expire within hours. So the inbox is not a nice-to-have — it is revenue.
 
 ## 9.1 Inbox layout
 
-Two panes under one bar: the **views** as pills with their counts, the property
-and the search on the same line; then the **thread list** and the **conversation**
-side by side. The booking's facts sit in a strip above the messages rather than
-in a third column, so a 13-inch screen shows the whole conversation.
+Two panes (design canvas, November 2026): the **thread list** with four views in
+front as chips (Needs reply · n, Past target · n, Arriving, All; the other views,
+the property filter and the search behind "⋯"), and the **conversation** beside it.
+A row shows the guest, how long they have waited (amber past the target), property ·
+channel · where they are in the stay, and the last line ("You: …" when we wrote
+last). The conversation header carries the booking in one line (property, dates,
+nights, channel) with Reservation and Assign; close, no-reply-needed, snooze and
+tags sit behind "⋯". Messages read as a chat, and a pill says how long ago the guest
+wrote against the reply target. Keys: J / K next and previous conversation, R reply,
+S suggest a reply, E close, A assign, ⌘↵ send. On a phone the list and the
+conversation are two screens.
 
 Thread list rows show: guest name, channel badge, last message preview, unread
 count, stay dates, an **SLA chip** (time remaining to first response), assignee
@@ -133,6 +140,14 @@ internal note to a guest.** Therefore:
 
 ## 9.5 Automation
 
+The Automation page reads as the guest journey (design canvas): rules grouped by
+phase (Booking, Before arrival, During the stay, After check-out), each one row with
+its moment, name, channels and properties, an On/Off switch and Edit; the selected
+rule's editor sits beside the timeline and edits the rule's message together with the
+rule (a changed body updates its template). Above it: messages sent, held back by the
+guards, review requests sent and reviews received over 30 days, and the number of rules
+switched off.
+
 Rules over triggers, with conditions and quiet hours:
 
 | Trigger | Typical automation |
@@ -174,6 +189,13 @@ SMS, and a website chat widget tied to the booking engine. Each arrives as a
 `provider` value with declared capabilities.
 
 ## 9.7 Reviews
+
+The Reviews page (design canvas) opens with the 12-month rating, the reply rate, how many
+wait for a reply and the review requests sent in 30 days. Each review shows stars, the
+property, channel and age, and, while it waits, a reply already started from its rating
+(edited before posting, posted through the channel). Beside the list: the after-check-out
+rule that sends review requests, the Airbnb guests still to review, and the rating by
+property. The Inbox tab reads "Reviews · n" while replies wait.
 
 Reviews live next to messaging because it is the same team's job: list by property
 and channel, filter by rating and response state, respond where the OTA allows it,

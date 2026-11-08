@@ -86,7 +86,8 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await expect(row.getByTestId("sla-chip")).toBeVisible();
   await row.click();
   await expect(page.getByTestId("conversation")).toBeVisible();
-  await expect(page.getByTestId("booking-sidebar")).toContainText(`${d1} → ${d2}`);
+  await expect(page.getByTestId("booking-sidebar")).toHaveAttribute("data-arrival", d1);
+  await expect(page.getByTestId("booking-sidebar")).toHaveAttribute("data-departure", d2);
 
   // MSG-4: the send button names the guest and the channel; the template renders real values
   await pickOption(page, { testId: "template-select" }, { label: "Early check-in (en)" });
@@ -153,7 +154,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await request.post("/api/v1/test/drain", { data: { orgId } });
   await page.goto("/reviews");
   await expect(page.getByTestId("rating")).toHaveText("9/10");
-  await page.locator('input[name="body"]').fill("Thank you, Ana!");
+  await page.locator('[data-testid="review-row"] [name="body"]').first().fill("Thank you, Ana!");
   await page.getByTestId("respond-review").click();
   // the response is queued by a server action; drain only once it is on the page, or the drain races it
   await expect(page.getByTestId("review-response")).toContainText("(queued)");

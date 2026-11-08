@@ -37,6 +37,7 @@ import {
   messaging,
   queueDelivery,
   queueThreadClose,
+  saveTemplateBody,
   TRIGGERS,
 } from "@/server/inbox";
 
@@ -363,6 +364,7 @@ export interface AutomationView {
   templates: MessageTemplate[];
   properties: Array<{ id: string; title: string; killSwitch: boolean }>;
   runs: Awaited<ReturnType<Awaited<ReturnType<typeof messaging>>["runs"]>>;
+  stats: Awaited<ReturnType<Awaited<ReturnType<typeof messaging>>["automationStats"]>>;
 }
 
 export const loadAutomation = withPermission<[], AutomationView>(
@@ -378,6 +380,7 @@ export const loadAutomation = withPermission<[], AutomationView>(
       templates: await repo.listTemplates(),
       properties,
       runs: await repo.runs(),
+      stats: await repo.automationStats(new Date(Date.now() - 30 * 86_400_000).toISOString()),
     };
   },
 );
@@ -426,9 +429,12 @@ export const saveRuleAction = withPermission<[FormData], void>(
     const conditions: Record<string, unknown> = {};
     if (r.providers.length) conditions.providers = r.providers;
     if (r.minNights !== null) conditions.minNights = r.minNights;
-    await (
-      await messaging(ctx)
-    ).saveRule({ ...r, id: r.id ?? null, conditions, createdBy: ctx.userId });
+    const propertyIds = fd.getAll("propertyIds").map(String).filter(Boolean);
+    if (propertyIds.length) conditions.propertyIds = propertyIds;
+    const repo = await messaging(ctx);
+    // the board edits a rule and its message together: a changed body updates the rule's template
+    await saveTemplateBody(repo, r.templateId, fd.get("body"), ctx.userId);
+    await repo.saveRule({ ...r, id: r.id ?? null, conditions, createdBy: ctx.userId });
     revalidatePath("/inbox/automation");
   },
 );
