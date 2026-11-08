@@ -150,6 +150,14 @@ as a port costs us a logo and buys the trust that the `built` ones are true.
 The list lives in `packages/core/src/platform/integrations.ts`, so the console, the
 marketing site and the docs cannot drift from each other.
 
+The console page (Settings → Integrations, design canvas November 2026) groups the entries
+as Distribution, Money and Guest & operations and gives each card one state a manager can
+act on: **Connected** (built, keyed on this deployment and in use by this organisation —
+a channel connection made, a booking site switched on, a pricing import set up, a plugin
+installed), **Available** (can be set up today, including interfaces whose only adapter is
+the built-in stand-in) or **Planned**. `integrationState()` decides; filter chips count each.
+iCal feeds, WhatsApp and Home Assistant are listed as planned.
+
 ## 12.8 Upgrades and operations
 
 - **SemVer** for the API and plugin interfaces; breaking changes only on major
@@ -170,6 +178,17 @@ marketing site and the docs cannot drift from each other.
 - A suspended tenant still has correct availability on every OTA.
 - A tenant can export everything they own and leave, unaided, in under an hour.
 - Installing a plugin cannot degrade sync latency.
+
+### 12.9b The tenants page
+
+The operator's Tenants page (design canvas, November 2026) leads with tenants, live
+properties, MRR (each billed tenant's plan tiers at its active units, `tenantMonthlyMinor`;
+trials, suspended and complimentary tenants pay nothing), trials ending within seven days
+and billed units; filters for paying, trials and tenants needing attention; a row per tenant
+with plan, monthly price, state, last activity and properties live; then platform health
+from the fleet counters and the Channex environment, and the latest sign-ups. Host-level
+health (the web host, the worker host, the database's compute) is not measured by the
+product and is not shown.
 
 ## 12.10 Implementation notes (M8)
 

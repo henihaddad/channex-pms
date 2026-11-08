@@ -257,7 +257,23 @@
   },
   {
     "file": "src/app/(console)/financials/financials.actions.ts",
+    "export": "loadFinancialOverview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/financials/financials.actions.ts",
     "export": "loadFinancials",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/financials/financials.actions.ts",
+    "export": "loadTransactions",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "statement:read",
@@ -652,6 +668,13 @@
   },
   {
     "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "generateDueStatementsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:generate"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
     "export": "generateStatementAction",
     "kind": "action",
     "wrapper": "withPermission",
@@ -708,6 +731,13 @@
   },
   {
     "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "loadOwnersBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "owner:read"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
     "export": "loadStatement",
     "kind": "action",
     "wrapper": "withPermission",
@@ -726,6 +756,13 @@
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "agreement:manage"
+  },
+  {
+    "file": "src/app/(console)/owners/owners.actions.ts",
+    "export": "saveStatementScheduleAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "statement:send"
   },
   {
     "file": "src/app/(console)/owners/owners.actions.ts",
@@ -955,6 +992,13 @@
   {
     "file": "src/app/(console)/reports/reports.actions.ts",
     "export": "loadDashboard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "report:read"
+  },
+  {
+    "file": "src/app/(console)/reports/reports.actions.ts",
+    "export": "loadReportsOverview",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "report:read"

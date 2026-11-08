@@ -74,6 +74,19 @@ gross booking revenue (nights in period, per BookingRoomDay)
   when property currency differs, the conversion date and rate are printed.
 - **STMT-7** Consolidated statements for owners with multiple properties, with
   per-property sections and a portfolio summary.
+- **STMT-8 How it reads (design canvas, November 2026).** The console shows a statement
+  per reservation — nights in the period, accommodation, channel fee (commission and tax
+  the channel withheld) and net — then every other line, and totals down to the manager's
+  and the owner's share, with approve, send and pay beside them and the agreement's earlier
+  statements below. The grouping is `statementReservations()` in core and only regroups
+  the per-night lines (STMT-3), so the rows always add back up to them; every line and the
+  comparison with the previous period stay one click away.
+- **STMT-9 The schedule is visible.** The Owners page lists each owner with properties,
+  split, last month's payable, where that statement stands and portal access, explains how a
+  statement adds up, and shows the schedule: drafts are generated nightly for every period
+  that has ended (and on demand with "Generate <month> statements", the same sweep), and
+  sending is either by hand or automatic N days after approval (`statement_auto_send`,
+  `statement_auto_send_days` on the organization, read by `statements.autosend`).
 
 ## 17.3 Expenses
 

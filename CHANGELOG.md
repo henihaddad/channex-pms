@@ -19,6 +19,24 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Financials, payment rules, Owners, the owner statement, Reports, Settings → Integrations and
+  the operator's Tenants page match the design canvas. Financials leads with this month's
+  revenue, payments received, guest balances, expenses and owner payables, revenue by month
+  stacked by channel, the latest transactions (a new Transactions tab lists them all), who owes
+  what, the month's tourist tax and channel commission; the six to-do lists follow under
+  "Waiting on you". Payment rules moved under Financials (the old address redirects) with
+  30-day collected, failed, held and refunded tiles, the rules as a table edited in place, and
+  what a change in a stay's total does to each instalment. Owners is a table with split, last
+  month's payable, statement state and portal access, an explainer, and the statement schedule,
+  where automatic sending after approval can now be turned off or on; "Generate <month>
+  statements" runs the nightly sweep on demand. A statement reads per reservation with nights
+  in the period, channel fee and net, then the other lines, totals to the manager's and owner's
+  share, and the agreement's earlier statements. Reports opens with KPIs for a trailing window
+  against the one before, occupancy by week and revenue by channel, then report cards. Settings
+  has a sub-nav, and Integrations is a card grid grouped by Distribution, Money and Guest &
+  operations with Connected / Available / Planned filters that reflect what this organisation
+  actually uses. Tenants shows MRR, trials ending, live properties, billed units, filters,
+  platform health and recent sign-ups. Every sum is kept per currency.
 - Inbox, Automation and Reviews match the design canvas. The inbox is a list and a
   conversation: four views in front, rows that say how long the guest has waited, a
   one-line booking header, a chat, the time since the guest wrote against the target,

@@ -15,3 +15,9 @@ export {
   type PayoutOutcome,
   type PayoutState,
 } from "./payout-port.js";
+export {
+  statementReservations,
+  statementOtherLines,
+  type StatementLineLike,
+  type StatementReservation,
+} from "./statement-view.js";

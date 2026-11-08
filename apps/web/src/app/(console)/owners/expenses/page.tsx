@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, PageTitle, Select } from "@/components/ui";
+import { Button, Card, Field, Label, PageHeader, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { EXPENSE_CATEGORIES, money } from "@/server/owners";
 import { approveExpenseAction, createExpenseAction, listExpenses } from "../owners.actions";
@@ -15,7 +15,7 @@ export default async function ExpensesPage({
   const v = await guard(() => listExpenses({ state: sp.state ?? null }));
   return (
     <div className="space-y-4">
-      <PageTitle>{t("expenses")}</PageTitle>
+      <PageHeader title={t("expenses")} />
       <div className="grid grid-cols-[2fr_1fr] gap-4">
         <Card>
           <form className="mb-2 flex gap-2 text-xs">

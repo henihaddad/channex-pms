@@ -163,10 +163,15 @@ export async function generateStatement(
   });
 }
 
-/** The scheduled run (spec 17 §17.2): every agreement whose latest period has ended gets a draft; existing drafts are refreshed. */
+/**
+ * The scheduled run (spec 17 §17.2): every agreement whose latest period has ended gets a draft;
+ * existing drafts are refreshed. `run` keeps one organisation's sweep inside the caller's
+ * transaction ("Generate <month> statements" on the Owners page).
+ */
 export async function generateDueStatements(
   deps: OwnerDeps,
   orgId?: string,
+  run?: TxRunner,
 ): Promise<{ generated: number; refreshed: number }> {
   const orgs = orgId
     ? [orgId]
@@ -178,7 +183,8 @@ export async function generateDueStatements(
   const today = deps.clock.today("UTC").toString();
   const out = { generated: 0, refreshed: 0 };
   for (const org of orgs) {
-    const keys = await asSystem(deps.db, org, async (tx) => {
+    const inOrg: TxRunner = run && orgId ? run : (fn) => asSystem(deps.db, org, fn);
+    const keys = await inOrg(async (tx) => {
       const repo = repoFor(deps, tx, org);
       const monthly = await repo.agreementKeysActive(periodEndingBefore("monthly", today));
       const fortnightly = await repo.agreementKeysActive(periodEndingBefore("fortnightly", today));
@@ -189,13 +195,13 @@ export async function generateDueStatements(
     });
     for (const k of keys) {
       const period = periodEndingBefore(k.frequency, today);
-      const existing = await asSystem(deps.db, org, (tx) =>
+      const existing = await inOrg((tx) =>
         repoFor(deps, tx, org).statements({ agreementKey: k.agreementKey }),
       );
       const forPeriod = existing.find((s) => s.periodFrom === period.from);
       if (forPeriod && forPeriod.state !== "draft") continue;
       try {
-        const r = await generateStatement(deps, org, k.agreementKey, period);
+        const r = await generateStatement(deps, org, k.agreementKey, period, inOrg);
         if (!r) continue;
         if (forPeriod) {
           if (r.changed) out.refreshed++;

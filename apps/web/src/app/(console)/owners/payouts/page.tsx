@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, PageTitle } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/server/owners";
 import { approvePayoutAction, listPayouts } from "../owners.actions";
@@ -11,7 +11,7 @@ export default async function PayoutsPage() {
   const rows = await guard(() => listPayouts());
   return (
     <div className="space-y-4">
-      <PageTitle>{t("payouts")}</PageTitle>
+      <PageHeader title={t("payouts")} />
       <Card>
         {rows.length === 0 ? <p className="text-sm text-muted">{t("noPayouts")}</p> : null}
         {rows.map((p) => (

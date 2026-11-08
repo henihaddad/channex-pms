@@ -23,6 +23,7 @@ import {
 } from "@pms/db";
 import { createLogger } from "@pms/runtime";
 import { queueAriPush } from "./ari-events.js";
+import { integrationUsage } from "./integrations.js";
 import { recomputeAvailability } from "./availability.js";
 import {
   attachPaymentMethod,
@@ -322,6 +323,27 @@ describe("metering and plans (§12.5)", () => {
     expect(sub?.customerRef).toBeNull();
     expect(sub?.periodFrom).toBe("2026-08-10");
     expect(sub?.periodTo).toBe("2026-09-10");
+    // the operator's tenant list prices the tenant from its plan and counts what is live
+    const tenant = (
+      await withoutTenant(handle.db, (tx) => new DrizzleOperatorRepository(tx).tenants(""))
+    ).find((x) => x.id === ORG);
+    expect(tenant).toMatchObject({
+      planKey: "complimentary",
+      planName: sub?.plan.name,
+      planCurrency: sub?.plan.currency,
+    });
+    expect(tenant?.planTiers).toEqual(sub?.plan.tiers);
+    expect(tenant?.liveProperties).toBeLessThanOrEqual(tenant?.properties ?? 0);
+    expect(tenant?.channelConnections).toBeGreaterThanOrEqual(0);
+    // and the integrations page can tell what this tenant uses
+    const usage = await run((tx) => integrationUsage(tx));
+    expect(usage).toEqual({
+      channelConnections: expect.any(Number),
+      bookingSites: expect.any(Number),
+      rateImports: expect.any(Number),
+      plugins: expect.any(Number),
+      lockCredentials: expect.any(Number),
+    });
     // the period closes at zero: the invoice is paid without a provider call, nothing starts dunning
     const invoicesBefore = (await repo((x) => x.invoices())).length;
     clock.set("2026-09-11T03:00:00Z");

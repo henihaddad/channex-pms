@@ -26,6 +26,7 @@ import {
 } from "@pms/db";
 import { createLogger } from "@pms/runtime";
 import {
+  autoSendStatements,
   executePayout,
   generateDueStatements,
   generateStatement,
@@ -34,6 +35,7 @@ import {
   sendStatement,
 } from "./owners.js";
 import { moneyQueue } from "./financials.js";
+import { financialOverview, paymentRuleStats } from "./financial-overview.js";
 import { textPdf } from "./statement-pdf.js";
 
 /**
@@ -572,5 +574,83 @@ describe("what money needs from a person today", () => {
     expect(due.map((d) => d.amountMinor)).not.toContain(9900);
     expect(due.every((d) => d.dueOn <= today)).toBe(true);
     expect(due.find((d) => d.amountMinor === 1200)?.currency).toBe("EUR");
+  });
+});
+
+/** Spec 11 §11.5b: the overview reads the same rows, keeps currencies apart and loses no money. */
+describe("the financials overview", () => {
+  const overview = () =>
+    asSystem(handle.db, ORG, (tx) => financialOverview({ crypto, clock }, tx, ORG));
+
+  it("owes what the money queue owes and owes the owners what their statements say", async () => {
+    const o = await overview();
+    const q = await asSystem(handle.db, ORG, (tx) => moneyQueue({ crypto, clock }, tx, ORG));
+    expect(o.balanceDueCount).toBe(q.unpaidFolios.length);
+    const owed = q.unpaidFolios.reduce((a, f) => a + f.balanceMinor, 0);
+    expect(o.balanceDue.reduce((a, c) => a + c.minor, 0)).toBe(owed);
+    const open = [
+      ...(await repo((r) => r.statements({ state: "draft" }))),
+      ...(await repo((r) => r.statements({ state: "approved" }))),
+    ];
+    expect(o.draftStatements).toBe(open.filter((st) => st.state === "draft").length);
+    expect(o.ownerPayable.reduce((a, c) => a + c.minor, 0)).toBe(
+      open.reduce((a, st) => a + Number(st.totals.payable ?? st.totals.netDue ?? 0), 0),
+    );
+    expect(o.revenueByMonth).toHaveLength(7);
+    expect(o.revenueByMonth.at(-1)?.month).toBe(clock.today("UTC").toString().slice(0, 7));
+  });
+
+  it("lists payments in and expenses out, signed, newest first", async () => {
+    const o = await overview();
+    const payment = o.transactions.find((t) => t.kind === "payment");
+    expect(payment).toMatchObject({ amountMinor: 4500, method: "card", state: "captured" });
+    for (const t of o.transactions.filter((x) => x.kind === "expense" || x.kind === "owner_payout"))
+      expect(t.amountMinor).toBeLessThanOrEqual(0);
+  });
+
+  it("counts what the rules collected, what failed and what is retrying", async () => {
+    const [b] = await asSystem(handle.db, ORG, (tx) =>
+      rawRows<{ id: string }>(tx, sql`select id from booking limit 1`),
+    );
+    const add = (state: string, attempts: number, amount: number) =>
+      asSystem(handle.db, ORG, (tx) =>
+        rawRows(
+          tx,
+          sql`insert into payment_schedule (id, org_id, booking_id, rule_id, name, due_on, amount_minor, currency, state, attempts, settled_at)
+              values (${Id.next()}, ${ORG}, ${b!.id}, null, ${`Deposit ${state}`}, ${clock.today("UTC").toString()}, ${amount}, 'EUR', ${state}, ${attempts},
+                      ${state === "paid" ? clock.now().toString() : null})`,
+        ),
+      );
+    const before = await asSystem(handle.db, ORG, (tx) => paymentRuleStats({ clock }, tx));
+    await add("paid", 1, 3000);
+    await add("failed", 1, 700);
+    await add("scheduled", 2, 800);
+    const after = await asSystem(handle.db, ORG, (tx) => paymentRuleStats({ clock }, tx));
+    expect(after.collectedCount).toBe(before.collectedCount + 1);
+    const eur = (xs: Array<{ currency: string; minor: number }>) =>
+      xs.find((x) => x.currency === "EUR")?.minor ?? 0;
+    expect(eur(after.collected30d)).toBe(eur(before.collected30d) + 3000);
+    expect(after.failed).toBe(before.failed + 1);
+    expect(after.retrying).toBe(before.retrying + 1);
+  });
+});
+
+/** STMT-5: the statement schedule a manager sets on the Owners page is the one the worker reads. */
+describe("the statement schedule", () => {
+  it("turns automatic sending off and on, with its delay", async () => {
+    await repo((r) => r.setStatementAutoSend(false, 7));
+    expect(await repo((r) => r.orgSetting("statement_auto_send"))).toBe("off");
+    expect(await autoSendStatements({ db: handle.db, ...deps }, ORG)).toBe(0);
+    await repo((r) => r.setStatementAutoSend(true, 3));
+    expect(await repo((r) => r.orgSetting("statement_auto_send"))).toBe("on");
+    expect(await repo((r) => r.orgSetting("statement_auto_send_days"))).toBe("3");
+    await expect(repo((r) => r.setStatementAutoSend(true, 1.5))).rejects.toThrow();
+  });
+
+  it("runs the sweep inside the caller's transaction, as the Owners page does", async () => {
+    const r = await asSystem(handle.db, ORG, (tx) =>
+      generateDueStatements({ db: handle.db, ...deps }, ORG, (fn) => fn(tx)),
+    );
+    expect(r).toEqual({ generated: expect.any(Number), refreshed: expect.any(Number) });
   });
 });

@@ -7,11 +7,13 @@ import { DrizzleMessagingRepository, type AlertRow, type PropertyLeagueRow } fro
 import {
   dashboardKpis,
   REPORT_CATALOGUE,
+  reportsOverview,
   rollup,
   runReport,
   type DashboardKpis,
   type ReportDefinition,
   type ReportResult,
+  type ReportsOverview,
 } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
@@ -86,6 +88,19 @@ const shift = (iso: string, days: number) => {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 };
+
+/** The Reports overview (design board "Reports"): KPIs for a trailing window, weekly occupancy, channel mix. */
+export const loadReportsOverview = withPermission<
+  [{ days: number; propertyId?: string | null }],
+  ReportsOverview & { dictionary: Record<KpiKey, KpiDefinition> }
+>("report:read", org, async (ctx, f) => ({
+  ...(await reportsOverview(ctx.tx, ctx.orgId, {
+    today: today(),
+    days: [7, 30, 90, 365].includes(f.days) ? f.days : 30,
+    propertyIds: f.propertyId ? [f.propertyId] : null,
+  })),
+  dictionary: KPI_DICTIONARY as Record<KpiKey, KpiDefinition>,
+}));
 
 /** "Refresh now": the rollup for the last 45 days and the horizon, on demand (the nightly job does the same). */
 export const refreshRollupsAction = withPermission<[FormData], void>(

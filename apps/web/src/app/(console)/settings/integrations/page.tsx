@@ -1,99 +1,182 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { INTEGRATIONS, type IntegrationEntry, type IntegrationStatus } from "@pms/core";
-import { Card, Chip, SectionTitle } from "@/components/ui";
+import {
+  INTEGRATIONS,
+  INTEGRATION_GROUPS,
+  integrationState,
+  type IntegrationEntry,
+  type IntegrationState,
+} from "@pms/core";
+import { integrationUsage, type IntegrationUsage } from "@pms/jobs";
+import { Chip, cn } from "@/components/ui";
 import { container } from "@/server/container";
 import { withPermission } from "@/server/with-permission";
 import { guard } from "@/server/guard";
 
 /**
- * What this deployment can actually reach. Behind `org:read` because it names the
- * services the organisation has wired, which is nobody's business but theirs.
+ * What this deployment can actually reach, and what this organisation uses. Behind
+ * `org:read` because it names the services the organisation has wired, which is nobody's
+ * business but theirs.
  */
-const loadConfigured = withPermission<[], Record<string, boolean>>(
-  "org:read",
-  { scope: "organization", audit: false },
-  async () => {
-    const c = await container();
-    return {
+const loadIntegrations = withPermission<
+  [],
+  { configured: Record<string, boolean>; usage: IntegrationUsage; channexEnv: string }
+>("org:read", { scope: "organization", audit: false }, async (ctx) => {
+  const c = await container();
+  return {
+    configured: {
       stripe_payments: Boolean(process.env.STRIPE_SECRET_KEY),
       stripe_connect: Boolean(process.env.STRIPE_SECRET_KEY),
       stripe_billing: Boolean(process.env.STRIPE_SECRET_KEY) && c.hosted,
       mail: c.config.MAIL_TRANSPORT !== "console",
       llm: c.llm.name !== "none",
-    };
-  },
-);
+    },
+    usage: await integrationUsage(ctx.tx),
+    channexEnv: process.env.CHANNEX_ENV === "production" ? "production" : "staging",
+  };
+});
 
-const ORDER: IntegrationStatus[] = ["built", "partial", "port", "planned"];
-const TONE: Record<IntegrationStatus, "success" | "accent" | "warning" | "default"> = {
-  built: "success",
-  partial: "accent",
-  port: "warning",
+const TONE: Record<IntegrationState, "success" | "default"> = {
+  connected: "success",
+  available: "default",
   planned: "default",
 };
+const FILTERS = ["all", "connected", "available", "planned"] as const;
+type Filter = (typeof FILTERS)[number];
 
 /**
- * What this product connects to, and how far each one is built (spec 12 §12.7). Every
- * competitor's integrations page is a wall of logos you cannot verify; this one says
- * `built`, `partial`, `port` or `planned`, and for the ones that need a key it says
- * whether this deployment has one. Honest is the differentiator.
+ * Integrations (spec 12 §12.7b, design board "Settings — Integrations"). Every competitor's
+ * integrations page is a wall of logos you cannot verify; this one says, per card, whether
+ * it runs here for you (Connected), can be set up today (Available) or is only on the
+ * roadmap (Planned), from the registry in core and the running container.
  */
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const sp = await searchParams;
   const t = await getTranslations("integrations");
-  const configured = await guard(() => loadConfigured());
-  const entry = (i: IntegrationEntry) => (
-    <li key={i.key} className="border-t border-border py-3 first:border-0 first:pt-0">
-      <div className="flex flex-wrap items-baseline gap-2">
-        <strong className="text-sm">{i.name}</strong>
-        <Chip color={TONE[i.status]} data-testid={`integration-${i.key}`} data-status={i.status}>
-          {t(`status.${i.status}`)}
-        </Chip>
-        {i.configurable ? (
+  const { configured, usage, channexEnv } = await guard(() => loadIntegrations());
+  const inUse: Record<string, boolean | undefined> = {
+    channex: usage.channelConnections > 0,
+    booking_engine: usage.bookingSites > 0,
+    pricing: usage.rateImports > 0,
+    plugins: usage.plugins > 0,
+  };
+  const stateOf = (i: IntegrationEntry): IntegrationState =>
+    integrationState(i, { configured: configured[i.key], inUse: inUse[i.key] });
+  const filter: Filter = (FILTERS as readonly string[]).includes(sp.show ?? "")
+    ? (sp.show as Filter)
+    : "all";
+  const count = (s: IntegrationState) => INTEGRATIONS.filter((i) => stateOf(i) === s).length;
+  const shown = (i: IntegrationEntry) => filter === "all" || stateOf(i) === filter;
+
+  const card = (i: IntegrationEntry) => {
+    const state = stateOf(i);
+    const chip =
+      i.key === "channex" && state === "connected"
+        ? t("connectedEnv", { env: t(`env.${channexEnv}`) })
+        : t(`state.${state}`);
+    const action =
+      state === "planned"
+        ? null
+        : i.href
+          ? { href: i.href, label: state === "connected" ? t("manage") : t("setUp") }
+          : null;
+    return (
+      <li
+        key={i.key}
+        className="flex min-w-0 flex-col gap-2 rounded-card border border-border bg-surface p-4.5"
+        data-testid="integration-card"
+        data-state={state}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <strong className="text-[15px] font-bold text-foreground">{i.name}</strong>
           <Chip
-            color={configured[i.key] ? "success" : "default"}
-            data-testid={`integration-configured-${i.key}`}
+            color={
+              i.key === "channex" && state === "connected" && channexEnv !== "production"
+                ? "warning"
+                : TONE[state]
+            }
+            size="sm"
+            data-testid={`integration-${i.key}`}
+            data-status={i.status}
           >
-            {configured[i.key] ? t("configured") : t("notConfigured")}
+            {chip}
           </Chip>
+        </div>
+        <p className="text-[13px] text-muted">{i.summary}</p>
+        {i.configurable ? (
+          <span className="sr-only" data-testid={`integration-configured-${i.key}`}>
+            {configured[i.key] ? t("configured") : t("notConfigured")}
+          </span>
         ) : null}
-      </div>
-      <p className="mt-1 text-sm text-muted">{i.summary}</p>
-      <p className="mt-1 text-xs text-muted">
-        {i.href ? (
-          <>
-            <Link href={i.href} className="underline">
-              {t("openSettings")}
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[13px]">
+          {action ? (
+            <Link href={action.href} className="font-semibold text-accent hover:underline">
+              {action.label}
             </Link>
-            {" · "}
-          </>
-        ) : null}
-        {i.port ? (
-          <>
-            <code>{i.port}</code>
-            {" · "}
-          </>
-        ) : null}
-        {t("specRef", { spec: i.spec })}
-      </p>
-    </li>
-  );
+          ) : null}
+          {i.configurable && !configured[i.key] && state !== "planned" ? (
+            <span className="text-xs text-muted">{t("needsKey")}</span>
+          ) : null}
+          {i.status === "port" ? <span className="text-xs text-muted">{t("portHint")}</span> : null}
+          {state === "planned" ? (
+            <span className="text-xs text-muted">{t("onRoadmap")}</span>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <SectionTitle>{t("title")}</SectionTitle>
-      <p className="max-w-prose text-sm text-muted">{t("lead")}</p>
-      {ORDER.map((status) => {
-        const items = INTEGRATIONS.filter((i) => i.status === status);
+    <div className="flex flex-col gap-5">
+      <nav className="flex flex-wrap gap-2" aria-label={t("filter")}>
+        {FILTERS.map((f) => {
+          const label =
+            f === "all"
+              ? t("all")
+              : f === "planned"
+                ? t("state.planned")
+                : `${t(`state.${f}`)} · ${String(count(f))}`;
+          return (
+            <Link
+              key={f}
+              href={f === "all" ? "/settings/integrations" : `/settings/integrations?show=${f}`}
+              aria-current={filter === f ? "page" : undefined}
+              className={cn(
+                "inline-flex h-9 items-center rounded-full border px-3.5 text-sm font-semibold transition-colors",
+                filter === f
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-surface text-foreground hover:bg-default",
+              )}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {INTEGRATION_GROUPS.map((g) => {
+        const items = INTEGRATIONS.filter((i) => i.group === g && shown(i));
         if (items.length === 0) return null;
         return (
-          <Card key={status} title={t(`heading.${status}`)} description={t(`blurb.${status}`)}>
-            <ul data-testid={`integrations-${status}`}>{items.map(entry)}</ul>
-          </Card>
+          <section key={g} className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold text-muted">{t(`group.${g}`)}</h2>
+            <ul
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+              data-testid={`integrations-${g}`}
+            >
+              {items.map(card)}
+            </ul>
+          </section>
         );
       })}
+
       <p className="text-sm text-muted">
         {t("writeOne")}{" "}
-        <Link href="/settings/plugins" className="underline">
+        <Link href="/settings/plugins" className="font-semibold text-accent hover:underline">
           {t("plugins")}
         </Link>
         .

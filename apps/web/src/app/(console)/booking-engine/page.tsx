@@ -40,7 +40,7 @@ export default async function BookingEngineIndexPage() {
         title={t("index")}
         actions={
           <LinkButton
-            href="/booking-engine/payments"
+            href="/financials/payment-rules"
             variant="secondary"
             data-testid="payment-rules-link"
           >

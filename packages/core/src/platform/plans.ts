@@ -87,7 +87,7 @@ export function peakUnits(records: readonly UsageRecord[], period: BillingPeriod
 
 /** Volume tiers are marginal: units 1–50 at the first price, 51–200 at the second, and so on. */
 export function tieredAmount(
-  plan: Plan,
+  plan: Pick<Plan, "tiers">,
   units: number,
 ): { lines: InvoiceLine[]; amountMinor: number } {
   const tiers = [...plan.tiers].sort((a, b) => a.fromUnits - b.fromUnits);
@@ -267,4 +267,18 @@ export function prorate(monthlyMinor: number, period: BillingPeriod, changeDate:
 
 function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
+
+/**
+ * What a tenant pays a month at its current active units (spec 12 §12.5), for the operator's
+ * MRR: only a tenant that is billed (active or past due) counts; a trial, a suspended or
+ * expired tenant and one without a plan pay nothing.
+ */
+export function tenantMonthlyMinor(t: {
+  state: string;
+  planTiers: Plan["tiers"] | null;
+  activeUnits: number;
+}): number {
+  if (!t.planTiers || (t.state !== "active" && t.state !== "past_due")) return 0;
+  return tieredAmount({ tiers: t.planTiers }, t.activeUnits).amountMinor;
 }

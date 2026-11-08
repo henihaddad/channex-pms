@@ -4,6 +4,7 @@ export {
   VAT_RATES_BPS,
   peakUnits,
   tieredAmount,
+  tenantMonthlyMinor,
   vatFor,
   draftInvoice,
   prorate,
@@ -28,7 +29,12 @@ export {
 } from "./billing-port.js";
 export {
   INTEGRATIONS,
+  INTEGRATION_GROUPS,
+  integrationsByGroup,
   integrationsByStatus,
+  integrationState,
+  type IntegrationGroup,
+  type IntegrationState,
   type IntegrationEntry,
   type IntegrationStatus,
 } from "./integrations.js";
