@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Chip, Select } from "@/components/ui";
 import type { CalendarLabels } from "@/components/calendar-labels";
+import { money as moneyText } from "@/lib/format";
 
 type Values = {
   rate?: number;
@@ -48,8 +49,7 @@ const addDays = (iso: string, n: number): string => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const money = (minor: number | undefined, currency: string): string =>
-  minor === undefined ? "—" : `${(minor / 100).toFixed(2)} ${currency}`;
+const money = (minor: number | undefined, currency: string): string => moneyText(minor, currency);
 const fmt = (s: string, vars: Record<string, string | number>): string =>
   s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
 

@@ -87,6 +87,43 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/calendar/calendar.actions.ts",
+    "export": "addSeasonAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "yield_rule:update"
+  },
+  {
+    "file": "src/app/(console)/calendar/calendar.actions.ts",
+    "export": "loadStaysAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/calendar/calendar.actions.ts",
+    "export": "removeSeasonAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "yield_rule:update"
+  },
+  {
+    "file": "src/app/(console)/calendar/calendar.actions.ts",
+    "export": "saveNightNotesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:update_restriction",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/calendar/calendar.actions.ts",
+    "export": "savePricingDefaultsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "yield_rule:update"
+  },
+  {
     "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "acknowledgeEventAction",
     "kind": "action",

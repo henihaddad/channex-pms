@@ -29,6 +29,8 @@ export {
 } from "./channels.js";
 export {
   loadGrid,
+  loadStays,
+  saveNightNotes,
   checkCellVersions,
   cellStatesSince,
   medianRate,
@@ -37,15 +39,19 @@ export {
   type GridRoomType,
   type GridRatePlan,
   type GridQuery,
+  type GridStay,
+  type GridBlock,
   type RateCellWire,
   type AvailCellWire,
   type CellEdit,
   type CellEditOutcome,
 } from "./calendar.js";
+export { DrizzleSeasonRepository, loadYearNights, type SeasonRow } from "./seasons.js";
 export { DrizzleOperationsRepository, type TaskRow } from "./operations.js";
 export { DrizzleGuideRepository } from "./guides.js";
 export {
   DrizzleRateImportRepository,
+  DrizzlePricingDefaultsRepository,
   DEFAULT_RATE_IMPORT,
   type RateImportSettings,
 } from "./pricing.js";

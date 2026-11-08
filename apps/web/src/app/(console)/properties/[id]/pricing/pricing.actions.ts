@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { parseRateImportCsv, type RateImportPlan } from "@pms/core";
+import { parseMinor, parseRateImportCsv, type RateImportPlan } from "@pms/core";
 import { DrizzleRateImportRepository } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
@@ -37,11 +37,11 @@ export const saveRateImportAction = withPermission<[FormData], void>(
       ...stored,
       provider: str(fd, "provider") || "csv",
       providerRef: str(fd, "providerRef") || null,
-      enabled: fd.get("enabled") === "on",
+      enabled: fd.get("schedule") === "nightly",
       autoApply: fd.get("autoApply") === "on",
       guardRails: {
-        floorMinor: intOrNull(fd, "floorMinor"),
-        ceilingMinor: intOrNull(fd, "ceilingMinor"),
+        floorMinor: parseMinor(str(fd, "floor")),
+        ceilingMinor: parseMinor(str(fd, "ceiling")),
         maxChangeBps:
           intOrNull(fd, "maxChangePercent") === null
             ? null

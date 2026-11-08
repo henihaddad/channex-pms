@@ -1,6 +1,6 @@
 # 06 — Inventory, Rates & the Calendar
 
-**Status:** `accepted` (2026-09-02) — implemented in M2: property wizard with `kind`, templates, clone and CSV import; derived plans recomputed in the same transaction as the parent edit; the portfolio grid (virtualised rows and columns, keyboard editing, range toolbar, `expected_version` conflicts, server-backed undo, SSE cell states); bulk update with mandatory dry run and inverse-operation undo; rolling 730-day horizon. Not yet built: year heatmap, presence avatars (CAL-6), history popover UI (the audit-backed endpoint exists), yield rules (§6.5) and promotions (§6.6), which M6/M7 pick up. The mobile day view (CAL-9) and rate import (§6.5b) shipped after v1.0.
+**Status:** `accepted` (2026-09-02) — implemented in M2: property wizard with `kind`, templates, clone and CSV import; derived plans recomputed in the same transaction as the parent edit; the portfolio grid (virtualised rows and columns, keyboard editing, range toolbar, `expected_version` conflicts, server-backed undo, SSE cell states); bulk update with mandatory dry run and inverse-operation undo; rolling 730-day horizon. The year view, seasons and the Pricing & availability page shipped in November 2026 (CAL-10, CAL-11, §6.6). Not yet built: presence avatars (CAL-6), history popover UI (the audit-backed endpoint exists), yield rules (§6.5) and promotions (§6.6), which M6/M7 pick up. The mobile day view (CAL-9) and rate import (§6.5b) shipped after v1.0.
 
 **Primary personas:** `revenue_manager`, `property_manager`, `portfolio_manager`.
 
@@ -77,22 +77,36 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   commit, `Esc` to cancel, `Shift`+arrows to range-select, `Cmd/Ctrl+C/V` to copy
   and paste blocks, `Cmd/Ctrl+Z` to undo. A revenue manager should never need the
   mouse.
-- **CAL-2** Click a night or drag across nights (Shift-click extends) → a side
-  panel for the selection: price per night, Open/Blocked, minimum stay, and under
-  "More settings" check-in/check-out closures and a percentage change that
-  previews before it applies (BULK-1). No dialogs, no toolbar of buttons: the
-  panel is the only place to act on a selection, and it names the nights and the
-  listing it will change. A right-click on a night opens the same verbs as a menu
-  (set price, block, open, minimum stay, new reservation on these dates), and one
-  letter each does the same from the keyboard: `P`, `B`, `O`, `M`, `R`; `T` jumps
-  to tonight. The toolbar carries a Today button, a legend for the sync dots and
-  hatching, and a "Tips" sheet that lists every trick; nothing in it is the only
-  way to do something.
-- **CAL-2a** Rows follow the portfolio shape: a single-unit listing with one rate
-  plan is one row that carries its cover photo (first library photo, else the
-  photo an import brought) and title, so a manager scans listings the way the
-  channels show them. Booked and blocked nights are hatched with the word.
-  Hotels keep property → room type → rate plan rows.
+- **CAL-2** Click a night or drag across nights (Shift-click extends, ⌘/Ctrl-click adds
+  another range, even on another listing) → a panel under the strip for the selection,
+  named after the listing and the nights it will change ("Alfama Loft · 16–18 Nov, 3 nights ·
+  Mon, Tue, Wed"): price per night with what the old price was and what each connected OTA
+  shows after its markup, Open/Block, the channels the nights are open on, minimum and maximum
+  nights, the weekdays a guest may check in on (an unticked weekday writes `closedToArrival`
+  on those nights), a private note, and where to apply it (the selection, every base plan of
+  these listings, or every listing on screen). One "Save N nights" press writes only what was
+  touched, as one undo entry; "More settings" keeps check-out closure and a percentage change
+  that previews before it applies (BULK-1). No dialogs. A right-click on a night opens the same
+  verbs as a menu (set price, block, open, minimum stay, private note, new reservation on
+  these dates, copy price, paste to selection), and one key each does the same: `P`, `B`, `O`,
+  `M`, `N`, `R`, `⌘C`, `⌘V`; `T` jumps to tonight; with no night focused `←`/`→` move the
+  strip a week, `1`–`4` pick 14/30/60/90 nights and `Y` opens the year. Hovering a night shows
+  a card: your price, what the guest sees on each connected OTA (markup and rounding from
+  §6.6), the direct price, the minimum stay, any closure, the sync state and the private
+  note. The toolbar carries Strip/Month/Year, the range, a property and group filter, Today,
+  the price tips, the gear to Pricing & availability and `?`; a "Tricks that save you clicks"
+  card lists every one of these, and a toast after each save names the nights and the
+  channels told, with Undo and ⌘Z.
+- **CAL-2a** Rows follow the portfolio shape: a listing with one room type and one base
+  plan is one row carrying its cover photo (first library photo, else the photo an import
+  brought), its title and a subtitle (city · plan · rooms); its derived plans fold under a
+  "+N" button. A row of several rooms shows "N left" under each price. Bookings are bars
+  across their nights, coloured by channel (Airbnb, Booking.com, Vrbo, Expedia, Direct) and
+  labelled with the guest and the channel; a bar opens the reservation. Owner and maintenance
+  blocks and stop-sold nights are hatched with the reason. Hotels keep property → room type →
+  rate plan rows. Bars need `booking:read`; without it the strip still shows prices.
+- **CAL-2b** Private notes on nights are kept with the property, keyed by plan and night,
+  seen by the team and never sent to a channel; an empty note removes it.
 - **CAL-3** Optimistic rendering: edits appear immediately, marked `pending`, with
   a per-cell state that resolves over the realtime channel.
 - **CAL-4** Undo/redo is server-backed (an inverse operation, not a UI trick), so
@@ -106,13 +120,21 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   portfolio view must not exceed a 2 s load.
 - **CAL-8** Every cell exposes a history popover: value, actor, surface, timestamp,
   and the sync result — sourced from the audit log.
-- **CAL-9** Mobile: read-optimised with a single-day column view and a quick
-  "close out today" action. We do not pretend a 400-cell grid works on a phone.
-  **Shipped:** the day view is what a phone gets by default and either view is one press
-  away on any screen, because closing a night out is useful at a desk too. It lists every
-  listing's price, rooms left, minimum stay, restriction flags and per-cell sync state for
-  one night, and "close this night" stop-sells a property's plans through the ordinary bulk
-  path, with the undo it returns.
+- **CAL-9** Mobile: a phone opens one listing's month, not the strip: a tile per night with
+  its price ("€80"), booked nights dark, the selection teal. Tap a night and tap or swipe to
+  another to select the nights between; a bottom sheet sets price, Open/Block, minimum stay
+  and a note and saves them in one press through the same ARI path, undo and push. A booked
+  night opens its reservation. The single-day close-out list (every listing's price, rooms
+  left, minimum stay and sync state for one night, and "close this night" through the bulk
+  path) stays one link away, and on a desktop the month is the "Month" view.
+- **CAL-10** Year view: twelve months of one listing from the current month, each night
+  booked, part-booked, open or closed, each month with its occupancy on the books and its
+  average price; nights in a season carry the season's colour. Tiles for occupancy over the
+  next twelve months, revenue on the books, nights blocked by reason, seasons and price tips;
+  a month opens the strip at that month.
+- **CAL-11** Price tips are what a pricing engine proposes and has not applied (open
+  `rate_import_pending` alerts from §6.5b). The calendar counts them and links to the review;
+  with none it says so and says where they would come from. There is no tip engine of our own.
 
 ## 6.3 Bulk update
 
@@ -222,22 +244,45 @@ goes through the same guard rails, dry run, undo and push path as a bulk edit.
   ordinary ARI queue, marked `source = rate_import` so the calendar says where the price
   came from.
 
+**The page** leads with where prices come from and when (source, last import and how many
+nights it changed, nights set by hand that imports leave alone, the next nightly pull at
+02:40 UTC), then the rails per rate plan with today's price and its source, the future nights
+priced outside the rails, the CSV import, and the connector (engine, listing ID, schedule,
+default floor and ceiling in the property currency, largest move, hold, apply without review).
+
 Acceptance: a PriceLabs CSV moves 90 nights in one dry run and one apply; a price below the
 floor is named and refused rather than sold; last night's hand-typed New Year price is still
 there after the morning pull.
 
 ## 6.6 Promotions and pricing tools
 
-- **Seasons** — named date ranges that colour the calendar and act as bulk-edit
-  targets.
+**Persona:** the `revenue_manager` and the owner-operator who prices by hand (spec 02).
+
+- **Seasons** — named night ranges (inclusive of both ends, never overlapping inside one
+  season) on a listing or the whole organization. **Shipped:** added and removed from the
+  year view, which outlines their nights and shows what each actually charges, read from the
+  nights themselves: the median weeknight and Friday–Saturday price and the most common
+  minimum stay. Not stored next to the season, so they never disagree with the calendar.
+- **Pricing & availability** (the calendar's gear) — one page per base rate plan:
+  base and weekend price, minimum and maximum nights, each applied to every future night
+  through a dry run, as one reversible bulk operation (BULK-1/2); the price-tips mode
+  (suggest / apply within the rails / off) and the floor and ceiling, which are the rate
+  import's own settings (§6.5b); derived plans; check-in and check-out days and the
+  availability rules read from the nights; taxes; channel connections; promo codes.
+- **Channel markup and rounding** — basis points per OTA (Airbnb, Booking.com, Vrbo,
+  Expedia), kept in `property.settings.pricing`, and how a marked-up price is rounded (up to
+  the next unit, the next five, or not at all; up so a guest never sees less than the local
+  price). The calendar shows what each guest sees. Pushing the markup to the channel as the
+  mapping's `derived_option` is not built yet; the page says so.
+- **Length-of-stay and early-bird / last-minute discounts** — stored with the property in
+  basis points. Sending them as each channel's own discount type, or as derived plans, is not
+  built yet; today they change no price, and the page says so.
 - **Rate templates** — saved value patterns ("Summer weekday", "Christmas") that
-  can be applied to any range.
-- **Length-of-stay and early-bird / last-minute discounts** — expressed as derived
-  plans or restriction+rate combinations, whichever the channel supports.
+  can be applied to any range. Not built.
 - **Rate parity view** — a per-channel table of the effective price after
   connection-level and mapping-level `derived_option` modifiers, so a manager can
   see what each OTA will actually display. Parity mistakes are expensive; they
-  deserve a screen.
+  deserve a screen. The night card (CAL-2) is its first piece.
 
 ## 6.7 Import, export and the rolling horizon
 
