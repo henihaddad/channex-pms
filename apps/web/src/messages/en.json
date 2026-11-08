@@ -542,7 +542,7 @@
     "issueInvoice": "Issue invoice",
     "split": "Split",
     "operations": "Operations",
-    "timeline": "Revision timeline",
+    "timeline": "Timeline",
     "unacknowledged": "unacknowledged",
     "notes": "Notes",
     "addNote": "Add a note",
@@ -628,6 +628,186 @@
     "party": {
       "adults": "{n, plural, one {# adult} other {# adults}}",
       "children": "{n, plural, one {# child} other {# children}}"
+    },
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "when": {
+      "today": "today",
+      "yesterday": "yesterday"
+    },
+    "chips": {
+      "updatedBy": "Updated by {channel} {when}",
+      "updatedByYou": "Updated {when}",
+      "formDone": "Check-in form done",
+      "formMissing": "{n, plural, one {Missing # guest} other {Missing # guests}}"
+    },
+    "tiles": {
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "room": "Room",
+      "doorCode": "Door code",
+      "from": "from {time}",
+      "by": "by {time}",
+      "sleeps": "{units, plural, one {# unit} other {# units}} · sleeps {n}",
+      "units": "{units, plural, one {# unit} other {# units}}",
+      "validity": "valid {from} → {to}",
+      "notIssued": "Not issued"
+    },
+    "money": {
+      "title": "Money",
+      "nightsTimes": "{n, plural, one {# night} other {# nights}} × {price}",
+      "commission": "{channel} commission",
+      "total": "Total",
+      "collected": "Collected so far: {paid}.",
+      "chargedHere": "Charged here: {list}.",
+      "datesChanged": "Dates changed {when} ({from} → {to}).",
+      "totalWent": "Total went from {from} to {to}.",
+      "otaPaysDifference": "{channel} pays the difference in the same payout; nothing is charged twice.",
+      "balanceRecomputed": "The balance was recomputed; nothing is charged twice.",
+      "recordPayment": "Record payment"
+    },
+    "folio": {
+      "title": "Folio · {label}",
+      "held": "held {amount}",
+      "invoiced": "invoiced",
+      "reason": "Reason",
+      "capture": "Capture",
+      "release": "Release",
+      "refund": "Refund",
+      "method": "Method",
+      "amount": "Amount",
+      "depositHold": "Deposit hold",
+      "kind": "Kind",
+      "description": "Description",
+      "splitLabel": "Split label",
+      "kinds": {
+        "room": "Room",
+        "extra": "Extra",
+        "cleaning_fee": "Cleaning fee",
+        "tourist_tax": "Tourist tax",
+        "tax": "Tax",
+        "damage": "Damage",
+        "cancellation_fee": "Cancellation fee",
+        "no_show_fee": "No-show fee",
+        "adjustment": "Adjustment"
+      },
+      "methods": {
+        "card": "Card",
+        "cash": "Cash",
+        "bank_transfer": "Bank transfer",
+        "ota_collected": "Collected by the channel",
+        "virtual_card": "Virtual card"
+      },
+      "states": {
+        "captured": "Received",
+        "held": "Deposit held",
+        "released": "Deposit released",
+        "refunded": "Refunded"
+      }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "openInInbox": "Open in inbox",
+      "you": "You",
+      "empty": "No messages with this guest yet.",
+      "replyTo": "Reply to {name} via {channel}…",
+      "reply": "Reply",
+      "send": "Send"
+    },
+    "rooms": {
+      "title": "Stay and rooms",
+      "ages": "ages {ages}",
+      "unit": "Unit",
+      "noUnit": "No unit yet",
+      "move": "Move",
+      "state": {
+        "expected": "Expected",
+        "checked_in": "Checked in",
+        "checked_out": "Checked out",
+        "no_show": "No-show"
+      },
+      "credential": {
+        "door_code": "door code",
+        "smart_lock": "smart lock",
+        "lockbox": "lockbox",
+        "key_handover": "key handover"
+      },
+      "delivery": {
+        "pending": "not sent yet",
+        "scheduled": "scheduled",
+        "delivered": "sent"
+      }
+    },
+    "guestCard": {
+      "nthStay": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} stay",
+      "speaks": "speaks {language}",
+      "email": "Email",
+      "phone": "Phone",
+      "onFile": "On file",
+      "show": "Show (audited)",
+      "revealedFor": "Shown for {name}, audited",
+      "portal": "Portal",
+      "openPortal": "Open as the guest",
+      "form": "Check-in form",
+      "formDone": "Done",
+      "formDoneAt": "Done · arrives {time}",
+      "formNotStarted": "Not started"
+    },
+    "actions": {
+      "title": "Actions",
+      "checkIn": "Check in guest",
+      "checkOut": "Check out guest",
+      "move": "Move to another room",
+      "changeDates": "Change dates",
+      "cancel": "Cancel reservation",
+      "saveDates": "Save new dates",
+      "changeDatesHint": "New nights are priced from the rate plan and closed on every channel; nights you drop are released.",
+      "otaNote": "Changes to a {channel} booking are requested through {channel}. OTAbridge keeps the booking until the channel confirms."
+    },
+    "tl": {
+      "booked": "Booked",
+      "cancelled": "Cancelled",
+      "datesChanged": "Dates changed to {range}",
+      "guestsChanged": "Guests changed to {n}",
+      "totalChanged": "Total changed to {amount}",
+      "updated": "Updated",
+      "was": "was {value}",
+      "by": "By {channel}",
+      "byYou": "By your team",
+      "form_done": "Check-in form done",
+      "code_issued": "Door code issued",
+      "code_revoked": "Door code revoked",
+      "checked_in": "Checked in",
+      "checked_out": "Checked out",
+      "messageSent": "Message sent",
+      "messageSentNamed": "{name} sent",
+      "automation": "Automation",
+      "guest": "Guest",
+      "staff": "Staff"
+    },
+    "turnover": {
+      "title": "Turnover",
+      "none": "No cleaning planned for this stay yet.",
+      "before": "Clean before arrival",
+      "after": "Clean after departure",
+      "nobody": "nobody yet",
+      "types": {
+        "changeover": "Same-day changeover",
+        "departure": "Departure clean",
+        "mid_stay": "Mid-stay clean",
+        "deep": "Deep clean",
+        "inspection": "Inspection",
+        "linen": "Linen"
+      },
+      "states": {
+        "planned": "Planned",
+        "assigned": "Scheduled",
+        "accepted": "Accepted",
+        "on_site": "On site",
+        "done": "Done",
+        "inspected": "Inspected",
+        "cancelled": "Cancelled"
+      }
     }
   },
   "operations": {

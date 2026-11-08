@@ -19,6 +19,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The reservation detail (spec 08 §8.2) follows the design canvas: a header card with status
+  chips and four tiles (check-in, check-out, room, door code), a Money card with the folio
+  operations behind "Record payment", the booking's conversation with a reply box, the guest
+  with an audited contact reveal and "Open as the guest" (a fresh one-hour portal session), an
+  Actions card, a timeline in words and the turnover. Direct bookings can change dates from the
+  page. Single keys C (check in), D (change dates), $ (record a payment) and O (open the portal)
+  press the same buttons.
+
 - The reservation list (spec 08 §8.1) reads in words, per the design canvas: four filter pills
   with counts (Arriving this week, In house, Balance due, Cancelled), More filters and Export CSV
   on the same row, the guest's full name over "2 adults · reference", the stay as "Fri 14 → Mon

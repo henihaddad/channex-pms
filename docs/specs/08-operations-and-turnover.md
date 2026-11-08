@@ -62,6 +62,28 @@ is reached from Check-in.
 | **Messages** | The linked thread inline, sendable without leaving. |
 | **Audit** | Every local action, with actor and surface. |
 
+On screen (design canvas, November 2026) the detail is two columns under the crumb
+"Reservations / guest / reference". The wide column holds a header card (property, stay, party,
+status chips: status, channel and reference, "Updated by Airbnb today", "Check-in form done",
+and the acknowledge button while a change is unacknowledged) with four tiles (**Check-in** with
+the policy time, **Check-out**, **Room**, **Door code**: masked until revealed, issued from the
+tile when there is none); **Money** (nights × price, extras, taxes, commission, expected payout,
+what was collected and charged here, a "Dates changed" callout after a date revision, and the
+folio operations behind **Record payment**); **Conversation** (the last messages of the
+booking's thread, read under `message:read` without marking it read, a reply box and "Open in
+inbox"); **Stay and rooms** (rate plan, nightly prices, unit assignment, no-show, issued
+credentials) and **Notes**. The narrow column holds **Guest** (stays count, country, language,
+contact sealed behind an audited "Show", **Open as the guest**, which mints a one-hour portal
+session for this booking under `booking:read_pii` because the mailed link is stored only as a
+hash, and the check-in form state), **Actions** (Check in / Check out, Move to another room,
+Change dates, Cancel reservation, with the OTA note when the change belongs to the channel),
+a readable **Timeline** (revisions and local events in words with dot bullets, never ISO
+timestamps or staff ids) and **Turnover**. Single keys work when focus is not in a field:
+**C** check in (or out), **D** change dates, **$** record a payment, **O** open the portal; each
+presses the button that shows it. Direct bookings change dates here: the nights the booking holds
+count as free for itself, new nights are priced from the rate plan, kept nights keep their price
+(`booking:modify`, one booking path).
+
 ## 8.3 Revision timeline
 
 - One entry per revision, newest first: type, received timestamp, OTA `system_id`.

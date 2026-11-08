@@ -14,6 +14,8 @@ import {
 import {
   DrizzleAriStore,
   DrizzleBillingRepository,
+  DrizzleBookingEngineRepository,
+  DrizzleMessagingRepository,
   DrizzleOperationsRepository,
   DrizzlePropertyRepository,
   DrizzleReservationRepository,
@@ -105,6 +107,8 @@ export interface ReservationView {
   folios: FolioView[];
   notes: Awaited<ReturnType<DrizzleOperationsRepository["notesFor"]>>;
   units: Awaited<ReturnType<DrizzleOperationsRepository["unitIds"]>>;
+  /** The property-local date. */
+  today: string;
 }
 
 export const loadReservation = withPermission<[string], ReservationView>(
@@ -122,6 +126,7 @@ export const loadReservation = withPermission<[string], ReservationView>(
       folios: await new DrizzleBillingRepository(ctx.tx, ctx.orgId).foliosForBooking(id),
       notes: await ops.notesFor("booking", id),
       units: await ops.unitIds(detail.propertyId),
+      today: c.clock.today(detail.timezone).toString(),
     };
   },
 );
@@ -136,6 +141,72 @@ export const revealGuestPii = withPermission<
   async (ctx, { guestId }) => {
     const c = await container();
     return reservations(ctx, c).guestPii(guestId);
+  },
+);
+
+export interface BookingConversation {
+  threadId: string;
+  propertyId: string;
+  channel: string;
+  messages: Array<{
+    id: string;
+    direction: "inbound" | "outbound";
+    author: string | null;
+    body: string;
+    sentAt: string;
+  }>;
+}
+
+/** The booking's thread on its detail page (spec 08 §8.2 Messages): the last few messages, read under `message:read` and audited; it does not mark the thread read. */
+export const loadBookingConversation = withPermission<[string], BookingConversation | null>(
+  "message:read",
+  { scope: "organization", subject: (id) => ({ kind: "booking", id }) },
+  async (ctx, bookingId) => {
+    const c = await container();
+    const repo = new DrizzleMessagingRepository(ctx.tx, ctx.orgId, c.crypto);
+    const thread = await repo.threadForBooking(bookingId);
+    if (!thread) return null;
+    const d = await repo.detail(thread.id, c.clock.now().toString());
+    if (!d) return null;
+    return {
+      threadId: d.id,
+      propertyId: d.propertyId,
+      channel: d.provider,
+      messages: d.messages
+        .filter((m) => m.kind === "guest_message" && m.authorType !== "system")
+        .slice(-4)
+        .map((m) => ({
+          id: m.id,
+          direction: m.direction === "inbound" ? "inbound" : "outbound",
+          author: m.authorName,
+          body: m.body,
+          sentAt: m.sentAt,
+        })),
+    };
+  },
+);
+
+/**
+ * Open the guest portal as the guest (shortcut O): the mailed link is stored only as a hash, so
+ * staff get a fresh one-hour session for this booking. Under `booking:read_pii`, audited.
+ */
+export const openGuestPortalAction = withPermission<[{ bookingId: string }], { url: string }>(
+  "booking:read_pii",
+  { scope: "organization", subject: (i) => ({ kind: "booking", id: i.bookingId }) },
+  async (ctx, { bookingId }) => {
+    const c = await container();
+    const [b] = await rawRows<{ id: string }>(
+      ctx.tx,
+      sql`select id from booking where id = ${bookingId}`,
+    );
+    if (!b) throw new HttpProblem(404, "not_found", "Reservation not found");
+    const token = c.crypto.randomToken(32);
+    await new DrizzleBookingEngineRepository(ctx.tx, ctx.orgId, c.crypto).createGuestSession(
+      bookingId,
+      c.crypto.sha256Hex(token),
+      new Date(Date.parse(c.clock.now().toString()) + 3_600_000).toISOString(),
+    );
+    return { url: `/guest?token=${token}` };
   },
 );
 
@@ -629,6 +700,73 @@ async function applyDirect(ctx: ActorCtx, rev: BookingRevisionPayload): Promise<
   const c = await container();
   return applyDirectRevision(c, ctx.tx, ctx.orgId, rev, "direct_booking");
 }
+
+/**
+ * Change the dates of a direct booking (spec 08 §8.4 Modify): the nights it already holds count
+ * as free for itself, new nights are priced from the rate plan, kept nights keep their price.
+ * OTA bookings are modified at the OTA.
+ */
+export const changeDatesAction = withPermission<[FormData], void>(
+  "booking:modify",
+  { ...bookingScope, subject: (fd) => ({ kind: "booking", id: String(fd.get("bookingId")) }) },
+  async (ctx, fd) => {
+    const bookingId = await assertBookingInProperty(ctx, fd);
+    const c = await container();
+    const d = (await reservations(ctx, c).detail(bookingId))!;
+    if (!DIRECT_SOURCES.includes(d.otaName ?? ""))
+      throw new HttpProblem(409, "ota_booking", "OTA bookings are modified at the OTA");
+    const arrivalDate = String(fd.get("arrivalDate"));
+    const departureDate = String(fd.get("departureDate"));
+    const room = d.rooms[0];
+    if (!room?.roomTypeId || !room.ratePlanId)
+      throw new HttpProblem(409, "unmapped", "Give the booking a room first");
+    const held = new Set(room.days.map((x) => x.date));
+    const avail = await new DrizzleAriStore(ctx.tx).loadDesired(
+      d.propertyId,
+      arrivalDate,
+      departureDate,
+    );
+    const check = checkSellable({
+      arrivalDate,
+      departureDate,
+      rateCells: await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).rateCells(
+        room.ratePlanId,
+        arrivalDate,
+        departureDate,
+      ),
+      availability: new Map(
+        avail.availability
+          .filter((a) => a.roomTypeId === room.roomTypeId)
+          .map((a) => [a.date, a.availability + (held.has(a.date) ? 1 : 0)]),
+      ),
+    });
+    if (!check.ok) throw new HttpProblem(422, "not_sellable", check.reasons.join("; "));
+    const kept = Object.fromEntries(
+      room.days.filter((x) => x.date in check.nightly).map((x) => [x.date, Number(x.amountMinor)]),
+    );
+    const last = await rawRows<{ normalised: BookingRevisionPayload; n: number }>(
+      ctx.tx,
+      sql`select normalised, (select count(*)::int from booking_revision where booking_id = ${bookingId}) as n from booking_revision where booking_id = ${bookingId} order by inserted_at desc limit 1`,
+    );
+    await applyDirect(
+      ctx,
+      directBookingChange(
+        { ...last[0]!.normalised, raw: {} },
+        {
+          status: "modified",
+          arrivalDate,
+          departureDate,
+          nightly: { ...check.nightly, ...kept },
+          nowIso: c.clock.now().toString(),
+          sequence: last[0]!.n + 1,
+        },
+      ),
+    );
+    revalidatePath(`/reservations/${bookingId}`);
+  },
+);
+
+const DIRECT_SOURCES = ["direct", "staff", "phone", "walk_in"];
 
 /** OTA bookings are modified at the OTA (spec 08 §8.4); direct ones cancel here with the policy fee. */
 export const cancelDirectBookingAction = withPermission<[FormData], void>(

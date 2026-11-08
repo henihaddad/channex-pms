@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { Crypto, RevisionDiff } from "@pms/core";
+import type { BookingRevisionPayload, Crypto, RevisionDiff } from "@pms/core";
 import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
 
@@ -222,7 +222,7 @@ export class DrizzleReservationRepository {
     const rooms = await rawRows<ReservationDetail["rooms"][number]>(
       this.tx,
       sql`select br.id, br.room_type_id as "roomTypeId", rt.title as "roomTypeTitle", br.rate_plan_id as "ratePlanId", rp.title as "ratePlanTitle", br.checkin_date::text as "checkinDate", br.checkout_date::text as "checkoutDate", br.occupancy, br.guest_names as "guestNames", br.amount_minor as "amountMinor", br.assigned_unit_id as "assignedUnitId", u.name as "unitName",
-        coalesce(ss.state, 'expected') as "stayState",
+        coalesce(ss.state, 'expected') as "stayState", rt.max_occupancy as "maxOccupancy",
         (select json_agg(json_build_object('date', d.date, 'amountMinor', d.amount_minor) order by d.date) from booking_room_day d where d.booking_room_id = br.id) as days
         from booking_room br left join room_type rt on rt.id = br.room_type_id left join rate_plan rp on rp.id = br.rate_plan_id left join unit u on u.id = br.assigned_unit_id left join stay_state ss on ss.booking_room_id = br.id
         where br.booking_id = ${id} order by br.checkin_date`,
@@ -249,6 +249,30 @@ export class DrizzleReservationRepository {
       .select()
       .from(s.paymentInstrument)
       .where(eq(s.paymentInstrument.bookingId, id));
+    // what happened to the stay besides revisions, for the readable timeline (spec 08 §8.3)
+    const events = await rawRows<ReservationDetail["events"][number]>(
+      this.tx,
+      sql`select * from (
+          select 'form_done' as kind, pc.completed_at::text as at, null as detail from pre_checkin pc where pc.booking_id = ${id} and pc.completed_at is not null
+          union all select 'code_issued', c.issued_at::text, c.type from access_credential c where c.booking_id = ${id}
+          union all select 'code_revoked', c.revoked_at::text, c.type from access_credential c where c.booking_id = ${id} and c.revoked_at is not null
+          union all select 'checked_in', ss.checked_in_at::text, null from stay_state ss where ss.booking_id = ${id} and ss.checked_in_at is not null
+          union all select 'checked_out', ss.checked_out_at::text, null from stay_state ss where ss.booking_id = ${id} and ss.checked_out_at is not null
+          union all select 'message_sent', ar.executed_at::text, coalesce(r.name, '') from automation_run ar left join automation_rule r on r.id = ar.rule_id where ar.booking_id = ${id} and ar.state = 'sent'
+        ) e order by at desc`,
+    );
+    const [extra] = await rawRows<{
+      checkInTime: string | null;
+      checkOutTime: string | null;
+      guestStays: number;
+      preCheckin: ReservationDetail["preCheckin"];
+    }>(
+      this.tx,
+      sql`select (select check_in_time from policy where property_id = ${b.propertyId} limit 1) as "checkInTime",
+          (select check_out_time from policy where property_id = ${b.propertyId} limit 1) as "checkOutTime",
+          (select count(*)::int from booking b2 where ${b.guestId}::uuid is not null and b2.guest_id = ${b.guestId} and b2.status <> 'cancelled' and b2.arrival_date <= ${b.arrivalDate}) as "guestStays",
+          (select json_build_object('completedAt', pc.completed_at, 'arrivalTime', pc.arrival_time, 'guests', jsonb_array_length(pc.guests), 'idOnFile', pc.id_document_ref is not null) from pre_checkin pc where pc.booking_id = ${id}) as "preCheckin"`,
+    );
     const taxes =
       (revisions[0]?.normalised.taxes as
         Array<{ name: string; amount: number; withheldByOta?: boolean }> | undefined) ?? [];
@@ -275,10 +299,20 @@ export class DrizzleReservationRepository {
       mappingState: b.mappingState,
       lastRevisionId: b.lastRevisionId,
       rooms: rooms.map((r) => ({ ...r, days: r.days ?? [] })),
-      revisions: revisions.map(({ normalised: _n, ...r }) => ({
+      revisions: revisions.map(({ normalised: n, ...r }) => ({
         ...r,
+        amountMinor: Number(n.amount ?? 0),
+        guests: ((n.rooms as BookingRevisionPayload["rooms"] | undefined) ?? []).reduce(
+          (a, x) => a + x.occupancy.adults + x.occupancy.children,
+          0,
+        ),
         timelineText: describeDiff(r.diff, r.revisionType, b.currency),
       })),
+      events,
+      checkInTime: extra?.checkInTime ?? "15:00",
+      checkOutTime: extra?.checkOutTime ?? "11:00",
+      guestStays: extra?.guestStays ?? 0,
+      preCheckin: extra?.preCheckin ?? null,
       guest: guest
         ? {
             id: guest.id,
@@ -556,6 +590,7 @@ export interface ReservationDetail {
     assignedUnitId: string | null;
     unitName: string | null;
     stayState: string;
+    maxOccupancy: number | null;
     days: Array<{ date: string; amountMinor: number }>;
   }>;
   revisions: Array<{
@@ -568,7 +603,27 @@ export interface ReservationDetail {
     diff: RevisionDiff | null;
     acknowledged: boolean;
     timelineText: string;
+    /** The booking's total and party size as this revision stated them. */
+    amountMinor: number;
+    guests: number;
   }>;
+  /** Local events on the stay, newest first: form done, code issued or revoked, check-in/out, messages sent. */
+  events: Array<{
+    kind:
+      "form_done" | "code_issued" | "code_revoked" | "checked_in" | "checked_out" | "message_sent";
+    at: string;
+    detail: string | null;
+  }>;
+  checkInTime: string;
+  checkOutTime: string;
+  /** This guest's stays up to and including this one ("2nd stay"). */
+  guestStays: number;
+  preCheckin: {
+    completedAt: string | null;
+    arrivalTime: string | null;
+    guests: number;
+    idOnFile: boolean;
+  } | null;
   guest: {
     id: string;
     country: string | null;

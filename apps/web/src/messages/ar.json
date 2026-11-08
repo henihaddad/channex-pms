@@ -534,7 +534,7 @@
     "issueInvoice": "إصدار فاتورة",
     "split": "تقسيم",
     "operations": "العمليات",
-    "timeline": "سجل المراجعات",
+    "timeline": "السجل",
     "unacknowledged": "غير مقرّ به",
     "notes": "الملاحظات",
     "addNote": "إضافة ملاحظة",
@@ -620,6 +620,186 @@
     "party": {
       "adults": "{n, plural, one {بالغ واحد} two {بالغان} few {# بالغين} other {# بالغ}}",
       "children": "{n, plural, one {طفل واحد} two {طفلان} few {# أطفال} other {# طفل}}"
+    },
+    "pin": "تثبيت",
+    "pinned": "مثبّتة",
+    "when": {
+      "today": "اليوم",
+      "yesterday": "أمس"
+    },
+    "chips": {
+      "updatedBy": "حدّثته {channel} {when}",
+      "updatedByYou": "حُدّث {when}",
+      "formDone": "اكتمل نموذج الوصول",
+      "formMissing": "{n, plural, one {ينقص ضيف واحد} two {ينقص ضيفان} few {ينقص # ضيوف} other {ينقص # ضيف}}"
+    },
+    "tiles": {
+      "checkIn": "الوصول",
+      "checkOut": "المغادرة",
+      "room": "الوحدة",
+      "doorCode": "رمز الباب",
+      "from": "من {time}",
+      "by": "قبل {time}",
+      "sleeps": "{units, plural, one {وحدة واحدة} other {# وحدات}} · تتسع لـ {n}",
+      "units": "{units, plural, one {وحدة واحدة} other {# وحدات}}",
+      "validity": "صالح {from} ← {to}",
+      "notIssued": "لم يُصدر"
+    },
+    "money": {
+      "title": "المال",
+      "nightsTimes": "{n, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} other {# ليلة}} × {price}",
+      "commission": "عمولة {channel}",
+      "total": "الإجمالي",
+      "collected": "المحصَّل حتى الآن: {paid}.",
+      "chargedHere": "رسوم محلية: {list}.",
+      "datesChanged": "تغيّرت التواريخ {when} ({from} ← {to}).",
+      "totalWent": "تغيّر الإجمالي من {from} إلى {to}.",
+      "otaPaysDifference": "تدفع {channel} الفرق في الدفعة نفسها؛ لا شيء يُحتسب مرتين.",
+      "balanceRecomputed": "أُعيد حساب الرصيد؛ لا شيء يُحتسب مرتين.",
+      "recordPayment": "تسجيل دفعة"
+    },
+    "folio": {
+      "title": "الفاتورة · {label}",
+      "held": "محجوز {amount}",
+      "invoiced": "مفوتر",
+      "reason": "السبب",
+      "capture": "تحصيل",
+      "release": "تحرير",
+      "refund": "استرداد",
+      "method": "الطريقة",
+      "amount": "المبلغ",
+      "depositHold": "تأمين",
+      "kind": "النوع",
+      "description": "الوصف",
+      "splitLabel": "اسم الفاتورة",
+      "kinds": {
+        "room": "ليلة",
+        "extra": "إضافة",
+        "cleaning_fee": "رسوم التنظيف",
+        "tourist_tax": "ضريبة سياحية",
+        "tax": "ضريبة",
+        "damage": "أضرار",
+        "cancellation_fee": "رسوم إلغاء",
+        "no_show_fee": "رسوم عدم حضور",
+        "adjustment": "تسوية"
+      },
+      "methods": {
+        "card": "بطاقة",
+        "cash": "نقدًا",
+        "bank_transfer": "تحويل بنكي",
+        "ota_collected": "حصّلته القناة",
+        "virtual_card": "بطاقة افتراضية"
+      },
+      "states": {
+        "captured": "مستلم",
+        "held": "تأمين محجوز",
+        "released": "تأمين محرَّر",
+        "refunded": "مسترد"
+      }
+    },
+    "conversation": {
+      "title": "المحادثة",
+      "openInInbox": "فتح في صندوق الرسائل",
+      "you": "أنت",
+      "empty": "لا رسائل مع هذا الضيف بعد.",
+      "replyTo": "الرد على {name} عبر {channel}…",
+      "reply": "الرد",
+      "send": "إرسال"
+    },
+    "rooms": {
+      "title": "الإقامة والوحدات",
+      "ages": "الأعمار {ages}",
+      "unit": "الوحدة",
+      "noUnit": "بلا وحدة",
+      "move": "نقل",
+      "state": {
+        "expected": "متوقع",
+        "checked_in": "وصل",
+        "checked_out": "غادر",
+        "no_show": "لم يحضر"
+      },
+      "credential": {
+        "door_code": "رمز الباب",
+        "smart_lock": "قفل ذكي",
+        "lockbox": "صندوق مفاتيح",
+        "key_handover": "تسليم المفاتيح"
+      },
+      "delivery": {
+        "pending": "لم يُرسل بعد",
+        "scheduled": "مجدول",
+        "delivered": "أُرسل"
+      }
+    },
+    "guestCard": {
+      "nthStay": "الإقامة رقم {n}",
+      "speaks": "يتحدث {language}",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "onFile": "محفوظ",
+      "show": "عرض (مُسجَّل)",
+      "revealedFor": "عُرض لـ {name}، مُسجَّل",
+      "portal": "البوابة",
+      "openPortal": "فتح كضيف",
+      "form": "نموذج الوصول",
+      "formDone": "مكتمل",
+      "formDoneAt": "مكتمل · يصل {time}",
+      "formNotStarted": "لم يبدأ"
+    },
+    "actions": {
+      "title": "الإجراءات",
+      "checkIn": "تسجيل وصول الضيف",
+      "checkOut": "تسجيل مغادرة الضيف",
+      "move": "النقل إلى وحدة أخرى",
+      "changeDates": "تغيير التواريخ",
+      "cancel": "إلغاء الحجز",
+      "saveDates": "حفظ التواريخ الجديدة",
+      "changeDatesHint": "تُسعَّر الليالي الجديدة من خطة الأسعار وتُغلق على كل القنوات؛ وتُحرَّر الليالي المحذوفة.",
+      "otaNote": "تُطلب تغييرات حجز {channel} عبر {channel}. يحتفظ OTAbridge بالحجز حتى تؤكد القناة."
+    },
+    "tl": {
+      "booked": "حُجز",
+      "cancelled": "أُلغي",
+      "datesChanged": "تغيّرت التواريخ إلى {range}",
+      "guestsChanged": "عدد الضيوف أصبح {n}",
+      "totalChanged": "الإجمالي أصبح {amount}",
+      "updated": "حُدّث",
+      "was": "كان {value}",
+      "by": "بواسطة {channel}",
+      "byYou": "بواسطة فريقك",
+      "form_done": "اكتمل نموذج الوصول",
+      "code_issued": "أُصدر رمز الباب",
+      "code_revoked": "أُلغي رمز الباب",
+      "checked_in": "سُجّل الوصول",
+      "checked_out": "سُجّلت المغادرة",
+      "messageSent": "أُرسلت رسالة",
+      "messageSentNamed": "أُرسلت {name}",
+      "automation": "أتمتة",
+      "guest": "الضيف",
+      "staff": "الفريق"
+    },
+    "turnover": {
+      "title": "التنظيف",
+      "none": "لا تنظيف مخطط لهذه الإقامة بعد.",
+      "before": "تنظيف قبل الوصول",
+      "after": "تنظيف بعد المغادرة",
+      "nobody": "لا أحد بعد",
+      "types": {
+        "changeover": "تبديل في اليوم نفسه",
+        "departure": "تنظيف المغادرة",
+        "mid_stay": "تنظيف أثناء الإقامة",
+        "deep": "تنظيف عميق",
+        "inspection": "فحص",
+        "linen": "البياضات"
+      },
+      "states": {
+        "planned": "مخطط",
+        "assigned": "مجدول",
+        "accepted": "مقبول",
+        "on_site": "في الموقع",
+        "done": "منجز",
+        "inspected": "مفحوص",
+        "cancelled": "ملغى"
+      }
     }
   },
   "operations": {

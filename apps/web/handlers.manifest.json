@@ -1029,6 +1029,13 @@
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "changeDatesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:modify"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "createStaffBookingAction",
     "kind": "action",
     "wrapper": "withPermission",
@@ -1059,6 +1066,14 @@
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "loadBookingConversation",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "loadReservation",
     "kind": "action",
     "wrapper": "withPermission",
@@ -1071,6 +1086,14 @@
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "openGuestPortalAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_pii",
     "scope": "organization"
   },
   {
