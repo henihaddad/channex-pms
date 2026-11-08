@@ -59,6 +59,8 @@ export {
   type ReservationFilters,
   type ReservationRow,
   type ReservationDetail,
+  type CheckinRow,
+  type GuestListRow,
 } from "./reservations.js";
 export {
   DrizzleMessagingRepository,

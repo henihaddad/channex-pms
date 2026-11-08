@@ -42,6 +42,18 @@ The Reservations section's tabs are **All · Check-in · Guests · Requests · n
 n** (the counts are open Airbnb requests and unmapped bookings). The hotel front desk (§8.10)
 is reached from Check-in.
 
+**Guests** (Reservations › Guests; persona `property_manager`, `reservations_agent`) lists
+every guest once (guests are deduplicated per org): tiles for guests, returned at least once,
+booked direct after an OTA stay (a direct booking created on or after the departure of a
+channel stay) and marketing consent (said yes on a direct checkout); pills **All**,
+**Returning**, **Can be emailed** (consent and an email), **Flagged** (a pinned note on one of
+their bookings); search by name or country; a table of the guest with which contact details are
+on file (never the values), stays, properties, lifetime value per currency, what is happening
+now (in house, arrives, the pinned note, the last review score) and the channels they booked
+through; and "Win them back direct", which counts who a post-stay direct offer would reach and
+links to Automation. **Export** includes contact details and so needs `booking:read_pii`
+(audited).
+
 - **RES-1** Bulk actions where safe: assign units, issue access codes, export, tag.
 - **RES-2** Every list exportable (CSV/XLSX) under `export:execute`.
 - **RES-3** A `modified` badge persists until a human acknowledges it — a silently

@@ -961,6 +961,30 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/reservations/check-in/check-in.actions.ts",
+    "export": "loadCheckinBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/check-in/check-in.actions.ts",
+    "export": "sendCheckinRemindersAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/guests/guests.actions.ts",
+    "export": "loadGuests",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/reservations/requests/requests.actions.ts",
     "export": "listRequests",
     "kind": "action",
@@ -1639,6 +1663,14 @@
     "publicReason": "guest_portal"
   },
   {
+    "file": "src/app/api/v1/guests/export/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read_pii",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/v1/openapi.json/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1675,6 +1707,14 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "export:execute",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/reservations/registrations/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read_pii",
     "scope": "organization"
   },
   {

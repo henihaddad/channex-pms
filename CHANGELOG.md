@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Reservations › Check-in (spec 10 §10.6): the online check-in board. Arrivals in the next seven
+  days and guests in house with their check-in form, guests listed, ID, balance and door code;
+  tiles for arrivals, forms done, reminders scheduled and registrations; "Send reminders" writes
+  each unfinished arrival a message with a fresh portal link; "Export registrations" downloads
+  the named guests (audited). The hotel front desk is linked from here instead of its own tab.
+
+- Reservations › Guests (spec 08 §8.1): every guest once, with returning, direct-after-OTA and
+  consent tiles, filters, lifetime value, what is happening now and how they booked, the
+  win-back audience, and an audited export with contact details.
+
 - ⌘K (Ctrl+K) opens a command palette from anywhere in the console: it searches guests and
   reservations by name, reference or property and properties by title on the server, lists the
   sections and their pages, and runs the common actions (new reservation, import from Airbnb,

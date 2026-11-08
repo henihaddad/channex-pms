@@ -862,6 +862,120 @@
       "create": "Create reservation",
       "cancel": "Cancel",
       "sideEffects": "Saving closes these nights on every channel within a minute, plans the turnover and puts the stay on the calendar."
+    },
+    "checkin": {
+      "title": "Online check-in",
+      "frontDesk": "Front desk and room rack",
+      "kpi": {
+        "arrivals": "Arrivals · 7 days",
+        "formsDone": "Check-in forms done",
+        "missing": "{n} missing",
+        "allDone": "all done",
+        "reminders": "Reminders scheduled",
+        "remindersHint": "by your before-arrival message",
+        "noRule": "no before-arrival message is on",
+        "registrations": "Registrations to file",
+        "registrationsHint": "filing is not connected yet; export instead"
+      },
+      "upcoming": "Upcoming arrivals",
+      "sendReminders": "Send reminders · {n}",
+      "exportRegistrations": "Export registrations",
+      "col": {
+        "guest": "Guest",
+        "form": "Check-in form",
+        "listed": "Guests listed",
+        "id": "ID",
+        "balance": "Balance",
+        "code": "Door code"
+      },
+      "empty": "Nobody arrives in the next seven days.",
+      "form": {
+        "done": "Done",
+        "notStarted": "Not started"
+      },
+      "listedOf": "{listed} of {expected}",
+      "idOnFile": "On file",
+      "code": {
+        "sent": "Sent",
+        "ready": "Code ready {when}",
+        "notIssued": "Not issued"
+      },
+      "fill": {
+        "title": "What guests fill in",
+        "lead": "Asked in the guest portal, linked from the confirmation and from your reminders. Takes about two minutes.",
+        "names": "Names of every guest",
+        "namesHint": "For the police registration",
+        "arrival": "Arrival time",
+        "arrivalHint": "Lets the cleaner and the host plan",
+        "preferences": "Preferences",
+        "preferencesHint": "Beds, cot, anything to prepare",
+        "id": "ID document photo",
+        "idHint": "Not asked yet: the portal has no upload",
+        "required": "Required",
+        "optional": "Optional",
+        "notAsked": "Not asked"
+      },
+      "rules": {
+        "title": "Rules",
+        "lead": "How check-in works today.",
+        "code": "Door code is released",
+        "codeValue": "In the guest portal, a set number of hours before the code becomes valid (booking engine settings). It does not wait for the form or the balance.",
+        "remind": "Remind guests",
+        "remindValue": "By your before-arrival message, and on demand with Send reminders.",
+        "remindNone": "Only on demand with Send reminders.",
+        "automation": "Set it up in Automation",
+        "export": "Registration export",
+        "exportValue": "A CSV of the named guests for the next seven days; filing with SEF or Alloggiati is not connected."
+      },
+      "reminderBody": "Hi {name}, before you arrive at {property}, please complete your online check-in. It takes about two minutes: {url}"
+    },
+    "guestsPage": {
+      "title": "Guests",
+      "kpi": {
+        "guests": "Guests",
+        "guestsHint": "since you started",
+        "returning": "Returned at least once",
+        "directAfterOta": "Booked direct after an OTA stay",
+        "directAfterOtaHint": "no commission on those stays",
+        "consent": "Marketing consent"
+      },
+      "pills": {
+        "all": "All",
+        "returning": "Returning",
+        "emailable": "Can be emailed",
+        "flagged": "Flagged"
+      },
+      "search": "Name or country",
+      "export": "Export",
+      "col": {
+        "guest": "Guest",
+        "stays": "Stays",
+        "properties": "Properties",
+        "value": "Lifetime value",
+        "status": "Now",
+        "via": "Booked via"
+      },
+      "contact": {
+        "both": "email and phone on file",
+        "email": "email on file",
+        "phone": "phone on file",
+        "none": "no contact on file"
+      },
+      "speaks": "speaks {language}",
+      "status": {
+        "inHouse": "In house",
+        "arrives": "Arrives {date}",
+        "note": "Note: {note}"
+      },
+      "empty": "No guests match.",
+      "showing": "Showing {shown} of {total}",
+      "loadMore": "Load more",
+      "winBack": {
+        "title": "Win them back direct",
+        "lead": "Guests who booked on Airbnb or Booking.com and said yes to news can get one email after check-out with a direct-booking offer. Set it up in Automation; this page only shows who it would reach.",
+        "open": "Open Automation",
+        "audience": "{n, plural, =0 {Nobody to reach yet} one {# guest it would reach} other {# guests it would reach}}"
+      }
     }
   },
   "operations": {

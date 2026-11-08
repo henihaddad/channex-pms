@@ -358,6 +358,113 @@ export class DrizzleReservationRepository {
     };
   }
   /**
+   * The online check-in board (spec 10 §10.6): who arrives in the next `days` days or is in house,
+   * how far their check-in form is, the money, and the door code. Lead guest names are opened
+   * for the list as everywhere else under `booking:read`; nothing else.
+   */
+  async checkinBoard(today: string, days: number): Promise<CheckinRow[]> {
+    const until = shift(today, days - 1);
+    const rows = await rawRows<
+      Omit<CheckinRow, "guestName"> & {
+        guestNameEnc: string | null;
+        guestSurnameEnc: string | null;
+      }
+    >(
+      this.tx,
+      sql`select b.id, b.property_id as "propertyId", p.title as "propertyTitle", p.kind as "propertyKind", b.ota_name as "otaName", b.status,
+          b.arrival_date::text as "arrivalDate", b.departure_date::text as "departureDate", b.currency, b.total_amount_minor as "totalAmountMinor", b.payment_collect as "paymentCollect",
+          g.name_enc as "guestNameEnc", g.surname_enc as "guestSurnameEnc", (g.email_enc is not null) as "hasEmail", g.language as "guestLanguage",
+          coalesce((select sum((br.occupancy->>'adults')::int + (br.occupancy->>'children')::int) from booking_room br where br.booking_id = b.id), 0)::int as "guestsExpected",
+          pc.completed_at::text as "formCompletedAt", coalesce(jsonb_array_length(pc.guests), 0)::int as "guestsListed", (pc.id_document_ref is not null) as "idOnFile", pc.arrival_time as "arrivalTime",
+          cr.value_masked as "codeMasked", cr.valid_from::text as "codeValidFrom", cr.delivery_state as "codeDelivery",
+          ${ROOM_CHARGES}::bigint as "roomChargesMinor", ${OTHER_CHARGES}::bigint as "otherChargesMinor", ${PAID}::bigint as "paidMinor",
+          exists (select 1 from message_thread t where t.booking_id = b.id) as "hasThread"
+        from booking b join property p on p.id = b.property_id left join guest g on g.id = b.guest_id
+          left join pre_checkin pc on pc.booking_id = b.id
+          left join lateral (select c.value_masked, c.valid_from, c.delivery_state from access_credential c where c.booking_id = b.id and c.revoked_at is null order by c.issued_at desc limit 1) cr on true
+        where b.status <> 'cancelled' and b.departure_date > ${today} and b.arrival_date <= ${until}
+        order by b.arrival_date, b.id limit 300`,
+    );
+    const out: CheckinRow[] = [];
+    for (const r of rows) {
+      const { guestNameEnc, guestSurnameEnc, ...rest } = r;
+      out.push({
+        ...rest,
+        totalAmountMinor: Number(rest.totalAmountMinor),
+        roomChargesMinor: Number(rest.roomChargesMinor),
+        otherChargesMinor: Number(rest.otherChargesMinor),
+        paidMinor: Number(rest.paidMinor),
+        guestName:
+          guestNameEnc && guestSurnameEnc
+            ? `${await this.crypto.open(guestNameEnc)} ${await this.crypto.open(guestSurnameEnc)}`.trim()
+            : "—",
+      });
+    }
+    return out;
+  }
+
+  /**
+   * Every guest with what the guest list shows (design canvas, November 2026): stays,
+   * properties, lifetime value per currency, channels, what is happening now, marketing consent
+   * and pinned notes. Names are opened as on the reservation list; contact details stay sealed.
+   */
+  async guestList(today: string): Promise<GuestListRow[]> {
+    const rows = await rawRows<
+      Omit<GuestListRow, "name"> & { nameEnc: string; surnameEnc: string }
+    >(
+      this.tx,
+      sql`select g.id, g.name_enc as "nameEnc", g.surname_enc as "surnameEnc", g.country, g.language,
+          (g.email_enc is not null) as "hasEmail", (g.phone_enc is not null) as "hasPhone",
+          (select count(*)::int from booking b where b.guest_id = g.id and b.status <> 'cancelled') as stays,
+          coalesce((select json_agg(distinct p.title) from booking b join property p on p.id = b.property_id where b.guest_id = g.id and b.status <> 'cancelled'), '[]'::json) as properties,
+          coalesce((select json_agg(x) from (select b.currency, sum(b.total_amount_minor)::bigint as "amountMinor" from booking b where b.guest_id = g.id and b.status <> 'cancelled' group by b.currency) x), '[]'::json) as value,
+          coalesce((select json_agg(distinct b.ota_name) from booking b where b.guest_id = g.id and b.status <> 'cancelled'), '[]'::json) as channels,
+          (select b.id from booking b where b.guest_id = g.id and b.status <> 'cancelled' and b.arrival_date <= ${today} and b.departure_date > ${today} limit 1) as "inHouseBookingId",
+          (select min(b.arrival_date)::text from booking b where b.guest_id = g.id and b.status <> 'cancelled' and b.arrival_date > ${today}) as "nextArrival",
+          (select r.rating from review r join booking b on b.id = r.booking_id where b.guest_id = g.id order by r.inserted_at desc limit 1) as "lastRating",
+          (select n.body from note n join booking b on b.id = n.subject_id where n.subject_type = 'booking' and n.pinned and b.guest_id = g.id order by n.created_at desc limit 1) as "pinnedNote",
+          exists (select 1 from booking_hold h join booking b on b.id = h.booking_id where b.guest_id = g.id and h.consent_marketing) as consent,
+          exists (select 1 from booking d join booking o on o.guest_id = d.guest_id
+            where d.guest_id = g.id and d.status <> 'cancelled' and o.status <> 'cancelled'
+              and lower(coalesce(d.ota_name, '')) in ('direct', 'staff', 'phone', 'walk_in')
+              and lower(coalesce(o.ota_name, '')) not in ('direct', 'staff', 'phone', 'walk_in')
+              and d.created_at::date >= o.departure_date) as "directAfterOta",
+          (select b.id from booking b where b.guest_id = g.id order by b.arrival_date desc limit 1) as "lastBookingId",
+          g.created_at as "createdAt"
+        from guest g where g.erased_at is null order by g.created_at desc limit 2000`,
+    );
+    const out: GuestListRow[] = [];
+    for (const r of rows) {
+      const { nameEnc, surnameEnc, ...rest } = r;
+      out.push({
+        ...rest,
+        value: rest.value.map((v) => ({
+          currency: v.currency,
+          amountMinor: Number(v.amountMinor),
+        })),
+        channels: rest.channels.filter(Boolean),
+        name: `${await this.crypto.open(nameEnc)} ${await this.crypto.open(surnameEnc)}`.trim(),
+      });
+    }
+    return out;
+  }
+
+  /** Enabled before-arrival messages by property (null: every property), for "Reminders scheduled". */
+  async beforeArrivalRules(): Promise<Array<{ id: string; propertyIds: string[] | null }>> {
+    const rows = await rawRows<{ id: string; conditions: Record<string, unknown> }>(
+      this.tx,
+      sql`select id, conditions from automation_rule where enabled and trigger = 'before_arrival'`,
+    );
+    return rows.map((r) => {
+      const ids = r.conditions.propertyIds;
+      return {
+        id: r.id,
+        propertyIds: Array.isArray(ids) && ids.length > 0 ? (ids as string[]) : null,
+      };
+    });
+  }
+
+  /**
    * Returning guests whose name or email contains `q` (accents and case ignored). Names are
    * sealed, so this opens them in memory for the most recent guests; callers hold
    * `booking:read_pii` and are audited.
@@ -619,6 +726,62 @@ export class DrizzleReservationRepository {
       blocks: blocks.filter((x) => x.unitId === u.unitId),
     }));
   }
+}
+
+export interface GuestListRow {
+  id: string;
+  name: string;
+  country: string | null;
+  language: string | null;
+  hasEmail: boolean;
+  hasPhone: boolean;
+  stays: number;
+  properties: string[];
+  /** Lifetime value per currency, non-cancelled stays. */
+  value: Array<{ currency: string; amountMinor: number }>;
+  /** Channex `ota_name`s the guest booked through. */
+  channels: string[];
+  inHouseBookingId: string | null;
+  nextArrival: string | null;
+  lastRating: number | null;
+  /** The latest pinned note on any of the guest's bookings: the guest is flagged. */
+  pinnedNote: string | null;
+  /** Ticked "keep me posted" on a direct booking. */
+  consent: boolean;
+  /** Booked direct after a stay that came through a channel. */
+  directAfterOta: boolean;
+  /** The most recent booking, for the link from the list. */
+  lastBookingId: string | null;
+  createdAt: string;
+}
+
+export interface CheckinRow {
+  id: string;
+  propertyId: string;
+  propertyTitle: string;
+  propertyKind: string;
+  otaName: string | null;
+  status: string;
+  arrivalDate: string;
+  departureDate: string;
+  currency: string;
+  totalAmountMinor: number;
+  paymentCollect: string | null;
+  guestName: string;
+  hasEmail: boolean;
+  guestLanguage: string | null;
+  guestsExpected: number;
+  formCompletedAt: string | null;
+  guestsListed: number;
+  idOnFile: boolean;
+  arrivalTime: string | null;
+  codeMasked: string | null;
+  codeValidFrom: string | null;
+  codeDelivery: string | null;
+  roomChargesMinor: number;
+  otherChargesMinor: number;
+  paidMinor: number;
+  hasThread: boolean;
 }
 
 export interface ReservationDetail {

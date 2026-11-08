@@ -854,6 +854,120 @@
       "create": "Créer la réservation",
       "cancel": "Annuler",
       "sideEffects": "L’enregistrement ferme ces nuits sur tous les canaux en moins d’une minute, planifie le ménage et place le séjour au calendrier."
+    },
+    "checkin": {
+      "title": "Enregistrement en ligne",
+      "frontDesk": "Réception et planning des chambres",
+      "kpi": {
+        "arrivals": "Arrivées · 7 jours",
+        "formsDone": "Formulaires remplis",
+        "missing": "{n} manquants",
+        "allDone": "tous remplis",
+        "reminders": "Rappels programmés",
+        "remindersHint": "par votre message avant l’arrivée",
+        "noRule": "aucun message avant l’arrivée actif",
+        "registrations": "Déclarations à faire",
+        "registrationsHint": "déclaration non connectée ; exportez"
+      },
+      "upcoming": "Arrivées à venir",
+      "sendReminders": "Envoyer des rappels · {n}",
+      "exportRegistrations": "Exporter les déclarations",
+      "col": {
+        "guest": "Voyageur",
+        "form": "Formulaire",
+        "listed": "Voyageurs listés",
+        "id": "Pièce d’identité",
+        "balance": "Solde",
+        "code": "Code d’accès"
+      },
+      "empty": "Personne n’arrive dans les sept prochains jours.",
+      "form": {
+        "done": "Rempli",
+        "notStarted": "Pas commencé"
+      },
+      "listedOf": "{listed} sur {expected}",
+      "idOnFile": "Enregistrée",
+      "code": {
+        "sent": "Envoyé",
+        "ready": "Code prêt {when}",
+        "notIssued": "Pas émis"
+      },
+      "fill": {
+        "title": "Ce que remplissent les voyageurs",
+        "lead": "Demandé dans le portail voyageur, depuis la confirmation et vos rappels. Environ deux minutes.",
+        "names": "Nom de chaque voyageur",
+        "namesHint": "Pour la déclaration à la police",
+        "arrival": "Heure d’arrivée",
+        "arrivalHint": "Pour organiser le ménage et l’accueil",
+        "preferences": "Préférences",
+        "preferencesHint": "Lits, lit bébé, ce qu’il faut préparer",
+        "id": "Photo de la pièce d’identité",
+        "idHint": "Pas encore demandée : le portail n’a pas d’envoi de fichier",
+        "required": "Obligatoire",
+        "optional": "Facultatif",
+        "notAsked": "Non demandé"
+      },
+      "rules": {
+        "title": "Règles",
+        "lead": "Le fonctionnement actuel.",
+        "code": "Le code d’accès est communiqué",
+        "codeValue": "Dans le portail voyageur, un nombre d’heures fixé avant le début de validité du code (réglages du moteur de réservation). Il n’attend ni le formulaire ni le solde.",
+        "remind": "Rappels aux voyageurs",
+        "remindValue": "Par votre message avant l’arrivée, et à la demande avec Envoyer des rappels.",
+        "remindNone": "Uniquement à la demande avec Envoyer des rappels.",
+        "automation": "Le configurer dans Automatisation",
+        "export": "Export des déclarations",
+        "exportValue": "Un CSV des voyageurs nommés pour les sept prochains jours ; la déclaration SEF ou Alloggiati n’est pas connectée."
+      },
+      "reminderBody": "Bonjour {name}, avant votre arrivée à {property}, merci de compléter votre enregistrement en ligne. Cela prend environ deux minutes : {url}"
+    },
+    "guestsPage": {
+      "title": "Voyageurs",
+      "kpi": {
+        "guests": "Voyageurs",
+        "guestsHint": "depuis vos débuts",
+        "returning": "Revenus au moins une fois",
+        "directAfterOta": "Réservé en direct après une OTA",
+        "directAfterOtaHint": "aucune commission sur ces séjours",
+        "consent": "Consentement marketing"
+      },
+      "pills": {
+        "all": "Tous",
+        "returning": "Fidèles",
+        "emailable": "Joignables par e-mail",
+        "flagged": "Signalés"
+      },
+      "search": "Nom ou pays",
+      "export": "Exporter",
+      "col": {
+        "guest": "Voyageur",
+        "stays": "Séjours",
+        "properties": "Hébergements",
+        "value": "Valeur cumulée",
+        "status": "Maintenant",
+        "via": "Réservé via"
+      },
+      "contact": {
+        "both": "e-mail et téléphone enregistrés",
+        "email": "e-mail enregistré",
+        "phone": "téléphone enregistré",
+        "none": "aucun contact"
+      },
+      "speaks": "parle {language}",
+      "status": {
+        "inHouse": "Sur place",
+        "arrives": "Arrive le {date}",
+        "note": "Note : {note}"
+      },
+      "empty": "Aucun voyageur ne correspond.",
+      "showing": "{shown} sur {total}",
+      "loadMore": "Afficher plus",
+      "winBack": {
+        "title": "Les faire revenir en direct",
+        "lead": "Les voyageurs venus par Airbnb ou Booking.com qui ont accepté les nouvelles peuvent recevoir un e-mail après leur départ avec une offre de réservation directe. À configurer dans Automatisation ; cette page montre seulement qui serait concerné.",
+        "open": "Ouvrir Automatisation",
+        "audience": "{n, plural, =0 {Personne à joindre pour l’instant} one {# voyageur concerné} other {# voyageurs concernés}}"
+      }
     }
   },
   "operations": {

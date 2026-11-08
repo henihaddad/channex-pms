@@ -304,9 +304,11 @@ export default async function ReservationsPage({
                   {stay(r.arrivalDate, r.departureDate, locale)}
                   <span className="block text-xs text-muted">
                     {t("nights", { n: nights })}
-                    {status !== "cancelled"
-                      ? ` · ${phaseWords(stayPhase(today, r.arrivalDate, r.departureDate), t)}`
-                      : ""}
+                    {status === "cancelled"
+                      ? ""
+                      : status === "checked_in"
+                        ? ` · ${t("phase.inHouse")}`
+                        : ` · ${phaseWords(stayPhase(today, r.arrivalDate, r.departureDate), t)}`}
                   </span>
                 </Td>
                 <Td>
