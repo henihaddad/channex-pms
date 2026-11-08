@@ -38,6 +38,34 @@ export const ALERT_DEFAULTS = {
  * opens the calendar for a listing once, and eight listings must not become sixty
  * rows that bury every other signal (spec 11 ALRT-1).
  */
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** "Sun 8 Nov": a night as a person reads it. */
+function nightText(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return `${WEEKDAY[d.getUTCDay()]!} ${String(d.getUTCDate())} ${MONTH[d.getUTCMonth()]!}`;
+}
+
+/** "8, 9 and 12 Nov", "30 Nov, 1 and 2 Dec": nights grouped by month. */
+export function nightsText(isos: string[]): string {
+  const byMonth = new Map<string, number[]>();
+  for (const iso of [...isos].sort()) {
+    const d = new Date(`${iso}T00:00:00Z`);
+    const k = `${String(d.getUTCFullYear())}-${MONTH[d.getUTCMonth()]!}`;
+    byMonth.set(k, [...(byMonth.get(k) ?? []), d.getUTCDate()]);
+  }
+  const parts = [...byMonth.entries()].map(([k, days]) => {
+    const mon = k.split("-")[1]!;
+    const list =
+      days.length === 1
+        ? String(days[0])
+        : `${days.slice(0, -1).join(", ")} and ${String(days.at(-1))}`;
+    return `${list} ${mon}`;
+  });
+  return parts.join(", ");
+}
+
 export function lowOccupancy(i: {
   propertyId: string;
   propertyTitle: string;
@@ -64,10 +92,10 @@ export function lowOccupancy(i: {
     severity: "warning",
     title:
       weak.length === 1
-        ? `${i.propertyTitle}: ${first.date} under ${pctText}`
+        ? `${i.propertyTitle}: ${nightText(first.date)} under ${pctText}`
         : `${i.propertyTitle}: ${String(weak.length)} of the next ${String(ALERT_DEFAULTS.lowOccupancyDaysOut)} nights under ${pctText}`,
-    detail: `Occupancy below ${pctText} on ${weak.map((n) => n.date).join(", ")}. Consider a rate or restriction change.`,
-    link: `/calendar?property=${i.propertyId}&date=${first.date}`,
+    detail: `Below ${pctText} on ${nightsText(weak.map((n) => n.date))}. A lower price or a shorter minimum stay may fill them.`,
+    link: `/calendar?propertyId=${i.propertyId}&from=${first.date}`,
   };
 }
 

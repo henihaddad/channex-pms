@@ -83,6 +83,7 @@ export {
   type DailyFactRow,
   type PropertyLeagueRow,
   type AlertRow,
+  type TodayDetails,
 } from "./analytics.js";
 export {
   DrizzleBookingEngineRepository,

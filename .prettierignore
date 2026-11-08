@@ -10,3 +10,4 @@ docs/specs
 CHANGELOG.md
 apps/web/handlers.manifest.json
 docs/vendor/
+.claude/worktrees

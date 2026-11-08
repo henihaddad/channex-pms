@@ -11,6 +11,61 @@ import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
 
 const num = (v: unknown): number => Number(v ?? 0);
+
+interface BookingPointer {
+  bookingId: string;
+  propertyTitle: string;
+  channel: string | null;
+  arrivalDate: string;
+  nights: number;
+}
+
+/** The details Today writes under its numbers and in its "Needs you" rows. */
+export interface TodayDetails {
+  /** Whether the organization has ever had a booking: until then Today is the first-run checklist. */
+  anyBooking: boolean;
+  arrivalsFormsDone: number;
+  sameDayChangeovers: number;
+  revenueSameDayLastWeekMinor: number;
+  /** When a channel last accepted a push from us. */
+  lastSyncAt: string | null;
+  /** When the longest-waiting guest message past its target arrived. */
+  oldestBreachingSince: string | null;
+  /** The portfolio's city when every property is in one. */
+  city: string | null;
+  unmapped: BookingPointer | null;
+  unassigned: BookingPointer | null;
+  changeoverNoCleaner: {
+    count: number;
+    first: { propertyTitle: string; from: string; to: string } | null;
+  };
+  failedPayouts: {
+    count: number;
+    first: {
+      ownerName: string;
+      amountMinor: number;
+      currency: string;
+      reason: string | null;
+    } | null;
+  };
+  statementsToReview: {
+    count: number;
+    first: {
+      statementId: string;
+      ownerName: string;
+      netDueMinor: number | null;
+      currency: string;
+      periodFrom: string;
+    } | null;
+  };
+  arrivals: Array<{
+    bookingId: string;
+    formDone: boolean;
+    arrivalTime: string | null;
+    codeSent: boolean;
+    adults: number;
+  }>;
+}
 const uuids = (ids: readonly string[]) =>
   ids.length === 0
     ? sql`array[]::uuid[]`
@@ -413,6 +468,186 @@ export class DrizzleAnalyticsRepository {
         totalMinor: num(r.total_amount_minor),
         currency: r.currency,
         createdAt: r.created_at,
+      })),
+    };
+  }
+
+  /**
+   * What Today writes under each number and row (design canvas, November 2026): how many arrivals
+   * have their check-in form done, same-day changeovers, revenue on the same weekday last week,
+   * when a channel last accepted a push, and the first item behind each "Needs you" count so the
+   * row can say which booking, owner or property it means.
+   */
+  async todayDetails(today: string, propertyIds?: string[] | null): Promise<TodayDetails> {
+    const pscope = (col: string) =>
+      propertyIds ? sql`and ${sql.raw(col)} = any(${uuids(propertyIds)})` : sql``;
+    const [c] = await rawRows<{
+      forms_done: number;
+      changeovers: number;
+      revenue_last_week: number;
+      last_sync: string | null;
+      oldest_breaching: string | null;
+      changeover_no_cleaner: number;
+      failed_payouts: number;
+      statements_to_review: number;
+      any_booking: boolean;
+    }>(
+      this.tx,
+      sql`select
+        (select count(*) from booking b join pre_checkin pc on pc.booking_id = b.id where b.org_id = ${this.orgId} and b.status <> 'cancelled' and b.arrival_date = ${today} and pc.completed_at is not null ${pscope("b.property_id")})::int as forms_done,
+        (select count(*) from turnover_task t where t.org_id = ${this.orgId} and t.date = ${today} and t.is_same_day and t.cancelled_at is null ${pscope("t.property_id")})::int as changeovers,
+        coalesce((select sum(d.amount_minor) from booking_room_day d join booking_room br on br.id = d.booking_room_id join booking b on b.id = br.booking_id where b.org_id = ${this.orgId} and b.status <> 'cancelled' and d.status = 'confirmed' and d.date = ${today}::date - 7 ${pscope("b.property_id")}), 0)::bigint as revenue_last_week,
+        (select max(finished_at)::text from sync_operation where org_id = ${this.orgId} and state not in ('failed', 'dead') and finished_at is not null) as last_sync,
+        (select min(last_inbound_at)::text from message_thread where org_id = ${this.orgId} and state = 'open' and last_inbound_at is not null and (last_outbound_at is null or last_outbound_at < last_inbound_at)) as oldest_breaching,
+        (select count(*) from turnover_task t where t.org_id = ${this.orgId} and t.date = ${today} and t.is_same_day and t.cancelled_at is null and t.assignee_id is null and t.crew_id is null ${pscope("t.property_id")})::int as changeover_no_cleaner,
+        (select count(*) from owner_payout where org_id = ${this.orgId} and state = 'failed')::int as failed_payouts,
+        (select count(*) from owner_statement where org_id = ${this.orgId} and state = 'draft')::int as statements_to_review,
+        exists (select 1 from booking where org_id = ${this.orgId}) as any_booking`,
+    );
+    const first = async <T>(q: ReturnType<typeof sql>): Promise<T | null> =>
+      ((await rawRows<T & Record<string, unknown>>(this.tx, q))[0] as T | undefined) ?? null;
+    const unmapped = await first<{
+      property_title: string;
+      ota_name: string | null;
+      arrival_date: string;
+      nights: number;
+      id: string;
+    }>(
+      sql`select b.id, p.title as property_title, b.ota_name, b.arrival_date::text, (b.departure_date - b.arrival_date)::int as nights
+          from booking b join property p on p.id = b.property_id
+          where b.org_id = ${this.orgId} and b.mapping_state <> 'mapped' and b.status <> 'cancelled' ${pscope("b.property_id")}
+          order by b.arrival_date limit 1`,
+    );
+    const unassigned = await first<{
+      property_title: string;
+      ota_name: string | null;
+      arrival_date: string;
+      nights: number;
+      id: string;
+    }>(
+      sql`select b.id, p.title as property_title, b.ota_name, b.arrival_date::text, (b.departure_date - b.arrival_date)::int as nights
+          from booking b join booking_room br on br.booking_id = b.id join property p on p.id = b.property_id
+          where b.org_id = ${this.orgId} and b.status <> 'cancelled' and p.kind <> 'single_unit' and br.assigned_unit_id is null
+            and b.arrival_date >= ${today} and b.arrival_date < ${today}::date + 7 ${pscope("b.property_id")}
+          order by b.arrival_date limit 1`,
+    );
+    const changeover = await first<{
+      property_title: string;
+      window_from: string;
+      window_to: string;
+    }>(
+      sql`select p.title as property_title, t.window_from::text, t.window_to::text
+          from turnover_task t join property p on p.id = t.property_id
+          where t.org_id = ${this.orgId} and t.date = ${today} and t.is_same_day and t.cancelled_at is null and t.assignee_id is null and t.crew_id is null ${pscope("t.property_id")}
+          order by t.window_from limit 1`,
+    );
+    const payout = await first<{
+      owner_name: string;
+      amount_minor: number;
+      currency: string;
+      failure_reason: string | null;
+    }>(
+      sql`select o.name as owner_name, op.amount_minor, op.currency, op.failure_reason
+          from owner_payout op join owner o on o.id = op.owner_id
+          where op.org_id = ${this.orgId} and op.state = 'failed' order by op.updated_at desc limit 1`,
+    );
+    const statement = await first<{
+      id: string;
+      owner_name: string;
+      net_due: number | null;
+      currency: string;
+      period_from: string;
+    }>(
+      sql`select st.id, o.name as owner_name, (st.totals->>'netDue')::bigint as net_due, st.currency, st.period_from::text
+          from owner_statement st join owner o on o.id = st.owner_id
+          where st.org_id = ${this.orgId} and st.state = 'draft' order by st.period_from desc limit 1`,
+    );
+    const arrivals = await rawRows<{
+      booking_id: string;
+      form_done: boolean;
+      arrival_time: string | null;
+      code_sent: boolean;
+      adults: number;
+    }>(
+      this.tx,
+      sql`select b.id as booking_id,
+                 coalesce((select sum(coalesce((br.occupancy->>'adults')::int, 0)) from booking_room br where br.booking_id = b.id), 0)::int as adults,
+                 (pc.completed_at is not null) as form_done,
+                 pc.arrival_time,
+                 exists (select 1 from access_credential ac where ac.booking_id = b.id and ac.revoked_at is null and ac.delivery_state = 'delivered') as code_sent
+          from booking b left join pre_checkin pc on pc.booking_id = b.id
+          where b.org_id = ${this.orgId} and b.status <> 'cancelled' and b.arrival_date = ${today} ${pscope("b.property_id")}`,
+    );
+    const [city] = await rawRows<{ city: string | null; n: number }>(
+      this.tx,
+      sql`select max(address->>'city') as city, count(distinct nullif(address->>'city', ''))::int as n
+          from property where org_id = ${this.orgId} and archived_at is null ${pscope("id")}`,
+    );
+    return {
+      anyBooking: Boolean(c?.any_booking),
+      arrivalsFormsDone: num(c?.forms_done),
+      sameDayChangeovers: num(c?.changeovers),
+      revenueSameDayLastWeekMinor: num(c?.revenue_last_week),
+      lastSyncAt: c?.last_sync ?? null,
+      oldestBreachingSince: c?.oldest_breaching ?? null,
+      city: city && num(city.n) === 1 ? (city.city ?? null) : null,
+      unmapped: unmapped
+        ? {
+            bookingId: unmapped.id,
+            propertyTitle: unmapped.property_title,
+            channel: unmapped.ota_name,
+            arrivalDate: unmapped.arrival_date,
+            nights: num(unmapped.nights),
+          }
+        : null,
+      unassigned: unassigned
+        ? {
+            bookingId: unassigned.id,
+            propertyTitle: unassigned.property_title,
+            channel: unassigned.ota_name,
+            arrivalDate: unassigned.arrival_date,
+            nights: num(unassigned.nights),
+          }
+        : null,
+      changeoverNoCleaner: {
+        count: num(c?.changeover_no_cleaner),
+        first: changeover
+          ? {
+              propertyTitle: changeover.property_title,
+              from: changeover.window_from,
+              to: changeover.window_to,
+            }
+          : null,
+      },
+      failedPayouts: {
+        count: num(c?.failed_payouts),
+        first: payout
+          ? {
+              ownerName: payout.owner_name,
+              amountMinor: num(payout.amount_minor),
+              currency: payout.currency,
+              reason: payout.failure_reason,
+            }
+          : null,
+      },
+      statementsToReview: {
+        count: num(c?.statements_to_review),
+        first: statement
+          ? {
+              statementId: statement.id,
+              ownerName: statement.owner_name,
+              netDueMinor: statement.net_due === null ? null : num(statement.net_due),
+              currency: statement.currency,
+              periodFrom: statement.period_from,
+            }
+          : null,
+      },
+      arrivals: arrivals.map((a) => ({
+        bookingId: a.booking_id,
+        formDone: Boolean(a.form_done),
+        arrivalTime: a.arrival_time,
+        codeSent: Boolean(a.code_sent),
+        adults: num(a.adults),
       })),
     };
   }

@@ -71,9 +71,10 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
   ).json()) as { rollups: { days: number } };
   expect(drained.rollups.days).toBeGreaterThan(0);
 
-  // the dashboard's MTD occupancy equals the report's and the export's
+  // Reports' month-to-date occupancy equals the report's and the export's (Today keeps to the day)
   await page.goto("/");
   await expect(page.getByTestId("dashboard")).toHaveAttribute("data-role", "portfolio");
+  await page.goto("/reports");
   const occ = (await page.getByTestId("occupancy-mtd").textContent()) ?? "";
   const occValue = /(\d+\.\d)%/.exec(occ)?.[1];
   expect(occValue).toBeDefined();
@@ -116,7 +117,7 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
   expect(seeded.ok()).toBeTruthy();
   await request.post("/api/v1/test/drain", { data: { orgId, rollups: true } });
   const started = Date.now();
-  await page.goto("/");
+  await page.goto("/reports");
   await expect(page.getByTestId("league-row").first()).toBeVisible();
   const ms = Date.now() - started;
   expect(await page.getByTestId("league-row").count()).toBeGreaterThanOrEqual(200);

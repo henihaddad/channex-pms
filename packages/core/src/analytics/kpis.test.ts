@@ -15,6 +15,7 @@ import {
 import {
   cancellationSpike,
   lowOccupancy,
+  nightsText,
   noisyTypes,
   statementMismatch,
   zeroBookingChannel,
@@ -176,7 +177,11 @@ describe("KPI dictionary as code", () => {
       type: "low_occupancy",
       key: "p",
       title: "P: 2 of the next 7 nights under 40%",
+      detail: "Below 40% on 9 and 10 May. A lower price or a shorter minimum stay may fill them.",
+      link: "/calendar?propertyId=p&from=2026-05-09",
     });
+    expect(nightsText(["2026-11-30", "2026-12-02", "2026-12-01"])).toBe("30 Nov, 1 and 2 Dec");
+    expect(nightsText(["2026-11-08"])).toBe("8 Nov");
     expect(
       lowOccupancy({
         propertyId: "p",

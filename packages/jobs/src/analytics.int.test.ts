@@ -170,6 +170,24 @@ beforeAll(async () => {
 afterAll(() => handle.close());
 
 describe("KPI engine over the rollups", () => {
+  it("Today's details agree with Today's counts and point at real bookings", async () => {
+    for (const d of [day(3), day(10), day(17)]) {
+      const [board, details, queue] = await repo((r) =>
+        Promise.all([r.today(d), r.todayDetails(d), r.actionQueue(d)]),
+      );
+      expect(details.anyBooking).toBe(true);
+      expect(details.arrivals).toHaveLength(board.arrivals);
+      expect(details.arrivalsFormsDone).toBe(0);
+      expect(details.arrivals.every((a) => !a.codeSent && !a.formDone)).toBe(true);
+      expect(details.revenueSameDayLastWeekMinor).toBeGreaterThanOrEqual(0);
+      expect(details.unmapped === null).toBe(queue.unmapped === 0);
+      expect(details.unassigned === null).toBe(queue.unassignedArrivals === 0);
+      if (details.unassigned) expect(details.unassigned.propertyTitle).toBe("Harbour House");
+      expect(details.failedPayouts.count).toBe(0);
+      expect(details.statementsToReview.count).toBe(0);
+    }
+  });
+
   it("occupancy agrees between the KPI function, the SQL aggregate and the CSV export (spec 11 §11.6)", async () => {
     const r = await rollup({ db: handle.db, ...deps }, ORG, "2026-06-01", "2026-07-05");
     expect(r.days).toBe(70);

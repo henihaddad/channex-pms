@@ -1,188 +1,129 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import {
-  Button,
-  Card,
-  Chip,
-  DataTable,
-  EmptyState,
-  LinkButton,
-  PageTitle,
-  Select,
-  Stat,
-} from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Card, Chip, EmptyState, LinkButton, PageHeader, Stat } from "@/components/ui";
+import { cn } from "@/components/ui/cn";
 import { guard } from "@/server/guard";
 import { currentOrgId, currentSession } from "@/server/session";
 import { consoleContext } from "@/server/console-context";
-import { GettingStarted } from "./getting-started";
+import { currentUserProfile, memberships } from "@/server/auth-flows";
+import { channelLabel, day as dayLabel, dayMonth, elapsed, money, percent } from "@/lib/format";
+import { FirstRun } from "./first-run";
 import { startLabels } from "./start-labels";
-import { memberships } from "@/server/auth-flows";
-import { loadDashboard, refreshRollupsAction } from "./reports/reports.actions";
+import { loadDashboard } from "./reports/reports.actions";
 import { listReservations } from "./reservations/reservations.actions";
-import { Kpi, money, pct } from "./reports/kpi";
+
+const channelName = (c: string | null | undefined): string => channelLabel(c);
 
 /**
- * Today (spec 11 §11.2, design canvas November 2026): the day's numbers, then
- * what needs a person, who arrives, what happened, and the week ahead. The
- * month's KPIs and the league table follow for the people who read them.
- * Numbers a new account cannot have yet stay behind "All metrics".
+ * Today (spec 11 §11.2, design canvas November 2026): the day's four numbers, then what needs a
+ * person (each row says which booking or owner and has the button that clears it), who arrives
+ * and what is still open for them, what happened, and the week ahead. Before the first property
+ * is live the page is the first-run checklist instead. The month's KPIs live on Reports.
  */
-export default async function DashboardPage({
+export default async function TodayPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
   const t = await getTranslations("dashboard");
+  const tt = await getTranslations("dashboard.t");
   const tn = await getTranslations("nav");
+  const locale = await getLocale();
   const d = await guard(() => loadDashboard({ propertyId: sp.property ?? null }));
-  const arrivals = await guard(() => listReservations({ view: "arrivals_today" }));
   const session = (await currentSession())!;
-  const orgs = await memberships(session.userId);
-  const tob = await getTranslations("onboarding");
   const orgId = await currentOrgId();
-  const setup = orgId ? (await consoleContext(orgId)).onboarding : null;
-  const m = d.month.current;
-  const cur = d.month.currency;
-  const fresh = d.month.freshness
-    ? d.month.freshness.slice(0, 16).replace("T", " ")
-    : t("noRollup");
-  const syncIssues = d.queue.failedCells + d.queue.conflictedCells;
-  const queue = [
-    ["unmapped", d.queue.unmapped, "/reservations/unmapped"],
-    ["failedSync", syncIssues, "/sync-health"],
-    ["unassigned", d.queue.unassignedArrivals, "/reservations?view=unassigned"],
-    ["breaching", d.queue.breachingMessages, "/inbox?view=breaching_sla"],
-    ["unacked", d.queue.unackedRevisions, "/sync-health"],
-    ["disputes", d.queue.openDisputes, "/owners/statements"],
-    ["expiringCards", d.queue.expiringCards, "/reservations?view=payment_action_needed"],
-  ] as const;
-  const showFinance = d.role === "finance" || d.role === "portfolio" || d.role === "viewer";
-  const showOps = d.role !== "viewer";
-  const open = queue.filter(([, n]) => n > 0);
-  const alerts = d.alerts.slice(0, 5);
-  const moreAlerts = d.alerts.length - alerts.length;
-  const needs = open.length + (d.inbox.needsReply > 0 ? 1 : 0) + alerts.length;
-  const dateLine = new Date(`${d.today}T12:00:00Z`).toLocaleDateString("en-GB", {
+  const [orgs, me, cx] = await Promise.all([
+    memberships(session.userId),
+    currentUserProfile(session.userId),
+    orgId ? consoleContext(orgId) : Promise.resolve(null),
+  ]);
+  const org = orgs.find((o) => o.orgId === orgId) ?? orgs[0];
+  const setup = cx?.onboarding ?? null;
+  const connect = setup?.find((tr) => tr.key === "connect");
+  const firstRun = Boolean(connect && !connect.done) && !d.details.anyBooking;
+  const firstName = (me?.name ?? "").trim().split(/\s+/)[0] ?? "";
+
+  const dateLine = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
     weekday: "long",
     day: "numeric",
     month: "long",
     timeZone: "UTC",
-  });
+  }).format(new Date(`${d.today}T12:00:00Z`));
+  const place = d.details.city ?? org?.name ?? "";
 
-  const activity = [
-    ...d.board.recentBookings.map((b) => ({
-      at: b.createdAt,
-      tone: "accent" as const,
-      title: `${t("booked")} · ${b.propertyTitle}`,
-      sub: `${b.channel} · ${b.arrivalDate} → ${b.departureDate} · ${money(b.totalMinor, b.currency)}`,
-      href: `/reservations/${b.id}`,
-    })),
-    ...d.alerts.map((a) => ({
-      at: a.createdAt,
-      tone: a.severity === "critical" ? ("danger" as const) : ("warning" as const),
-      title: a.title,
-      sub: a.type,
-      href: a.link,
-    })),
-  ]
-    .sort((x, y) => (y.at > x.at ? 1 : -1))
-    .slice(0, 8);
-
-  const firstRun = setup && setup.some((tr) => !tr.done);
-
-  return (
-    <div className="flex flex-col gap-5" data-testid="dashboard" data-role={d.role}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <PageTitle>{tn("dashboard")}</PageTitle>
-          <p className="mt-1.5 text-sm text-muted">
-            {dateLine} · {t("welcome", { name: orgs[0]?.name ?? "" })}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {syncIssues === 0 ? (
-            <Chip color="success" size="md">
-              {t("inSync")}
-            </Chip>
-          ) : (
-            <Link href="/sync-health">
-              <Chip color="warning" size="md">
-                {t("syncIssues", { n: syncIssues })}
-              </Chip>
-            </Link>
-          )}
-          <form className="flex items-center gap-2">
-            <Select
-              name="property"
-              defaultValue={sp.property ?? ""}
-              aria-label={t("allProperties")}
-              size="sm"
-              className="w-48"
-            >
-              <option value="">{t("allProperties")}</option>
-              {d.properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </Select>
-            <Button type="submit" variant="ghost" size="sm">
-              {t("filter")}
-            </Button>
-          </form>
-        </div>
+  const header = (
+    <PageHeader title={tn("dashboard")} titleOnPhone={false}>
+      <div className="-mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          {tt("dateLine", { date: dateLine, place })}
+          <span className="sr-only">{t("welcome", { name: org?.name ?? "" })}</span>
+        </p>
+        <SyncPill
+          issues={d.queue.failedCells + d.queue.conflictedCells}
+          issuesText={tt("need.failedSync", { n: d.queue.failedCells + d.queue.conflictedCells })}
+          okText={
+            d.details.lastSyncAt
+              ? tt("syncedAgo", { ago: elapsed(d.details.lastSyncAt) })
+              : t("inSync")
+          }
+        />
       </div>
+    </PageHeader>
+  );
 
-      {showOps ? (
-        <section
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-          data-testid="today-board"
-          aria-label={t("today")}
-        >
-          <Link href="/reservations?view=arrivals_today" className="contents">
-            <Stat label={t("arrivals")} value={String(d.board.arrivals)} />
-          </Link>
-          <Link href="/reservations?view=departures_today" className="contents">
-            <Stat label={t("departures")} value={String(d.board.departures)} />
-          </Link>
-          <Stat
-            label={t("occupancyTonight")}
-            value={pct(d.board.occupancyTonightBps)}
-            hint={t("unitsTonight", {
-              sold: d.board.roomsSoldTonight,
-              total: d.board.roomsAvailable,
-            })}
-            testId="occupancy-tonight"
-          />
-          <Stat label={t("revenueToday")} value={money(d.board.revenueTodayMinor, cur)} />
-        </section>
-      ) : null}
-
-      {firstRun ? (
+  if (firstRun && setup) {
+    const tob = await getTranslations("onboarding");
+    const L = startLabels(tob);
+    return (
+      <div className="flex flex-col gap-5" data-testid="dashboard" data-role={d.role}>
+        {header}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <GettingStarted tracks={setup} labels={startLabels(tob)} />
+          <FirstRun
+            tracks={setup}
+            labels={{
+              title: tt("first.title", { name: firstName }),
+              lead: tt("first.lead"),
+              of: (done, total) => tt("first.of", { done, total }),
+              orgCreated: tt("first.orgCreated"),
+              minutes: (n) => tt("first.minutes", { n }),
+              start: tt("first.start"),
+              done: tt("first.done"),
+              locked: tt("first.locked"),
+              tracks: L.tracks,
+              steps: L.steps,
+              waiting: L.waiting,
+              call: tt("first.call"),
+              guide: tt("first.guide"),
+              help: tt("first.help"),
+              previewTitle: tt("first.previewTitle"),
+              previewBody: tt("first.previewBody"),
+              addProperty: tt("first.addProperty"),
+            }}
+          />
           <div className="flex flex-col gap-5">
-            <Card>
-              <div className="flex items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#34d399] to-[#22d3ee] text-sm font-bold text-[#0b1020]">
-                  HH
-                </span>
-                <div>
-                  <h2 className="text-base font-bold">{t("person.title")}</h2>
-                  <p className="text-xs text-muted">{t("person.lead")}</p>
-                </div>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed">{t("person.body")}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <LinkButton href="/settings/support" size="sm">
-                  {t("person.email")}
-                </LinkButton>
-                <LinkButton href="/settings/support#call" size="sm">
-                  {t("person.call")}
-                </LinkButton>
-              </div>
+            <Card title={tt("first.getTitle")}>
+              <ul className="flex flex-col gap-2 text-sm">
+                {(["get1", "get2", "get3", "get4"] as const).map((k) => (
+                  <li key={k} className="flex gap-2">
+                    <span className="text-success" aria-hidden="true">
+                      ✓
+                    </span>
+                    {tt(`first.${k}`)}
+                  </li>
+                ))}
+              </ul>
             </Card>
+            <PersonCard
+              L={{
+                title: t("person.title"),
+                byline: tt("first.byline"),
+                body: t("person.body"),
+                email: t("person.email"),
+                whatsapp: tt("first.whatsapp"),
+                call: t("person.call"),
+              }}
+            />
             <Card title={t("importCard.title")}>
               <p className="text-sm leading-relaxed text-muted">{t("importCard.body")}</p>
               <LinkButton href="/properties/import" variant="primary" className="mt-3 w-full">
@@ -191,6 +132,318 @@ export default async function DashboardPage({
             </Card>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  const arrivals = await guard(() => listReservations({ view: "arrivals_today", limit: 8 }));
+  const since = shiftDays(d.today, -1);
+  const [booked, modified] = await Promise.all([
+    guard(() => listReservations({ dateType: "booked", from: since, limit: 12 })),
+    guard(() => listReservations({ view: "modified_since_yesterday", limit: 12 })),
+  ]);
+  const recent = {
+    rows: [...new Map([...booked.rows, ...modified.rows].map((r) => [r.id, r])).values()],
+  };
+  const cur = d.month.currency;
+  const det = d.details;
+  const syncIssues = d.queue.failedCells + d.queue.conflictedCells;
+  const showOps = d.role !== "viewer";
+
+  // the four numbers, each with the line that says what is behind it
+  const weekdayLastWeek = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${d.today}T12:00:00Z`));
+  const revDelta =
+    det.revenueSameDayLastWeekMinor > 0
+      ? Math.round(
+          ((d.board.revenueTodayMinor - det.revenueSameDayLastWeekMinor) /
+            det.revenueSameDayLastWeekMinor) *
+            100,
+        )
+      : null;
+
+  // Needs you: one row per thing, saying which booking, owner or property it means
+  type Need = {
+    key: string;
+    title: string;
+    sub: string;
+    href: string;
+    cta: string;
+    alert?: boolean;
+  };
+  const needs: Need[] = [];
+  const q = d.queue;
+  if (q.unmapped > 0 && det.unmapped)
+    needs.push({
+      key: "unmapped",
+      title: tt("need.unmapped", { channel: channelName(det.unmapped.channel) }),
+      sub: tt("need.unmappedSub", {
+        property: det.unmapped.propertyTitle,
+        day: dayLabel(det.unmapped.arrivalDate, locale),
+        nights: det.unmapped.nights,
+      }),
+      href: "/reservations/unmapped",
+      cta: tt("need.cta.unmapped"),
+    });
+  if (d.inbox.breaching > 0)
+    needs.push({
+      key: "breaching",
+      title: tt("need.breaching", { n: d.inbox.breaching }),
+      sub: det.oldestBreachingSince
+        ? tt("need.breachingSub", { ago: elapsed(det.oldestBreachingSince) })
+        : "",
+      href: "/inbox?view=breaching_sla",
+      cta: tt("need.cta.breaching"),
+    });
+  else if (d.inbox.needsReply > 0)
+    needs.push({
+      key: "needsReply",
+      title: tt("need.needsReply", { n: d.inbox.needsReply }),
+      sub: tt("need.needsReplySub"),
+      href: "/inbox",
+      cta: tt("need.cta.needsReply"),
+    });
+  if (det.changeoverNoCleaner.count > 0)
+    needs.push({
+      key: "changeover",
+      title:
+        det.changeoverNoCleaner.count === 1
+          ? tt("need.changeover")
+          : tt("need.changeoverMore", { n: det.changeoverNoCleaner.count }),
+      sub: det.changeoverNoCleaner.first
+        ? tt("need.changeoverSub", {
+            property: det.changeoverNoCleaner.first.propertyTitle,
+            from: det.changeoverNoCleaner.first.from,
+            to: det.changeoverNoCleaner.first.to,
+          })
+        : "",
+      href: "/operations",
+      cta: tt("need.cta.changeover"),
+    });
+  if (q.unassignedArrivals > 0 && det.unassigned)
+    needs.push({
+      key: "unassigned",
+      title: tt("need.unassigned", { n: q.unassignedArrivals }),
+      sub: tt("need.unmappedSub", {
+        property: det.unassigned.propertyTitle,
+        day: dayLabel(det.unassigned.arrivalDate, locale),
+        nights: det.unassigned.nights,
+      }),
+      href: "/reservations?view=unassigned",
+      cta: tt("need.cta.unassigned"),
+    });
+  if (det.failedPayouts.count > 0 && det.failedPayouts.first)
+    needs.push({
+      key: "payout",
+      title:
+        det.failedPayouts.count === 1
+          ? tt("need.payout", { owner: det.failedPayouts.first.ownerName })
+          : tt("need.payoutMore", { n: det.failedPayouts.count }),
+      sub: tt("need.payoutSub", {
+        amount: money(det.failedPayouts.first.amountMinor, det.failedPayouts.first.currency),
+        reason: det.failedPayouts.first.reason ?? tt("need.payoutNoReason"),
+      }),
+      href: "/owners/payouts",
+      cta: tt("need.cta.payout"),
+    });
+  if (det.statementsToReview.count > 0 && det.statementsToReview.first) {
+    const st = det.statementsToReview.first;
+    const period = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      month: "long",
+      timeZone: "UTC",
+    }).format(new Date(`${st.periodFrom}T12:00:00Z`));
+    needs.push({
+      key: "statement",
+      title:
+        det.statementsToReview.count === 1
+          ? tt("need.statement", { period, owner: st.ownerName })
+          : tt("need.statementMore", { n: det.statementsToReview.count }),
+      sub:
+        st.netDueMinor === null
+          ? ""
+          : tt("need.statementSub", { amount: money(st.netDueMinor, st.currency) }),
+      href:
+        det.statementsToReview.count === 1
+          ? `/owners/statements/${st.statementId}`
+          : "/owners/statements",
+      cta: tt("need.cta.statement"),
+    });
+  }
+  if (syncIssues > 0)
+    needs.push({
+      key: "failedSync",
+      title: tt("need.failedSync", { n: syncIssues }),
+      sub: tt("need.failedSyncSub"),
+      href: "/sync-health",
+      cta: tt("need.cta.failedSync"),
+    });
+  if (q.unackedRevisions > 0)
+    needs.push({
+      key: "unacked",
+      title: tt("need.unacked", { n: q.unackedRevisions }),
+      sub: tt("need.unackedSub"),
+      href: "/sync-health",
+      cta: tt("need.cta.unacked"),
+    });
+  if (q.openDisputes > 0)
+    needs.push({
+      key: "disputes",
+      title: tt("need.disputes", { n: q.openDisputes }),
+      sub: "",
+      href: "/owners/statements",
+      cta: tt("need.cta.disputes"),
+    });
+  if (q.expiringCards > 0)
+    needs.push({
+      key: "expiringCards",
+      title: tt("need.expiringCards", { n: q.expiringCards }),
+      sub: tt("need.expiringCardsSub"),
+      href: "/reservations?view=payment_action_needed",
+      cta: tt("need.cta.expiringCards"),
+    });
+  const alerts = d.alerts.slice(0, Math.max(0, 8 - needs.length));
+  for (const a of alerts)
+    needs.push({
+      key: `alert-${a.id}`,
+      title: a.title,
+      sub: a.detail,
+      href: a.link,
+      cta: tt("need.cta.alert"),
+      alert: true,
+    });
+  const moreAlerts = d.alerts.length - alerts.length;
+
+  // Activity: what changed since yesterday, newest first
+  const yesterday = shiftDays(d.today, -1);
+  const when = (iso: string) => {
+    const at = new Date(iso);
+    const sameDay = iso.slice(0, 10) === d.today;
+    if (sameDay)
+      return `${String(at.getUTCHours()).padStart(2, "0")}:${String(at.getUTCMinutes()).padStart(2, "0")}`;
+    return iso.slice(0, 10) === yesterday ? tt("act.yesterday") : dayMonth(iso, locale);
+  };
+  const activity = [
+    ...recent.rows.map((r) => {
+      const isNew = r.createdAt.slice(0, 10) >= shiftDays(d.today, -1) && r.status !== "cancelled";
+      const range = `${dayMonth(r.arrivalDate, locale)}–${dayMonth(r.departureDate, locale)}`;
+      const tags = [channelName(r.otaName), r.propertyTitle];
+      if (r.status === "cancelled") tags.push(tt("act.reopened"));
+      else if (r.mappingState !== "mapped" || r.unassignedRooms > 0) tags.push(tt("act.needsRoom"));
+      return {
+        at: r.updatedAt,
+        tone: r.status === "cancelled" ? "danger" : isNew ? "warning" : "accent",
+        lead:
+          r.status === "cancelled"
+            ? tt("act.cancelled")
+            : isNew
+              ? tt("act.newBooking")
+              : r.guestName,
+        text:
+          r.status === "cancelled"
+            ? `${r.guestName}, ${range}`
+            : isNew
+              ? `${r.guestName}, ${range}, ${money(r.totalAmountMinor, r.currency)}`
+              : tt("act.changed"),
+        sub: tags.join(" · "),
+        href: `/reservations/${r.id}`,
+      };
+    }),
+    ...d.alerts.map((a) => ({
+      at: a.createdAt,
+      tone: a.severity === "critical" ? "danger" : "warning",
+      lead: "",
+      text: a.title,
+      sub: a.detail,
+      href: a.link,
+    })),
+  ]
+    .sort((x, y) => (y.at > x.at ? 1 : -1))
+    .slice(0, 7);
+
+  // Next 7 nights and the soft ones
+  const weekday = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      weekday: "short",
+      timeZone: "UTC",
+    }).format(new Date(`${iso}T12:00:00Z`));
+  const weekdayLong = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      weekday: "long",
+      timeZone: "UTC",
+    }).format(new Date(`${iso}T12:00:00Z`));
+  const soft = d.next7.filter((n) => n.occupancyBps !== null && n.occupancyBps < 5000);
+  const softNames = soft.map((n) => weekdayLong(n.date));
+  const softText =
+    softNames.length === 0
+      ? tt("softNone")
+      : tt("soft", {
+          days:
+            softNames.length === 1
+              ? softNames[0]!
+              : `${softNames.slice(0, -1).join(", ")} ${tt("and")} ${softNames.at(-1)!}`,
+          n: softNames.length,
+        });
+
+  const detailsFor = new Map(det.arrivals.map((a) => [a.bookingId, a]));
+
+  return (
+    <div className="flex flex-col gap-5" data-testid="dashboard" data-role={d.role}>
+      {header}
+
+      {showOps ? (
+        <section
+          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          data-testid="today-board"
+          aria-label={t("today")}
+        >
+          <Link href="/reservations?view=arrivals_today" className="contents">
+            <Stat
+              label={t("arrivals")}
+              value={String(d.board.arrivals)}
+              hint={
+                d.board.arrivals > 0 ? tt("formsDone", { n: det.arrivalsFormsDone }) : undefined
+              }
+            />
+          </Link>
+          <Link href="/reservations?view=departures_today" className="contents">
+            <Stat
+              label={t("departures")}
+              value={String(d.board.departures)}
+              hint={
+                det.sameDayChangeovers > 0
+                  ? tt("changeovers", { n: det.sameDayChangeovers })
+                  : undefined
+              }
+            />
+          </Link>
+          <Stat
+            className="hidden lg:flex"
+            label={t("occupancyTonight")}
+            value={percent(
+              d.board.occupancyTonightBps === null ? null : d.board.occupancyTonightBps / 10_000,
+            )}
+            hint={t("unitsTonight", {
+              sold: d.board.roomsSoldTonight,
+              total: d.board.roomsAvailable,
+            })}
+            testId="occupancy-tonight"
+          />
+          <Stat
+            className="hidden lg:flex"
+            label={t("revenueToday")}
+            value={money(d.board.revenueTodayMinor, cur)}
+            hint={
+              revDelta === null
+                ? undefined
+                : tt("vsLastWeek", {
+                    delta: `${revDelta >= 0 ? "+" : "−"}${Math.abs(revDelta)}%`,
+                    weekday: weekdayLastWeek,
+                  })
+            }
+          />
+        </section>
       ) : null}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -199,47 +452,37 @@ export default async function DashboardPage({
             <Card
               title={t("needsYou")}
               data-testid="action-queue"
-              actions={<span className="text-xs text-muted">{t("things", { n: needs })}</span>}
+              actions={
+                <span className="text-xs text-muted">{t("things", { n: needs.length })}</span>
+              }
             >
-              {needs === 0 ? <EmptyState title={t("queueEmpty")} className="py-2" /> : null}
+              {needs.length === 0 ? <EmptyState title={t("queueEmpty")} className="py-2" /> : null}
               <ul className="flex flex-col" data-testid="alerts-widget">
-                {d.inbox.needsReply > 0 ? (
-                  <NeedRow
-                    title={t("queue.needsReply")}
-                    sub={String(d.inbox.needsReply)}
-                    href="/inbox"
-                    cta={t("actions.needsReply")}
-                  />
-                ) : null}
-                {open.map(([k, n, href]) => (
-                  <NeedRow
-                    key={k}
-                    title={t(`queue.${k}`)}
-                    sub={String(n)}
-                    href={href}
-                    cta={t(`actions.${k}`)}
-                  />
-                ))}
-                {alerts.map((a) => (
-                  <li key={a.id}>
-                    <Link
-                      href={a.link}
-                      className="flex items-center gap-3 border-b border-border/70 py-3 text-sm last:border-b-0 hover:bg-surface-secondary/60"
-                      data-testid="alert-row"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`h-2 w-2 shrink-0 rounded-full ${a.severity === "critical" ? "bg-danger" : "bg-warning"}`}
-                      />
-                      <span className="min-w-0 flex-1 truncate font-medium">{a.title}</span>
+                {needs.map((n) => (
+                  <li
+                    key={n.key}
+                    className="flex items-center justify-between gap-3 border-b border-border/70 py-3 last:border-b-0"
+                    data-testid={n.alert ? "alert-row" : undefined}
+                  >
+                    <Link href={n.href} className="min-w-0 flex-1 text-sm lg:pointer-events-none">
+                      <span className="block font-semibold">{n.title}</span>
+                      {n.sub ? (
+                        <span className="block truncate text-xs text-muted">{n.sub}</span>
+                      ) : null}
                     </Link>
+                    <LinkButton href={n.href} size="sm" className="hidden shrink-0 lg:inline-flex">
+                      {n.cta}
+                    </LinkButton>
+                    <span className="text-lg text-muted lg:hidden" aria-hidden="true">
+                      ›
+                    </span>
                   </li>
                 ))}
                 {moreAlerts > 0 ? (
                   <li>
                     <Link
                       href="/alerts"
-                      className="block py-2 text-sm text-muted hover:text-foreground"
+                      className="block pt-3 text-sm text-muted hover:text-foreground"
                     >
                       {t("moreAlerts", { n: moreAlerts })}
                     </Link>
@@ -255,40 +498,63 @@ export default async function DashboardPage({
                 <EmptyState title={t("noArrivalsToday")} className="py-1" />
               ) : (
                 <ul className="flex flex-col">
-                  {arrivals.rows.slice(0, 8).map((r) => (
-                    <li
-                      key={r.id}
-                      className="flex items-center justify-between gap-3 border-b border-border/70 py-3 text-sm last:border-b-0"
-                    >
-                      <span className="min-w-0">
-                        <Link
-                          href={`/reservations/${r.id}`}
-                          className="font-semibold hover:underline"
-                        >
-                          {r.guestName}
-                        </Link>
-                        <span className="block truncate text-xs text-muted">
-                          {r.propertyTitle} · {r.otaName ?? "Direct"} · {r.nights} {t("nights")}
+                  {arrivals.rows.map((r) => {
+                    const x = detailsFor.get(r.id);
+                    const late = x?.arrivalTime && x.arrivalTime >= "20:00";
+                    return (
+                      <li
+                        key={r.id}
+                        className="flex items-center justify-between gap-3 border-b border-border/70 py-3 text-sm last:border-b-0"
+                      >
+                        <span className="min-w-0">
+                          <Link
+                            href={`/reservations/${r.id}`}
+                            className="font-semibold hover:underline"
+                          >
+                            {r.guestName}
+                          </Link>
+                          <span className="block truncate text-xs text-muted">
+                            {[
+                              r.propertyTitle,
+                              channelName(r.otaName),
+                              x && x.adults > 0 ? tt("adults", { n: x.adults }) : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1.5">
-                        {r.mappingState !== "mapped" || r.unassignedRooms > 0 ? (
-                          <Chip color="warning" size="sm">
-                            {t("needsRoomChip")}
-                          </Chip>
-                        ) : null}
-                        {r.balanceMinor > 0 ? (
-                          <Chip color="warning" size="sm">
-                            {t("balanceDue", { amount: money(r.balanceMinor, r.currency) })}
-                          </Chip>
-                        ) : (
-                          <Chip color="success" size="sm">
-                            {t("paid")}
-                          </Chip>
-                        )}
-                      </span>
-                    </li>
-                  ))}
+                        <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                          {x?.arrivalTime ? (
+                            <Chip size="sm" color={late ? "info" : "default"}>
+                              {late
+                                ? tt("late", { time: x.arrivalTime.slice(0, 5) })
+                                : tt("from", { time: x.arrivalTime.slice(0, 5) })}
+                            </Chip>
+                          ) : null}
+                          {r.mappingState !== "mapped" || r.unassignedRooms > 0 ? (
+                            <Chip color="warning" size="sm">
+                              {t("needsRoomChip")}
+                            </Chip>
+                          ) : null}
+                          {x?.formDone ? (
+                            <Chip color="success" size="sm">
+                              {tt("formDone")}
+                            </Chip>
+                          ) : null}
+                          {r.balanceMinor > 0 ? (
+                            <Chip color="warning" size="sm">
+                              {tt("due", { amount: money(r.balanceMinor, r.currency) })}
+                            </Chip>
+                          ) : null}
+                          {x?.codeSent ? (
+                            <Chip color="success" size="sm">
+                              {tt("codeSent")}
+                            </Chip>
+                          ) : null}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card>
@@ -299,8 +565,11 @@ export default async function DashboardPage({
           <Card
             title={t("activity")}
             actions={
-              <Link href="/alerts" className="text-xs font-semibold text-accent hover:underline">
-                {t("allActivity")}
+              <Link
+                href="/reservations?view=modified_since_yesterday"
+                className="text-xs font-semibold text-accent hover:underline"
+              >
+                {tt("all")}
               </Link>
             }
           >
@@ -315,23 +584,22 @@ export default async function DashboardPage({
                   >
                     <span
                       aria-hidden="true"
-                      className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                      className={cn(
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
                         a.tone === "danger"
                           ? "bg-danger"
                           : a.tone === "warning"
-                            ? "bg-warning"
-                            : "bg-accent"
-                      }`}
+                            ? "bg-[#f59e0b]"
+                            : "bg-accent",
+                      )}
                     />
-                    <span className="min-w-0 flex-1">
-                      <Link href={a.href} className="font-medium hover:underline">
-                        {a.title}
-                      </Link>
-                      <span className="block truncate text-xs text-muted">{a.sub}</span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted tabular-nums">
-                      {a.at.slice(11, 16) || a.at.slice(5, 10)}
-                    </span>
+                    <Link href={a.href} className="min-w-0 flex-1 hover:underline">
+                      {a.lead ? <strong className="font-semibold">{a.lead}</strong> : null} {a.text}
+                      {a.sub ? (
+                        <span className="block truncate text-xs text-muted">{a.sub}</span>
+                      ) : null}
+                    </Link>
+                    <span className="shrink-0 text-xs text-muted tabular-nums">{when(a.at)}</span>
                   </li>
                 ))}
               </ul>
@@ -339,218 +607,99 @@ export default async function DashboardPage({
           </Card>
 
           <Card title={t("next7")}>
-            <div className="flex items-end gap-1.5" data-testid="next7">
+            <div className="grid grid-cols-7 gap-2" data-testid="next7">
               {d.next7.map((n) => {
                 const occ = n.occupancyBps ?? 0;
-                const tone =
-                  n.occupancyBps === null
-                    ? "bg-default"
-                    : occ < 4000
-                      ? "bg-accent-soft"
-                      : occ < 7000
-                        ? "bg-accent/60"
-                        : "bg-accent";
                 return (
-                  <div key={n.date} className="flex flex-1 flex-col items-center gap-1 text-xs">
-                    <div className="flex h-20 w-full items-end rounded-lg bg-surface-secondary">
+                  <div key={n.date} className="flex flex-col items-center gap-1.5 text-xs">
+                    <span className="text-muted">{weekday(n.date)}</span>
+                    <div className="flex h-16 w-full items-start">
                       <div
-                        className={`w-full rounded-lg ${tone}`}
-                        style={{ height: `${Math.max(6, occ / 100)}%` }}
-                        title={`${n.date}: ${pct(n.occupancyBps)}`}
+                        className={cn(
+                          "w-full rounded-md",
+                          n.occupancyBps === null
+                            ? "bg-default"
+                            : occ < 5000
+                              ? "bg-[#99f6e4]"
+                              : "bg-accent",
+                        )}
+                        style={{ height: `${Math.max(12, occ / 100)}%` }}
+                        title={`${dayLabel(n.date, locale)}: ${percent(n.occupancyBps === null ? null : occ / 10_000)}`}
                       />
                     </div>
-                    <span className="text-muted">{n.date.slice(5)}</span>
-                    <span className="font-semibold tabular-nums">{pct(n.occupancyBps)}</span>
+                    <span className="font-semibold tabular-nums">
+                      {percent(n.occupancyBps === null ? null : occ / 10_000)}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            <p className="mt-3 text-xs text-muted">
-              {t("channelMix")}:{" "}
-              {d.month.channels
-                .map(
-                  (c) => `${c.channel} ${pct(c.nightShareBps)}${c.commissionEstimated ? "*" : ""}`,
-                )
-                .join(" · ") || "—"}
+            <p className="mt-3 text-sm text-muted">
+              {softText}{" "}
+              <Link href="/calendar" className="font-semibold text-accent hover:underline">
+                {tt("openCalendar")}
+              </Link>
             </p>
           </Card>
         </div>
       </div>
-
-      <Card
-        title={t("thisMonth")}
-        description={t("freshness", { at: fresh })}
-        actions={
-          <form action={refreshRollupsAction}>
-            <Button type="submit" variant="ghost" size="sm" data-testid="refresh-rollups">
-              {t("refresh")}
-            </Button>
-          </form>
-        }
-      >
-        <span className="sr-only" data-testid="freshness">
-          {t("freshness", { at: fresh })}
-        </span>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="month-kpis">
-          <Kpi
-            label={d.dictionary.occupancy.name}
-            value={pct(m.occupancyBps)}
-            delta={d.month.previous.occupancyBps}
-            current={m.occupancyBps}
-            hint={d.dictionary.occupancy.formula}
-            testId="occupancy-mtd"
-          />
-          <Kpi
-            label={d.dictionary.adr.name}
-            value={money(m.adrMinor, cur)}
-            delta={d.month.previous.adrMinor}
-            current={m.adrMinor}
-            hint={d.dictionary.adr.formula}
-            testId="adr-mtd"
-          />
-          <Kpi
-            label={d.dictionary.revpar.name}
-            value={money(m.revparMinor, cur)}
-            delta={d.month.previous.revparMinor}
-            current={m.revparMinor}
-            hint={d.dictionary.revpar.formula}
-            testId="revpar-mtd"
-          />
-          <Kpi
-            label={t("revenueMtd")}
-            value={money(m.roomRevenueMinor, cur)}
-            delta={d.month.previous.roomRevenueMinor}
-            current={m.roomRevenueMinor}
-            hint={d.dictionary.rooms_sold.formula}
-          />
-        </div>
-        <details className="group mt-3">
-          <summary className="cursor-pointer text-sm text-muted select-none hover:text-foreground">
-            {t("allMetrics")}
-          </summary>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <Kpi
-              label={d.dictionary.direct_share.name}
-              value={pct(m.directShareBps)}
-              hint={d.dictionary.direct_share.formula}
-            />
-            <Kpi
-              label={d.dictionary.pickup.name}
-              value={`${String(d.month.pickup7.nights)} ${t("nights")}`}
-              hint={d.dictionary.pickup.formula}
-            />
-            {showFinance ? (
-              <>
-                <Kpi
-                  label={d.dictionary.net_adr.name}
-                  value={money(m.netAdrMinor, cur)}
-                  hint={d.dictionary.net_adr.formula}
-                />
-                <Kpi
-                  label={d.dictionary.commission_cost.name}
-                  value={money(m.commissionMinor, cur)}
-                  hint={d.dictionary.commission_cost.formula}
-                />
-                <Kpi
-                  label={d.dictionary.trevpar.name}
-                  value={money(m.trevparMinor, cur)}
-                  hint={d.dictionary.trevpar.formula}
-                />
-              </>
-            ) : null}
-            <Kpi
-              label={d.dictionary.cancellation_rate.name}
-              value={pct(m.cancellationRateBps)}
-              hint={d.dictionary.cancellation_rate.formula}
-            />
-            <Kpi
-              label={d.dictionary.alos.name}
-              value={d.month.alos === null ? "—" : `${String(d.month.alos)} ${t("nights")}`}
-              hint={d.dictionary.alos.formula}
-            />
-            <Kpi
-              label={d.dictionary.pace.name}
-              value={d.month.pace.available ? pct(d.month.pace.deltaBps) : t("paceUnavailable")}
-              hint={`${d.dictionary.pace.formula}${d.month.pace.available ? "" : ` · ${d.month.pace.reason ?? ""}`}`}
-              testId="pace"
-            />
-          </div>
-        </details>
-      </Card>
-
-      {d.role === "portfolio" || d.role === "viewer" || d.role === "finance" ? (
-        <Card
-          title={t("league")}
-          actions={
-            <Link
-              className="text-xs font-semibold text-accent hover:underline"
-              href={`/api/v1/reports/kpi_summary.csv?from=${d.month.period.from}&to=${d.month.period.to}`}
-            >
-              {t("exportCsv")}
-            </Link>
-          }
-        >
-          <DataTable
-            testId="league-table"
-            rowTestId="league-row"
-            columns={[
-              t("property"),
-              { label: d.dictionary.occupancy.name, align: "end" },
-              { label: d.dictionary.adr.name, align: "end" },
-              { label: d.dictionary.revpar.name, align: "end" },
-              { label: t("revenueMtd"), align: "end" },
-              { label: t("budget"), align: "end" },
-            ]}
-            rowKey={(_, i) => d.league[i]!.propertyId}
-            rows={d.league.map((p) => [
-              <span
-                key="t"
-                className="inline-flex items-center gap-2"
-                data-outlier={p.outlier ? "1" : "0"}
-              >
-                <Link className="font-medium hover:underline" href={`/?property=${p.propertyId}`}>
-                  {p.title}
-                </Link>
-                {p.outlier ? (
-                  <Chip color="danger" size="sm">
-                    {t("outlier")}
-                  </Chip>
-                ) : null}
-              </span>,
-              pct(p.kpi.occupancyBps),
-              money(p.kpi.adrMinor, p.currency),
-              money(p.kpi.revparMinor, p.currency),
-              money(p.kpi.roomRevenueMinor, p.currency),
-              p.budgetRoomRevenueMinor === null ? "—" : money(p.budgetRoomRevenueMinor, p.currency),
-            ])}
-            dense
-          />
-        </Card>
-      ) : null}
     </div>
   );
 }
 
-function NeedRow({
-  title,
-  sub,
-  href,
-  cta,
+function shiftDays(iso: string, n: number): string {
+  const x = new Date(`${iso}T00:00:00Z`);
+  x.setUTCDate(x.getUTCDate() + n);
+  return x.toISOString().slice(0, 10);
+}
+
+function SyncPill({
+  issues,
+  issuesText,
+  okText,
 }: {
-  title: string;
-  sub: string;
-  href: string;
-  cta: string;
+  issues: number;
+  issuesText: string;
+  okText: string;
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 border-b border-border/70 py-3 last:border-b-0">
-      <span className="min-w-0 text-sm">
-        <span className="block font-semibold">{title}</span>
-        <span className="block text-xs text-muted">{sub}</span>
-      </span>
-      <LinkButton href={href} size="sm" className="shrink-0">
-        {cta}
-      </LinkButton>
-    </li>
+    <Link href="/sync-health">
+      <Chip color={issues > 0 ? "warning" : "success"}>{issues > 0 ? issuesText : okText}</Chip>
+    </Link>
+  );
+}
+
+function PersonCard({
+  L,
+}: {
+  L: { title: string; byline: string; body: string; email: string; whatsapp: string; call: string };
+}) {
+  const whatsapp = process.env.SUPPORT_WHATSAPP;
+  return (
+    <Card>
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#34d399] to-[#22d3ee] text-sm font-bold text-[#0b1020]">
+          HH
+        </span>
+        <div>
+          <h2 className="text-base font-bold">{L.title}</h2>
+          <p className="text-xs text-muted">{L.byline}</p>
+        </div>
+      </div>
+      <p className="mt-3 text-sm leading-relaxed">{L.body}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <LinkButton href="/settings/support" size="sm">
+          {L.email}
+        </LinkButton>
+        {whatsapp ? (
+          <LinkButton href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, "")}`} size="sm">
+            {L.whatsapp}
+          </LinkButton>
+        ) : null}
+        <LinkButton href="/settings/support#call" size="sm">
+          {L.call}
+        </LinkButton>
+      </div>
+    </Card>
   );
 }

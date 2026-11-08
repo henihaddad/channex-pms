@@ -27,6 +27,7 @@ export interface DashboardData {
   month: DashboardKpis;
   board: Awaited<ReturnType<ReturnType<typeof analytics>["today"]>>;
   queue: Awaited<ReturnType<ReturnType<typeof analytics>["actionQueue"]>>;
+  details: Awaited<ReturnType<ReturnType<typeof analytics>["todayDetails"]>>;
   next7: Array<{ date: string; occupancyBps: number | null }>;
   league: Array<PropertyLeagueRow & { kpi: ReturnType<typeof kpis>; outlier: boolean }>;
   alerts: AlertRow[];
@@ -67,6 +68,7 @@ export const loadDashboard = withPermission<[{ propertyId?: string | null }], Da
       month,
       board: await repo.today(t, ids),
       queue: await repo.actionQueue(t),
+      details: await repo.todayDetails(t, ids),
       next7: [...byDate.entries()]
         .sort()
         .map(([date, rows]) => ({ date, occupancyBps: kpis(rows).occupancyBps })),

@@ -10,13 +10,7 @@ import { currentRoleKey, currentUserProfile, memberships } from "@/server/auth-f
 import { logoutAction } from "../(auth)/auth.actions";
 import { setLocaleAction } from "./shell.actions";
 import { Logo } from "@/components/logo";
-import {
-  Alert,
-  ConsoleHotkeys,
-  LinkButton,
-  type PaletteItem,
-  type ShortcutGroup,
-} from "@/components/ui";
+import { Alert, ConsoleHotkeys, LinkButton, type PaletteItem } from "@/components/ui";
 import { paletteSearch } from "./palette.actions";
 import { ConsoleShell, type NavSectionDef } from "./console-shell";
 import { BellLink, HeaderMenu, MenuButton, MenuLink } from "./header-menus";
@@ -242,6 +236,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     </form>
   );
 
+  const bell = <BellLink href="/alerts" count={badge.breaching} label={t("activity")} />;
   const actions = (
     <>
       <HeaderMenu label={t("help")} testId="help-menu">
@@ -253,7 +248,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           {t("operateGuide")}
         </MenuLink>
         <MenuLink href="/settings/support">{t("contactSupport")}</MenuLink>
-        <MenuLink href="#shortcuts" hint="?">
+        <MenuLink href="/shortcuts" hint="?">
           {t("shortcuts")}
         </MenuLink>
       </HeaderMenu>
@@ -266,7 +261,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           ))}
         </form>
       </HeaderMenu>
-      <BellLink href="/alerts" count={badge.breaching} label={t("activity")} />
+      {bell}
       <LinkButton href="/reservations/new" variant="primary" className="hidden sm:inline-flex">
         + {t("newReservation")}
       </LinkButton>
@@ -338,35 +333,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     p: "/properties",
     s: "/settings",
   };
-  const ts = await getTranslations("nav.shortcuts");
-  const sheet: { title: string; lead: string; groups: ShortcutGroup[] } = {
-    title: ts("title"),
-    lead: ts("lead"),
-    groups: [
-      {
-        title: ts("everywhere"),
-        items: [
-          { keys: ["⌘", "K"], label: ts("palette") },
-          { keys: ["/"], label: ts("focusSearch") },
-          { keys: ["?"], label: ts("sheet") },
-          { keys: ["N"], label: ts("newReservation") },
-          { keys: ["Esc"], label: ts("close") },
-        ],
-      },
-      {
-        title: ts("goto"),
-        items: [
-          { keys: ["G", ts("gThen"), "T"], label: t("dashboard") },
-          { keys: ["G", ts("gThen"), "I"], label: t("inbox") },
-          { keys: ["G", ts("gThen"), "C"], label: t("calendar") },
-          { keys: ["G", ts("gThen"), "R"], label: t("reservations") },
-          { keys: ["G", ts("gThen"), "O"], label: t("operations") },
-          { keys: ["G", ts("gThen"), "P"], label: t("properties") },
-          { keys: ["G", ts("gThen"), "S"], label: t("settings") },
-        ],
-      },
-    ],
-  };
   const tp = await getTranslations("nav.palette");
   const paletteLabels = {
     placeholder: tp("placeholder"),
@@ -376,6 +342,25 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
     pages: tp("pages"),
     actions: tp("actions"),
     footer: tp("footer"),
+    keys: tp("keys"),
+    replyTo: tp("replyTo"),
+    replySub: tp("replySub"),
+    newFor: tp("newFor"),
+    newForSub: tp("newForSub"),
+    block: tp("block"),
+    blockSub: tp("blockSub"),
+    calendarOf: tp("calendarOf"),
+    calendarOfSub: tp("calendarOfSub"),
+    try: tp("try"),
+    blockCmd: tp("blockCmd"),
+    blockCmdSub: tp("blockCmdSub"),
+    fromDay: tp("fromDay"),
+    priceCmd: tp("priceCmd"),
+    priceCmdSub: tp("priceCmdSub"),
+    switchCmd: tp("switchCmd"),
+    switchCmdSub: tp("switchCmdSub"),
+    examples: [tp("example1"), tp("example2"), tp("example3")],
+    languages: Object.fromEntries(LOCALES.map((l) => [l, t(`languages.${l}`)])),
   };
 
   return (
@@ -386,7 +371,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         actions={paletteActions}
         goTo={goTo}
         labels={paletteLabels}
-        sheet={sheet}
+        onLocale={setLocaleAction}
       />
       <ConsoleShell
         sections={sections}
@@ -396,7 +381,20 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         search={search}
         actions={actions}
         banners={banners}
-        labels={{ menu: t("menu"), close: t("closeMenu"), sectionPages: t("sectionPages") }}
+        labels={{
+          menu: t("menu"),
+          close: t("closeMenu"),
+          sectionPages: t("sectionPages"),
+          more: t("more"),
+          search: t("search"),
+        }}
+        bell={bell}
+        phoneTabs={[
+          { href: "/", label: t("dashboard") },
+          { href: "/inbox", label: t("inbox"), badge: badge.unread },
+          { href: "/calendar", label: t("calendar") },
+          { href: "/reservations", label: t("bookings") },
+        ]}
       >
         {children}
       </ConsoleShell>

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui";
 import { ReportsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
+import { MonthOverview } from "./month-overview";
 import {
   deleteScheduleAction,
   listReports,
@@ -68,6 +69,7 @@ export default async function ReportsPage({
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title={t("title")} description={t("description")} />
+      <MonthOverview propertyId={sp.property ?? null} />
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
         <Card className="h-fit" contentClassName="flex flex-col gap-4">
           {groups.map((g) => (

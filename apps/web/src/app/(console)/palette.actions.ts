@@ -2,19 +2,11 @@
 
 import { DrizzlePropertyRepository, DrizzleReservationRepository } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
+import { getTranslations } from "next-intl/server";
 import { container } from "@/server/container";
+import { paletteRows, type PaletteResults } from "@/server/palette";
 
-export interface PaletteHit {
-  id: string;
-  title: string;
-  subtitle: string;
-  href: string;
-}
-
-export interface PaletteResults {
-  reservations: PaletteHit[];
-  properties: PaletteHit[];
-}
+export type { PaletteHit, PaletteResults } from "@/server/palette";
 
 /**
  * What ⌘K searches: guests and reservations by name, reference or property,
@@ -28,29 +20,25 @@ export const paletteSearch = withPermission<[{ q: string }], PaletteResults>(
     const query = q.trim();
     if (query.length < 2) return { reservations: [], properties: [] };
     const c = await container();
-    const repo = new DrizzleReservationRepository(ctx.tx, ctx.orgId, c.crypto);
     const today = c.clock.today("UTC").toString();
     const [list, properties] = await Promise.all([
-      repo.list({ q: query, limit: 6 }, today),
+      new DrizzleReservationRepository(ctx.tx, ctx.orgId, c.crypto).list(
+        { q: query, limit: 6 },
+        today,
+      ),
       new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list(),
     ]);
-    const needle = query.toLowerCase();
-    return {
-      reservations: list.rows.map((r) => ({
-        id: r.id,
-        title: r.guestName,
-        subtitle: `${r.propertyTitle} · ${r.arrivalDate} → ${r.departureDate} · ${r.otaName ?? "Direct"}${r.otaReservationCode ? ` · ${r.otaReservationCode}` : ""}`,
-        href: `/reservations/${r.id}`,
-      })),
-      properties: properties
-        .filter((p) => p.title.toLowerCase().includes(needle))
-        .slice(0, 5)
-        .map((p) => ({
-          id: p.id,
-          title: p.title,
-          subtitle: p.state,
-          href: `/properties/${p.id}`,
-        })),
-    };
+    const t = await getTranslations("nav.palette.rows");
+    return paletteRows(query, list.rows, properties, today, {
+      arrivesIn: (n) => t("arrivesIn", { n }),
+      arrivesToday: t("arrivesToday"),
+      inHouse: t("inHouse"),
+      checkedOut: t("checkedOut"),
+      confirmed: t("confirmed"),
+      cancelled: t("cancelled"),
+      due: (amount) => t("due", { amount }),
+      direct: t("direct"),
+      live: t("live"),
+    });
   },
 );

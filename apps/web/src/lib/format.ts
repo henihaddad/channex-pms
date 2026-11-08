@@ -88,3 +88,13 @@ export function clock(value: string): string {
   const d = new Date(value);
   return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
+
+/** Our own sources (staff, phone, walk-in, the booking site) read as "Direct", as the design writes it. */
+export function channelLabel(ota: string | null | undefined, direct = "Direct"): string {
+  if (!ota) return direct;
+  return ["direct", "staff", "phone", "walk_in", "walk-in", "booking_engine", "website"].includes(
+    ota.toLowerCase(),
+  )
+    ? direct
+    : ota;
+}

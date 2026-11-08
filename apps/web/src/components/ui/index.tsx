@@ -507,6 +507,7 @@ export function PageHeader({
   description,
   actions,
   crumb,
+  titleOnPhone = true,
   children,
 }: {
   title: ReactNode;
@@ -514,6 +515,8 @@ export function PageHeader({
   actions?: ReactNode;
   /** A breadcrumb above the title, for pages inside a section (design: "Reservations / Ana Silva"). */
   crumb?: Array<{ href?: string; label: ReactNode }>;
+  /** False when the phone header already says it (a section's front page). */
+  titleOnPhone?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -521,7 +524,7 @@ export function PageHeader({
       {crumb ? <Breadcrumbs items={crumb} className="-mb-2 text-[13px]" /> : null}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <PageTitle>{title}</PageTitle>
+          <PageTitle className={titleOnPhone ? undefined : "hidden lg:block"}>{title}</PageTitle>
           {description ? <p className="max-w-[640px] text-sm text-muted">{description}</p> : null}
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -603,7 +606,7 @@ export function Alert({
   );
 }
 
-type ChipColor = "default" | "accent" | "success" | "warning" | "danger";
+type ChipColor = "default" | "accent" | "success" | "warning" | "danger" | "info" | "dark";
 
 const chipSoft: Record<ChipColor, string> = {
   default: "bg-default text-muted",
@@ -611,6 +614,8 @@ const chipSoft: Record<ChipColor, string> = {
   success: "bg-success-soft text-success-soft-foreground",
   warning: "bg-warning-soft text-warning-soft-foreground",
   danger: "bg-danger-soft text-danger-soft-foreground",
+  info: "bg-[#e0f2fe] text-[#075985]",
+  dark: "bg-foreground text-background",
 };
 const chipSolid: Record<ChipColor, string> = {
   default: "bg-foreground text-background",
@@ -618,6 +623,8 @@ const chipSolid: Record<ChipColor, string> = {
   success: "bg-success text-white",
   warning: "bg-warning text-white",
   danger: "bg-danger text-white",
+  info: "bg-[#0369a1] text-white",
+  dark: "bg-foreground text-background",
 };
 
 export function Chip({
@@ -918,6 +925,5 @@ export function Stat({
 
 export { SectionTabs, SectionTabsContext, SectionTabsSlot, type SectionTab } from "./section-tabs";
 import { SectionTabsSlot } from "./section-tabs";
-export { ConsoleHotkeys } from "./hotkeys";
+export { ConsoleHotkeys, OPEN_PALETTE_EVENT } from "./hotkeys";
 export type { PaletteItem, PaletteLabels } from "./command-palette";
-export type { ShortcutGroup } from "./shortcuts-sheet";

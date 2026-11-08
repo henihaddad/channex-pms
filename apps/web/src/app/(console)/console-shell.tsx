@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SectionTabs, SectionTabsContext } from "@/components/ui";
+import { OPEN_PALETTE_EVENT, SectionTabs, SectionTabsContext } from "@/components/ui";
 import { NavLink, type NavItem } from "./nav-link";
 
 export interface NavSectionDef {
@@ -35,6 +36,8 @@ export function ConsoleShell({
   actions,
   banners,
   labels,
+  bell,
+  phoneTabs,
   children,
 }: {
   sections: NavSectionDef[];
@@ -45,7 +48,11 @@ export function ConsoleShell({
   search: ReactNode;
   actions: ReactNode;
   banners: ReactNode;
-  labels: { menu: string; close: string; sectionPages: string };
+  labels: { menu: string; close: string; sectionPages: string; more: string; search: string };
+  /** The alerts bell, shown in the phone header as well. */
+  bell: ReactNode;
+  /** The phone's bottom bar (design canvas "Today — phone"); "More" opens the full menu. */
+  phoneTabs: Array<{ href: string; label: string; badge?: number }>;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -136,24 +143,34 @@ export function ConsoleShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="bridge-rail h-[3px] w-full" aria-hidden="true" />
         <header className="sticky top-0 z-30 border-b border-border bg-surface">
-          <div className="flex items-center gap-3 px-4 py-2.5 lg:gap-4 lg:px-8">
+          <div className="flex items-center gap-3 px-4 py-2.5 lg:hidden">
+            <span className="min-w-0 flex-1 truncate font-display text-lg font-bold">
+              {current?.item.label ?? ""}
+            </span>
             <button
               type="button"
-              onClick={() => setOpen(true)}
-              aria-label={labels.menu}
-              aria-expanded={open}
-              data-testid="nav-menu"
-              className="grid h-9.5 w-9.5 shrink-0 place-items-center rounded-full border border-border text-foreground lg:hidden"
+              onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))}
+              aria-label={labels.search}
+              className="grid h-9.5 w-9.5 shrink-0 place-items-center rounded-full border border-border text-foreground"
+              data-testid="phone-search"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M2 4h12M2 8h12M2 12h12"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
               </svg>
             </button>
+            {bell}
+          </div>
+          <div className="hidden items-center gap-4 px-8 py-2.5 lg:flex">
             {search}
             <span className="flex-1" />
             {actions}
@@ -166,6 +183,47 @@ export function ConsoleShell({
             <SectionTabsContext.Provider value={tabsEl}>{children}</SectionTabsContext.Provider>
           </div>
         </main>
+        <nav
+          aria-label={labels.menu}
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+          data-testid="phone-tabs"
+        >
+          {phoneTabs.map((tab) => {
+            const active =
+              tab.href === "/"
+                ? pathname === "/"
+                : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${active ? "text-accent" : "text-muted"}`}
+              >
+                <span
+                  className={`h-1 w-6 rounded-full ${active ? "bg-accent" : "bg-transparent"}`}
+                  aria-hidden="true"
+                />
+                {tab.label}
+                {tab.badge ? (
+                  <span className="absolute top-1 end-[calc(50%-1.75rem)] inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#f59e0b] px-1 text-[10px] font-bold text-[#141716]">
+                    {tab.badge}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            className="flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold text-muted"
+            data-testid="nav-menu"
+          >
+            <span className="h-1 w-6 rounded-full bg-transparent" aria-hidden="true" />
+            {labels.more}
+          </button>
+        </nav>
       </div>
     </div>
   );

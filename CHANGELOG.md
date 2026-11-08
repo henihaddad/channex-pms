@@ -19,6 +19,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Today matches the design canvas: every number and "Needs you" row says what is behind it
+  (which booking needs a room, how long the oldest guest has waited, which owner's payout
+  failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,
+  and the week ends with which nights are soft. Before the first booking Today is a single
+  first-run checklist with a picture of the calendar to come. Month KPIs and the league table
+  moved to Reports. Low-occupancy alerts now name the nights ("8, 9 and 12 Nov") and their "Look"
+  link opens the calendar at that property and night; before, the link's parameters were ignored.
+- ⌘K shows each guest with their property, stay, channel, reference and what is open, offers
+  "Reply to", "New reservation for" and "Block nights" for the first guest found, and understands
+  three typed commands: "block <property> <dates>", "price <property>" and "> switch to <language>".
+  "?" opens a Keyboard shortcuts page listing every key by where it works.
+- On a phone the console has a bottom bar (Today, Inbox, Calendar, Bookings, More) and a header
+  with the page's name, search and the alerts bell.
+
 - The console rail is near-black again, as the design canvas has it: Tailwind resolved the colour
   tokens once at the root, so the rail's dark scope never reached its utilities. The tokens now
   live in an inline theme block. The rail lists its ten destinations as text, its badges are

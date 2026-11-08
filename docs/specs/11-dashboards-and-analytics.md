@@ -223,6 +223,15 @@ expense and payout that needs them, and every guest who still owes.
   commission, withheld taxes, disputes, expiring cards. Viewer: KPIs vs last year, no PII.
   Widget rearrangement, the rate-parity table, yield rule activity and the competitor plugin are
   deferred.
+- **Today (design canvas, November 2026).** The console's front page keeps to the day: the four
+  numbers each carry the line behind them (arrivals with the check-in form done, same-day
+  changeovers, units sold tonight, revenue against the same weekday last week); "Needs you" is
+  one row per thing that names the booking, owner or property and carries the button that
+  clears it; "Arriving today" shows each guest's arrival time, form, balance and door-code
+  state; Activity lists new, changed and cancelled bookings and alerts since yesterday; the next
+  seven nights end with which nights are soft. Until the organization's first booking, and while
+  its channel is not connected, Today is the first-run checklist instead. The month's KPIs and the
+  league table moved to Reports, where the design puts occupancy, ADR and RevPAR.
 - **Reports.** Seventeen catalogue reports run through one `runReport`, export as CSV or PDF (the
   dependency-free writer; XLSX deferred) with the basis printed on every file, and can be
   scheduled daily, weekly or monthly by email. Financial reports need `report:read_financial`;

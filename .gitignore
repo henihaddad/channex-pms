@@ -36,3 +36,6 @@ data/
 .dev.vars
 .dev.vars.*
 .vercel
+
+# agent worktrees (Claude Code)
+.claude/worktrees/
