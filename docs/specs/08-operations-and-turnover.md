@@ -24,6 +24,36 @@ Shipped views: **Arrivals today**, **Departures today**, **In stay**,
 **Same-day changeovers**, **Unassigned**, **Unmapped**, **No access code issued**,
 **Cancelled this week**, **Modified since yesterday**, **Payment action needed**.
 
+The list leads with four filters and their counts: **Arriving this week**, **In house**,
+**Balance due** and **Cancelled**; the other shipped views, the date and channel filters,
+free-text search and saved views sit behind **More filters**, next to **Export CSV**. Each row
+reads in words, never in codes or ISO dates: the guest with "2 adults · reference", the
+property (or **Needs a room** in amber when the booking is unmapped or unassigned), the stay
+("Fri 14 → Mon 17 Nov" over "3 nights · arrives in 11 days"), the channel with its colour
+dot, one status word (**Confirmed**, **Checked in**, **Checked out**, **Assign a room**,
+**Changed · check** until acknowledged, **No-show**, **Cancelled**), the total and the balance
+in words (**Paid by Airbnb** when the channel collected, **Paid**, **€450 due**). The room is
+owed from the moment of booking, not from the daily close that posts it; a channel-collected
+booking owes only what was charged locally; a cancelled one only its fees (core
+`bookingBalance`, `stayStatus`, `stayPhase`). The list shows 50 rows and loads 50 more on
+request. Persona: `reservations_agent`, `property_manager`.
+
+The Reservations section's tabs are **All · Check-in · Guests · Requests · n · Needs a room ·
+n** (the counts are open Airbnb requests and unmapped bookings). The hotel front desk (§8.10)
+is reached from Check-in.
+
+**Guests** (Reservations › Guests; persona `property_manager`, `reservations_agent`) lists
+every guest once (guests are deduplicated per org): tiles for guests, returned at least once,
+booked direct after an OTA stay (a direct booking created on or after the departure of a
+channel stay) and marketing consent (said yes on a direct checkout); pills **All**,
+**Returning**, **Can be emailed** (consent and an email), **Flagged** (a pinned note on one of
+their bookings); search by name or country; a table of the guest with which contact details are
+on file (never the values), stays, properties, lifetime value per currency, what is happening
+now (in house, arrives, the pinned note, the last review score) and the channels they booked
+through; and "Win them back direct", which counts who a post-stay direct offer would reach and
+links to Automation. **Export** includes contact details and so needs `booking:read_pii`
+(audited).
+
 - **RES-1** Bulk actions where safe: assign units, issue access codes, export, tag.
 - **RES-2** Every list exportable (CSV/XLSX) under `export:execute`.
 - **RES-3** A `modified` badge persists until a human acknowledges it — a silently
@@ -43,6 +73,28 @@ Shipped views: **Arrivals today**, **Departures today**, **In stay**,
 | **Revisions** | The timeline (§8.3). |
 | **Messages** | The linked thread inline, sendable without leaving. |
 | **Audit** | Every local action, with actor and surface. |
+
+On screen (design canvas, November 2026) the detail is two columns under the crumb
+"Reservations / guest / reference". The wide column holds a header card (property, stay, party,
+status chips: status, channel and reference, "Updated by Airbnb today", "Check-in form done",
+and the acknowledge button while a change is unacknowledged) with four tiles (**Check-in** with
+the policy time, **Check-out**, **Room**, **Door code**: masked until revealed, issued from the
+tile when there is none); **Money** (nights × price, extras, taxes, commission, expected payout,
+what was collected and charged here, a "Dates changed" callout after a date revision, and the
+folio operations behind **Record payment**); **Conversation** (the last messages of the
+booking's thread, read under `message:read` without marking it read, a reply box and "Open in
+inbox"); **Stay and rooms** (rate plan, nightly prices, unit assignment, no-show, issued
+credentials) and **Notes**. The narrow column holds **Guest** (stays count, country, language,
+contact sealed behind an audited "Show", **Open as the guest**, which mints a one-hour portal
+session for this booking under `booking:read_pii` because the mailed link is stored only as a
+hash, and the check-in form state), **Actions** (Check in / Check out, Move to another room,
+Change dates, Cancel reservation, with the OTA note when the change belongs to the channel),
+a readable **Timeline** (revisions and local events in words with dot bullets, never ISO
+timestamps or staff ids) and **Turnover**. Single keys work when focus is not in a field:
+**C** check in (or out), **D** change dates, **$** record a payment, **O** open the portal; each
+presses the button that shows it. Direct bookings change dates here: the nights the booking holds
+count as free for itself, new nights are priced from the rate plan, kept nights keep their price
+(`booking:modify`, one booking path).
 
 ## 8.3 Revision timeline
 
@@ -190,6 +242,20 @@ Staff can create bookings directly: availability-checked, priced from the rate
 plan, guest created or matched, availability pushed everywhere, confirmation
 emailed. Same domain path as the booking engine ([10](./10-booking-engine.md)) —
 one booking-creation code path, ever.
+
+The staff form (design canvas, November 2026) has three numbered sections, **1 · Where and
+when** (property, room / unit with its sleeping capacity, dates, party), **2 · Guest** (one
+**Full name** box split server-side into given name and surname, email, phone, language) and
+**3 · Price and payment** (rate plan, a **Total** that overrides the rate plan's price, spread
+over the nights in proportion and in whole minor units, the source, whether the money is
+already in, recorded on the folio as a payment, and an internal note), with a summary that
+stays in view: nightly lines, total, what the payment rules ask for now, **Create
+reservation** and **Cancel**. The availability check under section 1 is the same check the
+create runs ("Available. 3 nights · minimum stay 2 · …" or the reasons it is not). Typing a
+name looks up returning guests (sealed names, so `booking:read_pii`, audited) and picking one
+fills the contact and language. The form is prefilled from `propertyId`, `arrivalDate`,
+`departureDate` and `guest` in the URL (the calendar and the command palette), and a `guest`
+that matches exactly one returning guest selects them. Persona: `reservations_agent`.
 
 **Owner stays** are created as `UnitBlock`s of reason `owner_stay` (by staff or by
 the owner from their portal, subject to agreement terms), reduce availability, and

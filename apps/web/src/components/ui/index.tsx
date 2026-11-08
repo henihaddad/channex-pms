@@ -508,6 +508,7 @@ export function PageHeader({
   actions,
   crumb,
   titleOnPhone = true,
+  tabs = true,
   children,
 }: {
   title: ReactNode;
@@ -517,6 +518,8 @@ export function PageHeader({
   crumb?: Array<{ href?: string; label: ReactNode }>;
   /** False when the phone header already says it (a section's front page). */
   titleOnPhone?: boolean;
+  /** False on a record page under a crumb (one reservation, a new one): the section tabs stay away. */
+  tabs?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -529,7 +532,7 @@ export function PageHeader({
         </div>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      <SectionTabsSlot />
+      {tabs ? <SectionTabsSlot /> : <div className="section-tabs-slot hidden" aria-hidden="true" />}
       {children}
     </div>
   );

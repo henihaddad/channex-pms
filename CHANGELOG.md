@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Reservations › Check-in (spec 10 §10.6): the online check-in board. Arrivals in the next seven
+  days and guests in house with their check-in form, guests listed, ID, balance and door code;
+  tiles for arrivals, forms done, reminders scheduled and registrations; "Send reminders" writes
+  each unfinished arrival a message with a fresh portal link; "Export registrations" downloads
+  the named guests (audited). The hotel front desk is linked from here instead of its own tab.
+
+- Reservations › Guests (spec 08 §8.1): every guest once, with returning, direct-after-OTA and
+  consent tiles, filters, lifetime value, what is happening now and how they booked, the
+  win-back audience, and an audited export with contact details.
+
 - ⌘K (Ctrl+K) opens a command palette from anywhere in the console: it searches guests and
   reservations by name, reference or property and properties by title on the server, lists the
   sections and their pages, and runs the common actions (new reservation, import from Airbnb,
@@ -73,6 +83,28 @@ All notable changes to this project are documented here. The format follows
 - Pricing import leads with where prices come from: source, last import, nights set by hand
   and the next pull, then rails per rate plan, the future nights outside the rails, and the
   connector. Floor and ceiling are typed in the property currency, not minor units.
+- New reservation (spec 08 §8.11) follows the design canvas: numbered sections, one Full name
+  box, a live availability check, a Total that overrides the rate plan's price, whether the
+  money is already in, an internal note and a summary with Create and Cancel that stays in
+  view. Typing a name finds returning guests and fills their details; `?guest=` from the
+  command palette prefills the name and selects an exact match.
+
+- The reservation detail (spec 08 §8.2) follows the design canvas: a header card with status
+  chips and four tiles (check-in, check-out, room, door code), a Money card with the folio
+  operations behind "Record payment", the booking's conversation with a reply box, the guest
+  with an audited contact reveal and "Open as the guest" (a fresh one-hour portal session), an
+  Actions card, a timeline in words and the turnover. Direct bookings can change dates from the
+  page. Single keys C (check in), D (change dates), $ (record a payment) and O (open the portal)
+  press the same buttons.
+
+- The reservation list (spec 08 §8.1) reads in words, per the design canvas: four filter pills
+  with counts (Arriving this week, In house, Balance due, Cancelled), More filters and Export CSV
+  on the same row, the guest's full name over "2 adults · reference", the stay as "Fri 14 → Mon
+  17 Nov" over "3 nights · arrives in 11 days", the channel with its colour dot, one status word
+  and the balance as "Paid by Airbnb", "Paid" or "€450 due". Bookings that need a room are
+  highlighted in amber. 50 rows at a time with "Load more". The section's tabs are now All,
+  Check-in, Guests, Requests and Needs a room, with counts; the hotel front desk is reached from
+  Check-in. The "In stay" view no longer counts cancelled bookings.
 
 - The console rail is near-black again, as the design canvas has it: Tailwind resolved the colour
   tokens once at the root, so the rail's dark scope never reached its utilities. The tokens now

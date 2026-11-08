@@ -946,7 +946,7 @@
     "issueInvoice": "Émettre une facture",
     "split": "Scinder",
     "operations": "Opérations",
-    "timeline": "Historique des révisions",
+    "timeline": "Historique",
     "unacknowledged": "non pris en compte",
     "notes": "Notes",
     "addNote": "Ajouter une note",
@@ -964,7 +964,10 @@
       "no_access_code": "Sans code d'accès",
       "cancelled_this_week": "Annulées cette semaine",
       "modified_since_yesterday": "Modifiées depuis hier",
-      "payment_action_needed": "Action de paiement requise"
+      "payment_action_needed": "Action de paiement requise",
+      "arriving_this_week": "Arrivent cette semaine",
+      "balance_due": "Solde dû",
+      "cancelled": "Annulées"
     },
     "dateType": "Date",
     "dateTypes": {
@@ -984,7 +987,400 @@
       "credit_card": "carte sur la réservation",
       "bank_transfer": "virement du canal"
     },
-    "moreFilters": "Plus de filtres"
+    "moreFilters": "Plus de filtres",
+    "newReservation": "Nouvelle réservation",
+    "exportCsv": "Exporter en CSV",
+    "stayColumn": "Séjour",
+    "showing": "{shown} sur {total}",
+    "loadMore": "Afficher plus",
+    "nights": "{n, plural, one {# nuit} other {# nuits}}",
+    "tabs": {
+      "checkIn": "Enregistrement",
+      "guests": "Voyageurs",
+      "requests": "Demandes"
+    },
+    "pills": {
+      "arriving_this_week": "Arrivent cette semaine",
+      "in_stay": "Sur place",
+      "balance_due": "Solde dû",
+      "cancelled": "Annulées"
+    },
+    "stayStatus": {
+      "confirmed": "Confirmée",
+      "checked_in": "Arrivé",
+      "checked_out": "Parti",
+      "needs_room": "Attribuer un logement",
+      "needs_room_short": "Sans logement",
+      "changed": "Modifiée · à vérifier",
+      "no_show": "Non présenté",
+      "cancelled": "Annulée"
+    },
+    "balanceWords": {
+      "ota": "Payé via {ota}",
+      "paid": "Payé",
+      "due": "{amount} dû"
+    },
+    "phase": {
+      "arrivesToday": "arrive aujourd’hui",
+      "arrivesTomorrow": "arrive demain",
+      "arrivesIn": "arrive dans {days} jours",
+      "inHouse": "sur place",
+      "departsToday": "part aujourd’hui",
+      "leftYesterday": "parti hier",
+      "leftAgo": "parti il y a {days} jours"
+    },
+    "party": {
+      "adults": "{n, plural, one {# adulte} other {# adultes}}",
+      "children": "{n, plural, one {# enfant} other {# enfants}}"
+    },
+    "pin": "Épingler",
+    "pinned": "Épinglée",
+    "when": {
+      "today": "aujourd’hui",
+      "yesterday": "hier"
+    },
+    "chips": {
+      "updatedBy": "Mise à jour par {channel} {when}",
+      "updatedByYou": "Mise à jour {when}",
+      "formDone": "Formulaire d’arrivée rempli",
+      "formMissing": "{n, plural, one {# voyageur manquant} other {# voyageurs manquants}}"
+    },
+    "tiles": {
+      "checkIn": "Arrivée",
+      "checkOut": "Départ",
+      "room": "Logement",
+      "doorCode": "Code d’accès",
+      "from": "à partir de {time}",
+      "by": "avant {time}",
+      "sleeps": "{units, plural, one {# logement} other {# logements}} · {n} couchages",
+      "units": "{units, plural, one {# logement} other {# logements}}",
+      "validity": "valable {from} → {to}",
+      "notIssued": "Pas encore émis"
+    },
+    "money": {
+      "title": "Argent",
+      "nightsTimes": "{n, plural, one {# nuit} other {# nuits}} × {price}",
+      "commission": "Commission {channel}",
+      "total": "Total",
+      "collected": "Encaissé à ce jour : {paid}.",
+      "chargedHere": "Facturé ici : {list}.",
+      "datesChanged": "Dates modifiées {when} ({from} → {to}).",
+      "totalWent": "Le total est passé de {from} à {to}.",
+      "otaPaysDifference": "{channel} verse la différence dans le même virement ; rien n’est facturé deux fois.",
+      "balanceRecomputed": "Le solde a été recalculé ; rien n’est facturé deux fois.",
+      "recordPayment": "Enregistrer un paiement"
+    },
+    "folio": {
+      "title": "Folio · {label}",
+      "held": "bloqué {amount}",
+      "invoiced": "facturé",
+      "reason": "Motif",
+      "capture": "Encaisser",
+      "release": "Libérer",
+      "refund": "Rembourser",
+      "method": "Moyen",
+      "amount": "Montant",
+      "depositHold": "Caution",
+      "kind": "Type",
+      "description": "Description",
+      "splitLabel": "Nom du folio",
+      "kinds": {
+        "room": "Nuitée",
+        "extra": "Supplément",
+        "cleaning_fee": "Frais de ménage",
+        "tourist_tax": "Taxe de séjour",
+        "tax": "Taxe",
+        "damage": "Dégâts",
+        "cancellation_fee": "Frais d’annulation",
+        "no_show_fee": "Frais de non-présentation",
+        "adjustment": "Ajustement"
+      },
+      "methods": {
+        "card": "Carte",
+        "cash": "Espèces",
+        "bank_transfer": "Virement",
+        "ota_collected": "Encaissé par le canal",
+        "virtual_card": "Carte virtuelle"
+      },
+      "states": {
+        "captured": "Reçu",
+        "held": "Caution bloquée",
+        "released": "Caution libérée",
+        "refunded": "Remboursé"
+      }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "openInInbox": "Ouvrir dans la messagerie",
+      "you": "Vous",
+      "empty": "Aucun message avec ce voyageur pour l’instant.",
+      "replyTo": "Répondre à {name} via {channel}…",
+      "reply": "Réponse",
+      "send": "Envoyer"
+    },
+    "rooms": {
+      "title": "Séjour et logements",
+      "ages": "âges {ages}",
+      "unit": "Logement",
+      "noUnit": "Aucun logement",
+      "move": "Déplacer",
+      "state": {
+        "expected": "Attendu",
+        "checked_in": "Arrivé",
+        "checked_out": "Parti",
+        "no_show": "Non présenté"
+      },
+      "credential": {
+        "door_code": "code d’accès",
+        "smart_lock": "serrure connectée",
+        "lockbox": "boîte à clés",
+        "key_handover": "remise des clés"
+      },
+      "delivery": {
+        "pending": "pas encore envoyé",
+        "scheduled": "programmé",
+        "delivered": "envoyé"
+      }
+    },
+    "guestCard": {
+      "nthStay": "{n, selectordinal, one {#er} other {#e}} séjour",
+      "speaks": "parle {language}",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "onFile": "Enregistré",
+      "show": "Afficher (journalisé)",
+      "revealedFor": "Affiché pour {name}, journalisé",
+      "portal": "Portail",
+      "openPortal": "Ouvrir comme le voyageur",
+      "form": "Formulaire d’arrivée",
+      "formDone": "Rempli",
+      "formDoneAt": "Rempli · arrive à {time}",
+      "formNotStarted": "Pas commencé"
+    },
+    "actions": {
+      "title": "Actions",
+      "checkIn": "Enregistrer l’arrivée",
+      "checkOut": "Enregistrer le départ",
+      "move": "Changer de logement",
+      "changeDates": "Modifier les dates",
+      "cancel": "Annuler la réservation",
+      "saveDates": "Enregistrer les dates",
+      "changeDatesHint": "Les nouvelles nuits sont tarifées selon le plan tarifaire et fermées sur tous les canaux ; les nuits retirées sont libérées.",
+      "otaNote": "Les modifications d’une réservation {channel} se demandent sur {channel}. OTAbridge conserve la réservation jusqu’à la confirmation du canal."
+    },
+    "tl": {
+      "booked": "Réservée",
+      "cancelled": "Annulée",
+      "datesChanged": "Dates changées : {range}",
+      "guestsChanged": "Voyageurs : {n}",
+      "totalChanged": "Total : {amount}",
+      "updated": "Mise à jour",
+      "was": "avant {value}",
+      "by": "Par {channel}",
+      "byYou": "Par votre équipe",
+      "form_done": "Formulaire d’arrivée rempli",
+      "code_issued": "Code d’accès émis",
+      "code_revoked": "Code d’accès révoqué",
+      "checked_in": "Arrivée enregistrée",
+      "checked_out": "Départ enregistré",
+      "messageSent": "Message envoyé",
+      "messageSentNamed": "{name} envoyé",
+      "automation": "Automatisation",
+      "guest": "Voyageur",
+      "staff": "Équipe"
+    },
+    "turnover": {
+      "title": "Ménage",
+      "none": "Aucun ménage prévu pour ce séjour.",
+      "before": "Ménage avant l’arrivée",
+      "after": "Ménage après le départ",
+      "nobody": "personne",
+      "types": {
+        "changeover": "Rotation le jour même",
+        "departure": "Ménage de départ",
+        "mid_stay": "Ménage en séjour",
+        "deep": "Grand ménage",
+        "inspection": "Inspection",
+        "linen": "Linge"
+      },
+      "states": {
+        "planned": "Prévu",
+        "assigned": "Planifié",
+        "accepted": "Accepté",
+        "on_site": "Sur place",
+        "done": "Fait",
+        "inspected": "Inspecté",
+        "cancelled": "Annulé"
+      }
+    },
+    "new": {
+      "crumb": "Nouvelle",
+      "where": "1 · Où et quand",
+      "property": "Hébergement",
+      "room": "Chambre / logement",
+      "sleeps": "{title} ({n} couchages)",
+      "checkIn": "Arrivée",
+      "checkOut": "Départ",
+      "adults": "Adultes",
+      "children": "Enfants",
+      "available": "Disponible.",
+      "availableDetail": "{nights} nuits",
+      "minStay": "séjour minimum {n}",
+      "noRestrictions": "aucune restriction sur ces dates.",
+      "channelsClose": "Les canaux seront fermés pour ces nuits dès l’enregistrement.",
+      "unavailable": "Indisponible.",
+      "guest": "2 · Voyageur",
+      "fullName": "Nom complet",
+      "fullNameHint": "Tapez pour retrouver un voyageur déjà venu",
+      "returning": "Voyageur fidèle · {n} avant",
+      "stays": "{n} séjours",
+      "stay1": "1 séjour",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "language": "Langue",
+      "languageUnknown": "Inconnue",
+      "price": "3 · Prix et paiement",
+      "ratePlan": "Plan tarifaire",
+      "total": "Total ({currency})",
+      "totalHint": "Prix du plan tarifaire · modifiable",
+      "source": "Origine",
+      "sourcePhone": "Direct · téléphone",
+      "sourceWalkIn": "Direct · sur place",
+      "sourceDirect": "Direct · e-mail ou site",
+      "sourceStaff": "Direct · autre",
+      "payment": "Paiement",
+      "payLater": "À encaisser plus tard",
+      "payCard": "Déjà payé · carte",
+      "payCash": "Déjà payé · espèces",
+      "payTransfer": "Déjà payé · virement",
+      "note": "Note interne",
+      "noteHint": "Ce que l’équipe doit savoir (invisible pour le voyageur)",
+      "summary": "Récapitulatif",
+      "nights": "{n} nuits",
+      "night1": "1 nuit",
+      "adultsN": "{n} adultes",
+      "adult1": "1 adulte",
+      "pickDates": "Choisissez les dates pour voir le prix.",
+      "totalLabel": "Total",
+      "dueNow": "À payer maintenant ({name})",
+      "create": "Créer la réservation",
+      "cancel": "Annuler",
+      "sideEffects": "L’enregistrement ferme ces nuits sur tous les canaux en moins d’une minute, planifie le ménage et place le séjour au calendrier."
+    },
+    "checkin": {
+      "title": "Enregistrement en ligne",
+      "frontDesk": "Réception et planning des chambres",
+      "kpi": {
+        "arrivals": "Arrivées · 7 jours",
+        "formsDone": "Formulaires remplis",
+        "missing": "{n} manquants",
+        "allDone": "tous remplis",
+        "reminders": "Rappels programmés",
+        "remindersHint": "par votre message avant l’arrivée",
+        "noRule": "aucun message avant l’arrivée actif",
+        "registrations": "Déclarations à faire",
+        "registrationsHint": "déclaration non connectée ; exportez"
+      },
+      "upcoming": "Arrivées à venir",
+      "sendReminders": "Envoyer des rappels · {n}",
+      "exportRegistrations": "Exporter les déclarations",
+      "col": {
+        "guest": "Voyageur",
+        "form": "Formulaire",
+        "listed": "Voyageurs listés",
+        "id": "Pièce d’identité",
+        "balance": "Solde",
+        "code": "Code d’accès"
+      },
+      "empty": "Personne n’arrive dans les sept prochains jours.",
+      "form": {
+        "done": "Rempli",
+        "notStarted": "Pas commencé"
+      },
+      "listedOf": "{listed} sur {expected}",
+      "idOnFile": "Enregistrée",
+      "code": {
+        "sent": "Envoyé",
+        "ready": "Code prêt {when}",
+        "notIssued": "Pas émis"
+      },
+      "fill": {
+        "title": "Ce que remplissent les voyageurs",
+        "lead": "Demandé dans le portail voyageur, depuis la confirmation et vos rappels. Environ deux minutes.",
+        "names": "Nom de chaque voyageur",
+        "namesHint": "Pour la déclaration à la police",
+        "arrival": "Heure d’arrivée",
+        "arrivalHint": "Pour organiser le ménage et l’accueil",
+        "preferences": "Préférences",
+        "preferencesHint": "Lits, lit bébé, ce qu’il faut préparer",
+        "id": "Photo de la pièce d’identité",
+        "idHint": "Pas encore demandée : le portail n’a pas d’envoi de fichier",
+        "required": "Obligatoire",
+        "optional": "Facultatif",
+        "notAsked": "Non demandé"
+      },
+      "rules": {
+        "title": "Règles",
+        "lead": "Le fonctionnement actuel.",
+        "code": "Le code d’accès est communiqué",
+        "codeValue": "Dans le portail voyageur, un nombre d’heures fixé avant le début de validité du code (réglages du moteur de réservation). Il n’attend ni le formulaire ni le solde.",
+        "remind": "Rappels aux voyageurs",
+        "remindValue": "Par votre message avant l’arrivée, et à la demande avec Envoyer des rappels.",
+        "remindNone": "Uniquement à la demande avec Envoyer des rappels.",
+        "automation": "Le configurer dans Automatisation",
+        "export": "Export des déclarations",
+        "exportValue": "Un CSV des voyageurs nommés pour les sept prochains jours ; la déclaration SEF ou Alloggiati n’est pas connectée."
+      },
+      "reminderBody": "Bonjour {name}, avant votre arrivée à {property}, merci de compléter votre enregistrement en ligne. Cela prend environ deux minutes : {url}"
+    },
+    "guestsPage": {
+      "title": "Voyageurs",
+      "kpi": {
+        "guests": "Voyageurs",
+        "guestsHint": "depuis vos débuts",
+        "returning": "Revenus au moins une fois",
+        "directAfterOta": "Réservé en direct après une OTA",
+        "directAfterOtaHint": "aucune commission sur ces séjours",
+        "consent": "Consentement marketing"
+      },
+      "pills": {
+        "all": "Tous",
+        "returning": "Fidèles",
+        "emailable": "Joignables par e-mail",
+        "flagged": "Signalés"
+      },
+      "search": "Nom ou pays",
+      "export": "Exporter",
+      "col": {
+        "guest": "Voyageur",
+        "stays": "Séjours",
+        "properties": "Hébergements",
+        "value": "Valeur cumulée",
+        "status": "Maintenant",
+        "via": "Réservé via"
+      },
+      "contact": {
+        "both": "e-mail et téléphone enregistrés",
+        "email": "e-mail enregistré",
+        "phone": "téléphone enregistré",
+        "none": "aucun contact"
+      },
+      "speaks": "parle {language}",
+      "status": {
+        "inHouse": "Sur place",
+        "arrives": "Arrive le {date}",
+        "note": "Note : {note}"
+      },
+      "empty": "Aucun voyageur ne correspond.",
+      "showing": "{shown} sur {total}",
+      "loadMore": "Afficher plus",
+      "winBack": {
+        "title": "Les faire revenir en direct",
+        "lead": "Les voyageurs venus par Airbnb ou Booking.com qui ont accepté les nouvelles peuvent recevoir un e-mail après leur départ avec une offre de réservation directe. À configurer dans Automatisation ; cette page montre seulement qui serait concerné.",
+        "open": "Ouvrir Automatisation",
+        "audience": "{n, plural, =0 {Personne à joindre pour l’instant} one {# voyageur concerné} other {# voyageurs concernés}}"
+      }
+    }
   },
   "operations": {
     "title": "Tableau des rotations",

@@ -1014,6 +1014,30 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/reservations/check-in/check-in.actions.ts",
+    "export": "loadCheckinBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/check-in/check-in.actions.ts",
+    "export": "sendCheckinRemindersAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/guests/guests.actions.ts",
+    "export": "loadGuests",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/reservations/requests/requests.actions.ts",
     "export": "listRequests",
     "kind": "action",
@@ -1082,11 +1106,26 @@
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "changeDatesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:modify"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "createStaffBookingAction",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "booking:create",
     "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "findReturningGuestsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_pii",
+    "scope": "organization"
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
@@ -1112,6 +1151,14 @@
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "loadBookingConversation",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
     "export": "loadReservation",
     "kind": "action",
     "wrapper": "withPermission",
@@ -1125,6 +1172,22 @@
     "wrapper": "withPermission",
     "permission": "booking:read",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "openGuestPortalAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:read_pii",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/reservations/reservations.actions.ts",
+    "export": "quoteStaffBookingAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "booking:create",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",
@@ -1669,6 +1732,14 @@
     "publicReason": "guest_portal"
   },
   {
+    "file": "src/app/api/v1/guests/export/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read_pii",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/api/v1/ical/[propertyId]/[token]/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1712,6 +1783,14 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "export:execute",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/reservations/registrations/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read_pii",
     "scope": "organization"
   },
   {

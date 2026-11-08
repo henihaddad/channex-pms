@@ -1,26 +1,37 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { SHIPPED_VIEWS, type ReservationFilters } from "@pms/db";
+import { getLocale, getTranslations } from "next-intl/server";
+import { bookingBalance, stayPhase, stayStatus } from "@pms/core";
+import { LIST_PILLS, SHIPPED_VIEWS, type ReservationFilters } from "@pms/db";
 import {
   AnchorButton,
   Button,
   Card,
-  Chip,
-  DataTable,
   DateInput,
   FormRow,
   Input,
   LinkButton,
   PageHeader,
   Select,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
   cn,
 } from "@/components/ui";
+import { money, nightsBetween, stay } from "@/lib/format";
 import { guard } from "@/server/guard";
 import { listReservations, saveViewAction } from "./reservations.actions";
+import { BalanceWords, ChannelDot, StatusChip, partyWords, phaseWords } from "./words";
 
-const money = (minor: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: "currency", currency }).format(minor / 100);
+const PAGE = 50;
 
+/**
+ * Reservations (spec 08 §8.1, design canvas November 2026): four filters with their counts,
+ * the rest behind "More filters", and a table that reads in words: who, where, when, through
+ * which channel, what state it is in and what is owed.
+ */
 export default async function ReservationsPage({
   searchParams,
 }: {
@@ -28,6 +39,8 @@ export default async function ReservationsPage({
 }) {
   const sp = await searchParams;
   const t = await getTranslations("reservations");
+  const locale = await getLocale();
+  const limit = Math.min(Math.max(Number(sp.limit) || PAGE, PAGE), 1000);
   const filters: ReservationFilters = {
     view: sp.view,
     dateType: sp.dateType as ReservationFilters["dateType"],
@@ -43,86 +56,98 @@ export default async function ReservationsPage({
   };
   for (const k of Object.keys(filters) as (keyof ReservationFilters)[])
     if (filters[k] === undefined || filters[k] === "" || filters[k] === false) delete filters[k];
-  const { rows, total, views } = await guard(() => listReservations(filters));
-  const qs = new URLSearchParams(
-    Object.entries(sp).filter(([, v]) => v) as [string, string][],
+  const { rows, total, views, pills, today } = await guard(() =>
+    listReservations({ ...filters, limit }),
+  );
+  const params = (over: Record<string, string | undefined>) => {
+    const next = new URLSearchParams(
+      Object.entries({ ...sp, ...over }).filter(([, v]) => v) as [string, string][],
+    );
+    const s = next.toString();
+    return s ? `/reservations?${s}` : "/reservations";
+  };
+  const exportQs = new URLSearchParams(
+    Object.entries(filters).map(([k, v]) => [k, String(v)]),
   ).toString();
-  const advanced = Boolean(sp.dateType ?? sp.from ?? sp.to ?? sp.channel);
+  const filtersOpen =
+    sp.filters === "1" || Boolean(sp.dateType ?? sp.from ?? sp.to ?? sp.channel ?? sp.q);
   const pill = (active: boolean) =>
     cn(
-      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+      "inline-flex h-8.5 items-center rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors",
       active
         ? "bg-foreground text-background"
-        : "bg-default text-foreground hover:bg-default-hover",
+        : "border border-border bg-surface text-muted hover:text-foreground",
     );
+
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
         title={t("title")}
-        description={`${total} ${t("results")}`}
         actions={
-          <>
-            <LinkButton href="/reservations/unmapped" variant="secondary">
-              {t("unmappedQueue")}
-            </LinkButton>
-            <LinkButton href="/reservations/new" variant="primary" data-testid="new-booking">
-              {t("newBooking")}
-            </LinkButton>
-          </>
+          <LinkButton href="/reservations/new" variant="primary" data-testid="new-booking">
+            + {t("newReservation")}
+          </LinkButton>
         }
       >
-        <div
-          className="scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
-          data-testid="shipped-views"
-        >
-          {Object.keys(SHIPPED_VIEWS).map((v) => (
+        <div className="flex flex-wrap items-center gap-2" data-testid="list-pills">
+          {LIST_PILLS.map((v) => (
             <Link
               key={v}
-              href={`/reservations?view=${v}`}
-              className={cn(pill(sp.view === v), "whitespace-nowrap")}
+              href={sp.view === v ? "/reservations" : `/reservations?view=${v}`}
+              className={pill(sp.view === v)}
+              aria-current={sp.view === v ? "true" : undefined}
+              data-pill={v}
             >
-              {t(`views.${v}`)}
+              {t(`pills.${v}`)}
+              {v !== "cancelled" && pills[v] > 0 ? (
+                <span className="tabular-nums">&nbsp;· {pills[v]}</span>
+              ) : null}
             </Link>
           ))}
-          {views.map((v) => (
-            <Link
-              key={v.id}
-              href={`/reservations?${new URLSearchParams(v.filters as Record<string, string>).toString()}`}
-              className={cn(pill(false), "bg-accent-soft text-accent-soft-foreground")}
-            >
-              ★ {v.name}
+          {sp.view && !(LIST_PILLS as readonly string[]).includes(sp.view) ? (
+            <Link href="/reservations" className={pill(true)}>
+              {t(`views.${sp.view}`)} ✕
             </Link>
-          ))}
+          ) : null}
+          {sp.q ? (
+            <Link href={params({ q: undefined })} className={pill(true)}>
+              “{sp.q}” ✕
+            </Link>
+          ) : null}
+          <span className="flex-1" />
+          <Link
+            href={params({ filters: filtersOpen ? undefined : "1" })}
+            className="text-[13px] font-semibold text-muted hover:text-foreground"
+            aria-expanded={filtersOpen}
+          >
+            {t("moreFilters")}
+          </Link>
+          <AnchorButton
+            href={`/api/v1/reservations/export${exportQs ? `?${exportQs}` : ""}`}
+            size="sm"
+          >
+            {t("exportCsv")}
+          </AnchorButton>
         </div>
       </PageHeader>
 
-      <Card>
-        <form method="get" className="flex flex-col gap-3">
-          {sp.view ? <input type="hidden" name="view" value={sp.view} /> : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              name="q"
-              placeholder={t("search")}
-              aria-label={t("search")}
-              defaultValue={sp.q}
-              data-testid="search"
-              className="w-full sm:w-80"
-            />
-            <Button type="submit" variant="secondary">
-              {t("filter")}
-            </Button>
-            <AnchorButton href={`/api/v1/reservations/export?${qs}`} className="ms-auto">
-              CSV
-            </AnchorButton>
-          </div>
-          <details open={advanced} className="text-sm">
-            <summary className="cursor-pointer select-none text-muted hover:text-foreground">
-              {t("moreFilters")}
-            </summary>
-            <FormRow className="mt-3">
+      {filtersOpen ? (
+        <Card>
+          <form method="get" className="flex flex-col gap-4">
+            <input type="hidden" name="filters" value="1" />
+            {sp.view ? <input type="hidden" name="view" value={sp.view} /> : null}
+            <FormRow>
+              <Input
+                name="q"
+                placeholder={t("search")}
+                aria-label={t("search")}
+                defaultValue={sp.q}
+                data-testid="search"
+                className="w-full sm:w-72"
+              />
               <Select
                 name="dateType"
-                label={t("dateType")}
+                aria-label={t("dateType")}
                 defaultValue={sp.dateType ?? "arrival"}
                 className="w-40"
               >
@@ -131,8 +156,13 @@ export default async function ReservationsPage({
                 <option value="stay">{t("dateTypes.stay")}</option>
                 <option value="booked">{t("dateTypes.booked")}</option>
               </Select>
-              <DateInput name="from" label={t("from")} defaultValue={sp.from} className="w-44" />
-              <DateInput name="to" label={t("to")} defaultValue={sp.to} className="w-44" />
+              <DateInput
+                name="from"
+                aria-label={t("from")}
+                defaultValue={sp.from}
+                className="w-44"
+              />
+              <DateInput name="to" aria-label={t("to")} defaultValue={sp.to} className="w-44" />
               <Input
                 name="channel"
                 placeholder={t("channel")}
@@ -140,87 +170,181 @@ export default async function ReservationsPage({
                 defaultValue={sp.channel}
                 className="w-40"
               />
+              <Button type="submit" variant="secondary">
+                {t("filter")}
+              </Button>
             </FormRow>
-          </details>
-        </form>
-        {Object.keys(filters).length > 0 ? (
-          <form action={saveViewAction} className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              type="hidden"
-              name="filters"
-              value={JSON.stringify(Object.fromEntries(Object.entries(sp).filter(([, v]) => v)))}
-            />
-            <Input
-              name="name"
-              placeholder={t("saveViewAs")}
-              aria-label={t("saveViewAs")}
-              className="w-64"
-              variant="secondary"
-            />
-            <Button type="submit" variant="ghost" size="sm">
-              {t("saveView")}
-            </Button>
+            <div className="flex flex-wrap gap-1.5" data-testid="shipped-views">
+              {Object.keys(SHIPPED_VIEWS)
+                .filter((v) => !(LIST_PILLS as readonly string[]).includes(v))
+                .map((v) => (
+                  <Link
+                    key={v}
+                    href={`/reservations?view=${v}&filters=1`}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap",
+                      sp.view === v
+                        ? "bg-foreground text-background"
+                        : "bg-default text-foreground hover:bg-border",
+                    )}
+                  >
+                    {t(`views.${v}`)}
+                  </Link>
+                ))}
+              {views.map((v) => (
+                <Link
+                  key={v.id}
+                  href={`/reservations?${new URLSearchParams(v.filters as Record<string, string>).toString()}`}
+                  className="rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent-soft-foreground"
+                >
+                  ★ {v.name}
+                </Link>
+              ))}
+            </div>
           </form>
-        ) : null}
-      </Card>
+          {Object.keys(filters).length > 0 ? (
+            <form action={saveViewAction} className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                type="hidden"
+                name="filters"
+                value={JSON.stringify(
+                  Object.fromEntries(
+                    Object.entries(sp).filter(([k, v]) => v && k !== "filters" && k !== "limit"),
+                  ),
+                )}
+              />
+              <Input
+                name="name"
+                placeholder={t("saveViewAs")}
+                aria-label={t("saveViewAs")}
+                className="w-64"
+              />
+              <Button type="submit" variant="ghost" size="sm">
+                {t("saveView")}
+              </Button>
+            </form>
+          ) : null}
+        </Card>
+      ) : null}
 
-      <Card>
-        <DataTable
-          testId="reservations-table"
-          columns={[
-            t("guest"),
-            t("property"),
-            t("dates"),
-            t("channel"),
-            t("status"),
-            t("unit"),
-            { label: t("total"), align: "end" },
-            { label: t("balance"), align: "end" },
-          ]}
-          rowKey={(_, i) => rows[i]!.id}
-          rows={rows.map((r) => [
-            <span
-              key="g"
-              className="inline-flex flex-wrap items-center gap-1.5"
-              data-booking={r.id}
-            >
-              <Link href={`/reservations/${r.id}`} className="font-medium hover:underline">
-                {r.guestName}
+      <Table data-testid="reservations-table" className="min-w-[980px]">
+        <THead>
+          <Tr className="hover:bg-transparent">
+            <Th>{t("guest")}</Th>
+            <Th>{t("property")}</Th>
+            <Th>{t("stayColumn")}</Th>
+            <Th>{t("channel")}</Th>
+            <Th>{t("status")}</Th>
+            <Th className="text-end">{t("total")}</Th>
+            <Th className="text-end">{t("balance")}</Th>
+          </Tr>
+        </THead>
+        <TBody>
+          {rows.length === 0 ? (
+            <Tr>
+              <Td colSpan={7} className="text-muted">
+                <p className="font-semibold text-foreground">{t("noResults")}</p>
+                <p>{t("noResultsHint")}</p>
+              </Td>
+            </Tr>
+          ) : null}
+          {rows.map((r) => {
+            const status = stayStatus({
+              status: r.status,
+              mappingState: r.mappingState,
+              unassignedRooms: r.unassignedRooms,
+              unacknowledged: r.unacknowledged,
+              stayStates: r.stayStates,
+            });
+            const balance = bookingBalance({
+              status: r.status,
+              paymentCollect: r.paymentCollect,
+              totalMinor: Number(r.totalAmountMinor),
+              roomChargesMinor: r.roomChargesMinor,
+              otherChargesMinor: r.otherChargesMinor,
+              paidMinor: r.paidMinor,
+            });
+            const nights = nightsBetween(r.arrivalDate, r.departureDate);
+            return (
+              <Tr
+                key={r.id}
+                data-row-status={status}
+                className={cn(status === "needs_room" && "bg-warning-soft/40")}
+              >
+                <Td>
+                  <span data-booking={r.id} className="block">
+                    <Link
+                      href={`/reservations/${r.id}`}
+                      className="font-semibold text-foreground hover:underline"
+                    >
+                      {r.guestFullName}
+                    </Link>
+                  </span>
+                  <span className="block text-xs text-muted">
+                    {partyWords(r.adults, r.children, t)}
+                    {r.otaReservationCode ? ` · ${r.otaReservationCode}` : ""}
+                  </span>
+                </Td>
+                <Td>
+                  {status === "needs_room" ? (
+                    <>
+                      <span className="block font-semibold text-warning-soft-foreground">
+                        {t("stayStatus.needs_room_short")}
+                      </span>
+                      <span className="block text-xs text-muted">{r.propertyTitle}</span>
+                    </>
+                  ) : (
+                    <>
+                      {r.propertyTitle}
+                      {r.unitNames ? ` · ${r.unitNames}` : ""}
+                    </>
+                  )}
+                </Td>
+                <Td className="whitespace-nowrap">
+                  {stay(r.arrivalDate, r.departureDate, locale)}
+                  <span className="block text-xs text-muted">
+                    {t("nights", { n: nights })}
+                    {status === "cancelled"
+                      ? ""
+                      : status === "checked_in"
+                        ? ` · ${t("phase.inHouse")}`
+                        : ` · ${phaseWords(stayPhase(today, r.arrivalDate, r.departureDate), t)}`}
+                  </span>
+                </Td>
+                <Td>
+                  <ChannelDot otaName={r.otaName} />
+                </Td>
+                <Td>
+                  <StatusChip status={status} t={t} />
+                </Td>
+                <Td className="text-end tabular-nums">
+                  {money(Number(r.totalAmountMinor), r.currency, locale)}
+                </Td>
+                <Td className="text-end tabular-nums">
+                  <BalanceWords balance={balance} currency={r.currency} otaName={r.otaName} t={t} />
+                </Td>
+              </Tr>
+            );
+          })}
+        </TBody>
+      </Table>
+      {total > 0 ? (
+        <p className="-mt-2 text-[13px] text-muted" data-testid="list-footer">
+          {t("showing", { shown: rows.length, total })}
+          {rows.length < total ? (
+            <>
+              {" · "}
+              <Link
+                href={params({ limit: String(limit + PAGE) })}
+                className="font-semibold text-accent hover:underline"
+                scroll={false}
+              >
+                {t("loadMore")}
               </Link>
-              {r.unacknowledged ? (
-                <Chip color="warning" size="sm">
-                  {t("modified")}
-                </Chip>
-              ) : null}
-              {r.mappingState !== "mapped" ? (
-                <Chip color="danger" size="sm">
-                  {t("unmapped")}
-                </Chip>
-              ) : null}
-            </span>,
-            r.propertyTitle,
-            <span key="d" className="whitespace-nowrap tabular-nums">
-              {r.arrivalDate} → {r.departureDate} <span className="text-muted">· {r.nights}n</span>
-            </span>,
-            <span key="c">
-              {r.otaName ?? "—"} <span className="text-xs text-muted">{r.otaReservationCode}</span>
-            </span>,
-            <Chip key="s" color={r.status === "cancelled" ? "default" : "success"} size="sm">
-              {r.status}
-            </Chip>,
-            <span key="u">
-              {r.unitNames ?? (r.unassignedRooms > 0 ? t("unassigned") : "—")}
-              {r.credentials > 0 ? " · 🔑" : ""}
-            </span>,
-            money(r.totalAmountMinor, r.currency),
-            <span key="b" className={r.balanceMinor > 0 ? "text-danger" : "text-muted"}>
-              {money(r.balanceMinor, r.currency)}
-            </span>,
-          ])}
-          empty={t("noResults")}
-          dense
-        />
-      </Card>
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

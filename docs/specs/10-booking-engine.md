@@ -146,6 +146,21 @@ Magic-link authenticated, scoped to one booking, no account required.
 Security: single-use, short-lived, rate-limited links; no enumeration of other
 bookings; every portal action audited as an `actor_type = guest` entry.
 
+**The check-in board** (Reservations › Check-in, design canvas November 2026; persona
+`reservations_agent`) is the staff side of pre-check-in: tiles for arrivals in the next seven
+days, forms done (with how many are missing), reminders a before-arrival automation will still
+send, and registrations to file (shown as "—" until a filing integration exists: SEF, Alloggiati
+and the like are not connected). The table lists everyone arriving within seven days or in
+house: the form state (done, missing n guests, not started; a saved form with no names counts
+the booker), guests listed of guests expected, whether an ID is on file (the portal has no
+upload yet, so this reads "—"), the balance in words and the door code (code ready from its
+validity start, sent once delivered, not issued). Rows that still need the form are amber.
+**Send reminders · n** writes one staff message per unfinished arrival on the booking's thread,
+in the guest's language, with a fresh portal link (`message:send`). **Export registrations**
+downloads the named guests as CSV (`booking:read_pii`, audited). "What guests fill in" lists what
+the portal actually asks; "Rules" states how the code release and reminders work today rather
+than offering settings that do nothing. Hotel-kind portfolios reach the front desk from here.
+
 ## 10.6b Guest guide
 
 **Persona:** the `property_manager` writes it; the guest reads it.

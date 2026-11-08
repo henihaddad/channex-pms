@@ -59,8 +59,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
   await fillDate(page, "arrivalDate", d1);
   await fillDate(page, "departureDate", d2);
-  await page.getByLabel("Guest first name").fill("Ana");
-  await page.getByLabel("Guest surname").fill("Silva");
+  await page.getByLabel("Full name").fill("Ana Silva");
   await page.getByLabel("Email").fill(`ana-${stamp}@example.com`);
   await page.getByTestId("create-booking").click();
   // the single in-process database serialises this behind whatever the other specs are pushing
@@ -128,8 +127,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   await page.goto("/reservations/new");
   await fillDate(page, "arrivalDate", iso(new Date(Date.now() + 5 * 86_400_000)));
   await fillDate(page, "departureDate", iso(new Date(Date.now() + 6 * 86_400_000)));
-  await page.getByLabel("Guest first name").fill("Bo");
-  await page.getByLabel("Guest surname").fill("Costa");
+  await page.getByLabel("Full name").fill("Bo Costa");
   await page.getByLabel("Email").fill(`bo-${stamp}@example.com`);
   await page.getByTestId("create-booking").click();
   await expect(page.getByTestId("reservation-detail")).toBeVisible({ timeout: 60_000 });

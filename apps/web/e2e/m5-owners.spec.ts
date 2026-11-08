@@ -63,8 +63,7 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
   await fillDate(page, "arrivalDate", arr);
   await fillDate(page, "departureDate", dep);
-  await page.getByLabel("Guest first name").fill("Ana");
-  await page.getByLabel("Guest surname").fill("Silva");
+  await page.getByLabel("Full name").fill("Ana Silva");
   await page.getByLabel("Email").fill(`ana-${stamp}@example.com`);
   await page.getByTestId("create-booking").click();
   await expect(page.getByTestId("reservation-detail")).toBeVisible({ timeout: 60_000 });

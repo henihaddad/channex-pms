@@ -946,7 +946,7 @@
     "issueInvoice": "إصدار فاتورة",
     "split": "تقسيم",
     "operations": "العمليات",
-    "timeline": "سجل المراجعات",
+    "timeline": "السجل",
     "unacknowledged": "غير مقرّ به",
     "notes": "الملاحظات",
     "addNote": "إضافة ملاحظة",
@@ -964,7 +964,10 @@
       "no_access_code": "بدون رمز دخول",
       "cancelled_this_week": "ملغاة هذا الأسبوع",
       "modified_since_yesterday": "معدّلة منذ الأمس",
-      "payment_action_needed": "تحتاج إجراء دفع"
+      "payment_action_needed": "تحتاج إجراء دفع",
+      "arriving_this_week": "يصلون هذا الأسبوع",
+      "balance_due": "رصيد مستحق",
+      "cancelled": "ملغاة"
     },
     "dateType": "التاريخ",
     "dateTypes": {
@@ -984,7 +987,400 @@
       "credit_card": "بطاقة على الحجز",
       "bank_transfer": "تحويل بنكي من القناة"
     },
-    "moreFilters": "مزيد من عوامل التصفية"
+    "moreFilters": "مزيد من عوامل التصفية",
+    "newReservation": "حجز جديد",
+    "exportCsv": "تصدير CSV",
+    "stayColumn": "الإقامة",
+    "showing": "عرض {shown} من {total}",
+    "loadMore": "عرض المزيد",
+    "nights": "{n, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} other {# ليلة}}",
+    "tabs": {
+      "checkIn": "تسجيل الوصول",
+      "guests": "الضيوف",
+      "requests": "الطلبات"
+    },
+    "pills": {
+      "arriving_this_week": "يصلون هذا الأسبوع",
+      "in_stay": "مقيمون الآن",
+      "balance_due": "رصيد مستحق",
+      "cancelled": "ملغاة"
+    },
+    "stayStatus": {
+      "confirmed": "مؤكد",
+      "checked_in": "وصل",
+      "checked_out": "غادر",
+      "needs_room": "خصّص غرفة",
+      "needs_room_short": "بلا غرفة",
+      "changed": "تغيّر · راجِع",
+      "no_show": "لم يحضر",
+      "cancelled": "ملغى"
+    },
+    "balanceWords": {
+      "ota": "مدفوع عبر {ota}",
+      "paid": "مدفوع",
+      "due": "مستحق {amount}"
+    },
+    "phase": {
+      "arrivesToday": "يصل اليوم",
+      "arrivesTomorrow": "يصل غدًا",
+      "arrivesIn": "يصل بعد {days} أيام",
+      "inHouse": "مقيم الآن",
+      "departsToday": "يغادر اليوم",
+      "leftYesterday": "غادر أمس",
+      "leftAgo": "غادر منذ {days} أيام"
+    },
+    "party": {
+      "adults": "{n, plural, one {بالغ واحد} two {بالغان} few {# بالغين} other {# بالغ}}",
+      "children": "{n, plural, one {طفل واحد} two {طفلان} few {# أطفال} other {# طفل}}"
+    },
+    "pin": "تثبيت",
+    "pinned": "مثبّتة",
+    "when": {
+      "today": "اليوم",
+      "yesterday": "أمس"
+    },
+    "chips": {
+      "updatedBy": "حدّثته {channel} {when}",
+      "updatedByYou": "حُدّث {when}",
+      "formDone": "اكتمل نموذج الوصول",
+      "formMissing": "{n, plural, one {ينقص ضيف واحد} two {ينقص ضيفان} few {ينقص # ضيوف} other {ينقص # ضيف}}"
+    },
+    "tiles": {
+      "checkIn": "الوصول",
+      "checkOut": "المغادرة",
+      "room": "الوحدة",
+      "doorCode": "رمز الباب",
+      "from": "من {time}",
+      "by": "قبل {time}",
+      "sleeps": "{units, plural, one {وحدة واحدة} other {# وحدات}} · تتسع لـ {n}",
+      "units": "{units, plural, one {وحدة واحدة} other {# وحدات}}",
+      "validity": "صالح {from} ← {to}",
+      "notIssued": "لم يُصدر"
+    },
+    "money": {
+      "title": "المال",
+      "nightsTimes": "{n, plural, one {ليلة واحدة} two {ليلتان} few {# ليالٍ} other {# ليلة}} × {price}",
+      "commission": "عمولة {channel}",
+      "total": "الإجمالي",
+      "collected": "المحصَّل حتى الآن: {paid}.",
+      "chargedHere": "رسوم محلية: {list}.",
+      "datesChanged": "تغيّرت التواريخ {when} ({from} ← {to}).",
+      "totalWent": "تغيّر الإجمالي من {from} إلى {to}.",
+      "otaPaysDifference": "تدفع {channel} الفرق في الدفعة نفسها؛ لا شيء يُحتسب مرتين.",
+      "balanceRecomputed": "أُعيد حساب الرصيد؛ لا شيء يُحتسب مرتين.",
+      "recordPayment": "تسجيل دفعة"
+    },
+    "folio": {
+      "title": "الفاتورة · {label}",
+      "held": "محجوز {amount}",
+      "invoiced": "مفوتر",
+      "reason": "السبب",
+      "capture": "تحصيل",
+      "release": "تحرير",
+      "refund": "استرداد",
+      "method": "الطريقة",
+      "amount": "المبلغ",
+      "depositHold": "تأمين",
+      "kind": "النوع",
+      "description": "الوصف",
+      "splitLabel": "اسم الفاتورة",
+      "kinds": {
+        "room": "ليلة",
+        "extra": "إضافة",
+        "cleaning_fee": "رسوم التنظيف",
+        "tourist_tax": "ضريبة سياحية",
+        "tax": "ضريبة",
+        "damage": "أضرار",
+        "cancellation_fee": "رسوم إلغاء",
+        "no_show_fee": "رسوم عدم حضور",
+        "adjustment": "تسوية"
+      },
+      "methods": {
+        "card": "بطاقة",
+        "cash": "نقدًا",
+        "bank_transfer": "تحويل بنكي",
+        "ota_collected": "حصّلته القناة",
+        "virtual_card": "بطاقة افتراضية"
+      },
+      "states": {
+        "captured": "مستلم",
+        "held": "تأمين محجوز",
+        "released": "تأمين محرَّر",
+        "refunded": "مسترد"
+      }
+    },
+    "conversation": {
+      "title": "المحادثة",
+      "openInInbox": "فتح في صندوق الرسائل",
+      "you": "أنت",
+      "empty": "لا رسائل مع هذا الضيف بعد.",
+      "replyTo": "الرد على {name} عبر {channel}…",
+      "reply": "الرد",
+      "send": "إرسال"
+    },
+    "rooms": {
+      "title": "الإقامة والوحدات",
+      "ages": "الأعمار {ages}",
+      "unit": "الوحدة",
+      "noUnit": "بلا وحدة",
+      "move": "نقل",
+      "state": {
+        "expected": "متوقع",
+        "checked_in": "وصل",
+        "checked_out": "غادر",
+        "no_show": "لم يحضر"
+      },
+      "credential": {
+        "door_code": "رمز الباب",
+        "smart_lock": "قفل ذكي",
+        "lockbox": "صندوق مفاتيح",
+        "key_handover": "تسليم المفاتيح"
+      },
+      "delivery": {
+        "pending": "لم يُرسل بعد",
+        "scheduled": "مجدول",
+        "delivered": "أُرسل"
+      }
+    },
+    "guestCard": {
+      "nthStay": "الإقامة رقم {n}",
+      "speaks": "يتحدث {language}",
+      "email": "البريد",
+      "phone": "الهاتف",
+      "onFile": "محفوظ",
+      "show": "عرض (مُسجَّل)",
+      "revealedFor": "عُرض لـ {name}، مُسجَّل",
+      "portal": "البوابة",
+      "openPortal": "فتح كضيف",
+      "form": "نموذج الوصول",
+      "formDone": "مكتمل",
+      "formDoneAt": "مكتمل · يصل {time}",
+      "formNotStarted": "لم يبدأ"
+    },
+    "actions": {
+      "title": "الإجراءات",
+      "checkIn": "تسجيل وصول الضيف",
+      "checkOut": "تسجيل مغادرة الضيف",
+      "move": "النقل إلى وحدة أخرى",
+      "changeDates": "تغيير التواريخ",
+      "cancel": "إلغاء الحجز",
+      "saveDates": "حفظ التواريخ الجديدة",
+      "changeDatesHint": "تُسعَّر الليالي الجديدة من خطة الأسعار وتُغلق على كل القنوات؛ وتُحرَّر الليالي المحذوفة.",
+      "otaNote": "تُطلب تغييرات حجز {channel} عبر {channel}. يحتفظ OTAbridge بالحجز حتى تؤكد القناة."
+    },
+    "tl": {
+      "booked": "حُجز",
+      "cancelled": "أُلغي",
+      "datesChanged": "تغيّرت التواريخ إلى {range}",
+      "guestsChanged": "عدد الضيوف أصبح {n}",
+      "totalChanged": "الإجمالي أصبح {amount}",
+      "updated": "حُدّث",
+      "was": "كان {value}",
+      "by": "بواسطة {channel}",
+      "byYou": "بواسطة فريقك",
+      "form_done": "اكتمل نموذج الوصول",
+      "code_issued": "أُصدر رمز الباب",
+      "code_revoked": "أُلغي رمز الباب",
+      "checked_in": "سُجّل الوصول",
+      "checked_out": "سُجّلت المغادرة",
+      "messageSent": "أُرسلت رسالة",
+      "messageSentNamed": "أُرسلت {name}",
+      "automation": "أتمتة",
+      "guest": "الضيف",
+      "staff": "الفريق"
+    },
+    "turnover": {
+      "title": "التنظيف",
+      "none": "لا تنظيف مخطط لهذه الإقامة بعد.",
+      "before": "تنظيف قبل الوصول",
+      "after": "تنظيف بعد المغادرة",
+      "nobody": "لا أحد بعد",
+      "types": {
+        "changeover": "تبديل في اليوم نفسه",
+        "departure": "تنظيف المغادرة",
+        "mid_stay": "تنظيف أثناء الإقامة",
+        "deep": "تنظيف عميق",
+        "inspection": "فحص",
+        "linen": "البياضات"
+      },
+      "states": {
+        "planned": "مخطط",
+        "assigned": "مجدول",
+        "accepted": "مقبول",
+        "on_site": "في الموقع",
+        "done": "منجز",
+        "inspected": "مفحوص",
+        "cancelled": "ملغى"
+      }
+    },
+    "new": {
+      "crumb": "جديد",
+      "where": "1 · أين ومتى",
+      "property": "العقار",
+      "room": "الغرفة / الوحدة",
+      "sleeps": "{title} (تتسع لـ {n})",
+      "checkIn": "الوصول",
+      "checkOut": "المغادرة",
+      "adults": "البالغون",
+      "children": "الأطفال",
+      "available": "متاح.",
+      "availableDetail": "{nights} ليالٍ",
+      "minStay": "الحد الأدنى للإقامة {n}",
+      "noRestrictions": "لا قيود على هذه التواريخ.",
+      "channelsClose": "ستُغلق القنوات لهذه الليالي لحظة الحفظ.",
+      "unavailable": "غير متاح.",
+      "guest": "2 · الضيف",
+      "fullName": "الاسم الكامل",
+      "fullNameHint": "ابدأ الكتابة للعثور على ضيف سابق",
+      "returning": "ضيف عائد · {n} سابقة",
+      "stays": "{n} إقامات",
+      "stay1": "إقامة واحدة",
+      "email": "البريد الإلكتروني",
+      "phone": "الهاتف",
+      "language": "اللغة",
+      "languageUnknown": "غير معروفة",
+      "price": "3 · السعر والدفع",
+      "ratePlan": "خطة الأسعار",
+      "total": "الإجمالي ({currency})",
+      "totalHint": "سعر خطة الأسعار · عدّله لتجاوزه",
+      "source": "المصدر",
+      "sourcePhone": "مباشر · هاتف",
+      "sourceWalkIn": "مباشر · حضوري",
+      "sourceDirect": "مباشر · بريد أو موقع",
+      "sourceStaff": "مباشر · آخر",
+      "payment": "الدفع",
+      "payLater": "التحصيل لاحقًا",
+      "payCard": "مدفوع · بطاقة",
+      "payCash": "مدفوع · نقدًا",
+      "payTransfer": "مدفوع · تحويل بنكي",
+      "note": "ملاحظة داخلية",
+      "noteHint": "ما يجب أن يعرفه الفريق (لا يراه الضيف)",
+      "summary": "الملخص",
+      "nights": "{n} ليالٍ",
+      "night1": "ليلة واحدة",
+      "adultsN": "{n} بالغين",
+      "adult1": "بالغ واحد",
+      "pickDates": "اختر التواريخ لرؤية السعر.",
+      "totalLabel": "الإجمالي",
+      "dueNow": "المستحق الآن ({name})",
+      "create": "إنشاء الحجز",
+      "cancel": "إلغاء",
+      "sideEffects": "يغلق الحفظ هذه الليالي على كل القنوات خلال دقيقة، ويخطط التنظيف ويضع الإقامة في التقويم."
+    },
+    "checkin": {
+      "title": "تسجيل الوصول عبر الإنترنت",
+      "frontDesk": "مكتب الاستقبال ولوحة الغرف",
+      "kpi": {
+        "arrivals": "الوصول · 7 أيام",
+        "formsDone": "نماذج الوصول المكتملة",
+        "missing": "{n} ناقصة",
+        "allDone": "كلها مكتملة",
+        "reminders": "التذكيرات المجدولة",
+        "remindersHint": "عبر رسالتك قبل الوصول",
+        "noRule": "لا رسالة مفعّلة قبل الوصول",
+        "registrations": "تسجيلات يجب تقديمها",
+        "registrationsHint": "التقديم غير موصول بعد؛ صدّرها بدلًا من ذلك"
+      },
+      "upcoming": "الوصول القادم",
+      "sendReminders": "إرسال التذكيرات · {n}",
+      "exportRegistrations": "تصدير التسجيلات",
+      "col": {
+        "guest": "الضيف",
+        "form": "نموذج الوصول",
+        "listed": "الضيوف المدرجون",
+        "id": "الهوية",
+        "balance": "الرصيد",
+        "code": "رمز الباب"
+      },
+      "empty": "لا أحد يصل في الأيام السبعة القادمة.",
+      "form": {
+        "done": "مكتمل",
+        "notStarted": "لم يبدأ"
+      },
+      "listedOf": "{listed} من {expected}",
+      "idOnFile": "محفوظة",
+      "code": {
+        "sent": "أُرسل",
+        "ready": "الرمز جاهز {when}",
+        "notIssued": "لم يُصدر"
+      },
+      "fill": {
+        "title": "ما يملؤه الضيوف",
+        "lead": "يُطلب في بوابة الضيف، من رسالة التأكيد ومن تذكيراتك. يستغرق دقيقتين تقريبًا.",
+        "names": "أسماء جميع الضيوف",
+        "namesHint": "لتسجيل الشرطة",
+        "arrival": "وقت الوصول",
+        "arrivalHint": "ليخطط عامل التنظيف والمضيف",
+        "preferences": "التفضيلات",
+        "preferencesHint": "الأسرّة، سرير الطفل، ما يجب تجهيزه",
+        "id": "صورة وثيقة الهوية",
+        "idHint": "لا تُطلب بعد: البوابة لا تدعم الرفع",
+        "required": "مطلوب",
+        "optional": "اختياري",
+        "notAsked": "غير مطلوب"
+      },
+      "rules": {
+        "title": "القواعد",
+        "lead": "كيف يعمل تسجيل الوصول اليوم.",
+        "code": "متى يُكشف رمز الباب",
+        "codeValue": "في بوابة الضيف، قبل بدء صلاحية الرمز بعدد ساعات محدد (إعدادات محرك الحجز). لا ينتظر النموذج ولا الرصيد.",
+        "remind": "تذكير الضيوف",
+        "remindValue": "عبر رسالتك قبل الوصول، وعند الطلب بزر إرسال التذكيرات.",
+        "remindNone": "عند الطلب فقط بزر إرسال التذكيرات.",
+        "automation": "اضبطها في الأتمتة",
+        "export": "تصدير التسجيلات",
+        "exportValue": "ملف CSV بالضيوف المسمّين للأيام السبعة القادمة؛ التقديم إلى SEF أو Alloggiati غير موصول."
+      },
+      "reminderBody": "مرحبًا {name}، قبل وصولك إلى {property} يُرجى إكمال تسجيل الوصول عبر الإنترنت. يستغرق دقيقتين تقريبًا: {url}"
+    },
+    "guestsPage": {
+      "title": "الضيوف",
+      "kpi": {
+        "guests": "الضيوف",
+        "guestsHint": "منذ البداية",
+        "returning": "عادوا مرة على الأقل",
+        "directAfterOta": "حجزوا مباشرة بعد إقامة عبر منصة",
+        "directAfterOtaHint": "بلا عمولة على تلك الإقامات",
+        "consent": "موافقة تسويقية"
+      },
+      "pills": {
+        "all": "الكل",
+        "returning": "العائدون",
+        "emailable": "يمكن مراسلتهم",
+        "flagged": "مُعلَّمون"
+      },
+      "search": "الاسم أو البلد",
+      "export": "تصدير",
+      "col": {
+        "guest": "الضيف",
+        "stays": "الإقامات",
+        "properties": "العقارات",
+        "value": "القيمة الإجمالية",
+        "status": "الآن",
+        "via": "حجز عبر"
+      },
+      "contact": {
+        "both": "البريد والهاتف محفوظان",
+        "email": "البريد محفوظ",
+        "phone": "الهاتف محفوظ",
+        "none": "لا جهة اتصال"
+      },
+      "speaks": "يتحدث {language}",
+      "status": {
+        "inHouse": "مقيم الآن",
+        "arrives": "يصل {date}",
+        "note": "ملاحظة: {note}"
+      },
+      "empty": "لا ضيوف مطابقون.",
+      "showing": "عرض {shown} من {total}",
+      "loadMore": "عرض المزيد",
+      "winBack": {
+        "title": "استعدهم بالحجز المباشر",
+        "lead": "يمكن للضيوف الذين حجزوا عبر Airbnb أو Booking.com ووافقوا على الأخبار تلقي رسالة بعد المغادرة بعرض للحجز المباشر. اضبطها في الأتمتة؛ هذه الصفحة تعرض فقط من ستصلهم.",
+        "open": "فتح الأتمتة",
+        "audience": "{n, plural, =0 {لا أحد بعد} one {ضيف واحد ستصله} other {# ضيوف ستصلهم}}"
+      }
+    }
   },
   "operations": {
     "title": "لوحة التنظيف",

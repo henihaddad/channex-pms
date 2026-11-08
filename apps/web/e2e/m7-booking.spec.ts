@@ -151,7 +151,7 @@ test("direct booking → OTA availability → door code → portal → owner sta
   // manager: one direct reservation, the door code issued at confirm
   await page.goto("/reservations");
   const row = page.locator('[data-testid="reservations-table"] tbody tr').first();
-  await expect(row).toContainText(/direct/);
+  await expect(row).toContainText(/direct/i);
   await row.getByRole("link").first().click();
   await expect(page.getByTestId("reservation-detail")).toBeVisible();
   // issued at confirm: the masked credential is there to reveal, nobody clicked "issue"

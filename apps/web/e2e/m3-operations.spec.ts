@@ -71,8 +71,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
     await expect(page.locator('select[name="ratePlanId"] option:not([value=""])')).toHaveCount(1);
     await fillDate(page, "arrivalDate", arr);
     await fillDate(page, "departureDate", dep);
-    await page.getByLabel("Guest first name").fill(name);
-    await page.getByLabel("Guest surname").fill("Silva");
+    await page.getByLabel("Full name").fill(`${name} Silva`);
     await page.getByLabel("Email").fill(`${name.toLowerCase()}-${stamp}@example.com`);
     await page.getByTestId("create-booking").click();
     await expect(page.getByTestId("reservation-detail")).toBeVisible();
@@ -132,6 +131,8 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.getByTestId("reveal-pii").click();
   await expect(page.getByTestId("guest-pii")).toContainText("Ana Silva");
   // room revenue posts at daily close; a charge added now can be invoiced immediately, gaplessly numbered
+  // folio operations sit behind "Record payment" on the Money card
+  await page.getByTestId("record-payment").click();
   const folio = page.getByTestId("folio").first();
   await folio.locator("input[name=description]").fill("Late check-out");
   await folio.locator("input[name=amount]").first().fill("30");
