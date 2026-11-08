@@ -20,6 +20,8 @@ export {
   DrizzlePropertyRepository,
   type PropertySummary,
   type PropertyDetail,
+  type PropertyVitals,
+  type PortfolioInventory,
 } from "./properties.js";
 export {
   DrizzleChannelRepository,

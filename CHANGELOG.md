@@ -19,6 +19,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Properties matches the design canvas: tabs for Properties, Rooms & units, Rate plans and
+  Amenities; filter pills by kind and "Needs attention"; each card shows place and units, the
+  channels it sells on, occupancy over the coming 30 nights and one status chip (a booking
+  that needs a room, a failed setup or push, or when Channex last confirmed the calendar); a
+  dashed "Add a property" card; and Content completeness across the portfolio (photos, guide,
+  house rules, price guard rails). Templates, the CSV import and adopting a Channex property
+  moved under "Other ways to add properties". The CSV import moved to `/properties/import/csv`.
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
   failed), arrivals show time, form, balance and door-code chips, Activity reads like sentences,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { importCsvAction } from "../properties.actions";
+import { importCsvAction } from "../../properties.actions";
 import { Alert, Button, Field, Label, Select, Textarea } from "@/components/ui";
 
 export function ImportForm({ templates }: { templates: Array<{ id: string; name: string }> }) {

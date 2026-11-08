@@ -525,7 +525,82 @@
     "noChannelsShort": "لا قناة",
     "removalDate": "يزيل Channex هذا العقار في",
     "guestGuide": "دليل الضيف",
-    "pricingImport": "استيراد الأسعار"
+    "pricingImport": "استيراد الأسعار",
+    "addProperty": "إضافة عقار",
+    "importAirbnb": "استيراد من Airbnb",
+    "filterLabel": "تصفية العقارات",
+    "filters": {
+      "all": "الكل",
+      "single_unit": "شقق",
+      "multi_unit": "متعددة الوحدات",
+      "hotel": "دور ضيافة",
+      "attention": "يحتاج متابعة"
+    },
+    "addCardTitle": "إضافة عقار",
+    "addCardHint": "3 دقائق، أو استورد من Airbnb",
+    "occupancy30": "الإشغال 30 يومًا",
+    "count": {
+      "units": "{count, plural, one {وحدة واحدة} other {# وحدات}}",
+      "rooms": "{count, plural, one {غرفة واحدة} other {# غرف}}"
+    },
+    "chip": {
+      "unmapped": "{count, plural, one {حجز واحد بلا غرفة} other {# حجوزات بلا غرفة}}",
+      "setupFailed": "الإعداد يحتاج إعادة محاولة",
+      "syncFailed": "{count, plural, one {ليلة واحدة لم تُرسل} other {# ليالٍ لم تُرسل}}",
+      "sending": "جارٍ الإرسال إلى القنوات",
+      "synced": "تمت المزامنة منذ {ago}",
+      "inSync": "متزامن",
+      "syncedNow": "تمت المزامنة الآن"
+    },
+    "content": {
+      "title": "اكتمال المحتوى",
+      "hint": "يحجز الضيوف أكثر عندما تكتمل الصور والدليل وقواعد المنزل.",
+      "photos": "الصور",
+      "guide": "دليل الضيف",
+      "houseRules": "قواعد المنزل",
+      "rails": "حدود التسعير",
+      "of": "{done} من {total}",
+      "photosFewest": "{title} لديه {count}",
+      "missing": "ينقص {names}",
+      "missingMore": "ينقص {names} و{more} أخرى",
+      "railsSet": "الحد الأدنى والأقصى محددان",
+      "photosNone": "{title} بلا صور"
+    },
+    "more": {
+      "title": "طرق أخرى لإضافة العقارات",
+      "hint": "لمحفظة موجودة في جدول بيانات أو على Channex.",
+      "csv": "استيراد ملف CSV"
+    },
+    "tabs": {
+      "rooms": "الغرف والوحدات",
+      "plans": "خطط الأسعار",
+      "amenities": "المرافق",
+      "roomsLead": "كل نوع غرفة ووحداته في جميع عقاراتك.",
+      "roomsEmpty": "لا توجد أنواع غرف بعد. أضف عقارًا أولًا.",
+      "plansLead": "كل خطة أسعار مع سعر الليلة والحد الأدنى للإقامة والقنوات المرتبطة بها.",
+      "plansEmpty": "لا توجد خطط أسعار بعد. أضف عقارًا أولًا.",
+      "amenitiesLead": "ما يقدمه كل عقار. يملؤه استيراد Airbnb؛ عدّله هنا، عنصر في كل سطر."
+    },
+    "cols": {
+      "property": "العقار",
+      "roomType": "نوع الغرفة",
+      "units": "الوحدات",
+      "sleeps": "يتسع لـ",
+      "ratePlan": "خطة السعر",
+      "rateTonight": "سعر الليلة",
+      "baseRate": "السعر الأساسي",
+      "minStay": "أقل إقامة",
+      "channels": "القنوات"
+    },
+    "wholeProperty": "العقار بالكامل",
+    "sleeps": "{count, plural, one {يتسع لشخص} other {يتسع لـ #}}",
+    "derived": "{change} مشتق",
+    "amenitiesCount": "{count, plural, =0 {لا شيء} one {عنصر واحد} other {# عناصر}}",
+    "noAmenities": "لا توجد مرافق مدرجة بعد.",
+    "editAmenities": "تعديل المرافق",
+    "amenitiesLabel": "مرافق {title}",
+    "amenitiesHint": "عنصر في كل سطر. تُحذف العناصر المكررة.",
+    "saveAmenities": "حفظ المرافق"
   },
   "calendar": {
     "title": "التقويم",

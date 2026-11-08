@@ -525,7 +525,82 @@
     "noChannelsShort": "Aucun canal",
     "removalDate": "Channex retire cette propriété le",
     "guestGuide": "Livret d'accueil",
-    "pricingImport": "Import des tarifs"
+    "pricingImport": "Import des tarifs",
+    "addProperty": "Ajouter un logement",
+    "importAirbnb": "Importer depuis Airbnb",
+    "filterLabel": "Filtrer les logements",
+    "filters": {
+      "all": "Tous",
+      "single_unit": "Appartements",
+      "multi_unit": "Multi-unités",
+      "hotel": "Maisons d'hôtes",
+      "attention": "À traiter"
+    },
+    "addCardTitle": "Ajouter un logement",
+    "addCardHint": "3 minutes, ou importez depuis Airbnb",
+    "occupancy30": "Occupation 30 j",
+    "count": {
+      "units": "{count, plural, one {# unité} other {# unités}}",
+      "rooms": "{count, plural, one {# chambre} other {# chambres}}"
+    },
+    "chip": {
+      "unmapped": "{count, plural, one {# réservation sans chambre} other {# réservations sans chambre}}",
+      "setupFailed": "Configuration à relancer",
+      "syncFailed": "{count, plural, one {# nuit non envoyée} other {# nuits non envoyées}}",
+      "sending": "Envoi aux canaux",
+      "synced": "Synchronisé il y a {ago}",
+      "inSync": "Synchronisé",
+      "syncedNow": "Synchronisé à l'instant"
+    },
+    "content": {
+      "title": "Contenu complet",
+      "hint": "Les voyageurs réservent davantage quand photos, guide et règlement sont complets.",
+      "photos": "Photos",
+      "guide": "Guide voyageur",
+      "houseRules": "Règlement intérieur",
+      "rails": "Garde-fous de prix",
+      "of": "{done} sur {total}",
+      "photosFewest": "{title} en a {count}",
+      "missing": "{names} manquant",
+      "missingMore": "{names} et {more} autres manquants",
+      "railsSet": "min/max définis",
+      "photosNone": "{title} n'en a aucune"
+    },
+    "more": {
+      "title": "Autres façons d'ajouter des logements",
+      "hint": "Pour un portefeuille déjà dans un tableur ou sur Channex.",
+      "csv": "Importer un CSV"
+    },
+    "tabs": {
+      "rooms": "Chambres et unités",
+      "plans": "Plans tarifaires",
+      "amenities": "Équipements",
+      "roomsLead": "Chaque type de chambre et ses unités, sur tous vos logements.",
+      "roomsEmpty": "Aucun type de chambre. Ajoutez d'abord un logement.",
+      "plansLead": "Chaque plan tarifaire avec le prix de ce soir, le séjour minimum et les canaux où il est relié.",
+      "plansEmpty": "Aucun plan tarifaire. Ajoutez d'abord un logement.",
+      "amenitiesLead": "Ce que chaque logement propose. Un import Airbnb le remplit ; modifiez-le ici, un par ligne."
+    },
+    "cols": {
+      "property": "Logement",
+      "roomType": "Type de chambre",
+      "units": "Unités",
+      "sleeps": "Couchages",
+      "ratePlan": "Plan tarifaire",
+      "rateTonight": "Prix ce soir",
+      "baseRate": "Prix de base",
+      "minStay": "Séjour min.",
+      "channels": "Canaux"
+    },
+    "wholeProperty": "Logement entier",
+    "sleeps": "{count, plural, one {# couchage} other {# couchages}}",
+    "derived": "{change} dérivé",
+    "amenitiesCount": "{count, plural, =0 {Aucun} one {# listé} other {# listés}}",
+    "noAmenities": "Aucun équipement listé.",
+    "editAmenities": "Modifier les équipements",
+    "amenitiesLabel": "Équipements de {title}",
+    "amenitiesHint": "Un par ligne. Les doublons sont retirés.",
+    "saveAmenities": "Enregistrer les équipements"
   },
   "calendar": {
     "title": "Calendrier",

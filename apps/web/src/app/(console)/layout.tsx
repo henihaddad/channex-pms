@@ -44,6 +44,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const top = await getTranslations("operations");
   const to2 = await getTranslations("owners");
   const tpay = await getTranslations("payments");
+  const tprop = await getTranslations("properties");
 
   const sections: NavSectionDef[] = [
     { item: { href: "/", label: t("dashboard") }, tabs: [] },
@@ -82,7 +83,14 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         { href: "/maintenance", label: t("maintenance") },
       ],
     },
-    { item: { href: "/properties", label: t("properties") }, tabs: [] },
+    {
+      item: { href: "/properties", label: t("properties") },
+      tabs: [
+        { href: "/properties/rooms", label: tprop("tabs.rooms") },
+        { href: "/properties/rate-plans", label: tprop("tabs.plans") },
+        { href: "/properties/amenities", label: tprop("tabs.amenities") },
+      ],
+    },
     {
       item: { href: "/channels", label: t("channels") },
       firstTab: t("tabs.connections"),

@@ -879,6 +879,38 @@
   },
   {
     "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadAmenities",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadInventory",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadPortfolio",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "saveAmenitiesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:update",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
     "export": "saveTemplateAction",
     "kind": "action",
     "wrapper": "withPermission",

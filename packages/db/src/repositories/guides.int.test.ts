@@ -233,3 +233,27 @@ describe("GUIDE-1: a template reads only a published guide", () => {
     expect(rendered.missing).toEqual(["guide.wifi_name", "guide.wifi_password"]);
   });
 });
+
+describe("property vitals (spec 03 §3.2a)", () => {
+  it("counts sold nights, room revenue and the guide per property over a window", async () => {
+    const [v] = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).vitals("2026-10-01", 30, propertyId),
+    );
+    expect(v).toMatchObject({
+      propertyId,
+      units: 1,
+      nightsSold: 3,
+      nightsAvailable: 30,
+      roomRevenueMinor: 30000,
+      unmappedBookings: 0,
+      directEnabled: false,
+      pricingRailsSet: false,
+    });
+    expect(v!.guides.map((g) => g.locale).sort()).toEqual(["en", "pt"]);
+    // a window that misses the stay sells nothing
+    const [later] = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).vitals("2026-11-01", 30, propertyId),
+    );
+    expect(later!.nightsSold).toBe(0);
+  });
+});

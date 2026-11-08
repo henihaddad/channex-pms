@@ -44,7 +44,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   ]);
   await page.goto("/properties");
   await expect(page.getByText(/^Template /)).toBeVisible();
-  await page.goto("/properties/import");
+  await page.goto("/properties/import/csv");
   await pickOption(page, { label: "Template" }, { index: 1 });
   const rows = Array.from(
     { length: 20 },

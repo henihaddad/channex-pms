@@ -3,15 +3,30 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
+  contentCompleteness,
   createProperty,
   fromCsvRow,
   fromTemplate,
   Id,
+  normaliseAmenities,
+  occupancyBps,
+  propertyAttention,
+  sectionWritten,
+  type ContentCompleteness,
+  type GuideSection,
   type Id as IdT,
+  type PropertyAttention,
   type PropertyInput,
   type PropertyTemplate,
 } from "@pms/core";
-import { DrizzlePropertyRepository, rawRows, sql, type PropertySummary } from "@pms/db";
+import {
+  DrizzlePropertyRepository,
+  rawRows,
+  sql,
+  type PropertySummary,
+  type PortfolioInventory,
+  type PropertyVitals,
+} from "@pms/db";
 import { localRatePlanTitle } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { propertyInputSchema } from "@/api/schemas";
@@ -23,6 +38,58 @@ export const listProperties = withPermission<[], PropertySummary[]>(
   { scope: "organization", audit: false },
   (ctx) => new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list(),
 );
+
+/** Days the portfolio view measures occupancy and ADR over: the coming month, as booked. */
+const VITALS_DAYS = 30;
+
+export type PortfolioRow = PropertySummary & {
+  vitals: PropertyVitals;
+  occupancyBps: number | null;
+  attention: PropertyAttention;
+};
+
+/** The property list with the numbers the cards show (spec 03 §3.2a). */
+export const loadPortfolio = withPermission<
+  [],
+  { rows: PortfolioRow[]; content: ContentCompleteness }
+>("property:read", { scope: "organization", audit: false }, async (ctx) => {
+  const c = await container();
+  const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
+  const [list, vitals] = await Promise.all([
+    repo.list(),
+    repo.vitals(c.clock.today("UTC").toString(), VITALS_DAYS),
+  ]);
+  const byId = new Map(vitals.map((v) => [v.propertyId, v]));
+  const rows = list.flatMap((p) => {
+    const v = byId.get(p.id);
+    if (!v) return [];
+    return [
+      {
+        ...p,
+        vitals: v,
+        occupancyBps: occupancyBps(v.nightsSold, v.nightsAvailable),
+        attention: propertyAttention({
+          state: p.state,
+          unmappedBookings: v.unmappedBookings,
+          failedCells: v.failedCells,
+          provisioningError: p.provisioningError,
+        }),
+      },
+    ];
+  });
+  const content = contentCompleteness(
+    rows.map((r) => ({
+      title: r.title,
+      photos: r.vitals.photos,
+      guidePublished: r.vitals.guides.some((g) => g.published),
+      houseRulesWritten: r.vitals.guides.some((g) =>
+        g.sections.some((s) => s.kind === "house_rules" && sectionWritten(s as GuideSection)),
+      ),
+      pricingRailsSet: r.vitals.pricingRailsSet,
+    })),
+  );
+  return { rows, content };
+});
 
 export const listTemplates = withPermission<[], PropertyTemplate[]>(
   "template:read",
@@ -301,5 +368,42 @@ export const adoptPropertyAction = withPermission<[CreateState, FormData], Creat
     });
     revalidatePath("/properties");
     return { createdId: created.property.id };
+  },
+);
+
+/** Room types and rate plans across the portfolio, with today's rate (the inventory tabs). */
+export const loadInventory = withPermission<[], PortfolioInventory>(
+  "property:read",
+  { scope: "organization", audit: false },
+  async (ctx) => {
+    const c = await container();
+    return new DrizzlePropertyRepository(ctx.tx, ctx.orgId).inventory(
+      c.clock.today("UTC").toString(),
+    );
+  },
+);
+
+export const loadAmenities = withPermission<
+  [],
+  Array<{ id: string; title: string; amenities: string[] }>
+>("property:read", { scope: "organization", audit: false }, (ctx) =>
+  new DrizzlePropertyRepository(ctx.tx, ctx.orgId).amenities(),
+);
+
+/** A property's amenity list, typed one per line (spec 03 §3.2a); channels read it from the content. */
+export const saveAmenitiesAction = withPermission<[FormData], void>(
+  "property:update",
+  {
+    scope: "property",
+    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+    subject: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+  },
+  async (ctx, fd) => {
+    const propertyId = String(fd.get("propertyId"));
+    await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).setContent(propertyId, {
+      amenities: normaliseAmenities(String(fd.get("amenities") ?? "")),
+    });
+    revalidatePath("/properties/amenities");
+    revalidatePath(`/properties/${propertyId}`);
   },
 );

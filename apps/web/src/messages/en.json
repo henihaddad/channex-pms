@@ -533,7 +533,82 @@
     "noChannelsShort": "No channel",
     "removalDate": "Channex removes this property on",
     "guestGuide": "Guest guide",
-    "pricingImport": "Pricing import"
+    "pricingImport": "Pricing import",
+    "addProperty": "Add property",
+    "importAirbnb": "Import from Airbnb",
+    "filterLabel": "Filter properties",
+    "filters": {
+      "all": "All",
+      "single_unit": "Apartments",
+      "multi_unit": "Multi-unit",
+      "hotel": "Guest houses",
+      "attention": "Needs attention"
+    },
+    "addCardTitle": "Add a property",
+    "addCardHint": "3 minutes, or import from Airbnb",
+    "occupancy30": "Occupancy 30 d",
+    "count": {
+      "units": "{count, plural, one {# unit} other {# units}}",
+      "rooms": "{count, plural, one {# room} other {# rooms}}"
+    },
+    "chip": {
+      "unmapped": "{count, plural, one {# booking needs a room} other {# bookings need a room}}",
+      "setupFailed": "Setup needs a retry",
+      "syncFailed": "{count, plural, one {# night not sent} other {# nights not sent}}",
+      "sending": "Sending to channels",
+      "synced": "Synced {ago} ago",
+      "inSync": "In sync",
+      "syncedNow": "Synced just now"
+    },
+    "content": {
+      "title": "Content completeness",
+      "hint": "Guests book more when photos, guide and house rules are complete.",
+      "photos": "Photos",
+      "guide": "Guest guide",
+      "houseRules": "House rules",
+      "rails": "Pricing rails",
+      "of": "{done} of {total}",
+      "photosFewest": "{title} has {count}",
+      "missing": "{names} missing",
+      "missingMore": "{names} and {more} more missing",
+      "railsSet": "min/max set",
+      "photosNone": "{title} has none"
+    },
+    "more": {
+      "title": "Other ways to add properties",
+      "hint": "For a portfolio that already lives in a spreadsheet or on Channex.",
+      "csv": "Import a CSV"
+    },
+    "tabs": {
+      "rooms": "Rooms & units",
+      "plans": "Rate plans",
+      "amenities": "Amenities",
+      "roomsLead": "Every room type and its units, across your properties.",
+      "roomsEmpty": "No room types yet. Add a property first.",
+      "plansLead": "Every rate plan with tonight's rate and minimum stay, and the channels it is mapped on.",
+      "plansEmpty": "No rate plans yet. Add a property first.",
+      "amenitiesLead": "What each property offers. An Airbnb import fills this in; edit it here, one per line."
+    },
+    "cols": {
+      "property": "Property",
+      "roomType": "Room type",
+      "units": "Units",
+      "sleeps": "Sleeps",
+      "ratePlan": "Rate plan",
+      "rateTonight": "Rate tonight",
+      "baseRate": "Base rate",
+      "minStay": "Min stay",
+      "channels": "Channels"
+    },
+    "wholeProperty": "Whole property",
+    "sleeps": "{count, plural, one {sleeps #} other {sleeps #}}",
+    "derived": "{change} derived",
+    "amenitiesCount": "{count, plural, =0 {None listed} one {# listed} other {# listed}}",
+    "noAmenities": "No amenities listed yet.",
+    "editAmenities": "Edit amenities",
+    "amenitiesLabel": "Amenities of {title}",
+    "amenitiesHint": "One per line. Duplicates are dropped.",
+    "saveAmenities": "Save amenities"
   },
   "calendar": {
     "title": "Calendar",

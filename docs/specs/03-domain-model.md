@@ -75,6 +75,38 @@ erDiagram
 must never ask a manager with 200 villas to create 200 room types by hand — that is
 the mistake that makes existing tools unusable at this scale.
 
+### 3.2a The portfolio view
+
+Persona: the property manager (spec 02 `property_manager`) who runs several listings and
+wants the one that needs them to say so. The Properties section has four tabs: **Properties**
+(the cards), **Rooms & units** (every room type with its units), **Rate plans** (every plan
+with tonight's rate, minimum stay and the channels it is mapped on) and **Amenities**.
+
+Each property card shows its place and unit count, the channels it sells on (live
+connections, plus Direct when the booking site is on), and **Occupancy 30 d**: nights sold
+over sellable nights (sum of room-type counts × 30) for the coming 30 nights, as booked
+(`occupancyBps`). The chip on the card is the one thing that needs a human, most urgent
+first (`propertyAttention`): bookings without a room (the mapping queue), a failed setup on
+a property that is not live, calendar nights the channel manager refused, suspension.
+Otherwise it says when Channex last confirmed a calendar cell ("Synced 2 min ago"). Pills
+filter by kind (Apartments = `single_unit`, Multi-unit, Guest houses = `hotel`) and pull out
+**Needs attention**.
+
+**Content completeness** counts, across the portfolio, properties with at least
+`MIN_LISTING_PHOTOS` (5) photos, a published guest guide (any locale), a written house-rules
+section of the guide, and price guard rails with both a floor and a ceiling (spec 06 §6.5b),
+and names the ones still missing.
+
+**Amenities** are a list on the property's content (`settings.content.amenities`), filled by
+an Airbnb import and editable on the Amenities tab, one per line (`normaliseAmenities`:
+trimmed, de-duplicated ignoring case, at most 200). It is a plain list, not a mapped
+vocabulary: channels that need their own amenity codes are mapped when that channel's content
+push is built.
+
+Templates, the CSV import and adopting an existing Channex property stay on the Properties
+tab under "Other ways to add properties"; the CSV import lives at `/properties/import/csv`,
+and `/properties/import` is the Airbnb import.
+
 ## 3.3 Inventory, rates and content
 
 ```mermaid
