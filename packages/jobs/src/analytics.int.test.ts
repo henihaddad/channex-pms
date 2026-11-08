@@ -15,6 +15,8 @@ import {
   asSystem,
   BookingRepositoryPerCall,
   DrizzleAnalyticsRepository,
+  DrizzleChannelRepository,
+  DrizzleSyncHealthRepository,
   DrizzleOwnerRepository,
   DrizzlePropertyRepository,
   rawRows,
@@ -170,6 +172,24 @@ beforeAll(async () => {
 afterAll(() => handle.close());
 
 describe("KPI engine over the rollups", () => {
+  it("sync health and rooms per channel read the same inventory", async () => {
+    const [summary, differing, rooms] = await asSystem(handle.db, ORG, (tx) =>
+      Promise.all([
+        new DrizzleSyncHealthRepository(tx, ORG).summary(clock.now().toString()),
+        new DrizzleSyncHealthRepository(tx, ORG).differing(),
+        new DrizzleChannelRepository(tx, ORG).roomsPerChannel(),
+      ]),
+    );
+    expect(summary.perHour).toHaveLength(24);
+    expect(summary.failedCells + summary.conflictedCells).toBe(differing.length);
+    expect(summary.liveProperties).toBe(2);
+    // every room type appears, with no channel connected in this fixture
+    expect(new Set(rooms.map((r) => r.propertyTitle))).toEqual(
+      new Set(["Sea View", "Harbour House"]),
+    );
+    expect(rooms.every((r) => r.adapterCode === null && r.otaRoomCodes.length === 0)).toBe(true);
+  });
+
   it("Today's details agree with Today's counts and point at real bookings", async () => {
     for (const d of [day(3), day(10), day(17)]) {
       const [board, details, queue] = await repo((r) =>
@@ -440,7 +460,7 @@ describe("KPI engine over the rollups", () => {
     const open = await repo((x) => x.alerts("open"));
     const low = open.find((a) => a.type === "low_occupancy");
     expect(low).toBeDefined();
-    expect(low!.link).toMatch(/\/calendar\?property=/);
+    expect(low!.link).toMatch(/\/calendar\?propertyId=/);
     await repo((x) => x.setAlertState(low!.id, "actioned", STAFF));
     expect(
       (await repo((x) => x.alertStats())).find((s) => s.type === "low_occupancy")?.actioned,

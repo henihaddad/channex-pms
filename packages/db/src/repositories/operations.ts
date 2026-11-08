@@ -15,6 +15,19 @@ import {
 import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
 
+/** An issue as the operations board lists it: open ones first, then those closed this week. */
+export interface RecentIssue {
+  id: string;
+  description: string;
+  propertyTitle: string;
+  unitName: string | null;
+  category: string;
+  state: string;
+  createdAt: string;
+  assigneeName: string | null;
+  reportedVia: string;
+}
+
 export interface TaskRow {
   id: string;
   propertyId: string;
@@ -181,6 +194,14 @@ export class DrizzleOperationsRepository {
         order by t.is_same_day desc, t.window_to, t.sequence nulls last, t.id`,
     );
   }
+  /** Tasks from `from` to `to` inclusive, by day then deadline: the multi-day turnover board. */
+  async tasksBetween(from: string, to: string): Promise<TaskRow[]> {
+    return rawRows<TaskRow>(
+      this.tx,
+      sql`${this.taskSelect()} where t.date between ${from}::date and ${to}::date and t.state <> 'cancelled'
+        order by t.date, t.is_same_day desc, t.window_to, t.sequence nulls last, t.id`,
+    );
+  }
   async tasksForBooking(bookingId: string): Promise<TaskRow[]> {
     return rawRows<TaskRow>(
       this.tx,
@@ -191,7 +212,10 @@ export class DrizzleOperationsRepository {
     const [r] = await rawRows<TaskRow>(this.tx, sql`${this.taskSelect()} where t.id = ${id}`);
     return r ?? null;
   }
-  async openSameDayTasks(): Promise<
+  /** Same-day changeovers still without a cleaner, from yesterday on (`today` defaults to the database's date). */
+  async openSameDayTasks(
+    today?: string,
+  ): Promise<
     Array<ExistingTask & { timezone: string; propertyId: string; escalatedLevel: string | null }>
   > {
     const rows = await rawRows<{
@@ -212,7 +236,7 @@ export class DrizzleOperationsRepository {
     }>(
       this.tx,
       sql`select t.id, t.unit_id, t.date::text, t.type, t.window_from, t.window_to, t.is_same_day, t.departing_booking_id, t.arriving_booking_id, t.state, t.assignee_id, p.timezone, t.property_id, t.escalated_level
-        from turnover_task t join property p on p.id = t.property_id where t.is_same_day and t.assignee_id is null and t.state in ('planned','assigned') and t.date >= current_date - 1`,
+        from turnover_task t join property p on p.id = t.property_id where t.is_same_day and t.assignee_id is null and t.state in ('planned','assigned') and t.date >= ${today ? sql`${today}::date` : sql`current_date`} - 1`,
     );
     return rows.map((r) => ({
       id: r.id,
@@ -554,6 +578,15 @@ export class DrizzleOperationsRepository {
       .update(s.maintenanceIssue)
       .set({ ...patch, ...(patch.state === "closed" ? { closedAt: sql`now()` } : {}) })
       .where(eq(s.maintenanceIssue.id, id));
+  }
+  async recentIssues(limit = 20): Promise<RecentIssue[]> {
+    return rawRows<RecentIssue>(
+      this.tx,
+      sql`select i.id, i.description, p.title as "propertyTitle", u.name as "unitName", i.category, i.state, i.created_at::text as "createdAt", usr.name as "assigneeName", i.reported_via as "reportedVia"
+        from maintenance_issue i join property p on p.id = i.property_id left join unit u on u.id = i.unit_id left join "user" usr on usr.id = i.assignee_id
+        where i.state <> 'closed' or i.closed_at > now() - interval '7 days'
+        order by i.state = 'closed', i.created_at desc limit ${limit}`,
+    );
   }
   async listIssues(
     opts: { propertyId?: string; open?: boolean; assigneeId?: string } = {},

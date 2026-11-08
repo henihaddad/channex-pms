@@ -473,3 +473,23 @@ language, and a runbook entry. "Sync failed" with no explanation is a bug.
 - **CX-8** A tenant-visible **Sync Health** page shows queue depth, last successful
   push per channel, pending/failed cells, drift count, unacked bookings, and the
   last 100 provider errors in plain language.
+
+  The page leads with the host's questions (design canvas "Sync health"): is everything
+  healthy, how many nights differ from a channel and when we last checked, how many changes
+  went out and bookings came in during the last 24 hours, and how many nights the nightly
+  check covers (365, rolling). Below sit the nights that differ, grouped into date ranges,
+  with what we hold, what the channel last accepted, and whether the night was re-sent or
+  failed (with the provider's reason). "Verify now" (`ari:force_resync`) queues the same
+  reconciliation the nightly job runs (CX-7) for the organization's live properties; the
+  worker records `lastVerifiedAt` and the drift it found on each property. A chart shows
+  changes sent per hour. Queue counters per property and the connection's environment
+  (staging or production) stay under "Technical details".
+
+- **CX-9** The Channels page is a board with one card per channel (Airbnb, Booking.com,
+  Expedia, Vrbo, Direct, and "Other" for anything else Channex carries): its status, how many
+  properties and rooms use it, which rooms are not assigned yet, and the one action the card
+  needs (connect, assign rooms, manage). "Rooms per channel" lists every room with the
+  channel room it maps to. For channels we do not connect, each property publishes a
+  read-only iCal feed of its closed nights at an unguessable address derived from the
+  property's webhook token (persona: the independent host who also lists on a site Channex
+  does not cover).

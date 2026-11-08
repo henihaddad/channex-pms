@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { fillDate, pickOption } from "./ui";
+import { fillDate } from "./ui";
 
 /**
  * M3 exit (spec 15): a staff booking on the single creation path generates a
@@ -81,10 +81,10 @@ test("staff booking → turnover task → cleaner completes offline → folio in
 
   // the board shows the same-day changeover; assign it to me
   await page.goto(`/operations?date=${d2}`);
-  const lane = page.getByTestId("turnover-lane");
+  const lane = page.locator(`[data-lane="${d2}"]`);
   await expect(lane.locator("[data-task]")).toHaveCount(1);
-  await expect(lane).toContainText("changeover");
-  await pickOption(page, { locator: lane.getByTestId("assignee") }, { label: "Me" });
+  await expect(lane).toContainText("Turnover clean");
+  await lane.getByTestId("assignee").selectOption({ label: "Me" });
   await lane.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(lane.locator('[data-state="assigned"]')).toHaveCount(1);
 
@@ -120,7 +120,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.locator('input[type="date"]').fill(d2);
   await expect(page.getByTestId("cleaner-task")).toHaveAttribute("data-state", "done");
   await page.goto(`/operations?date=${d2}`);
-  await expect(page.getByTestId("turnover-lane").locator('[data-state="done"]')).toHaveCount(1);
+  await expect(page.locator(`[data-lane="${d2}"]`).locator('[data-state="done"]')).toHaveCount(1);
   await page.goto("/operations/blocks");
   await expect(page.locator("select[name=status]").first()).toHaveValue("clean");
 

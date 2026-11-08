@@ -47,7 +47,7 @@ export {
   type CellEditOutcome,
 } from "./calendar.js";
 export { DrizzleSeasonRepository, loadYearNights, type SeasonRow } from "./seasons.js";
-export { DrizzleOperationsRepository, type TaskRow } from "./operations.js";
+export { DrizzleOperationsRepository, type RecentIssue, type TaskRow } from "./operations.js";
 export { DrizzleGuideRepository } from "./guides.js";
 export {
   DrizzleRateImportRepository,
@@ -112,3 +112,8 @@ export {
   type TenantRow,
   type FleetHealth,
 } from "./platform.js";
+export {
+  DrizzleSyncHealthRepository,
+  type SyncSummary,
+  type DifferingNight,
+} from "./sync-health.js";

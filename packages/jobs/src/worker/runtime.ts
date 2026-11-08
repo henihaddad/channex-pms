@@ -551,6 +551,18 @@ export async function runSystemJob(
           await enqueue(QUEUES.system, "reconcile.nightly", { name: "reconcile.nightly" });
           return { queued: true };
         },
+        // a host's "Verify now" on Sync health: the same drift check, for their properties only
+        "reconcile.org": async (orgId) => {
+          const mine = (await livePropertyIds(db)).filter((p) => p.orgId === orgId);
+          for (const p of mine)
+            await enqueue(
+              QUEUES.reconcileAri,
+              "reconcile",
+              { ...p, timezone: "UTC" },
+              { jobId: `reconcile:${p.propertyId}:now:${String(Math.floor(Date.now() / 60_000))}` },
+            );
+          return { queued: mine.length };
+        },
         "rollups.nightly": async (orgId) => ({
           rollups: await nightlyRollups(d.analytics, orgId ?? undefined),
         }),

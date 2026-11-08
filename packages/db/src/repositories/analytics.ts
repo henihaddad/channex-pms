@@ -27,7 +27,7 @@ export interface TodayDetails {
   arrivalsFormsDone: number;
   sameDayChangeovers: number;
   revenueSameDayLastWeekMinor: number;
-  /** When a channel last accepted a push from us. */
+  /** When a channel last accepted a push from us (the newest synced night). */
   lastSyncAt: string | null;
   /** When the longest-waiting guest message past its target arrived. */
   oldestBreachingSince: string | null;
@@ -497,7 +497,7 @@ export class DrizzleAnalyticsRepository {
         (select count(*) from booking b join pre_checkin pc on pc.booking_id = b.id where b.org_id = ${this.orgId} and b.status <> 'cancelled' and b.arrival_date = ${today} and pc.completed_at is not null ${pscope("b.property_id")})::int as forms_done,
         (select count(*) from turnover_task t where t.org_id = ${this.orgId} and t.date = ${today} and t.is_same_day and t.cancelled_at is null ${pscope("t.property_id")})::int as changeovers,
         coalesce((select sum(d.amount_minor) from booking_room_day d join booking_room br on br.id = d.booking_room_id join booking b on b.id = br.booking_id where b.org_id = ${this.orgId} and b.status <> 'cancelled' and d.status = 'confirmed' and d.date = ${today}::date - 7 ${pscope("b.property_id")}), 0)::bigint as revenue_last_week,
-        (select max(finished_at)::text from sync_operation where org_id = ${this.orgId} and state not in ('failed', 'dead') and finished_at is not null) as last_sync,
+        greatest((select max(synced_at) from rate_day where org_id = ${this.orgId}), (select max(synced_at) from availability_day where org_id = ${this.orgId}))::text as last_sync,
         (select min(last_inbound_at)::text from message_thread where org_id = ${this.orgId} and state = 'open' and last_inbound_at is not null and (last_outbound_at is null or last_outbound_at < last_inbound_at)) as oldest_breaching,
         (select count(*) from turnover_task t where t.org_id = ${this.orgId} and t.date = ${today} and t.is_same_day and t.cancelled_at is null and t.assignee_id is null and t.crew_id is null ${pscope("t.property_id")})::int as changeover_no_cleaner,
         (select count(*) from owner_payout where org_id = ${this.orgId} and state = 'failed')::int as failed_payouts,

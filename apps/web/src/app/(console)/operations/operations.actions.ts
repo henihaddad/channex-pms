@@ -7,6 +7,7 @@ import {
   DrizzleReservationRepository,
   rawRows,
   sql,
+  type RecentIssue,
   type TaskRow,
 } from "@pms/db";
 import { recomputeAvailability } from "@pms/jobs";
@@ -64,6 +65,54 @@ export const loadBoard = withPermission<[string], Board>(
       minutesLeft: e.minutesLeft,
     }));
     return { date, tasks, departures, arrivals, escalations, crews: await ops.listCrews() };
+  },
+);
+
+export interface WeekBoard {
+  from: string;
+  /** Tasks for the seven days from `from`; the board shows the first four, the tiles count all seven. */
+  tasks: TaskRow[];
+  issues: RecentIssue[];
+  cleaners: string[];
+  members: Array<{ userId: string; name: string; crewName: string }>;
+  escalations: Board["escalations"];
+}
+
+const plusDays = (iso: string, n: number): string => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+/** Operations (design canvas board): a week of turnovers, open issues and the team doing them. */
+export const loadWeekBoard = withPermission<[string], WeekBoard>(
+  "turnover:read",
+  { scope: "organization", audit: false },
+  async (ctx, from) => {
+    const c = await container();
+    const ops = new DrizzleOperationsRepository(ctx.tx, ctx.orgId);
+    const [tasks, issues, crews, open] = await Promise.all([
+      ops.tasksBetween(from, plusDays(from, 6)),
+      ops.recentIssues(),
+      ops.listCrews(),
+      ops.openSameDayTasks(from),
+    ]);
+    const members = crews.flatMap((cr) =>
+      cr.members.map((m) => ({ userId: m.userId, name: m.name, crewName: cr.name })),
+    );
+    const escalations = dueEscalations(open, c.clock.now().toString()).map((e) => ({
+      taskId: e.task.id,
+      level: e.level,
+      minutesLeft: e.minutesLeft,
+    }));
+    return {
+      from,
+      tasks,
+      issues,
+      cleaners: [...new Set(members.map((m) => m.name))],
+      members,
+      escalations,
+    };
   },
 );
 

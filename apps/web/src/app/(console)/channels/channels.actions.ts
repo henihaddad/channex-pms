@@ -27,6 +27,10 @@ import {
   type ChannelAccountRow,
   type ChannelEventRow,
   type ConnectionRow,
+  rawRows,
+  sql,
+  DrizzleSyncHealthRepository,
+  type SyncSummary,
 } from "@pms/db";
 import {
   activateConnection,
@@ -38,6 +42,7 @@ import {
 import { CHANNEX_PRODUCTION, CHANNEX_STAGING, channexChannelScreenUrl } from "@pms/connectivity";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
+import { icalPath, icalToken } from "@/server/ical";
 import { HttpProblem } from "@/server/errors";
 import { ADAPTERS } from "@/api/schemas";
 
@@ -78,6 +83,38 @@ export const loadHealthBoard = withPermission<[], HealthBoard>(
       ch.listEvents({ limit: 30, openOnly: true }),
     ]);
     return { connections: sortWorstFirst(rows), accounts, events };
+  },
+);
+
+export interface ChannelsOverview {
+  rooms: Awaited<ReturnType<DrizzleChannelRepository["roomsPerChannel"]>>;
+  /** iCal export links, one per property. */
+  ical: Array<{ propertyId: string; title: string; path: string }>;
+  sync: SyncSummary;
+}
+
+/** What the Channels board shows beside the connections: rooms per channel, iCal links, the sync totals. */
+export const loadChannelsOverview = withPermission<[], ChannelsOverview>(
+  "channel:read",
+  { scope: "organization", audit: false },
+  async (ctx) => {
+    const c = await container();
+    const [rooms, props, sync] = await Promise.all([
+      new DrizzleChannelRepository(ctx.tx, ctx.orgId).roomsPerChannel(),
+      rawRows<{ id: string; title: string; webhook_token: string | null }>(
+        ctx.tx,
+        sql`select id, title, webhook_token from property where archived_at is null order by title`,
+      ),
+      new DrizzleSyncHealthRepository(ctx.tx, ctx.orgId).summary(new Date().toISOString()),
+    ]);
+    const ical = props
+      .filter((p) => p.webhook_token)
+      .map((p) => ({
+        propertyId: p.id,
+        title: p.title,
+        path: icalPath(p.id, icalToken(c.crypto, p.webhook_token!)),
+      }));
+    return { rooms, ical, sync };
   },
 );
 

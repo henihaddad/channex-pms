@@ -46,6 +46,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const top = await getTranslations("operations");
   const to2 = await getTranslations("owners");
   const tpay = await getTranslations("payments");
+  const tch = await getTranslations("channels");
 
   const sections: NavSectionDef[] = [
     { item: { href: "/", label: t("dashboard") }, tabs: [] },
@@ -79,9 +80,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       item: { href: "/operations", label: t("operations") },
       firstTab: t("tabs.turnovers"),
       tabs: [
+        { href: "/maintenance", label: top("board.tabIssues") },
+        { href: "/operations/crews", label: top("board.tabTeam") },
         { href: "/operations/blocks", label: top("blocks") },
-        { href: "/operations/crews", label: top("crews") },
-        { href: "/maintenance", label: t("maintenance") },
       ],
     },
     { item: { href: "/properties", label: t("properties") }, tabs: [] },
@@ -89,6 +90,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       item: { href: "/channels", label: t("channels") },
       firstTab: t("tabs.connections"),
       tabs: [
+        { href: "/channels/rooms", label: tch("board.roomsTab") },
         { href: "/booking-engine", label: t("bookingEngine") },
         { href: "/sync-health", label: t("syncHealth") },
       ],
@@ -251,7 +253,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         </MenuLink>
         <MenuLink href="/settings/support">{t("contactSupport")}</MenuLink>
         <MenuLink href="/shortcuts" hint="?">
-          {t("shortcuts")}
+          {t("shortcuts.title")}
         </MenuLink>
       </HeaderMenu>
       <HeaderMenu label={locale.toUpperCase()} testId="language-menu">

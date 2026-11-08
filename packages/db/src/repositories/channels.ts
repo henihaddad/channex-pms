@@ -301,6 +301,67 @@ export class DrizzleChannelRepository {
   }
 
   /** One row per connection with the numbers the health board sorts on. */
+  /**
+   * "Which room is which, per channel" (design canvas Channels board): every room type with, for
+   * each connected channel on its property, the channel's room code it is assigned to (or none),
+   * whether the property sells direct, the last push, and bookings still waiting for a room.
+   */
+  async roomsPerChannel(): Promise<
+    Array<{
+      propertyId: string;
+      propertyTitle: string;
+      roomTypeId: string;
+      roomTitle: string;
+      adapterCode: string | null;
+      connectionId: string | null;
+      otaRoomCodes: string[];
+      direct: boolean;
+      lastPushAt: string | null;
+      waitingBookings: number;
+    }>
+  > {
+    const rows = await rawRows<{
+      property_id: string;
+      property_title: string;
+      room_type_id: string;
+      room_title: string;
+      adapter_code: string | null;
+      connection_id: string | null;
+      codes: string[] | null;
+      direct: boolean;
+      last_push: string | null;
+      waiting: number;
+    }>(
+      this.tx,
+      sql`select p.id as property_id, p.title as property_title, rt.id as room_type_id, rt.title as room_title,
+                 c.adapter_code, c.id as connection_id,
+                 (select array_agg(distinct cm.ota_room_code) from channel_mapping cm join rate_plan rp on rp.id = cm.rate_plan_id
+                   where cm.connection_id = c.id and cm.status = 'active' and rp.room_type_id = rt.id) as codes,
+                 coalesce((select bes.enabled from booking_engine_settings bes where bes.property_id = p.id), false) as direct,
+                 greatest((select max(synced_at) from rate_day where property_id = p.id),
+                          (select max(synced_at) from availability_day where property_id = p.id))::text as last_push,
+                 (select count(*)::int from booking b where b.property_id = p.id and c.adapter_code is not null
+                   and lower(b.ota_name) = lower(c.adapter_code) and b.mapping_state <> 'mapped' and b.status <> 'cancelled') as waiting
+            from room_type rt
+            join property p on p.id = rt.property_id
+            left join channel_connection c on c.property_id = p.id and c.archived_at is null
+           where p.org_id = ${this.orgId} and p.archived_at is null
+           order by p.title, rt.title, c.adapter_code`,
+    );
+    return rows.map((r) => ({
+      propertyId: r.property_id,
+      propertyTitle: r.property_title,
+      roomTypeId: r.room_type_id,
+      roomTitle: r.room_title,
+      adapterCode: r.adapter_code,
+      connectionId: r.connection_id,
+      otaRoomCodes: r.codes ?? [],
+      direct: Boolean(r.direct),
+      lastPushAt: r.last_push,
+      waitingBookings: Number(r.waiting ?? 0),
+    }));
+  }
+
   async health(): Promise<
     Array<
       ConnectionHealth &

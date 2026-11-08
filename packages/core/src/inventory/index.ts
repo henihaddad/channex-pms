@@ -61,3 +61,4 @@ export {
   type YearNight,
   type MonthSummary,
 } from "./seasons.js";
+export { closedRanges, icalFeed } from "./ical.js";

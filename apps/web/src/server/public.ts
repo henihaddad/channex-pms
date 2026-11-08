@@ -3,7 +3,14 @@ import { problemResponse, type RouteHandler, type RouteParams } from "./with-per
 import { kickOutbox } from "./outbox-kick";
 
 export type PublicReason =
-  "health" | "auth" | "webhook" | "booking_engine" | "guest_portal" | "catalogue" | "test_hook";
+  | "health"
+  | "auth"
+  | "webhook"
+  | "booking_engine"
+  | "guest_portal"
+  | "catalogue"
+  | "calendar_export"
+  | "test_hook";
 
 const PUBLIC = Symbol.for("pms.public");
 

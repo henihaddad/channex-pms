@@ -202,17 +202,18 @@ export async function issueCredential(
 
 /** OPS-4 every minute: escalate unassigned same-day changeovers; each level notifies once. */
 export async function escalateTurnovers(deps: OpsDeps): Promise<{ escalated: number }> {
+  const today = deps.clock.now().toString().slice(0, 10);
   const orgs = await withoutTenant(deps.db, (tx) =>
     rawRows<{ org_id: string }>(
       tx,
-      sql`select distinct org_id from turnover_task where is_same_day and assignee_id is null and state in ('planned','assigned') and date >= current_date - 1`,
+      sql`select distinct org_id from turnover_task where is_same_day and assignee_id is null and state in ('planned','assigned') and date >= ${today}::date - 1`,
     ),
   );
   let escalated = 0;
   for (const { org_id: orgId } of orgs) {
     await asSystem(deps.db, orgId, async (tx) => {
       const ops = new DrizzleOperationsRepository(tx, orgId);
-      const open = await ops.openSameDayTasks();
+      const open = await ops.openSameDayTasks(today);
       for (const e of dueEscalations(open, deps.clock.now().toString())) {
         const cur = (e.task as (typeof open)[number]).escalatedLevel;
         if (cur === e.level || cur === "property_manager") continue;

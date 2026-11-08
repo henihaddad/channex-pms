@@ -81,7 +81,15 @@ messaging the guest.
 
 ## 8.6 The turnover board
 
-The `ops_coordinator`'s home screen. Portfolio-wide, one day at a time, realtime.
+The `ops_coordinator`'s home screen. Portfolio-wide, realtime.
+
+As drawn on the design canvas, the board shows four days side by side from the chosen date
+(today by default), one card per task with its status ("Needs cleaner", "Scheduled", "In
+progress", "Done"), what it is and its window, and who does it. Tiles above count the week's
+turnovers and how many are unassigned, open issues, inspections and the team. "List" and "By
+cleaner" show the same seven days as a table and grouped per cleaner. Open issues, and those
+closed in the last week, sit below the board. Departures and arrivals for a day live on the
+reservation lists (Arrivals, Departures) rather than on this board.
 
 **Layout** — a time-windowed board:
 
@@ -115,6 +123,9 @@ A PWA designed for a phone in a stairwell, in the cleaner's language.
 
 - **My day**: an ordered route of tasks with addresses, access instructions, and
   time windows. One tap to navigate.
+- Per task: a header with the place, the window and the next arrival, the manager's note,
+  big checklist rows, one-tap "supplies to restock" chips (saved with the task's progress as
+  `restock:<item>` and shown on the coordinator's card), and a "Mark clean · n left" button.
 - Per task: checklist (photo-required items enforced), supplies notes, "report
   issue" (creates a `MaintenanceIssue` with photos in ≤3 taps), guest-facing
   info they need (arrival time) and nothing they don't (no financials, no PII

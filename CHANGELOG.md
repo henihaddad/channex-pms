@@ -19,6 +19,17 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Channels, Sync health, Operations and the cleaner app match the design canvas. Channels
+  is a board of channel cards with tiles for what is connected, rooms assigned, changes
+  waiting and the last check; a "Rooms per channel" tab lists each room's channel room, and
+  each property now publishes an iCal feed of closed nights for sites we do not connect.
+  Sync health says whether everything is healthy, lists the nights that differ from a
+  channel, charts the changes sent per hour, and has "Verify now", which queues the nightly
+  check for your properties. Operations shows four days of turnover cards with week tiles,
+  List and By cleaner views and the open issues; the cleaner app has a header per task, big
+  checklist rows, supplies to restock and "Mark clean". Today's "last sync" now reads when
+  a channel last accepted a change.
+
 - Inbox, Automation and Reviews match the design canvas. The inbox is a list and a
   conversation: four views in front, rows that say how long the guest has waited, a
   one-line booking header, a chat, the time since the guest wrote against the target,

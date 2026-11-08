@@ -200,8 +200,38 @@ describe("turnover tasks from bookings (OPS-1, OPS-3)", () => {
     const board = await run((tx) => new DrizzleOperationsRepository(tx, ORG).tasksOn("2026-10-08"));
     expect(board.map((t) => [t.type, t.isSameDay])).toEqual([["changeover", true]]);
     expect(board[0]?.windowTo).toBe("14:30");
-    const open = await run((tx) => new DrizzleOperationsRepository(tx, ORG).openSameDayTasks());
+    const open = await run((tx) =>
+      new DrizzleOperationsRepository(tx, ORG).openSameDayTasks("2026-10-08"),
+    );
     expect(open.map((t) => t.id)).toEqual([board[0]!.id]);
+    const week = await run((tx) =>
+      new DrizzleOperationsRepository(tx, ORG).tasksBetween("2026-10-07", "2026-10-13"),
+    );
+    expect(week.map((t) => t.date)).toEqual([...week.map((t) => t.date)].sort());
+    expect(week.some((t) => t.id === board[0]!.id)).toBe(true);
+    expect(
+      await run((tx) =>
+        new DrizzleOperationsRepository(tx, ORG).tasksBetween("2026-10-09", "2026-10-09"),
+      ),
+    ).not.toContainEqual(expect.objectContaining({ id: board[0]!.id }));
+    const issueId = Id.next();
+    await run((tx) =>
+      new DrizzleOperationsRepository(tx, ORG).insertIssue({
+        id: issueId,
+        propertyId,
+        unitId: null,
+        reportedVia: "guest",
+        severity: "high",
+        category: "heating",
+        description: "Bedroom heating not working",
+      }),
+    );
+    const issues = await run((tx) => new DrizzleOperationsRepository(tx, ORG).recentIssues());
+    expect(issues.find((i) => i.id === issueId)).toMatchObject({
+      state: "open",
+      category: "heating",
+      reportedVia: "guest",
+    });
   });
   it("blocks reduce availability counts; out-of-order units count too", async () => {
     await run((tx) =>

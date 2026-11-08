@@ -194,6 +194,14 @@
   },
   {
     "file": "src/app/(console)/channels/channels.actions.ts",
+    "export": "loadChannelsOverview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/channels/channels.actions.ts",
     "export": "loadConnection",
     "kind": "action",
     "wrapper": "withPermission",
@@ -566,6 +574,14 @@
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "turnover:read_own",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/operations/operations.actions.ts",
+    "export": "loadWeekBoard",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "turnover:read",
     "scope": "organization"
   },
   {
@@ -1369,6 +1385,22 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/(console)/sync-health/sync-health.actions.ts",
+    "export": "loadSyncOverview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/sync-health/sync-health.actions.ts",
+    "export": "verifyNowAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "ari:force_resync",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(guest)/guest/guest.actions.ts",
     "export": "addExtraAction",
     "kind": "action",
@@ -1635,6 +1667,13 @@
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "guest_portal"
+  },
+  {
+    "file": "src/app/api/v1/ical/[propertyId]/[token]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "calendar_export"
   },
   {
     "file": "src/app/api/v1/openapi.json/route.ts",

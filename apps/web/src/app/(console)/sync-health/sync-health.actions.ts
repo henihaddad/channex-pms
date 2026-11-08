@@ -1,6 +1,14 @@
 "use server";
 
-import { sql, rawRows } from "@pms/db";
+import { revalidatePath } from "next/cache";
+import {
+  DrizzleOperatorRepository,
+  DrizzleSyncHealthRepository,
+  rawRows,
+  sql,
+  type DifferingNight,
+  type SyncSummary,
+} from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 
 export interface PropertySyncHealth {
@@ -56,5 +64,52 @@ export const loadSyncHealth = withPermission<[], PropertySyncHealth[]>(
       });
     }
     return out;
+  },
+);
+
+/** The Sync health board's numbers and the nights that differ from a channel (design canvas). */
+export const loadSyncOverview = withPermission<
+  [],
+  {
+    summary: SyncSummary;
+    differing: DifferingNight[];
+    channexEnv: "production" | "staging";
+    verifyRequested: boolean;
+  }
+>("ari:read", { scope: "organization", audit: false }, async (ctx) => {
+  const repo = new DrizzleSyncHealthRepository(ctx.tx, ctx.orgId);
+  const [summary, differing, pending] = await Promise.all([
+    repo.summary(new Date().toISOString()),
+    repo.differing(),
+    rawRows<{ n: number }>(
+      ctx.tx,
+      sql`select count(*)::int as n from platform_job_request where kind = 'reconcile.org' and org_id = ${ctx.orgId} and state in ('requested', 'running')`,
+    ),
+  ]);
+  return {
+    summary,
+    differing,
+    channexEnv: process.env.CHANNEX_ENV === "production" ? "production" : "staging",
+    verifyRequested: (pending[0]?.n ?? 0) > 0,
+  };
+});
+
+/** "Verify now": the nightly drift check, for this organization's properties, as soon as the worker is free. */
+export const verifyNowAction = withPermission<[FormData], void>(
+  "ari:force_resync",
+  { scope: "organization", subject: () => ({ kind: "organization", id: "reconcile" }) },
+  async (ctx) => {
+    const [open] = await rawRows<{ n: number }>(
+      ctx.tx,
+      sql`select count(*)::int as n from platform_job_request where kind = 'reconcile.org' and org_id = ${ctx.orgId} and state in ('requested', 'running')`,
+    );
+    if (!open?.n)
+      await new DrizzleOperatorRepository(ctx.tx).requestJob(
+        "reconcile.org",
+        ctx.orgId,
+        {},
+        ctx.userId,
+      );
+    revalidatePath("/sync-health");
   },
 );

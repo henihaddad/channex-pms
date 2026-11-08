@@ -1,5 +1,5 @@
 import type { Clock, ConnectivityProvider } from "@pms/core";
-import { AriStorePerCall, type Db } from "@pms/db";
+import { AriStorePerCall, asSystem, rawRows, sql, type Db } from "@pms/db";
 import { verify, type CircuitBreaker, type RateLimiter } from "@pms/sync";
 import type { Logger } from "@pms/runtime";
 import { LocalDate } from "@pms/core";
@@ -36,6 +36,13 @@ export async function reconcileProperty(
     },
     today.toString(),
     today.plusDays(RECONCILE_HORIZON_DAYS).toString(),
+  );
+  // Sync health shows when the channel's copy was last checked and what it found
+  await asSystem(deps.db, orgId, (tx) =>
+    rawRows(
+      tx,
+      sql`update property set settings = coalesce(settings, '{}'::jsonb) || jsonb_build_object('lastVerifiedAt', ${deps.clock.now().toString()}::text, 'lastDrift', ${drift}::int) where id = ${propertyId}`,
+    ),
   );
   deps.log.info({ orgId, propertyId, drift }, "ari.reconcile.done");
   return drift;
