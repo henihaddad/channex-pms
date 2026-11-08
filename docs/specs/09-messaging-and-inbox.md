@@ -103,6 +103,10 @@ internal note to a guest.** Therefore:
   Wi-Fi and parking questions with the same words the portal shows. Only a published guide
   resolves (GUIDE-1), in the guest's language by the same rule as a locale variant; an
   unwritten section is reported as missing, never sent as a blank line.
+- **Single braces are accepted** — `{guide.wifi_name}` interpolates exactly as
+  `{{guide.wifi_name}}` (the guide editor shows the shorter form). A variable that does not
+  resolve is left in the text as it was typed and reported as missing; braces around
+  anything that is not `section.key` are left alone.
 - **Snippets** for `/`-triggered quick insertion.
 - **Translation** — inbound messages can be translated for staff and outbound
   drafts translated to the guest's language, always showing both versions before

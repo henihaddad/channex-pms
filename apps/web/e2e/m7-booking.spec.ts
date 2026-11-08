@@ -39,7 +39,7 @@ test("direct booking → OTA availability → door code → portal → owner sta
   test.skip(hooks.status() === 404, "test hooks disabled");
 
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("Engine Flat");
+  await page.getByLabel("Property name").fill("Engine Flat");
   await page.getByTestId("create-property").click();
   // provisioning kicks off on create; under a parallel suite the redirect can take a while
   await expect(page.getByTestId("property-state")).toBeVisible({ timeout: 90_000 });

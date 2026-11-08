@@ -233,3 +233,74 @@ describe("GUIDE-1: a template reads only a published guide", () => {
     expect(rendered.missing).toEqual(["guide.wifi_name", "guide.wifi_password"]);
   });
 });
+
+describe("property vitals (spec 03 §3.2a)", () => {
+  it("counts sold nights, room revenue and the guide per property over a window", async () => {
+    const [v] = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).vitals("2026-10-01", 30, propertyId),
+    );
+    expect(v).toMatchObject({
+      propertyId,
+      units: 1,
+      nightsSold: 3,
+      nightsAvailable: 30,
+      roomRevenueMinor: 30000,
+      unmappedBookings: 0,
+      directEnabled: false,
+      pricingRailsSet: false,
+    });
+    expect(v!.guides.map((g) => g.locale).sort()).toEqual(["en", "pt"]);
+    // a window that misses the stay sells nothing
+    const [later] = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).vitals("2026-11-01", 30, propertyId),
+    );
+    expect(later!.nightsSold).toBe(0);
+  });
+
+  it("names the next arrival and edits the details and house times in place", async () => {
+    const x = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).overviewExtras(propertyId, "2026-10-01"),
+    );
+    expect(x.nextArrival).toMatchObject({
+      date: "2026-10-04",
+      channel: "BookingCom",
+      guestName: "Ana Silva",
+    });
+    expect(x.owner).toBeNull();
+    expect(x.photos).toEqual([]);
+    const after = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).overviewExtras(propertyId, "2026-10-05"),
+    );
+    expect(after.nextArrival).toBeNull();
+    await run(async (tx) => {
+      const repo = new DrizzlePropertyRepository(tx, ORG);
+      await repo.updateDetails(propertyId, {
+        title: "Graça Studio II",
+        address: { street: "Rua da Graça 1", city: "Lisboa" },
+      });
+      await repo.setHouseTimes(propertyId, { checkInTime: "16:00", checkOutTime: "10:00" }, () =>
+        Id.next(),
+      );
+      await repo.setHouseTimes(propertyId, { checkInTime: "15:00", checkOutTime: "10:30" }, () =>
+        Id.next(),
+      );
+    });
+    const d = await run((tx) => new DrizzlePropertyRepository(tx, ORG).get(propertyId));
+    expect(d?.property.title).toBe("Graça Studio II");
+    expect(d?.property.address).toMatchObject({ street: "Rua da Graça 1", city: "Lisboa" });
+    expect(d?.policies).toHaveLength(1);
+    expect(d?.policies[0]).toMatchObject({ checkInTime: "15:00", checkOutTime: "10:30" });
+  });
+
+  it("reads what an Airbnb import compares against: content and the base plan's nights", async () => {
+    await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).setContent(propertyId, { amenities: ["Wifi"] }),
+    );
+    const snap = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).importSnapshot(propertyId, "2026-09-01", 10),
+    );
+    expect(snap).toMatchObject({ currency: "EUR", ratePlanId, content: { amenities: ["Wifi"] } });
+    expect(snap!.nights).toHaveLength(10);
+    expect(snap!.nights[0]).toEqual({ date: "2026-09-01", rate: 10000, minStay: 1 });
+  });
+});

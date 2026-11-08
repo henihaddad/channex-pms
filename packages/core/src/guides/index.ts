@@ -13,6 +13,7 @@ export {
   pickGuide,
   sectionSensitive,
   sectionWritten,
+  withSection,
   type GuestGuideSection,
   type GuideCompleteness,
 } from "./service.js";

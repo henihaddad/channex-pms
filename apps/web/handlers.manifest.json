@@ -809,7 +809,7 @@
   },
   {
     "file": "src/app/(console)/properties/[id]/guide/guide.actions.ts",
-    "export": "saveGuideAction",
+    "export": "saveGuideSectionAction",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "property:publish_content"
@@ -868,11 +868,42 @@
   },
   {
     "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "loadPropertyOverview",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
+    "export": "updateDetailsAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:update",
+    "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/[id]/property.actions.ts",
     "export": "updateRoomTypeCountAction",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "room_type:update",
     "scope": "property"
+  },
+  {
+    "file": "src/app/(console)/properties/import/airbnb.actions.ts",
+    "export": "loadAirbnbImport",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel_account:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/import/airbnb.actions.ts",
+    "export": "runAirbnbImportAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create",
+    "scope": "organization"
   },
   {
     "file": "src/app/(console)/properties/properties.actions.ts",
@@ -929,6 +960,38 @@
     "wrapper": "withPermission",
     "permission": "template:read",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadAmenities",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadInventory",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "loadPortfolio",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/properties.actions.ts",
+    "export": "saveAmenitiesAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "property:update",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/properties/properties.actions.ts",

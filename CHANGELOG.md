@@ -49,6 +49,37 @@ All notable changes to this project are documented here. The format follows
   rating, reply rate and requests, stars, a started reply per review, and the rating by
   property; the Inbox tab counts reviews waiting for a reply. The kill-switch label no
   longer shows its spec code.
+- Properties matches the design canvas: tabs for Properties, Rooms & units, Rate plans and
+  Amenities; filter pills by kind and "Needs attention"; each card shows place and units, the
+  channels it sells on, occupancy over the coming 30 nights and one status chip (a booking
+  that needs a room, a failed setup or push, or when Channex last confirmed the calendar); a
+  dashed "Add a property" card; and Content completeness across the portfolio (photos, guide,
+  house rules, price guard rails). Templates, the CSV import and adopting a Channex property
+  moved under "Other ways to add properties". The CSV import moved to `/properties/import/csv`.
+- A property's page matches the design canvas: its own tabs (Overview, Rooms & rates, Guide,
+  Pricing, Photos, Rules & policies, Settings), a photo mosaic, occupancy, ADR, next arrival
+  and sync over the coming 30 nights, a rooms-and-rate-plans table with tonight's rate,
+  minimum stay and mapped channels, and cards for content status, channels, owner and team.
+  A Details form edits the name, address and check-in/check-out times. "View booking page"
+  opens the public page once the booking site is on.
+- "Add a property" matches the design canvas: a step rail, an "Already on Airbnb?" shortcut,
+  Basics (property name, property type with its billing hint, country, city, street,
+  postcode, currency, timezone) and the first room or unit (sleeps, base rate per night,
+  minimum stay; room name and units for several units or a hotel). A single rental now
+  sleeps what the manager enters instead of always two. The name field is labelled
+  "Property name" (was "Title").
+- The guest guide matches the design canvas: sections listed with Written/Empty and a
+  progress bar, one section edited and saved at a time, a guest preview and a publish card
+  that says what guests see. Sections follow a stay — Arrival & access, Parking, Wi-Fi, House
+  rules, Appliances, a new Heating & hot water section, Neighbourhood, Check-out, Emergencies
+  — and the reply assistant answers heating and hot-water questions from the new section.
+  Message templates accept `{guide.wifi_name}` as well as `{{guide.wifi_name}}`.
+- "Import from Airbnb" (`/properties/import`) is a field-by-field preview per the design
+  canvas: pick a listing and the property it goes into (or a new one), see Airbnb's value
+  beside what OTAbridge will hold for name, place, bedrooms, sleeps, description, amenities,
+  photos, nightly prices, minimum stay, rate plan and bookings, untick what to keep, and
+  "Import exactly this" writes only the ticked rows and maps the listing. The table
+  downloads as CSV. Before, the link went to Channels.
 
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout
@@ -162,6 +193,8 @@ All notable changes to this project are documented here. The format follows
   those bookings, and failed.
 - The channel mapping selects, the alerts and the operations assignee carry their test hooks
   again, so the browser suite reaches the screens it checks.
+- The guest guide editor opened without a language when the URL had none, so it read and
+  showed an empty guide while saves went to English.
 
 - The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"
   step exited 0 when `CLOUDFLARE_API_TOKEN` or `NEON_DIRECT_URL` was unset, and every step

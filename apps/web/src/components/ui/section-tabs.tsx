@@ -55,6 +55,9 @@ export const SectionTabsContext = createContext<ReactNode>(null);
  */
 export function SectionTabsSlot() {
   const tabs = useContext(SectionTabsContext);
+  // `false` is a page that wants no tabs at all (a form inside the section): an empty slot
+  // still tells the shell not to draw its own row.
+  if (tabs === false) return <div className="section-tabs-slot hidden" />;
   if (!tabs) return null;
   return <div className="section-tabs-slot">{tabs}</div>;
 }

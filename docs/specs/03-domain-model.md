@@ -75,6 +75,64 @@ erDiagram
 must never ask a manager with 200 villas to create 200 room types by hand — that is
 the mistake that makes existing tools unusable at this scale.
 
+### 3.2a The portfolio view
+
+Persona: the property manager (spec 02 `property_manager`) who runs several listings and
+wants the one that needs them to say so. The Properties section has four tabs: **Properties**
+(the cards), **Rooms & units** (every room type with its units), **Rate plans** (every plan
+with tonight's rate, minimum stay and the channels it is mapped on) and **Amenities**.
+
+Each property card shows its place and unit count, the channels it sells on (live
+connections, plus Direct when the booking site is on), and **Occupancy 30 d**: nights sold
+over sellable nights (sum of room-type counts × 30) for the coming 30 nights, as booked
+(`occupancyBps`). The chip on the card is the one thing that needs a human, most urgent
+first (`propertyAttention`): bookings without a room (the mapping queue), a failed setup on
+a property that is not live, calendar nights the channel manager refused, suspension.
+Otherwise it says when Channex last confirmed a calendar cell ("Synced 2 min ago"). Pills
+filter by kind (Apartments = `single_unit`, Multi-unit, Guest houses = `hotel`) and pull out
+**Needs attention**.
+
+**Content completeness** counts, across the portfolio, properties with at least
+`MIN_LISTING_PHOTOS` (5) photos, a published guest guide (any locale), a written house-rules
+section of the guide, and price guard rails with both a floor and a ceiling (spec 06 §6.5b),
+and names the ones still missing.
+
+**Amenities** are a list on the property's content (`settings.content.amenities`), filled by
+an Airbnb import and editable on the Amenities tab, one per line (`normaliseAmenities`:
+trimmed, de-duplicated ignoring case, at most 200). It is a plain list, not a mapped
+vocabulary: channels that need their own amenity codes are mapped when that channel's content
+push is built.
+
+**One property** has its own tabs: Overview, Rooms & rates, Guide, Pricing, Photos, Rules &
+policies and Settings (rooms, photos, rules and settings are sections of the overview; the
+guide and pricing are pages). The overview shows four numbers over the coming 30 nights in
+the property's time zone: occupancy (with nights booked of sellable), ADR (`averageDailyRateMinor`:
+room revenue per sold night, with tonight's base rate beside it), the next arrival (guest
+and channel) and sync (OK, Sending, or the attention reason). Beside them: content status
+(guide published and how many sections, house rules written, photo count, price import
+schedule, booking page on or off), channels (each connection's state, Direct, and Connect
+for Airbnb and Booking.com when absent), the owner on the agreement in force with its split
+and statement frequency, and who cleans it most (last 60 days) with the turnovers ahead. The
+Details form edits the name, street, postcode and city, and the check-in and check-out times
+of the first policy (creating "Standard" when there is none); these are local fields and are
+not pushed to Channex. The property type is shown read-only: changing `kind` after creation
+would change MODEL-1's system-managed room type and is not offered. Photos are shown from the
+property's library or the content an import carried; uploading photos is not built yet.
+
+**Add a property** is one form beside a step rail (Basics, Rooms & rates, then Photos and
+Channels on the property's page) and an "Already on Airbnb?" shortcut to the import. Basics:
+name, property type (the MODEL-1 choice — one rental, several units, guest house or hotel —
+with how Channex bills each), country, city, street, postcode, currency, time zone. Then the
+first room or unit: for a single rental only how many it sleeps (`PropertyInput.sleeps`, the
+system-managed room type's occupancy, 1–50, default 2), the base rate per night and the
+minimum stay; for several units or a hotel also the room name and unit count, with more room
+types added on the same form, each with a Standard plan at its base rate. A cleaning fee is
+not asked for yet: the booking engine has no mandatory per-stay fee to carry it.
+
+Templates, the CSV import and adopting an existing Channex property stay on the Properties
+tab under "Other ways to add properties"; the CSV import lives at `/properties/import/csv`,
+and `/properties/import` is the Airbnb import.
+
 ## 3.3 Inventory, rates and content
 
 ```mermaid

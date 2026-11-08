@@ -35,6 +35,13 @@ export interface CreatedProperty {
  * invisible in the UI; multi_unit and hotel get what the wizard specified.
  * Rate plans are seeded for the horizon so the calendar is never empty.
  */
+/** A single rental sleeps 1–50 guests; anything else (or nothing) falls back to two. */
+function singleUnitSleeps(sleeps: number | undefined): number {
+  return sleeps !== undefined && Number.isInteger(sleeps) && sleeps >= 1 && sleeps <= 50
+    ? sleeps
+    : 2;
+}
+
 export async function createProperty(
   deps: CreatePropertyDeps,
   input: PropertyInput,
@@ -73,7 +80,7 @@ export async function createProperty(
           {
             title: input.title,
             countOfRooms: 1,
-            occAdults: 2,
+            occAdults: singleUnitSleeps(input.sleeps),
             occChildren: 0,
             unitNames: [input.title],
             system: true,

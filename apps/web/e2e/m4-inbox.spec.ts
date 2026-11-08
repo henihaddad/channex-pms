@@ -34,7 +34,7 @@ test("guest message → inbox → template reply; note never leaves; automation 
   test.skip(hooks.status() === 404, "test hooks disabled");
 
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("Inbox Flat");
+  await page.getByLabel("Property name").fill("Inbox Flat");
   await page.getByTestId("create-property").click();
   await expect(page.getByTestId("property-state")).toBeVisible();
   const propertyId = page.url().split("/properties/")[1]!.split(/[?#]/)[0]!;

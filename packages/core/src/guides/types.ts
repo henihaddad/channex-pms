@@ -16,6 +16,7 @@ export type GuideSectionKind =
   | "parking"
   | "house_rules"
   | "amenities"
+  | "heating"
   | "local_tips"
   | "emergency";
 

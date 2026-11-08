@@ -3,37 +3,34 @@
 import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPropertyAction, saveTemplateAction } from "../properties.actions";
-import { Alert, Button, Field, Input, Label, Select } from "@/components/ui";
+import { Alert, Button, Card, Field, Input, Label, LinkButton, Select } from "@/components/ui";
 
-type RoomType = { title: string; countOfRooms: number; occAdults: number; occChildren: number };
-type RatePlan = { title: string; roomTypeTitle?: string; price: string; minStay: number };
 type Kind = "single_unit" | "multi_unit" | "hotel";
+type Room = { title: string; units: number; sleeps: number; price: string; minStay: number };
 
 export interface WizardLabels {
-  step1: string;
-  step2: string;
-  step3: string;
-  kinds: Record<Kind, { title: string; hint: string }>;
+  basics: string;
+  firstRoom: string;
+  firstRoomHint: string;
   title: string;
   titlePlaceholder: string;
-  city: string;
+  kind: string;
+  kindHint: string;
+  kinds: Record<Kind, string>;
   country: string;
+  city: string;
+  street: string;
+  postcode: string;
   currency: string;
   timezone: string;
-  optional: string;
-  roomTypes: string;
   roomName: string;
-  rooms: string;
-  adults: string;
-  children: string;
+  units: string;
+  sleeps: string;
+  baseRate: string;
+  baseRateHint: string;
+  minStay: string;
   addRoomType: string;
-  ratePlans: string;
-  ratePlansHint: string;
-  planName: string;
-  roomType: string;
-  nightlyPrice: string;
-  minNights: string;
-  addRatePlan: string;
+  remove: string;
   advanced: string;
   template: string;
   none: string;
@@ -41,6 +38,7 @@ export interface WizardLabels {
   templateName: string;
   saveTemplate: string;
   create: string;
+  cancel: string;
   afterCreate: string;
 }
 
@@ -67,6 +65,7 @@ const CURRENCIES = [
   "INR",
   "JPY",
 ];
+const SYMBOLS: Record<string, string> = { EUR: "€", USD: "$", GBP: "£", JPY: "¥", INR: "₹" };
 const COUNTRIES: Array<[string, string]> = [
   ["DE", "Germany"],
   ["FR", "France"],
@@ -142,12 +141,14 @@ const TIMEZONES = [
   "Africa/Johannesburg",
 ];
 
+/** A price typed in the property's currency ("110", "110.50", "110,50") as integer minor units. */
 const toMinor = (price: string) => Math.round((Number(price.replace(",", ".")) || 0) * 100);
 
 /**
- * Property wizard (spec 03 §3.2) as three numbered sections on one page: what you
- * list, where it is, what it costs. Prices are typed in the property's currency,
- * not in cents. Templates and groups sit behind "Advanced".
+ * "Add a property" (spec 03 §3.2, design "Add a property"): the basics, then the first room
+ * or unit with its base rate. The property type carries MODEL-1's choice — one rental, several
+ * units, or a guest house — and decides whether rooms are managed for the manager. Templates
+ * and groups sit behind "Advanced". Photos and channels come after, on the property's page.
  */
 export function PropertyWizard({
   templates,
@@ -163,228 +164,194 @@ export function PropertyWizard({
   const router = useRouter();
   const [kind, setKind] = useState<Kind>("single_unit");
   const [currency, setCurrency] = useState(defaults.currency);
-  const [roomTypes, setRoomTypes] = useState<RoomType[]>([
-    { title: "Double Room", countOfRooms: 2, occAdults: 2, occChildren: 0 },
-  ]);
-  const [ratePlans, setRatePlans] = useState<RatePlan[]>([
-    { title: "Standard", price: "100", minStay: 1 },
+  const [rooms, setRooms] = useState<Room[]>([
+    { title: "Entire apartment", units: 1, sleeps: 2, price: "100", minStay: 1 },
   ]);
   const [state, action, pending] = useActionState(createPropertyAction, {});
   if (state.createdId) router.push(`/properties/${state.createdId}`);
-  const rtJson = JSON.stringify(kind === "single_unit" ? [] : roomTypes);
+  const single = kind === "single_unit";
+  const shown = single ? rooms.slice(0, 1) : rooms;
+  const rtJson = JSON.stringify(
+    single
+      ? []
+      : rooms.map((r) => ({
+          title: r.title,
+          countOfRooms: r.units,
+          occAdults: r.sleeps,
+          occChildren: 0,
+        })),
+  );
   const rpJson = JSON.stringify(
-    ratePlans.map((r) => ({
-      title: r.title,
+    shown.map((r) => ({
+      title: "Standard",
       minStay: r.minStay,
       baseRateMinor: toMinor(r.price),
-      roomTypeTitle: kind === "single_unit" ? undefined : (r.roomTypeTitle ?? roomTypes[0]?.title),
+      roomTypeTitle: single ? undefined : r.title,
     })),
   );
-  const editRoom = (i: number, patch: Partial<RoomType>) =>
-    setRoomTypes(roomTypes.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  const editPlan = (i: number, patch: Partial<RatePlan>) =>
-    setRatePlans(ratePlans.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  const step = (n: number, title: string) => (
-    <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-      <span className="grid h-6 w-6 place-items-center rounded-full bg-accent-soft text-xs text-accent">
-        {n}
-      </span>
-      {title}
-    </h2>
-  );
+  const edit = (i: number, patch: Partial<Room>) =>
+    setRooms(rooms.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const sym = SYMBOLS[currency] ?? currency;
   return (
-    <form action={action} className="space-y-8" data-testid="property-wizard">
+    <form action={action} className="flex flex-col gap-5" data-testid="property-wizard">
       {state.error ? <Alert>{state.error}</Alert> : null}
 
-      <section className="space-y-3">
-        {step(1, L.step1)}
-        <fieldset className="grid gap-3 sm:grid-cols-3">
+      <Card id="basics" title={L.basics} className="grid gap-4 sm:grid-cols-2">
+        <Field label={L.title} name="title" placeholder={L.titlePlaceholder} />
+        <Select
+          label={L.kind}
+          name="kind"
+          value={kind}
+          onChange={(v) => setKind(v as Kind)}
+          description={L.kindHint}
+        >
           {(["single_unit", "multi_unit", "hotel"] as const).map((k) => (
-            <Label
-              key={k}
-              className={`cursor-pointer rounded-xl border p-4 text-sm transition-colors ${kind === k ? "border-accent bg-accent-soft/40" : "border-border hover:border-muted"}`}
-            >
-              <span className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="kind"
-                  value={k}
-                  checked={kind === k}
-                  onChange={() => setKind(k)}
-                />
-                <span className="font-medium">{L.kinds[k].title}</span>
-              </span>
-              <p className="mt-1.5 ps-6 text-xs text-muted">{L.kinds[k].hint}</p>
-            </Label>
+            <option key={k} value={k}>
+              {L.kinds[k]}
+            </option>
           ))}
-        </fieldset>
-      </section>
+        </Select>
+        <Select label={L.country} name="country" defaultValue={defaults.country}>
+          {COUNTRIES.map(([code, name]) => (
+            <option key={code} value={code}>
+              {name}
+            </option>
+          ))}
+        </Select>
+        <Field label={L.city} name="city" required={false} placeholder="Lisbon" />
+        <Field label={L.street} name="street" required={false} placeholder="Rua dos Remédios 24" />
+        <Field label={L.postcode} name="postcode" required={false} placeholder="1100-446" />
+        <Select label={L.currency} name="currency" value={currency} onChange={setCurrency}>
+          {CURRENCIES.map((c) => (
+            <option key={c} value={c}>
+              {SYMBOLS[c] ? `${c} ${SYMBOLS[c]}` : c}
+            </option>
+          ))}
+        </Select>
+        <Select label={L.timezone} name="timezone" defaultValue={defaults.timezone}>
+          {TIMEZONES.map((z) => (
+            <option key={z} value={z}>
+              {z.replace(/_/g, " ")}
+            </option>
+          ))}
+        </Select>
+      </Card>
 
-      <section className="space-y-3">
-        {step(2, L.step2)}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={L.title} name="title" placeholder={L.titlePlaceholder} />
-          <Field label={`${L.city} ${L.optional}`} name="city" required={false} />
-          <Select label={L.country} name="country" defaultValue={defaults.country}>
-            {COUNTRIES.map(([code, name]) => (
-              <option key={code} value={code}>
-                {name}
-              </option>
-            ))}
-          </Select>
-          <Select label={L.timezone} name="timezone" defaultValue={defaults.timezone}>
-            {TIMEZONES.map((z) => (
-              <option key={z} value={z}>
-                {z.replace(/_/g, " ")}
-              </option>
-            ))}
-          </Select>
-          <Select label={L.currency} name="currency" value={currency} onChange={setCurrency}>
-            {CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        {step(3, L.step3)}
-        {kind !== "single_unit" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">{L.roomTypes}</p>
-            <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-xs text-muted">
-              <span>{L.roomName}</span>
-              <span>{L.rooms}</span>
-              <span>{L.adults}</span>
-              <span>{L.children}</span>
-            </div>
-            {roomTypes.map((rt, i) => (
-              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2">
-                <Input
-                  value={rt.title}
-                  aria-label={L.roomName}
-                  onChange={(e) => editRoom(i, { title: e.target.value })}
-                />
-                <Input
-                  type="number"
-                  min={1}
-                  aria-label={L.rooms}
-                  value={rt.countOfRooms}
-                  onChange={(e) => editRoom(i, { countOfRooms: Number(e.target.value) })}
-                />
-                <Input
-                  type="number"
-                  min={1}
-                  aria-label={L.adults}
-                  value={rt.occAdults}
-                  onChange={(e) => editRoom(i, { occAdults: Number(e.target.value) })}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  aria-label={L.children}
-                  value={rt.occChildren}
-                  onChange={(e) => editRoom(i, { occChildren: Number(e.target.value) })}
-                />
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                setRoomTypes([
-                  ...roomTypes,
-                  {
-                    title: `Room type ${String(roomTypes.length + 1)}`,
-                    countOfRooms: 1,
-                    occAdults: 2,
-                    occChildren: 0,
-                  },
-                ])
-              }
-            >
-              + {L.addRoomType}
-            </Button>
-          </div>
-        ) : null}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">{L.ratePlans}</p>
-          <p className="text-xs text-muted">{L.ratePlansHint}</p>
-          <div
-            className={`grid gap-2 text-xs text-muted ${kind !== "single_unit" ? "grid-cols-[2fr_1.5fr_1fr_1fr]" : "grid-cols-[2fr_1fr_1fr]"}`}
-          >
-            <span>{L.planName}</span>
-            {kind !== "single_unit" ? <span>{L.roomType}</span> : null}
-            <span>{L.nightlyPrice}</span>
-            <span>{L.minNights}</span>
-          </div>
-          {ratePlans.map((rp, i) => (
+      <Card id="rooms" title={L.firstRoom} description={L.firstRoomHint}>
+        <div className="flex flex-col gap-5">
+          {shown.map((r, i) => (
             <div
               key={i}
-              className={`grid gap-2 ${kind !== "single_unit" ? "grid-cols-[2fr_1.5fr_1fr_1fr]" : "grid-cols-[2fr_1fr_1fr]"}`}
+              className={`grid gap-4 sm:grid-cols-3 ${i > 0 ? "border-t border-border pt-5" : ""}`}
+              data-testid="room-row"
             >
-              <Input
-                value={rp.title}
-                aria-label={L.planName}
-                onChange={(e) => editPlan(i, { title: e.target.value })}
-              />
-              {kind !== "single_unit" ? (
-                <Select
-                  aria-label={L.roomType}
-                  value={rp.roomTypeTitle ?? roomTypes[0]?.title}
-                  onChange={(v) => editPlan(i, { roomTypeTitle: v })}
-                >
-                  {roomTypes.map((rt) => (
-                    <option key={rt.title} value={rt.title}>
-                      {rt.title}
-                    </option>
-                  ))}
-                </Select>
-              ) : null}
-              <div className="relative">
+              {single ? null : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`room-${String(i)}`}>{L.roomName}</Label>
+                    <Input
+                      id={`room-${String(i)}`}
+                      value={r.title}
+                      onChange={(e) => edit(i, { title: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`units-${String(i)}`}>{L.units}</Label>
+                    <Input
+                      id={`units-${String(i)}`}
+                      type="number"
+                      min={1}
+                      value={r.units}
+                      onChange={(e) => edit(i, { units: Number(e.target.value) })}
+                    />
+                  </div>
+                </>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`sleeps-${String(i)}`}>{L.sleeps}</Label>
                 <Input
-                  type="text"
-                  inputMode="decimal"
-                  aria-label={L.nightlyPrice}
-                  value={rp.price}
-                  data-testid={`price-${String(i)}`}
-                  onChange={(e) => editPlan(i, { price: e.target.value })}
-                  className="pe-12"
+                  id={`sleeps-${String(i)}`}
+                  name={single ? "sleeps" : undefined}
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={r.sleeps}
+                  onChange={(e) => edit(i, { sleeps: Number(e.target.value) })}
                 />
-                <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted">
-                  {currency}
-                </span>
               </div>
-              <Input
-                type="number"
-                min={1}
-                aria-label={L.minNights}
-                value={rp.minStay}
-                onChange={(e) => editPlan(i, { minStay: Number(e.target.value) })}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`price-${String(i)}`}>{L.baseRate}</Label>
+                <div className="relative">
+                  <Input
+                    id={`price-${String(i)}`}
+                    type="text"
+                    inputMode="decimal"
+                    value={r.price}
+                    data-testid={`price-${String(i)}`}
+                    onChange={(e) => edit(i, { price: e.target.value })}
+                    className="pe-12"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 end-3 flex items-center text-xs text-muted">
+                    {sym}
+                  </span>
+                </div>
+                {i === 0 ? <p className="text-xs text-muted">{L.baseRateHint}</p> : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`minstay-${String(i)}`}>{L.minStay}</Label>
+                <Input
+                  id={`minstay-${String(i)}`}
+                  type="number"
+                  min={1}
+                  value={r.minStay}
+                  onChange={(e) => edit(i, { minStay: Number(e.target.value) })}
+                />
+              </div>
+              {!single && i > 0 ? (
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setRooms(rooms.filter((_, j) => j !== i))}
+                  >
+                    {L.remove}
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              setRatePlans([
-                ...ratePlans,
-                { title: `Plan ${String(ratePlans.length + 1)}`, price: "100", minStay: 1 },
-              ])
-            }
-          >
-            + {L.addRatePlan}
-          </Button>
+          {single ? null : (
+            <div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  setRooms([
+                    ...rooms,
+                    {
+                      title: `Room type ${String(rooms.length + 1)}`,
+                      units: 1,
+                      sleeps: 2,
+                      price: rooms[0]?.price ?? "100",
+                      minStay: rooms[0]?.minStay ?? 1,
+                    },
+                  ])
+                }
+              >
+                + {L.addRoomType}
+              </Button>
+            </div>
+          )}
         </div>
-      </section>
+      </Card>
 
-      <details className="rounded-xl border border-border p-4" data-testid="wizard-advanced">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">
+      <details
+        className="rounded-card border border-border bg-surface p-5"
+        data-testid="wizard-advanced"
+      >
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">
           {L.advanced}
         </summary>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -427,10 +394,14 @@ export function PropertyWizard({
 
       <input type="hidden" name="roomTypes" value={rtJson} />
       <input type="hidden" name="ratePlans" value={rpJson} />
-      <div className="flex items-center gap-3 border-t border-border pt-5">
+      <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending} data-testid="create-property">
           {pending ? "…" : L.create}
         </Button>
+        <LinkButton href="/properties" variant="secondary">
+          {L.cancel}
+        </LinkButton>
+        <span className="flex-1" />
         <span className="text-xs text-muted">{L.afterCreate}</span>
       </div>
     </form>

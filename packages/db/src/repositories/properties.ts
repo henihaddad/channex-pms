@@ -37,6 +37,8 @@ export interface PropertySummary {
   /** First photo, from the property's own library or the content an import carried over. */
   photoUrl: string | null;
   city: string | null;
+  /** ISO country code from the address, when known. */
+  country: string | null;
   /** Adapter codes of the property's live connections, for the channel badges. */
   channels: string[];
 }
@@ -57,6 +59,85 @@ export interface PropertyDetail {
   policies: Array<{ id: string; title: string; checkInTime: string; checkOutTime: string }>;
   provisioning: ProvisioningState | null;
   groups: Array<{ id: string; name: string }>;
+}
+
+/** The raw counts behind a property's occupancy, ADR, sync and content status (spec 03 §3.2a). */
+export interface PropertyVitals {
+  propertyId: string;
+  /** Sellable units (sum of room type counts). */
+  units: number;
+  nightsSold: number;
+  nightsAvailable: number;
+  roomRevenueMinor: number;
+  unmappedBookings: number;
+  failedCells: number;
+  pendingCells: number;
+  /** When the channel manager last confirmed a calendar cell, or null if never. */
+  lastSyncedAt: string | null;
+  photos: number;
+  pricingRailsSet: boolean;
+  /** The direct booking site is switched on for this property. */
+  directEnabled: boolean;
+  guides: Array<{
+    locale: string;
+    published: boolean;
+    sections: Array<{ kind: string; body?: string; fields?: Record<string, string> }>;
+  }>;
+}
+
+/** The people and dates a property's overview shows beside its numbers. */
+export interface PropertyOverviewExtras {
+  nextArrival: {
+    bookingId: string;
+    date: string;
+    channel: string | null;
+    guestName: string | null;
+  } | null;
+  /** The owner on the agreement in force today, with its commercial model and payout terms. */
+  owner: {
+    id: string;
+    name: string;
+    model: Record<string, unknown>;
+    payout: Record<string, unknown>;
+  } | null;
+  /** Who cleaned it most over the last 60 days, and how many turnovers. */
+  cleaner: { name: string; tasks: number } | null;
+  upcomingTurnovers: number;
+  /** Photo URLs: the property's own library, else what an import carried over. */
+  photos: string[];
+}
+
+/** Room types and rate plans across the portfolio, for the inventory tabs. */
+export interface PortfolioInventory {
+  roomTypes: Array<{
+    id: string;
+    propertyId: string;
+    propertyTitle: string;
+    propertyKind: string;
+    title: string;
+    countOfRooms: number;
+    occAdults: number;
+    occChildren: number;
+    maxOccupancy: number;
+    isSystemManaged: boolean;
+    units: string[];
+  }>;
+  ratePlans: Array<{
+    id: string;
+    propertyId: string;
+    propertyTitle: string;
+    roomTypeId: string;
+    roomTypeTitle: string;
+    title: string;
+    currency: string;
+    parentTitle: string | null;
+    derivedOption: DerivedOption | null;
+    /** The rate on the requested date, in minor units, or null when no cell exists. */
+    rateMinor: number | null;
+    minStay: number | null;
+    /** Adapter codes of the connections this plan is mapped on. */
+    channels: string[];
+  }>;
 }
 
 const CHUNK = 500;
@@ -187,11 +268,311 @@ export class DrizzlePropertyRepository implements PropertyRepository {
           p.settings #>> '{content,photos,0}'
         ) as "photoUrl",
         p.address ->> 'city' as city,
+        p.address ->> 'country' as country,
         coalesce((select array_agg(distinct cc.adapter_code order by cc.adapter_code)
           from channel_connection cc
           where cc.property_id = p.id and cc.archived_at is null and cc.state in ('active','mapped','testing')), '{}') as channels
         from property p left join property_provisioning pv on pv.property_id = p.id
         where p.archived_at is null order by p.title, p.id`,
+    );
+  }
+
+  /**
+   * The counts behind the portfolio view (spec 03 §3.2a), one row per property: nights sold
+   * and sellable and room revenue over [from, from + days), bookings waiting for a room,
+   * calendar cells the channel manager refused, when the last cell was confirmed, and the
+   * content a guest sees. Core turns these into occupancy, ADR and "needs attention".
+   */
+  async vitals(from: string, days: number, propertyId?: string): Promise<PropertyVitals[]> {
+    const only = propertyId ? sql`and p.id = ${propertyId}` : sql``;
+    const rows = await rawRows<{
+      id: string;
+      units: number;
+      sold: number;
+      revenue: number | string;
+      unmapped: number;
+      failed: number;
+      pending: number;
+      synced_at: string | null;
+      photos: number;
+      rails: boolean;
+      direct: boolean;
+    }>(
+      this.tx,
+      sql`select p.id,
+        coalesce((select sum(rt.count_of_rooms) from room_type rt where rt.property_id = p.id and rt.archived_at is null), 0)::int as units,
+        (select count(*) from booking_room_day d join booking_room br on br.id = d.booking_room_id join booking b on b.id = br.booking_id
+           where d.property_id = p.id and d.status = 'confirmed' and b.status <> 'cancelled'
+             and d.date >= ${from}::date and d.date < ${from}::date + ${days}::int)::int as sold,
+        coalesce((select sum(d.amount_minor) from booking_room_day d join booking_room br on br.id = d.booking_room_id join booking b on b.id = br.booking_id
+           where d.property_id = p.id and d.status = 'confirmed' and b.status <> 'cancelled'
+             and d.date >= ${from}::date and d.date < ${from}::date + ${days}::int), 0) as revenue,
+        (select count(*) from booking b where b.property_id = p.id and b.mapping_state <> 'mapped' and b.status <> 'cancelled')::int as unmapped,
+        ((select count(*) from rate_day r where r.property_id = p.id and r.sync_state in ('failed','conflicted'))
+          + (select count(*) from availability_day a where a.property_id = p.id and a.sync_state in ('failed','conflicted')))::int as failed,
+        ((select count(*) from rate_day r where r.property_id = p.id and r.sync_state in ('pending','in_flight'))
+          + (select count(*) from availability_day a where a.property_id = p.id and a.sync_state in ('pending','in_flight')))::int as pending,
+        greatest((select max(r.synced_at) from rate_day r where r.property_id = p.id),
+                 (select max(a.synced_at) from availability_day a where a.property_id = p.id))::text as synced_at,
+        greatest((select count(*) from photo ph where ph.property_id = p.id),
+                 coalesce(jsonb_array_length(case when jsonb_typeof(p.settings #> '{content,photos}') = 'array' then p.settings #> '{content,photos}' end), 0))::int as photos,
+        exists(select 1 from rate_import_settings ri where ri.property_id = p.id and ri.floor_minor is not null and ri.ceiling_minor is not null) as rails,
+        exists(select 1 from booking_engine_settings be where be.property_id = p.id and be.enabled) as direct
+        from property p where p.archived_at is null ${only} order by p.title, p.id`,
+    );
+    const guides = await rawRows<{
+      property_id: string;
+      locale: string;
+      published: boolean;
+      sections: Array<{ kind: string; body?: string; fields?: Record<string, string> }>;
+    }>(
+      this.tx,
+      sql`select g.property_id, g.locale, g.published, g.sections from property_guide g join property p on p.id = g.property_id
+          where p.archived_at is null ${only}`,
+    );
+    return rows.map((r) => {
+      const mine = guides.filter((g) => g.property_id === r.id);
+      return {
+        propertyId: r.id,
+        units: r.units,
+        nightsSold: r.sold,
+        nightsAvailable: r.units * days,
+        roomRevenueMinor: Number(r.revenue),
+        unmappedBookings: r.unmapped,
+        failedCells: r.failed,
+        pendingCells: r.pending,
+        lastSyncedAt: r.synced_at,
+        photos: r.photos,
+        pricingRailsSet: r.rails,
+        directEnabled: r.direct,
+        guides: mine.map((g) => ({
+          locale: g.locale,
+          published: g.published,
+          sections: Array.isArray(g.sections) ? g.sections : [],
+        })),
+      };
+    });
+  }
+
+  /**
+   * Every room type and rate plan across the portfolio, with the rate and minimum stay on
+   * `date`, for the "Rooms & units" and "Rate plans" tabs. One property when `propertyId`.
+   */
+  async inventory(date: string, propertyId?: string): Promise<PortfolioInventory> {
+    const only = propertyId ? sql`and p.id = ${propertyId}` : sql``;
+    const roomTypes = await rawRows<PortfolioInventory["roomTypes"][number]>(
+      this.tx,
+      sql`select rt.id, p.id as "propertyId", p.title as "propertyTitle", p.kind as "propertyKind", rt.title,
+          rt.count_of_rooms as "countOfRooms", rt.occ_adults as "occAdults", rt.occ_children as "occChildren",
+          rt.max_occupancy as "maxOccupancy", rt.is_system_managed as "isSystemManaged",
+          coalesce((select array_agg(u.name order by u.name) from unit u where u.room_type_id = rt.id and u.archived_at is null), '{}') as units
+          from room_type rt join property p on p.id = rt.property_id
+          where rt.archived_at is null and p.archived_at is null ${only} order by p.title, rt.title`,
+    );
+    const ratePlans = await rawRows<PortfolioInventory["ratePlans"][number]>(
+      this.tx,
+      sql`select rp.id, p.id as "propertyId", p.title as "propertyTitle", rp.room_type_id as "roomTypeId", rt.title as "roomTypeTitle",
+          rp.title, rp.currency, parent.title as "parentTitle", rp.derived_option as "derivedOption",
+          (d.values ->> 'rate')::bigint as "rateMinor", (d.values ->> 'minStay')::int as "minStay",
+          coalesce((select array_agg(distinct cc.adapter_code order by cc.adapter_code) from channel_mapping m
+            join channel_connection cc on cc.id = m.connection_id
+            where m.rate_plan_id = rp.id and cc.archived_at is null), '{}') as channels
+          from rate_plan rp join property p on p.id = rp.property_id join room_type rt on rt.id = rp.room_type_id
+          left join rate_plan parent on parent.id = rp.parent_rate_plan_id
+          left join rate_day d on d.rate_plan_id = rp.id and d.date = ${date}::date
+          where rp.archived_at is null and p.archived_at is null ${only}
+          order by p.title, rt.title, rp.parent_rate_plan_id nulls first, rp.title`,
+    );
+    return {
+      roomTypes,
+      ratePlans: ratePlans.map((r) => ({
+        ...r,
+        rateMinor: r.rateMinor === null ? null : Number(r.rateMinor),
+      })),
+    };
+  }
+
+  /**
+   * What the property's overview shows beside the numbers (spec 03 §3.2a): the next arrival,
+   * the owner on the agreement in force, who cleans it, and its photos.
+   */
+  async overviewExtras(propertyId: string, today: string): Promise<PropertyOverviewExtras> {
+    const [next] = await rawRows<{
+      id: string;
+      arrival_date: string;
+      ota_name: string | null;
+      names: Array<{ name?: string; surname?: string }> | null;
+    }>(
+      this.tx,
+      sql`select b.id, b.arrival_date::text, b.ota_name,
+          (select br.guest_names from booking_room br where br.booking_id = b.id order by br.id limit 1) as names
+          from booking b where b.property_id = ${propertyId} and b.status <> 'cancelled' and b.arrival_date >= ${today}::date
+          order by b.arrival_date, b.created_at limit 1`,
+    );
+    const [owner] = await rawRows<{
+      id: string;
+      name: string;
+      model: Record<string, unknown>;
+      payout: Record<string, unknown>;
+    }>(
+      this.tx,
+      sql`select o.id, o.name, a.model, a.payout from owner_agreement a join owner o on o.id = a.owner_id
+          where a.property_id = ${propertyId} and o.archived_at is null and a.effective_from <= ${today}::date
+            and (a.effective_to is null or a.effective_to > ${today}::date)
+          order by a.effective_from desc, a.version desc limit 1`,
+    );
+    const [cleaner] = await rawRows<{ name: string; tasks: number }>(
+      this.tx,
+      sql`select u.name, count(*)::int as tasks from turnover_task t join "user" u on u.id = t.assignee_id
+          where t.property_id = ${propertyId} and t.date >= ${today}::date - 60
+          group by u.name order by count(*) desc, u.name limit 1`,
+    );
+    const [upcoming] = await rawRows<{ n: number }>(
+      this.tx,
+      sql`select count(*)::int as n from turnover_task t
+          where t.property_id = ${propertyId} and t.date >= ${today}::date and t.date < ${today}::date + 30`,
+    );
+    const photos = await rawRows<{ url: string }>(
+      this.tx,
+      sql`select storage_key as url from photo where property_id = ${propertyId} order by position, id`,
+    );
+    const [content] = await rawRows<{ photos: unknown }>(
+      this.tx,
+      sql`select settings #> '{content,photos}' as photos from property where id = ${propertyId}`,
+    );
+    const imported = Array.isArray(content?.photos) ? content.photos.map(String) : [];
+    const first = next?.names?.[0];
+    return {
+      nextArrival: next
+        ? {
+            bookingId: next.id,
+            date: next.arrival_date,
+            channel: next.ota_name,
+            guestName: first ? [first.name, first.surname].filter(Boolean).join(" ") : null,
+          }
+        : null,
+      owner: owner
+        ? { id: owner.id, name: owner.name, model: owner.model, payout: owner.payout }
+        : null,
+      cleaner: cleaner ? { name: cleaner.name, tasks: cleaner.tasks } : null,
+      upcomingTurnovers: upcoming?.n ?? 0,
+      photos: photos.length > 0 ? photos.map((p) => p.url) : imported,
+    };
+  }
+
+  /**
+   * What an Airbnb import compares against (spec 07 CH-5): the property's name, place and
+   * content, and its base plan's nights over [from, from + days).
+   */
+  async importSnapshot(
+    propertyId: string,
+    from: string,
+    days: number,
+  ): Promise<{
+    title: string;
+    kind: string;
+    currency: string;
+    address: Record<string, string>;
+    content: Record<string, unknown>;
+    ratePlanId: string | null;
+    nights: Array<{ date: string; rate: number | null; minStay: number | null }>;
+  } | null> {
+    const [p] = await rawRows<{
+      title: string;
+      kind: string;
+      currency: string;
+      address: Record<string, string> | null;
+      content: Record<string, unknown> | null;
+      plan: string | null;
+    }>(
+      this.tx,
+      sql`select p.title, p.kind, p.currency, p.address, p.settings -> 'content' as content,
+          (select rp.id from rate_plan rp where rp.property_id = p.id and rp.archived_at is null and rp.parent_rate_plan_id is null
+            order by rp.title, rp.id limit 1) as plan
+          from property p where p.id = ${propertyId} and p.archived_at is null`,
+    );
+    if (!p) return null;
+    const nights = p.plan
+      ? await rawRows<{ date: string; rate: number | string | null; min_stay: number | null }>(
+          this.tx,
+          sql`select date::text, (values ->> 'rate')::bigint as rate, (values ->> 'minStay')::int as min_stay
+              from rate_day where rate_plan_id = ${p.plan} and date >= ${from}::date and date < ${from}::date + ${days}::int
+              order by date`,
+        )
+      : [];
+    return {
+      title: p.title,
+      kind: p.kind,
+      currency: p.currency,
+      address: p.address ?? {},
+      content: p.content ?? {},
+      ratePlanId: p.plan,
+      nights: nights.map((n) => ({
+        date: n.date,
+        rate: n.rate === null ? null : Number(n.rate),
+        minStay: n.min_stay,
+      })),
+    };
+  }
+
+  /** The property's name and address, edited from its overview. Provider ids are untouched. */
+  async updateDetails(
+    propertyId: string,
+    d: { title: string; address: Record<string, string> },
+  ): Promise<void> {
+    await this.tx.execute(
+      sql`update property set title = ${d.title}, address = coalesce(address, '{}'::jsonb) || ${JSON.stringify(d.address)}::jsonb,
+          updated_at = now() where id = ${propertyId}`,
+    );
+  }
+
+  /** Check-in and check-out times on the property's first policy, creating "Standard" when there is none. */
+  async setHouseTimes(
+    propertyId: string,
+    times: { checkInTime: string; checkOutTime: string },
+    newId: () => string,
+  ): Promise<void> {
+    const [p] = await this.tx
+      .select({ id: s.policy.id })
+      .from(s.policy)
+      .where(eq(s.policy.propertyId, propertyId))
+      .orderBy(asc(s.policy.title))
+      .limit(1);
+    if (p)
+      await this.tx
+        .update(s.policy)
+        .set({ checkInTime: times.checkInTime, checkOutTime: times.checkOutTime })
+        .where(eq(s.policy.id, p.id));
+    else
+      await this.insertPolicy({
+        id: newId(),
+        propertyId,
+        title: "Standard",
+        ...times,
+        cancellation: { type: "flexible" },
+      });
+  }
+
+  /** The amenities a property lists (`settings.content.amenities`), as an Airbnb import carries them. */
+  async amenities(): Promise<Array<{ id: string; title: string; amenities: string[] }>> {
+    const rows = await rawRows<{ id: string; title: string; amenities: unknown }>(
+      this.tx,
+      sql`select p.id, p.title, p.settings #> '{content,amenities}' as amenities
+          from property p where p.archived_at is null order by p.title, p.id`,
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      amenities: Array.isArray(r.amenities) ? r.amenities.map(String) : [],
+    }));
+  }
+
+  /** Replaces a property's content fields (`settings.content.<key>`), leaving the rest of its settings alone. */
+  async setContent(propertyId: string, content: Record<string, unknown>): Promise<void> {
+    await this.tx.execute(
+      sql`update property set settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{content}',
+            coalesce(settings -> 'content', '{}'::jsonb) || ${JSON.stringify(content)}::jsonb, true),
+          updated_at = now() where id = ${propertyId}`,
     );
   }
 

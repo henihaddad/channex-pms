@@ -33,7 +33,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
 
   // a template from the wizard, then 20 listings from it in one CSV import (listing #40 in three minutes)
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("Template source");
+  await page.getByLabel("Property name").fill("Template source");
   await page.getByTestId("wizard-advanced").locator("summary").click();
   // wait for the action to commit: with a pooled database the list page can otherwise render first
   await Promise.all([
@@ -44,7 +44,7 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   ]);
   await page.goto("/properties");
   await expect(page.getByText(/^Template /)).toBeVisible();
-  await page.goto("/properties/import");
+  await page.goto("/properties/import/csv");
   await pickOption(page, { label: "Template" }, { index: 1 });
   const rows = Array.from(
     { length: 20 },

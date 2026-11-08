@@ -44,7 +44,7 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
   test.skip(hooks.status() === 404, "test hooks disabled");
 
   await page.goto("/properties/new");
-  await page.getByLabel("Title").fill("KPI Flat");
+  await page.getByLabel("Property name").fill("KPI Flat");
   await page.getByTestId("create-property").click();
   await expect(page.getByTestId("property-state")).toBeVisible();
   await request.post("/api/v1/test/drain", { data: { orgId } });
