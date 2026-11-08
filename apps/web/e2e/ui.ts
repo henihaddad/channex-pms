@@ -12,10 +12,12 @@ export async function pickOption(
   target: { label?: string | RegExp; testId?: string; locator?: Locator },
   option: { value?: string; label?: string | RegExp; index?: number },
 ): Promise<void> {
+  // the test id or locator may name the select itself or a wrapper around it
+  const selfOrInner = "xpath=self::select | .//select";
   const select = target.locator
-    ? target.locator.locator("select").first()
+    ? target.locator.locator(selfOrInner).first()
     : target.testId
-      ? page.getByTestId(target.testId).locator("select, [data-testid]").first()
+      ? page.getByTestId(target.testId).locator(selfOrInner).first()
       : page.getByRole("main").getByRole("combobox", {
           name: typeof target.label === "string" ? new RegExp(target.label, "i") : target.label,
         });

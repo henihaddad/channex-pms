@@ -528,7 +528,7 @@ export default async function InboxPage({
                 const author = note
                   ? `${t("note")} · ${m.authorName ?? ""}`
                   : m.authorType === "automation"
-                    ? `${t("automation")} · ${m.automationRuleName ?? ""}`
+                    ? `${t("automation")} · ${m.automationRuleName ?? ""}${m.automationRuleVersion ? ` v${m.automationRuleVersion}` : ""}`
                     : m.authorType === "system"
                       ? t("system")
                       : m.authorType === "guest"

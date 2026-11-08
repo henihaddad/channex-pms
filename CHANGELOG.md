@@ -157,6 +157,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Messages for bookings taken by phone or walk-in (automations included) go to the guest by
+  email like every other direct booking; they were sent to Channex, which does not know
+  those bookings, and failed.
+- The channel mapping selects, the alerts and the operations assignee carry their test hooks
+  again, so the browser suite reaches the screens it checks.
+
 - The Cloudflare deploy workflow reported success while deploying nothing. Its "Check secrets"
   step exited 0 when `CLOUDFLARE_API_TOKEN` or `NEON_DIRECT_URL` was unset, and every step
   below it was conditioned on those secrets, so fifty runs between 2026-09-17 and 2026-10-26

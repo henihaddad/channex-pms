@@ -17,7 +17,7 @@ async function signUp(page: Page, stamp: string): Promise<string> {
   await page.getByLabel("Country (ISO code)").fill("PT");
   await page.getByLabel("Currency (ISO code)").fill("EUR");
   await page.getByRole("button", { name: "Create your organization" }).click();
-  await expect(page.getByRole("heading", { name: /need me/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
   return (await page.context().cookies()).find((c) => c.name === "pms_org")?.value ?? "";
 }
 const iso = (d: Date) => d.toISOString().slice(0, 10);

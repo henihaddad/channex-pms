@@ -25,7 +25,7 @@ export function providerCode(name: string | null | undefined): string {
   if (n.includes("booking")) return "booking_com";
   if (n.includes("airbnb")) return "airbnb";
   if (n.includes("expedia") || n.includes("hotels.com") || n.includes("vrbo")) return "expedia";
-  if (n === "direct" || n === "staff" || n === "manual" || n === "website") return "direct";
+  if (["direct", "staff", "manual", "website", "phone", "walk_in"].includes(n)) return "direct";
   return n.replace(/[^a-z0-9]+/g, "_");
 }
 

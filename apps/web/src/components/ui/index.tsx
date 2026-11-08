@@ -321,6 +321,7 @@ export function Select({
   children,
   "aria-label": ariaLabel,
   testId,
+  "data-testid": dataTestId,
   form,
 }: {
   name?: string;
@@ -338,6 +339,8 @@ export function Select({
   children?: ReactNode;
   "aria-label"?: string;
   testId?: string;
+  /** Same as `testId`, for call sites written like a native element. */
+  "data-testid"?: string;
   form?: string;
 }) {
   const items = options ?? optionsFromChildren(children);
@@ -354,7 +357,7 @@ export function Select({
         required={required}
         disabled={disabled}
         aria-label={label ? undefined : (ariaLabel ?? name)}
-        data-testid={testId}
+        data-testid={testId ?? dataTestId}
         {...(controlled
           ? { value: value ?? "" }
           : { defaultValue: initial ?? (placeholder ? "" : undefined) })}
@@ -600,7 +603,7 @@ export function Alert({
   return (
     <div
       role="alert"
-      className={cn("rounded-control border px-4 py-3 text-sm", alertTones[tone], className)}
+      className={cn("alert rounded-control border px-4 py-3 text-sm", alertTones[tone], className)}
       {...rest}
     >
       {title ? <p className="font-semibold">{title}</p> : null}

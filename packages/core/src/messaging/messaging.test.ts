@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
+import { providerCode } from "./capabilities.js";
 import { assertSendable, toOutbound, NoteNeverSentError } from "./guard.js";
 import { firstResponseDue, matchesView, medianFirstResponseMinutes, slaState } from "./sla.js";
 import { interpolate, pickVariant, promotionalWarnings } from "./templates.js";
@@ -305,5 +306,14 @@ describe("Airbnb inquiry cards (CXMSG-6)", () => {
     expect(
       parseInquiry("Alteration request: 2026-11-02 to 2026-11-05", "2026-10-01T10:00:00Z").kind,
     ).toBe("alteration_request");
+  });
+});
+
+describe("providerCode", () => {
+  it("treats every booking we took ourselves as direct, so its messages go by email", () => {
+    for (const source of ["", "direct", "staff", "phone", "walk_in", "Website"])
+      expect(providerCode(source)).toBe("direct");
+    expect(providerCode("Booking.com")).toBe("booking_com");
+    expect(providerCode("AirBNB")).toBe("airbnb");
   });
 });
