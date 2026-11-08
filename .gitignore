@@ -39,3 +39,4 @@ data/
 
 # agent worktrees (Claude Code)
 .claude/worktrees/
+apps/web/e2e.local.config.ts
