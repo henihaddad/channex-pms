@@ -837,6 +837,22 @@
     "scope": "property"
   },
   {
+    "file": "src/app/(console)/properties/import/airbnb.actions.ts",
+    "export": "loadAirbnbImport",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel_account:manage",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/properties/import/airbnb.actions.ts",
+    "export": "runAirbnbImportAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "channel:create",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/properties/properties.actions.ts",
     "export": "adoptPropertyAction",
     "kind": "action",

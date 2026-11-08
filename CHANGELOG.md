@@ -44,6 +44,12 @@ All notable changes to this project are documented here. The format follows
   rules, Appliances, a new Heating & hot water section, Neighbourhood, Check-out, Emergencies
   — and the reply assistant answers heating and hot-water questions from the new section.
   Message templates accept `{guide.wifi_name}` as well as `{{guide.wifi_name}}`.
+- "Import from Airbnb" (`/properties/import`) is a field-by-field preview per the design
+  canvas: pick a listing and the property it goes into (or a new one), see Airbnb's value
+  beside what OTAbridge will hold for name, place, bedrooms, sleeps, description, amenities,
+  photos, nightly prices, minimum stay, rate plan and bookings, untick what to keep, and
+  "Import exactly this" writes only the ticked rows and maps the listing. The table
+  downloads as CSV. Before, the link went to Channels.
 
 - Today matches the design canvas: every number and "Needs you" row says what is behind it
   (which booking needs a room, how long the oldest guest has waited, which owner's payout

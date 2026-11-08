@@ -62,6 +62,20 @@ Requirements:
   ([05 §5.5.3](./05-channex-integration.md#553-event-catalogue-and-our-response)). Where an adapter is only supported through the
   **Channex channel iframe**, we embed it, clearly labelled, rather than faking a
   native flow we cannot support.
+  **One listing, field by field (`/properties/import`, November 2026).** Persona: the
+  property manager moving a listing over, who has seen other tools overwrite good content.
+  Step 1 connects Airbnb (Channels); step 2 previews one unmapped listing against the
+  property it goes into (the closest by name, another the manager picks, or a new one):
+  name, city, country, bedrooms, sleeps, description, amenities, photos, nightly prices
+  (median and Friday/Saturday median over the coming year), minimum stay, the rate plan, and
+  bookings and blocked nights. Each row shows Airbnb's value, what OTAbridge will hold, and
+  Same / Will change / Will be added / Not on Airbnb / At activation
+  (`listingImportPreview`). Nothing is written until "Import exactly this"; step 3 reads
+  Airbnb again and writes only the ticked rows that change or add something
+  (`fieldsToApply`) — a new property cannot drop its name or plan, a field Airbnb does not
+  report is never written — then maps the listing to the base plan so it is not offered
+  again. Bookings and blocks come in at step 4, activation, as before. The bulk import on
+  the connection page stays for many listings at once.
 - **CH-6** Activation triggers a full ARI push for the configured horizon, with
   visible progress and an ETA.
 

@@ -291,4 +291,16 @@ describe("property vitals (spec 03 §3.2a)", () => {
     expect(d?.policies).toHaveLength(1);
     expect(d?.policies[0]).toMatchObject({ checkInTime: "15:00", checkOutTime: "10:30" });
   });
+
+  it("reads what an Airbnb import compares against: content and the base plan's nights", async () => {
+    await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).setContent(propertyId, { amenities: ["Wifi"] }),
+    );
+    const snap = await run((tx) =>
+      new DrizzlePropertyRepository(tx, ORG).importSnapshot(propertyId, "2026-09-01", 10),
+    );
+    expect(snap).toMatchObject({ currency: "EUR", ratePlanId, content: { amenities: ["Wifi"] } });
+    expect(snap!.nights).toHaveLength(10);
+    expect(snap!.nights[0]).toEqual({ date: "2026-09-01", rate: 10000, minStay: 1 });
+  });
 });

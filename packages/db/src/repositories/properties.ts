@@ -460,6 +460,61 @@ export class DrizzlePropertyRepository implements PropertyRepository {
     };
   }
 
+  /**
+   * What an Airbnb import compares against (spec 07 CH-5): the property's name, place and
+   * content, and its base plan's nights over [from, from + days).
+   */
+  async importSnapshot(
+    propertyId: string,
+    from: string,
+    days: number,
+  ): Promise<{
+    title: string;
+    kind: string;
+    currency: string;
+    address: Record<string, string>;
+    content: Record<string, unknown>;
+    ratePlanId: string | null;
+    nights: Array<{ date: string; rate: number | null; minStay: number | null }>;
+  } | null> {
+    const [p] = await rawRows<{
+      title: string;
+      kind: string;
+      currency: string;
+      address: Record<string, string> | null;
+      content: Record<string, unknown> | null;
+      plan: string | null;
+    }>(
+      this.tx,
+      sql`select p.title, p.kind, p.currency, p.address, p.settings -> 'content' as content,
+          (select rp.id from rate_plan rp where rp.property_id = p.id and rp.archived_at is null and rp.parent_rate_plan_id is null
+            order by rp.title, rp.id limit 1) as plan
+          from property p where p.id = ${propertyId} and p.archived_at is null`,
+    );
+    if (!p) return null;
+    const nights = p.plan
+      ? await rawRows<{ date: string; rate: number | string | null; min_stay: number | null }>(
+          this.tx,
+          sql`select date::text, (values ->> 'rate')::bigint as rate, (values ->> 'minStay')::int as min_stay
+              from rate_day where rate_plan_id = ${p.plan} and date >= ${from}::date and date < ${from}::date + ${days}::int
+              order by date`,
+        )
+      : [];
+    return {
+      title: p.title,
+      kind: p.kind,
+      currency: p.currency,
+      address: p.address ?? {},
+      content: p.content ?? {},
+      ratePlanId: p.plan,
+      nights: nights.map((n) => ({
+        date: n.date,
+        rate: n.rate === null ? null : Number(n.rate),
+        minStay: n.min_stay,
+      })),
+    };
+  }
+
   /** The property's name and address, edited from its overview. Provider ids are untouched. */
   async updateDetails(
     propertyId: string,
