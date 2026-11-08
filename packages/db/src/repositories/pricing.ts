@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import type { PricingGuardRails } from "@pms/core";
+import { parsePricingDefaults, type PricingDefaults, type PricingGuardRails } from "@pms/core";
 import * as s from "../schema/index.js";
 import { rawRows, type Tx } from "../tenant.js";
 
@@ -96,6 +96,30 @@ export class DrizzleRateImportRepository {
       this.tx,
       sql`select property_id as "propertyId", org_id as "orgId"
           from rate_import_settings where enabled and provider <> 'csv'`,
+    );
+  }
+}
+
+/**
+ * Per-property pricing defaults (spec 06 §6.6): channel markup, rounding and discounts,
+ * kept in `property.settings.pricing`. Read through `parsePricingDefaults`, so a stored
+ * value out of range comes back as the default instead of as a strange price.
+ */
+export class DrizzlePricingDefaultsRepository {
+  constructor(private readonly tx: Tx) {}
+
+  async get(propertyId: string): Promise<PricingDefaults> {
+    const [r] = await rawRows<{ pricing: unknown }>(
+      this.tx,
+      sql`select settings->'pricing' as pricing from property where id = ${propertyId}`,
+    );
+    return parsePricingDefaults(r?.pricing);
+  }
+
+  async save(propertyId: string, next: PricingDefaults): Promise<void> {
+    const clean = parsePricingDefaults(next);
+    await this.tx.execute(
+      sql`update property set settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{pricing}', ${JSON.stringify(clean)}::jsonb), updated_at = now() where id = ${propertyId}`,
     );
   }
 }

@@ -1,46 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { guestPrice, Money } from "@pms/core";
 import { type CalendarLabels } from "@/components/calendar-labels";
-
-type Values = {
-  rate?: number;
-  minStay?: number;
-  maxStay?: number;
-  closedToArrival?: boolean;
-  closedToDeparture?: boolean;
-  stopSell?: boolean;
-};
-type SyncState = "pending" | "in_flight" | "synced" | "failed" | "conflicted";
-type RateCell = [string, Values, SyncState, number];
-type AvailCell = [string, number, SyncState, number];
-interface GridRatePlan {
-  id: string;
-  title: string;
-  parentRatePlanId: string | null;
-  cells: RateCell[];
-}
-interface GridRoomType {
-  id: string;
-  title: string;
-  countOfRooms: number;
-  isSystemManaged: boolean;
-  cells: AvailCell[];
-  ratePlans: GridRatePlan[];
-}
-interface GridProperty {
-  id: string;
-  title: string;
-  kind: string;
-  currency: string;
-  state: string;
-  groups: string[];
-  photoUrl: string | null;
-  roomTypes: GridRoomType[];
-}
+import {
+  addDays,
+  covers,
+  fmt,
+  heroPlan,
+  HATCH,
+  Kbd,
+  ListingThumb,
+  mondayIndex,
+  rich,
+  type Block,
+  type GridProperty,
+  type GridRatePlan,
+  type GridRoomType,
+  type RateCell,
+  type Stay,
+  type SyncState,
+  type Values,
+} from "@/components/calendar-shared";
+import { channelColour, channelInk, channelName, channelNameOf } from "@/lib/channels";
+import { money as moneyText } from "@/lib/format";
+import { loadStaysAction, saveNightNotesAction } from "@/app/(console)/calendar/calendar.actions";
 
 type Row =
   | { kind: "property"; key: string; property: GridProperty }
@@ -52,84 +47,72 @@ type Row =
       roomType: GridRoomType;
       ratePlan: GridRatePlan;
       derived: boolean;
-      /** A single-unit listing with one plan is one row: the plan row carries the listing itself. */
+      /** A listing with one room type and one base plan is one row: the plan row carries the listing. */
       hero: boolean;
     };
 type PlanRow = Extract<Row, { kind: "rate_plan" }>;
+type Rect = { r1: number; r2: number; c1: number; c2: number };
+type Target = { property: GridProperty; ratePlan: GridRatePlan; cell: RateCell };
+
+const HEADER_H = 50;
+const LABEL_W = 260;
+const MIN_COL_W = 64;
+const ROW_H: Record<Row["kind"], number> = { property: 52, room_type: 34, rate_plan: 44 };
 const rowHeight = (row: Row | undefined): number =>
-  row?.kind === "rate_plan" && row.hero ? 56 : ROW_H[row?.kind ?? "rate_plan"];
-
-/** The strings the grid shows; the page resolves them from the `calendar` namespace. */
-const fmt = (s: string, vars: Record<string, string | number>): string =>
-  s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
-
-const COL_W = 84;
-const HEADER_H = 52;
-const LABEL_W = 268;
-const ROW_H: Record<Row["kind"], number> = { property: 48, room_type: 32, rate_plan: 50 };
+  row?.kind === "rate_plan" && row.hero ? 54 : ROW_H[row?.kind ?? "rate_plan"];
 const DOT: Record<SyncState, string> = {
   pending: "bg-muted",
-  in_flight: "bg-accent",
+  in_flight: "bg-sky-500",
   synced: "bg-success",
   failed: "bg-danger",
   conflicted: "bg-warning",
 };
-const WEEKDAY = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-/** Blocked nights read as unavailable at a glance: a light hatch, like a closed date on a booking site. */
-const HATCH =
-  "repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in oklab, currentColor 12%, transparent) 6px 7px)";
+const isWeekend = (iso: string): boolean => mondayIndex(iso) >= 4 && mondayIndex(iso) <= 5;
 
-function addDays(iso: string, n: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-const dayOf = (iso: string): { wd: number; day: number; month: number } => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return { wd: d.getUTCDay(), day: d.getUTCDate(), month: d.getUTCMonth() };
-};
-const money = (minor: number | undefined, currency: string): string =>
-  minor === undefined
-    ? "—"
-    : new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency,
-        maximumFractionDigits: 0,
-      }).format(minor / 100);
-const shortDate = (iso: string): string => {
-  const { day, month } = dayOf(iso);
-  return `${String(day)} ${MONTH[month]!}`;
+/** A field has the keyboard: the calendar's letter keys stay out of its way. */
+const typing = (e: KeyboardEvent | React.KeyboardEvent): boolean => {
+  const t = e.target as HTMLElement | null;
+  return !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 };
 
 /**
- * Portfolio calendar (spec 06 §6.2): listings and their plans down, nights across.
- * Click a night or drag across nights and a side panel edits the price, whether the
- * nights sell, the minimum stay and the finer restrictions; nothing needs a toolbar.
- * Keyboard-first stays (CAL-1: arrows move, digits type a price, Enter commits),
- * edits are optimistic with a sync dot per night (CAL-3), undo is server-backed
- * (CAL-4), conflicts show both values (CAL-5), states resolve over SSE.
+ * Portfolio calendar, strip view (spec 06 §6.2): listings down, nights across, bookings as
+ * bars in their channel's colour. Click a night or drag across nights (⌘-click adds another
+ * range) and the panel under the strip edits price, open or blocked, stay limits, check-in
+ * days and a private note, saved in one press. Keyboard-first (CAL-1), optimistic with a
+ * sync dot per night (CAL-3), server-backed undo (CAL-4), conflicts show both values (CAL-5),
+ * states resolve over SSE.
  */
 export function CalendarGrid({
-  start,
+  start: initialStart,
   days: initialDays,
   propertyId,
   groups,
+  properties: allProperties,
+  tips,
+  viewSwitch,
   labels: L,
 }: {
   start: string;
   days: number;
   propertyId?: string;
   groups: Array<{ id: string; name: string }>;
+  properties: Array<{ id: string; title: string }>;
+  tips: Array<{ propertyId: string | null; title: string; link: string }>;
+  viewSwitch: ReactNode;
   labels: CalendarLabels;
 }) {
+  const [start, setStart] = useState(initialStart);
   const [days, setDays] = useState(initialDays);
   const [groupId, setGroupId] = useState<string>("");
   const [data, setData] = useState<GridProperty[]>([]);
+  const [stays, setStays] = useState<{ stays: Stay[]; blocks: Block[] }>({ stays: [], blocks: [] });
   const [loadMs, setLoadMs] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [focus, setFocus] = useState<{ r: number; c: number } | null>(null);
   const [anchor, setAnchor] = useState<{ r: number; c: number } | null>(null);
+  const [extra, setExtra] = useState<Rect[]>([]);
   const [editing, setEditing] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<string>("");
@@ -140,15 +123,20 @@ export function CalendarGrid({
     theirs: Values;
     version: number;
   } | null>(null);
-  const [undoStack, setUndoStack] = useState<Array<{ id: string; propertyId: string }>>([]);
+  const [undoStack, setUndoStack] = useState<Array<Array<{ id: string; propertyId: string }>>>([]);
   const [bulk, setBulk] = useState<{
     preview?: { cellCount: number; warnings: string[]; blocked: string[] };
     /** The operation the preview was computed for; Apply re-runs exactly it (BULK-1). */
     ops?: unknown[];
   }>({});
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [tips, setTips] = useState(false);
+  const [hover, setHover] = useState<{ r: number; c: number; x: number; y: number } | null>(null);
+  const [tipsOpen, setTipsOpen] = useState(tips.length > 0);
+  const [clip, setClip] = useState<number | null>(null);
+  const [width, setWidth] = useState(1100);
+  const [maxH, setMaxH] = useState(640);
   const dragging = useRef(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -158,6 +146,21 @@ export function CalendarGrid({
   );
   const end = dates[dates.length - 1] ?? start;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const colW = Math.max(MIN_COL_W, Math.floor((width - LABEL_W - 2) / days));
+
+  // the strip fills the width it is given; the page never scrolls sideways on 14 nights
+  useLayoutEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const measure = () => {
+      setWidth(el.clientWidth);
+      setMaxH(Math.max(320, Math.round(window.innerHeight * 0.72)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const load = useCallback(async () => {
     const t0 = performance.now();
@@ -172,6 +175,10 @@ export function CalendarGrid({
     const body = (await res.json()) as { properties: GridProperty[] };
     setData(body.properties);
     setLoadMs(Math.round(performance.now() - t0));
+    // the bars need booking:read; without it the strip still shows prices and availability
+    loadStaysAction({ from: start, to: end, propertyIds: body.properties.map((p) => p.id) })
+      .then(setStays)
+      .catch(() => setStays({ stays: [], blocks: [] }));
   }, [start, end, propertyId, groupId, L.loadFailed]);
   useEffect(() => {
     void load();
@@ -194,7 +201,6 @@ export function CalendarGrid({
     };
     const close = () => setMenu(null);
     const scroller = parentRef.current;
-    // a reflow fires a scroll event with no movement; only a real scroll takes the menu away
     const sx = scroller?.scrollLeft ?? 0;
     const sy = scroller?.scrollTop ?? 0;
     const onScroll = () => {
@@ -256,20 +262,36 @@ export function CalendarGrid({
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     for (const p of data) {
-      const only = p.roomTypes.length === 1 ? p.roomTypes[0] : undefined;
-      const hero =
-        p.kind === "single_unit" &&
-        only !== undefined &&
-        only.isSystemManaged &&
-        only.ratePlans.length === 1;
-      if (!hero) {
-        out.push({ kind: "property", key: p.id, property: p });
-        if (collapsed.has(p.id)) continue;
+      const hero = heroPlan(p);
+      if (hero) {
+        out.push({
+          kind: "rate_plan",
+          key: hero.plan.id,
+          property: p,
+          roomType: hero.rt,
+          ratePlan: hero.plan,
+          derived: false,
+          hero: true,
+        });
+        if (expanded.has(p.id))
+          for (const rp of hero.rt.ratePlans)
+            if (rp.parentRatePlanId !== null)
+              out.push({
+                kind: "rate_plan",
+                key: rp.id,
+                property: p,
+                roomType: hero.rt,
+                ratePlan: rp,
+                derived: true,
+                hero: false,
+              });
+        continue;
       }
+      out.push({ kind: "property", key: p.id, property: p });
+      if (collapsed.has(p.id)) continue;
       for (const rt of p.roomTypes) {
-        const single = p.kind === "single_unit" && rt.isSystemManaged;
-        if (!single) out.push({ kind: "room_type", key: rt.id, property: p, roomType: rt });
-        if (!single && collapsed.has(rt.id)) continue;
+        out.push({ kind: "room_type", key: rt.id, property: p, roomType: rt });
+        if (collapsed.has(rt.id)) continue;
         for (const rp of rt.ratePlans)
           out.push({
             kind: "rate_plan",
@@ -278,12 +300,12 @@ export function CalendarGrid({
             roomType: rt,
             ratePlan: rp,
             derived: rp.parentRatePlanId !== null,
-            hero,
+            hero: false,
           });
       }
     }
     return out;
-  }, [data, collapsed]);
+  }, [data, collapsed, expanded]);
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
@@ -296,13 +318,16 @@ export function CalendarGrid({
     horizontal: true,
     count: dates.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => COL_W,
+    estimateSize: () => colW,
     overscan: 4,
   });
+  useEffect(() => {
+    colVirtualizer.measure();
+  }, [colW, colVirtualizer]);
 
   const cellAt = (row: Row, c: number): RateCell | undefined =>
     row.kind === "rate_plan" ? row.ratePlan.cells.find((x) => x[0] === dates[c]) : undefined;
-  const selection = useMemo(() => {
+  const current = useMemo<Rect | null>(() => {
     if (!focus) return null;
     const a = anchor ?? focus;
     return {
@@ -312,33 +337,56 @@ export function CalendarGrid({
       c2: Math.max(a.c, focus.c),
     };
   }, [focus, anchor]);
-  const rangeCells = useCallback(
-    (sel: { r1: number; r2: number; c1: number; c2: number }) => {
-      const out: Array<{ row: PlanRow; cell: RateCell }> = [];
+  const rects = useMemo(() => (current ? [...extra, current] : extra), [current, extra]);
+  const inRects = (r: number, c: number): boolean =>
+    rects.some((s) => r >= s.r1 && r <= s.r2 && c >= s.c1 && c <= s.c2);
+  const selected = useMemo(() => {
+    const out: Array<{ row: PlanRow; cell: RateCell }> = [];
+    const seen = new Set<string>();
+    for (const sel of rects)
       for (let r = sel.r1; r <= sel.r2; r++) {
         const row = rows[r];
         if (!row || row.kind !== "rate_plan" || row.derived) continue;
         for (let c = sel.c1; c <= sel.c2; c++) {
           const cell = row.ratePlan.cells.find((x) => x[0] === dates[c]);
-          if (cell) out.push({ row, cell });
+          const k = `${row.ratePlan.id}|${String(c)}`;
+          if (cell && !seen.has(k)) {
+            seen.add(k);
+            out.push({ row, cell });
+          }
         }
       }
-      return out;
-    },
-    [rows, dates],
-  );
-  const selected = useMemo(() => (selection ? rangeCells(selection) : []), [selection, rangeCells]);
+    return out;
+  }, [rects, rows, dates]);
   const selectedPlans = useMemo(() => {
     const seen = new Map<string, PlanRow>();
     for (const t of selected) seen.set(t.row.ratePlan.id, t.row);
     return [...seen.values()];
   }, [selected]);
+  const selectedDates = useMemo(() => {
+    const s = new Set<string>();
+    for (const sel of rects) for (let c = sel.c1; c <= sel.c2; c++) s.add(dates[c]!);
+    return [...s].sort();
+  }, [rects, dates]);
   const derivedOnly = useMemo(() => {
-    if (!selection || selected.length > 0) return false;
-    for (let r = selection.r1; r <= selection.r2; r++)
-      if (rows[r]?.kind === "rate_plan") return true;
-    return false;
-  }, [selection, selected.length, rows]);
+    if (rects.length === 0 || selected.length > 0) return false;
+    return rects.some((sel) => {
+      for (let r = sel.r1; r <= sel.r2; r++) if (rows[r]?.kind === "rate_plan") return true;
+      return false;
+    });
+  }, [rects, selected.length, rows]);
+
+  const staysByRoomType = useMemo(() => {
+    const m = new Map<string, Stay[]>();
+    for (const s of stays.stays)
+      if (s.roomTypeId) m.set(s.roomTypeId, [...(m.get(s.roomTypeId) ?? []), s]);
+    return m;
+  }, [stays]);
+  const blocksByRoomType = useMemo(() => {
+    const m = new Map<string, Block[]>();
+    for (const b of stays.blocks) m.set(b.roomTypeId, [...(m.get(b.roomTypeId) ?? []), b]);
+    return m;
+  }, [stays]);
 
   const patchLocal = (
     ratePlanId: string,
@@ -366,16 +414,17 @@ export function CalendarGrid({
       })),
     );
 
+  /** One PATCH per property; returns the undo id, or null when nothing was written. */
   const submitEdits = async (
     kind: "rates" | "restrictions",
-    propertyId: string,
+    pid: string,
     edits: Array<{ ratePlanId: string; date: string; values: Values; expectedVersion?: number }>,
-  ) => {
+  ): Promise<string | null | false> => {
     for (const e of edits) patchLocal(e.ratePlanId, e.date, e.values, "pending");
     const res = await fetch(`/api/v1/ari/${kind}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ propertyId, edits }),
+      body: JSON.stringify({ propertyId: pid, edits }),
     });
     const body = (await res.json()) as {
       outcomes?: Array<{
@@ -402,36 +451,84 @@ export function CalendarGrid({
           version: c.current.version,
         });
       }
-      return;
+      return false;
     }
     if (!res.ok) {
       setMessage(body.detail ?? fmt(L.editFailed, { status: res.status }));
       await load();
-      return;
+      return false;
     }
     for (const o of body.outcomes ?? [])
       if (o.ok && o.version) patchLocal(o.ratePlanId, o.date, {}, "pending", o.version);
-    if (body.undoId) setUndoStack((s) => [...s, { id: body.undoId!, propertyId }]);
-    setMessage(L.saved);
+    return body.undoId ?? null;
   };
 
-  /** Write the same values to every selected night, one request per property. */
-  const writeSelection = async (kind: "rates" | "restrictions", values: Values) => {
-    const byProperty = new Map<
+  const channelsOf = (props: GridProperty[]): string[] => {
+    const set = new Set<string>();
+    for (const p of props) for (const c of p.channels) if (c !== "direct") set.add(c);
+    return [...set].map((c) => channelNameOf(c as "airbnb"));
+  };
+  const joinList = (xs: string[]): string =>
+    xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")}${L.and}${xs.at(-1)!}`;
+  const savedMessage = (nights: number, props: GridProperty[]): string => {
+    const head = nights === 1 ? L.savedNight : fmt(L.savedNights, { n: nights });
+    const chans = channelsOf(props);
+    return chans.length > 0 ? `${head} · ${fmt(L.sentTo, { channels: joinList(chans) })}` : head;
+  };
+
+  /**
+   * Write edits grouped by property and kind; one undo entry covers the whole save, so
+   * ⌘Z puts back everything a press of Save changed.
+   */
+  const writeTargets = async (
+    list: Array<{ t: Target; kind: "rates" | "restrictions"; values: Values }>,
+  ): Promise<boolean> => {
+    const groupsBy = new Map<
       string,
       Array<{ ratePlanId: string; date: string; values: Values; expectedVersion?: number }>
     >();
-    for (const t of selected) {
-      const list = byProperty.get(t.row.property.id) ?? [];
-      list.push({
-        ratePlanId: t.row.ratePlan.id,
-        date: t.cell[0],
-        values,
-        expectedVersion: t.cell[3],
-      });
-      byProperty.set(t.row.property.id, list);
+    for (const { t, kind, values } of list) {
+      const k = `${kind}|${t.property.id}`;
+      groupsBy.set(k, [
+        ...(groupsBy.get(k) ?? []),
+        { ratePlanId: t.ratePlan.id, date: t.cell[0], values, expectedVersion: t.cell[3] },
+      ]);
     }
-    for (const [pid, edits] of byProperty) await submitEdits(kind, pid, edits);
+    const ids: Array<{ id: string; propertyId: string }> = [];
+    // rates first; a night whose rate this save just wrote has a new version, so its
+    // restriction edit goes without the stale one rather than tripping over ourselves
+    const bumped = new Set<string>();
+    for (const [k, edits] of [...groupsBy.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+      const [kind, pid] = k.split("|") as ["rates" | "restrictions", string];
+      const fresh = edits.map((e) =>
+        kind === "restrictions" && bumped.has(`${e.ratePlanId}|${e.date}`)
+          ? { ratePlanId: e.ratePlanId, date: e.date, values: e.values }
+          : e,
+      );
+      if (kind === "rates") for (const e of edits) bumped.add(`${e.ratePlanId}|${e.date}`);
+      const id = await submitEdits(kind, pid, fresh);
+      if (id === false) return false;
+      if (id) ids.push({ id, propertyId: pid });
+    }
+    if (ids.length > 0) setUndoStack((s) => [...s, ids]);
+    return true;
+  };
+
+  /** Write the same values to every selected night (keys, menu, paste). */
+  const writeSelection = async (kind: "rates" | "restrictions", values: Values) => {
+    const ok = await writeTargets(
+      selected.map(({ row, cell }) => ({
+        t: { property: row.property, ratePlan: row.ratePlan, cell },
+        kind,
+        values,
+      })),
+    );
+    if (ok)
+      setMessage(
+        savedMessage(new Set(selected.map((s) => s.cell[0])).size, [
+          ...new Set(selected.map((s) => s.row.property)),
+        ]),
+      );
   };
 
   const commitEdit = async () => {
@@ -443,42 +540,45 @@ export function CalendarGrid({
     const n = Math.round(Number(editing) * 100);
     if (!Number.isFinite(n) || n < 0) return;
     if (selected.length > 1) await writeSelection("rates", { rate: n });
-    else
-      await submitEdits("rates", row.property.id, [
+    else {
+      const ok = await writeTargets([
         {
-          ratePlanId: row.ratePlan.id,
-          date: cell[0],
+          t: { property: row.property, ratePlan: row.ratePlan, cell },
+          kind: "rates",
           values: { rate: n },
-          expectedVersion: cell[3],
         },
       ]);
+      if (ok) setMessage(savedMessage(1, [row.property]));
+    }
   };
 
   const undo = async () => {
     const last = undoStack[undoStack.length - 1];
     if (!last) return;
-    const res = await fetch(
-      `/api/v1/ari/bulk/${last.id}/undo?propertyId=${encodeURIComponent(last.propertyId)}`,
-      { method: "POST" },
-    );
-    if (res.ok) {
-      setUndoStack((s) => s.slice(0, -1));
-      setMessage(L.undone);
-      await load();
-    } else setMessage(fmt(L.editFailed, { status: res.status }));
+    for (const u of [...last].reverse()) {
+      const res = await fetch(
+        `/api/v1/ari/bulk/${u.id}/undo?propertyId=${encodeURIComponent(u.propertyId)}`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        setMessage(fmt(L.editFailed, { status: res.status }));
+        return;
+      }
+    }
+    setUndoStack((s) => s.slice(0, -1));
+    setMessage(L.undone);
+    await load();
   };
 
   /** A percentage change goes through the bulk operation: preview first (BULK-1), then apply. */
   const runBulk = async (dryRun: boolean, ops: unknown[]) => {
-    if (!selection || selectedPlans.length === 0) return;
-    const propertyId = selectedPlans[0]!.property.id;
+    if (!current || selectedPlans.length === 0) return;
+    const pid = selectedPlans[0]!.property.id;
     const body = {
-      propertyId,
-      dateFrom: dates[selection.c1],
-      dateTo: dates[selection.c2],
-      ratePlanIds: selectedPlans
-        .filter((p) => p.property.id === propertyId)
-        .map((p) => p.ratePlan.id),
+      propertyId: pid,
+      dateFrom: dates[current.c1],
+      dateTo: dates[current.c2],
+      ratePlanIds: selectedPlans.filter((p) => p.property.id === pid).map((p) => p.ratePlan.id),
       ops,
       horizonEnd: addDays(start, 730),
       dryRun,
@@ -503,17 +603,24 @@ export function CalendarGrid({
     if (dryRun || !r.applied) setBulk({ preview: r, ops });
     else {
       setBulk({});
-      if (r.id) setUndoStack((s) => [...s, { id: r.id!, propertyId }]);
+      if (r.id) setUndoStack((s) => [...s, [{ id: r.id!, propertyId: pid }]]);
       setMessage(fmt(L.applied, { n: r.cellCount }));
       await load();
     }
   };
 
+  const clearSelection = () => {
+    setFocus(null);
+    setAnchor(null);
+    setExtra([]);
+    setBulk({});
+  };
   const todayIndex = dates.indexOf(today);
-  /** "T" and the Today button: scroll to tonight, or reload the calendar from today when it is off the range. */
+  /** "T" and the Today button: tonight in view, or the strip moved to start today. */
   const goToday = () => {
     if (todayIndex < 0) {
-      router.push(`/calendar?days=${String(days)}`);
+      clearSelection();
+      setStart(today);
       return;
     }
     colVirtualizer.scrollToIndex(todayIndex, { align: "start" });
@@ -522,13 +629,26 @@ export function CalendarGrid({
       setAnchor(null);
     }
   };
+  const shiftWeek = (dir: 1 | -1) => {
+    clearSelection();
+    setStart((s) => addDays(s, 7 * dir));
+  };
+  const focusProperty = (): string | undefined =>
+    selectedPlans[0]?.property.id ??
+    (current ? rows[current.r1]?.property.id : undefined) ??
+    propertyId ??
+    data[0]?.id;
+  const goYear = () => {
+    const pid = focusProperty();
+    router.push(`/calendar?view=year${pid ? `&propertyId=${pid}` : ""}`);
+  };
   /** "R" and the menu: a staff booking on the selected listing and nights, dates filled in. */
   const newReservationHere = () => {
-    if (!selection) return;
-    const property = selectedPlans[0]?.property ?? rows[selection.r1]?.property;
+    if (!current) return;
+    const property = selectedPlans[0]?.property ?? rows[current.r1]?.property;
     const q = new URLSearchParams({
-      arrivalDate: dates[selection.c1]!,
-      departureDate: addDays(dates[selection.c2]!, 1),
+      arrivalDate: dates[current.c1]!,
+      departureDate: addDays(dates[current.c2]!, 1),
     });
     if (property) q.set("propertyId", property.id);
     router.push(`/reservations/new?${q.toString()}`);
@@ -537,89 +657,157 @@ export function CalendarGrid({
     setMenu(null);
     requestAnimationFrame(() => document.getElementById(id)?.focus());
   };
+  const copyPrice = () => {
+    const row = focus ? rows[focus.r] : undefined;
+    const rate = row && focus ? cellAt(row, focus.c)?.[1].rate : undefined;
+    if (rate === undefined) return;
+    setClip(rate);
+    void navigator.clipboard?.writeText(String(rate / 100)).catch(() => undefined);
+    setMessage(fmt(L.copied, { price: moneyText(rate, row!.property.currency) }));
+  };
+  const pastePrice = () => {
+    if (clip !== null && selected.length > 0) void writeSelection("rates", { rate: clip });
+  };
   const openMenu = (e: React.MouseEvent, r: number, c: number) => {
     e.preventDefault();
-    const inside =
-      selection && r >= selection.r1 && r <= selection.r2 && c >= selection.c1 && c <= selection.c2;
-    if (!inside) {
+    if (!inRects(r, c)) {
+      setExtra([]);
       setFocus({ r, c });
       setAnchor({ r, c });
     }
     setIsEditing(false);
+    setHover(null);
     setMenu({ x: e.clientX, y: e.clientY });
     parentRef.current?.focus({ preventScroll: true });
   };
+  const selectRow = (r: number) => {
+    setExtra([]);
+    setAnchor({ r, c: 0 });
+    setFocus({ r, c: dates.length - 1 });
+    parentRef.current?.focus({ preventScroll: true });
+  };
+  const selectColumn = (c: number) => {
+    setExtra([]);
+    setAnchor({ r: 0, c });
+    setFocus({ r: rows.length - 1, c });
+    parentRef.current?.focus({ preventScroll: true });
+  };
+
+  // keys that work with no night focused: ← → a week, T today, 1–4 the range, Y the year
+  const winKeys = useRef<(e: KeyboardEvent) => void>(() => undefined);
+  winKeys.current = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (focus && parentRef.current?.contains(document.activeElement)) return;
+    const k = e.key.toLowerCase();
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      shiftWeek(e.key === "ArrowLeft" ? -1 : 1);
+    } else if (k === "t") {
+      e.preventDefault();
+      goToday();
+    } else if (/^[1-4]$/.test(e.key)) {
+      e.preventDefault();
+      setDays([14, 30, 60, 90][Number(e.key) - 1]!);
+    } else if (k === "y") {
+      e.preventDefault();
+      goYear();
+    }
+  };
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => winKeys.current(e);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
 
   const onKeyDown = async (e: React.KeyboardEvent) => {
-    if (
-      isEditing === false &&
-      !e.metaKey &&
-      !e.ctrlKey &&
-      !e.altKey &&
-      e.key.toLowerCase() === "t"
-    ) {
+    if (typing(e) && !isEditing) return;
+    const handled = () => {
       e.preventDefault();
+      e.stopPropagation();
+    };
+    const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+    if (!isEditing && plain && e.key.toLowerCase() === "t") {
+      handled();
       goToday();
       return;
     }
-    if (!focus) return;
+    if (!isEditing && plain && e.key.toLowerCase() === "y") {
+      handled();
+      goYear();
+      return;
+    }
+    if (!focus) {
+      if (plain && /^[1-4]$/.test(e.key)) {
+        handled();
+        setDays([14, 30, 60, 90][Number(e.key) - 1]!);
+      } else if (plain && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        handled();
+        shiftWeek(e.key === "ArrowLeft" ? -1 : 1);
+      }
+      return;
+    }
     const move = (dr: number, dc: number) => {
       const r = Math.max(0, Math.min(rows.length - 1, focus.r + dr));
       const c = Math.max(0, Math.min(dates.length - 1, focus.c + dc));
       setFocus({ r, c });
-      if (!e.shiftKey) setAnchor(null);
-      else setAnchor((a) => a ?? focus);
+      if (!e.shiftKey) {
+        setAnchor(null);
+        setExtra([]);
+      } else setAnchor((a) => a ?? focus);
       rowVirtualizer.scrollToIndex(r);
       colVirtualizer.scrollToIndex(c);
     };
     if (isEditing) {
       if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
+        handled();
         await commitEdit();
         move(0, e.key === "Tab" ? 1 : 0);
       } else if (e.key === "Escape") setIsEditing(false);
+      e.stopPropagation();
       return;
     }
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      move(0, 1);
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      move(0, -1);
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      move(1, 0);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      move(-1, 0);
+    const arrows: Record<string, [number, number]> = {
+      ArrowRight: [0, 1],
+      ArrowLeft: [0, -1],
+      ArrowDown: [1, 0],
+      ArrowUp: [-1, 0],
+    };
+    if (arrows[e.key]) {
+      handled();
+      move(...arrows[e.key]!);
     } else if (e.key === "Escape") {
-      if (menu || tips) {
+      e.stopPropagation();
+      if (menu || hover) {
         setMenu(null);
-        setTips(false);
+        setHover(null);
         return;
       }
-      setFocus(null);
-      setAnchor(null);
+      clearSelection();
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
-      e.preventDefault();
+      handled();
       await undo();
-    } else if (!e.metaKey && !e.ctrlKey && !e.altKey && /^[bomrp]$/i.test(e.key)) {
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c") {
+      handled();
+      copyPrice();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v") {
+      handled();
+      pastePrice();
+    } else if (plain && /^[bomrpn]$/i.test(e.key)) {
       // the same verbs as the right-click menu, one letter each
       const k = e.key.toLowerCase();
-      if (k === "r") {
-        e.preventDefault();
-        newReservationHere();
-      } else if (selected.length > 0) {
-        e.preventDefault();
+      handled();
+      if (k === "r") newReservationHere();
+      else if (selected.length > 0) {
         if (k === "b") await writeSelection("restrictions", { stopSell: true });
         else if (k === "o") await writeSelection("restrictions", { stopSell: false });
         else if (k === "m") focusPanel("panel-min-stay");
+        else if (k === "n") focusPanel("panel-note");
         else focusPanel("panel-price");
       }
     } else if (/^[0-9]$/.test(e.key) || e.key === "Enter") {
       const row = rows[focus.r];
       if (row?.kind === "rate_plan" && !row.derived) {
-        e.preventDefault();
+        handled();
         const cell = cellAt(row, focus.c);
         setEditing(e.key === "Enter" ? String((cell?.[1].rate ?? 0) / 100) : e.key);
         setIsEditing(true);
@@ -627,13 +815,39 @@ export function CalendarGrid({
     }
   };
 
-  const nightsCount = selection ? selection.c2 - selection.c1 + 1 : 0;
-  const panelOpen = selection !== null && (selected.length > 0 || derivedOnly);
+  const nightsCount = selectedDates.length;
+  const panelOpen = rects.length > 0 && (selected.length > 0 || derivedOnly);
+  const monthLabel = new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${dates[0] ?? start}T00:00:00Z`));
+  const shortDate = (iso: string) =>
+    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+      new Date(`${iso}T00:00:00Z`),
+    );
+  const rangeLabel = (from: string, to: string): string => {
+    if (from === to) return shortDate(from);
+    const a = new Date(`${from}T00:00:00Z`);
+    const b = new Date(`${to}T00:00:00Z`);
+    return a.getUTCMonth() === b.getUTCMonth()
+      ? `${String(a.getUTCDate())}–${shortDate(to)}`
+      : `${shortDate(from)} – ${shortDate(to)}`;
+  };
+  const gridHeight = Math.min(rowVirtualizer.getTotalSize() + HEADER_H + 2, maxH);
+  const hoverRow = hover ? rows[hover.r] : undefined;
+  const filterValue = propertyId ? `p:${propertyId}` : groupId ? `g:${groupId}` : "";
+  const settingsHref = `/calendar/settings${focusProperty() ? `?propertyId=${focusProperty()!}` : ""}`;
 
   return (
-    <div className="space-y-3" data-testid="calendar">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex rounded-full border border-border bg-surface p-0.5">
+    <div className="space-y-4" data-testid="calendar">
+      <div className="flex flex-wrap items-center gap-2.5 text-[13px]">
+        {viewSwitch}
+        <div
+          className="inline-flex overflow-hidden rounded-full border border-border bg-surface"
+          role="group"
+          aria-label={L.range}
+        >
           {(
             [
               [14, L.horizon14],
@@ -647,76 +861,81 @@ export function CalendarGrid({
               type="button"
               aria-pressed={d === days}
               onClick={() => setDays(d)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${d === days ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
+              className={`px-3 py-[7px] font-semibold transition-colors ${d === days ? "bg-foreground text-background" : "text-muted hover:text-foreground"}`}
             >
               {label}
             </button>
           ))}
         </div>
-        <Button variant="secondary" className="h-8 px-3" onClick={goToday} data-testid="go-today">
-          {L.today}
-        </Button>
-        {groups.length > 0 ? (
-          <select
-            className="h-8 rounded-full border border-border bg-surface px-3 text-xs"
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-          >
-            <option value="">{L.allGroups}</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <Button
-          variant="secondary"
-          className="h-8 px-3"
-          onClick={() => void undo()}
-          disabled={undoStack.length === 0}
+        <select
+          aria-label={L.allProperties}
+          className="h-[34px] rounded-full border border-border bg-surface px-3 font-semibold text-muted"
+          value={filterValue}
+          onChange={(e) => {
+            const v = e.target.value;
+            clearSelection();
+            if (v.startsWith("p:")) router.push(`/calendar?view=strip&propertyId=${v.slice(2)}`);
+            else {
+              if (propertyId) router.push("/calendar?view=strip");
+              setGroupId(v.startsWith("g:") ? v.slice(2) : "");
+            }
+          }}
+          data-testid="calendar-filter"
         >
-          {L.undo}
-        </Button>
-        {message ? (
-          <span className="text-xs text-muted" role="status">
-            {message}
-          </span>
-        ) : null}
-        <ul
-          className="ms-auto hidden items-center gap-3 text-[11px] text-muted md:flex"
-          aria-label={L.legend}
-        >
-          <li className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
-            {L.legendSynced}
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-            {L.legendSending}
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-danger" aria-hidden="true" />
-            {L.legendFailed}
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span
-              className="h-3 w-4 rounded-sm border border-border text-muted"
-              style={{ backgroundImage: HATCH }}
-              aria-hidden="true"
-            />
-            {L.blocked}
-          </li>
-        </ul>
+          <option value="">{L.allProperties}</option>
+          {groups.length > 0 ? (
+            <optgroup label={L.groupsLabel}>
+              {groups.map((g) => (
+                <option key={g.id} value={`g:${g.id}`}>
+                  {g.name}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+          {allProperties.length > 1 ? (
+            <optgroup label={L.propertiesLabel}>
+              {allProperties.map((p) => (
+                <option key={p.id} value={`p:${p.id}`}>
+                  {p.title}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
+        </select>
         <button
           type="button"
-          onClick={() => setTips((v) => !v)}
-          aria-expanded={tips}
-          className={`h-7 rounded-full border px-2.5 text-xs font-semibold transition-colors ${tips ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground"}`}
-          data-testid="calendar-tips"
+          className="h-[34px] rounded-full border border-border bg-surface px-3 font-semibold hover:bg-default"
+          onClick={goToday}
+          data-testid="go-today"
         >
-          {L.tips}
+          {L.today}
         </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setTipsOpen((v) => !v)}
+          aria-expanded={tipsOpen}
+          className={`inline-flex h-[34px] items-center gap-1.5 rounded-full border px-3 font-semibold ${tips.length > 0 ? "border-amber-300 bg-amber-50 text-warning-soft-foreground" : "border-border bg-surface text-muted hover:text-foreground"}`}
+          data-testid="price-tips"
+        >
+          <span aria-hidden="true">✦</span>
+          {tips.length > 0 ? fmt(L.priceTipsCount, { n: tips.length }) : L.priceTips}
+        </button>
+        <Link
+          href={settingsHref}
+          className="inline-flex h-[34px] items-center gap-1.5 rounded-full border border-border bg-surface px-3 font-semibold hover:bg-default"
+          data-testid="pricing-settings"
+        >
+          <span aria-hidden="true">⚙</span>
+          {L.pricingSettings}
+        </Link>
+        <a
+          href="#shortcuts"
+          aria-label={L.shortcuts}
+          className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-surface font-semibold hover:bg-default"
+        >
+          ?
+        </a>
         <span className="sr-only" data-testid="grid-stats">
           {loadMs === null
             ? ""
@@ -724,32 +943,36 @@ export function CalendarGrid({
         </span>
       </div>
 
-      {tips ? (
+      {tipsOpen ? (
         <div
-          className="rounded-2xl border border-border bg-surface p-4 shadow-surface"
-          data-testid="calendar-tips-sheet"
+          className="flex flex-wrap items-center gap-3 rounded-card border border-amber-300 bg-amber-50 px-4 py-2.5 text-[13px] dark:bg-warning-soft"
+          data-testid="price-tips-banner"
         >
-          <div className="flex items-start justify-between gap-3">
-            <p className="font-display text-base font-bold">{L.tipsTitle}</p>
-            <button
-              type="button"
-              onClick={() => setTips(false)}
-              className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-muted hover:bg-default"
-            >
-              Esc
-            </button>
-          </div>
-          <ul className="mt-3 grid gap-2 text-sm text-foreground sm:grid-cols-2">
-            {[L.tipDrag, L.tipType, L.tipRightClick, L.tipKeys, L.tipDouble].map((tip) => (
-              <li key={tip} className="flex gap-2">
-                <span
-                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
-                  aria-hidden="true"
-                />
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
+          <strong>{L.priceTips}</strong>
+          {tips.length > 0 ? (
+            <>
+              <span className="text-muted">{tips.map((t) => t.title).join(" · ")}</span>
+              <span className="flex-1" />
+              <Link
+                href={tips[0]!.link}
+                className="inline-flex h-8 items-center rounded-full bg-accent px-3 font-bold text-accent-foreground"
+              >
+                {L.tipsReview}
+              </Link>
+            </>
+          ) : (
+            <>
+              <span className="text-muted">{L.tipsNone}</span>
+              <span className="flex-1" />
+              <button
+                type="button"
+                className="h-8 rounded-full border border-border bg-surface px-3 font-semibold"
+                onClick={() => setTipsOpen(false)}
+              >
+                {L.close}
+              </button>
+            </>
+          )}
         </div>
       ) : null}
 
@@ -761,12 +984,13 @@ export function CalendarGrid({
         >
           <p className="font-medium">{L.conflictTitle}</p>
           <p className="text-xs">
-            {L.mine}: {JSON.stringify(conflict.mine)} · {L.theirs}:{" "}
-            {JSON.stringify(conflict.theirs)}
+            {L.mine}: {describe(conflict.mine, data, L)} · {L.theirs}:{" "}
+            {describe(conflict.theirs, data, L)}
           </p>
           <div className="mt-2 flex gap-2">
-            <Button
-              className="h-7 px-2 text-xs"
+            <button
+              type="button"
+              className="h-7 rounded-full bg-accent px-3 text-xs font-semibold text-accent-foreground"
               onClick={() => {
                 const c = conflict;
                 setConflict(null);
@@ -785,340 +1009,520 @@ export function CalendarGrid({
               }}
             >
               {L.keepMine}
-            </Button>
-            <Button
-              variant="secondary"
-              className="h-7 px-2 text-xs"
+            </button>
+            <button
+              type="button"
+              className="h-7 rounded-full border border-border px-3 text-xs font-semibold"
               onClick={() => setConflict(null)}
             >
               {L.keepTheirs}
-            </Button>
+            </button>
           </div>
         </div>
       ) : null}
 
-      <div className={`grid gap-3 ${panelOpen ? "lg:grid-cols-[minmax(0,1fr)_320px]" : ""}`}>
+      <div
+        ref={parentRef}
+        className="relative select-none overflow-auto rounded-card border border-border bg-surface text-xs outline-none"
+        style={{ height: gridHeight }}
+        tabIndex={0}
+        onKeyDown={(e) => void onKeyDown(e)}
+        onMouseLeave={() => {
+          if (hoverTimer.current) clearTimeout(hoverTimer.current);
+          setHover(null);
+        }}
+        data-testid="grid-scroller"
+      >
         <div
-          ref={parentRef}
-          className="relative h-[72vh] select-none overflow-auto rounded-2xl border border-border bg-surface outline-none"
-          tabIndex={0}
-          onKeyDown={(e) => void onKeyDown(e)}
-          data-testid="grid-scroller"
+          style={{
+            height: rowVirtualizer.getTotalSize() + HEADER_H,
+            width: colVirtualizer.getTotalSize() + LABEL_W,
+            position: "relative",
+          }}
         >
-          <div
-            style={{
-              height: rowVirtualizer.getTotalSize() + HEADER_H,
-              width: colVirtualizer.getTotalSize() + LABEL_W,
-              position: "relative",
-            }}
-          >
-            <div className="sticky top-0 z-20 flex bg-surface" style={{ height: HEADER_H }}>
-              <div
-                className="sticky start-0 z-30 flex items-end border-e border-b border-border bg-surface px-3 pb-2 text-[11px] text-muted"
-                style={{ width: LABEL_W }}
-              >
-                {selection ? "" : L.selectHint}
-              </div>
-              {colVirtualizer.getVirtualItems().map((col) => {
-                const d = dates[col.index]!;
-                const { wd, day, month } = dayOf(d);
-                const isToday = d === today;
-                const weekend = wd === 0 || wd === 6;
-                const monthStart = day === 1 || col.index === 0;
-                return (
-                  <div
-                    key={col.key}
-                    className={`absolute top-0 flex flex-col items-center justify-end border-e border-b border-border pb-1.5 text-center leading-tight ${weekend ? "bg-surface-secondary/60" : ""}`}
-                    style={{ left: LABEL_W + col.start, width: COL_W, height: HEADER_H }}
-                  >
-                    {monthStart ? (
-                      <span className="absolute start-1 top-1 text-[10px] font-medium uppercase tracking-wide text-muted">
-                        {MONTH[month]}
-                      </span>
-                    ) : null}
-                    <span className="text-[10px] uppercase text-muted">{WEEKDAY[wd]}</span>
-                    <span
-                      className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-sm ${isToday ? "bg-foreground font-semibold text-background" : "font-medium"}`}
-                      title={isToday ? L.today : undefined}
-                    >
-                      {day}
-                    </span>
-                  </div>
-                );
-              })}
+          <div className="sticky top-0 z-20 flex bg-surface-secondary" style={{ height: HEADER_H }}>
+            <div
+              className="sticky start-0 z-30 flex items-center border-b border-border bg-surface-secondary px-3.5 text-xs font-semibold text-muted"
+              style={{ width: LABEL_W }}
+            >
+              {monthLabel}
             </div>
-            {rowVirtualizer.getVirtualItems().map((vr) => {
-              const row = rows[vr.index]!;
-              const h = rowHeight(row);
+            {colVirtualizer.getVirtualItems().map((col) => {
+              const d = dates[col.index]!;
+              const isToday = d === today;
               return (
-                <div
-                  key={vr.key}
-                  className="absolute left-0 flex"
-                  style={{ top: vr.start + HEADER_H, height: h, width: "100%" }}
-                  data-row-kind={row.kind}
+                <button
+                  type="button"
+                  key={col.key}
+                  tabIndex={-1}
+                  onDoubleClick={() => selectColumn(col.index)}
+                  title={L.selectNightEverywhere}
+                  className={`absolute top-0 flex flex-col items-center justify-center border-b leading-tight ${isToday ? "border-b-2 border-accent font-bold text-accent" : "border-border font-medium text-muted"} ${isWeekend(d) && !isToday ? "bg-default" : ""}`}
+                  style={{ left: LABEL_W + col.start, width: colW, height: HEADER_H }}
                 >
-                  <div
-                    className={`sticky start-0 z-10 flex items-center gap-2 border-e border-b border-border bg-surface px-3 text-xs ${row.kind === "property" || (row.kind === "rate_plan" && row.hero) ? "" : row.kind === "room_type" ? "ps-5 text-foreground" : "ps-8 text-muted"}`}
-                    style={{ width: LABEL_W }}
-                  >
-                    {row.kind === "property" ? (
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center gap-2 text-start"
-                        onClick={() =>
-                          setCollapsed((s) => {
-                            const n = new Set(s);
-                            if (n.has(row.property.id)) n.delete(row.property.id);
-                            else n.add(row.property.id);
-                            return n;
-                          })
-                        }
-                        aria-expanded={!collapsed.has(row.property.id)}
-                      >
-                        <ListingLabel property={row.property} />
-                      </button>
-                    ) : row.kind === "room_type" ? (
-                      <button
-                        type="button"
-                        className="flex min-w-0 flex-1 items-center gap-1 text-start"
-                        onClick={() =>
-                          setCollapsed((s) => {
-                            const n = new Set(s);
-                            if (n.has(row.roomType.id)) n.delete(row.roomType.id);
-                            else n.add(row.roomType.id);
-                            return n;
-                          })
-                        }
-                        aria-expanded={!collapsed.has(row.roomType.id)}
-                      >
-                        <span className="truncate font-medium">{row.roomType.title}</span>
-                      </button>
-                    ) : row.hero ? (
-                      <ListingLabel property={row.property} />
-                    ) : (
-                      <>
-                        <span className="truncate">{row.ratePlan.title}</span>
-                        {row.derived ? (
-                          <span className="rounded-full bg-surface-secondary px-1.5 text-[10px]">
-                            {L.derived}
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                  {colVirtualizer.getVirtualItems().map((col) => {
-                    const date = dates[col.index]!;
-                    const r = vr.index;
-                    const c = col.index;
-                    const { wd } = dayOf(date);
-                    const weekend = wd === 0 || wd === 6;
-                    const inSelection =
-                      selection &&
-                      r >= selection.r1 &&
-                      r <= selection.r2 &&
-                      c >= selection.c1 &&
-                      c <= selection.c2;
-                    const focused = focus?.r === r && focus.c === c;
-                    const common = `absolute border-e border-b border-border ${weekend ? "bg-surface-secondary/40" : ""} ${inSelection ? "bg-accent/15" : ""} ${focused ? "ring-2 ring-inset ring-accent" : ""}`;
-                    const style = { left: LABEL_W + col.start, width: COL_W, height: h };
-                    const down = (e: React.MouseEvent) => {
-                      if (e.button !== 0) return;
-                      e.preventDefault();
-                      dragging.current = true;
-                      setFocus({ r, c });
-                      setAnchor(e.shiftKey ? (anchor ?? focus) : { r, c });
-                      setIsEditing(false);
-                      setBulk({});
-                      parentRef.current?.focus();
-                    };
-                    const enter = () => {
-                      if (dragging.current) setFocus({ r, c });
-                    };
-                    if (row.kind === "property") {
-                      const single =
-                        row.property.kind === "single_unit" ? row.property.roomTypes[0] : undefined;
-                      const av = single?.cells.find((x) => x[0] === date);
-                      const booked = av !== undefined && av[1] <= 0;
-                      return (
-                        <div
-                          key={col.key}
-                          className={`${common} flex items-center justify-center text-[11px] ${booked ? "text-danger" : "text-muted"}`}
-                          style={{ ...style, ...(booked ? { backgroundImage: HATCH } : {}) }}
-                          onMouseDown={down}
-                          onMouseEnter={enter}
-                          onContextMenu={(e) => openMenu(e, r, c)}
-                        >
-                          {booked ? L.booked : ""}
-                        </div>
-                      );
-                    }
-                    if (row.kind === "room_type") {
-                      const av = row.roomType.cells.find((x) => x[0] === date);
-                      const full = av !== undefined && av[1] <= 0;
-                      return (
-                        <div
-                          key={col.key}
-                          className={`${common} flex items-center justify-between px-2 text-[11px] ${av && av[1] < 0 ? "bg-danger-soft text-danger" : full ? "text-muted" : ""}`}
-                          style={style}
-                          onMouseDown={down}
-                          onMouseEnter={enter}
-                          onContextMenu={(e) => openMenu(e, r, c)}
-                        >
-                          {av ? (
-                            <>
-                              <span>{fmt(L.left, { n: av[1] })}</span>
-                              <span className={`h-1.5 w-1.5 rounded-full ${DOT[av[2]]}`} />
-                            </>
-                          ) : null}
-                        </div>
-                      );
-                    }
-                    const cell = row.ratePlan.cells.find((x) => x[0] === date);
-                    const ed = focused && isEditing;
-                    const v = cell?.[1];
-                    const heroAv = row.hero
-                      ? row.roomType.cells.find((x) => x[0] === date)
-                      : undefined;
-                    const booked = heroAv !== undefined && heroAv[1] <= 0;
-                    const blocked = v?.stopSell === true;
-                    const note = booked
-                      ? L.booked
-                      : blocked
-                        ? L.blocked
-                        : [
-                            v?.minStay && v.minStay > 1 ? `min ${String(v.minStay)}` : "",
-                            v?.closedToArrival ? "CTA" : "",
-                            v?.closedToDeparture ? "CTD" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" · ");
-                    return (
-                      <div
-                        key={col.key}
-                        className={`${common} flex flex-col justify-center px-2 ${booked || blocked ? "text-muted" : row.derived ? "text-muted" : "text-foreground"}`}
-                        style={{
-                          ...style,
-                          ...(booked || blocked ? { backgroundImage: HATCH } : {}),
-                        }}
-                        onMouseDown={down}
-                        onMouseEnter={enter}
-                        onContextMenu={(e) => openMenu(e, r, c)}
-                        onDoubleClick={() => {
-                          if (!row.derived) {
-                            setEditing(String((cell?.[1].rate ?? 0) / 100));
-                            setIsEditing(true);
-                          }
-                        }}
-                        data-testid={focused ? "focused-cell" : undefined}
-                        data-state={cell?.[2]}
-                        data-cell={`${row.ratePlan.id}:${date}`}
-                      >
-                        {ed ? (
-                          <input
-                            autoFocus
-                            className="w-full border-0 bg-surface p-0 text-[13px] font-medium outline-none"
-                            value={editing}
-                            onChange={(e) => setEditing(e.target.value)}
-                            onBlur={() => void commitEdit()}
-                            data-testid="cell-editor"
-                          />
-                        ) : (
-                          <>
-                            <div className="flex items-start justify-between gap-1">
-                              <span className={`text-[13px] ${row.derived ? "" : "font-medium"}`}>
-                                {money(cell?.[1].rate, row.property.currency)}
-                              </span>
-                              {cell ? (
-                                <span
-                                  className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${DOT[cell[2]]}`}
-                                  title={cell[2]}
-                                />
-                              ) : null}
-                            </div>
-                            {note ? (
-                              <div className="truncate text-[10px] text-muted">{note}</div>
-                            ) : null}
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                  <span className="text-[10px]">{L.weekdayNames.split(",")[mondayIndex(d)]}</span>
+                  <span className="text-xs">{Number(d.slice(8))}</span>
+                </button>
               );
             })}
           </div>
-        </div>
-
-        {menu && selection ? (
-          <div
-            ref={menuRef}
-            role="menu"
-            className="fixed z-50 w-60 overflow-hidden rounded-xl border border-border bg-surface p-1 text-sm shadow-float"
-            style={{
-              left: Math.min(menu.x, (typeof window === "undefined" ? 0 : window.innerWidth) - 252),
-              top: Math.min(menu.y, (typeof window === "undefined" ? 0 : window.innerHeight) - 232),
-            }}
-            data-testid="context-menu"
-          >
-            <p className="truncate px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              {(selectedPlans[0]?.property ?? rows[selection.r1]?.property)?.title} ·{" "}
-              {shortDate(dates[selection.c1]!)}
-              {nightsCount > 1 ? ` – ${shortDate(dates[selection.c2]!)}` : ""}
-            </p>
-            {(
-              [
-                ["price", L.setPrice, "P", selected.length > 0],
-                ["block", L.blocked, "B", selected.length > 0],
-                ["open", L.open, "O", selected.length > 0],
-                ["min", L.minStay, "M", selected.length > 0],
-                ["new", L.newReservationHere, "R", true],
-              ] as const
-            )
-              .filter(([, , , show]) => show)
-              .map(([id, label, key]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-start hover:bg-accent-soft/60"
-                  onClick={() => {
-                    setMenu(null);
-                    if (id === "price") focusPanel("panel-price");
-                    else if (id === "min") focusPanel("panel-min-stay");
-                    else if (id === "block")
-                      void writeSelection("restrictions", { stopSell: true });
-                    else if (id === "open")
-                      void writeSelection("restrictions", { stopSell: false });
-                    else newReservationHere();
-                  }}
+          {rowVirtualizer.getVirtualItems().map((vr) => {
+            const row = rows[vr.index]!;
+            const h = rowHeight(row);
+            const r = vr.index;
+            const rt = row.kind === "property" ? undefined : row.roomType;
+            const single =
+              rt !== undefined &&
+              rt.countOfRooms === 1 &&
+              (row.kind === "room_type" || (row.kind === "rate_plan" && row.hero));
+            const rowStays = single ? (staysByRoomType.get(rt.id) ?? []) : [];
+            const rowBlocks = rt ? (blocksByRoomType.get(rt.id) ?? []) : [];
+            return (
+              <div
+                key={vr.key}
+                className="absolute left-0 flex"
+                style={{ top: vr.start + HEADER_H, height: h, width: "100%" }}
+                data-row-kind={row.kind}
+              >
+                <div
+                  className={`sticky start-0 z-10 flex items-center gap-2.5 border-b border-default bg-surface px-3.5 ${row.kind === "room_type" ? "ps-6" : row.kind === "rate_plan" && !row.hero ? "ps-10 text-muted" : ""}`}
+                  style={{ width: LABEL_W }}
                 >
-                  <span>{label}</span>
-                  <kbd className="rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                    {key}
-                  </kbd>
-                </button>
-              ))}
-          </div>
-        ) : null}
+                  {row.kind === "property" ? (
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-start"
+                      onClick={() =>
+                        setCollapsed((s) => {
+                          const n = new Set(s);
+                          if (n.has(row.property.id)) n.delete(row.property.id);
+                          else n.add(row.property.id);
+                          return n;
+                        })
+                      }
+                      aria-expanded={!collapsed.has(row.property.id)}
+                    >
+                      <ListingLabel
+                        property={row.property}
+                        subtitle={[
+                          row.property.city,
+                          fmt(L.roomTypes, { n: row.property.roomTypes.length }),
+                        ]}
+                      />
+                    </button>
+                  ) : row.kind === "room_type" ? (
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-1 text-start"
+                      onClick={() =>
+                        setCollapsed((s) => {
+                          const n = new Set(s);
+                          if (n.has(row.roomType.id)) n.delete(row.roomType.id);
+                          else n.add(row.roomType.id);
+                          return n;
+                        })
+                      }
+                      aria-expanded={!collapsed.has(row.roomType.id)}
+                    >
+                      <span className="truncate font-semibold">{row.roomType.title}</span>
+                      <span className="text-[11px] text-muted">
+                        · {fmt(L.rooms, { n: row.roomType.countOfRooms })}
+                      </span>
+                    </button>
+                  ) : row.hero ? (
+                    <>
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2.5 text-start"
+                        onClick={() => selectRow(r)}
+                        title={L.selectWholeRow}
+                      >
+                        <ListingLabel
+                          property={row.property}
+                          subtitle={[
+                            row.property.city,
+                            row.ratePlan.title,
+                            row.roomType.countOfRooms > 1
+                              ? fmt(L.rooms, { n: row.roomType.countOfRooms })
+                              : null,
+                          ]}
+                        />
+                      </button>
+                      {row.roomType.ratePlans.length > 1 ? (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-full border border-border px-1.5 text-[10px] font-semibold text-muted hover:text-foreground"
+                          aria-expanded={expanded.has(row.property.id)}
+                          onClick={() =>
+                            setExpanded((s) => {
+                              const n = new Set(s);
+                              if (n.has(row.property.id)) n.delete(row.property.id);
+                              else n.add(row.property.id);
+                              return n;
+                            })
+                          }
+                          title={fmt(L.showDerived, { n: row.roomType.ratePlans.length - 1 })}
+                        >
+                          +{row.roomType.ratePlans.length - 1}
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <span className="truncate">{row.ratePlan.title}</span>
+                      {row.derived ? (
+                        <span className="rounded-full bg-default px-1.5 text-[10px]">
+                          {L.derived}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+                {colVirtualizer.getVirtualItems().map((col) => {
+                  const date = dates[col.index]!;
+                  const c = col.index;
+                  const inSelection = inRects(r, c);
+                  const focused = focus?.r === r && focus.c === c;
+                  const block = rowBlocks.find((b) => covers(b, date));
+                  const common = `absolute border-b border-default text-center ${isWeekend(date) ? "bg-default/70" : ""} ${inSelection ? "!bg-accent-soft/60 outline-2 -outline-offset-2 outline-accent" : ""} ${focused ? "ring-2 ring-inset ring-accent" : ""}`;
+                  const style = { left: LABEL_W + col.start, width: colW, height: h };
+                  const down = (e: React.MouseEvent) => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    dragging.current = true;
+                    if (e.metaKey || e.ctrlKey) setExtra((x) => (current ? [...x, current] : x));
+                    else if (!e.shiftKey) setExtra([]);
+                    setFocus({ r, c });
+                    setAnchor(e.shiftKey ? (anchor ?? focus) : { r, c });
+                    setIsEditing(false);
+                    setBulk({});
+                    setHover(null);
+                    parentRef.current?.focus();
+                  };
+                  const enter = (e: React.MouseEvent) => {
+                    if (dragging.current) {
+                      setFocus({ r, c });
+                      return;
+                    }
+                    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                    if (row.kind !== "rate_plan" || menu) return;
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    hoverTimer.current = setTimeout(
+                      () => setHover({ r, c, x: rect.right, y: rect.top }),
+                      450,
+                    );
+                  };
+                  if (row.kind === "property") {
+                    return (
+                      <div
+                        key={col.key}
+                        className={common}
+                        style={style}
+                        onMouseDown={down}
+                        onMouseEnter={enter}
+                        onContextMenu={(e) => openMenu(e, r, c)}
+                      />
+                    );
+                  }
+                  if (row.kind === "room_type") {
+                    const av = row.roomType.cells.find((x) => x[0] === date);
+                    return (
+                      <div
+                        key={col.key}
+                        className={`${common} flex flex-col items-center justify-center text-[11px] ${av && av[1] < 0 ? "bg-danger-soft text-danger" : ""}`}
+                        style={{ ...style, ...(block ? { backgroundImage: HATCH } : {}) }}
+                        onMouseDown={down}
+                        onMouseEnter={enter}
+                        onContextMenu={(e) => openMenu(e, r, c)}
+                      >
+                        {av ? (
+                          <span className={av[1] <= 0 ? "font-semibold text-danger" : "text-muted"}>
+                            {fmt(L.left, { n: av[1] })}
+                          </span>
+                        ) : null}
+                      </div>
+                    );
+                  }
+                  const cell = row.ratePlan.cells.find((x) => x[0] === date);
+                  const ed = focused && isEditing;
+                  const v = cell?.[1];
+                  const av = row.hero ? row.roomType.cells.find((x) => x[0] === date) : undefined;
+                  const multi = row.hero && row.roomType.countOfRooms > 1;
+                  const blocked = v?.stopSell === true;
+                  const hatched = !multi && (blocked || block !== undefined);
+                  const note = row.property.notes[`${row.ratePlan.id}|${date}`];
+                  const booked = !multi && av !== undefined && av[1] <= 0 && !block;
+                  const underBar = rowStays.some((st) => covers(st, date));
+                  return (
+                    <div
+                      key={col.key}
+                      className={`${common} flex flex-col items-center justify-center gap-0.5 px-1 ${row.derived ? "text-muted" : ""}`}
+                      style={{ ...style, ...(hatched ? { backgroundImage: HATCH } : {}) }}
+                      onMouseDown={down}
+                      onMouseEnter={enter}
+                      onContextMenu={(e) => openMenu(e, r, c)}
+                      onDoubleClick={() => {
+                        if (!row.derived) {
+                          setEditing(String((cell?.[1].rate ?? 0) / 100));
+                          setIsEditing(true);
+                        }
+                      }}
+                      data-testid={focused ? "focused-cell" : undefined}
+                      data-state={cell?.[2]}
+                      data-cell={`${row.ratePlan.id}:${date}`}
+                      title={note}
+                    >
+                      {ed ? (
+                        <input
+                          autoFocus
+                          className="w-full border-0 bg-surface p-0 text-center text-[13px] font-semibold outline-none"
+                          value={editing}
+                          onChange={(e) => setEditing(e.target.value)}
+                          onBlur={() => void commitEdit()}
+                          data-testid="cell-editor"
+                        />
+                      ) : underBar ? null : hatched ? (
+                        <>
+                          <span className="font-semibold text-muted">—</span>
+                          <span className="text-[10px] text-muted">
+                            {block
+                              ? (L[`block_${block.reason}` as keyof CalendarLabels] ?? L.blocked)
+                              : L.blocked}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span
+                            className={`font-semibold tabular-nums ${inSelection ? "text-accent" : ""}`}
+                          >
+                            {v?.rate === undefined
+                              ? "—"
+                              : new Intl.NumberFormat("en-GB").format(v.rate / 100)}
+                          </span>
+                          {multi && av ? (
+                            <span
+                              className={`text-[10px] ${av[1] <= 0 ? "font-semibold text-danger" : "text-muted"}`}
+                            >
+                              {fmt(L.left, { n: av[1] })}
+                            </span>
+                          ) : booked ? (
+                            <span className="text-[10px] text-muted">{L.booked}</span>
+                          ) : cell ? (
+                            <span className="flex items-center gap-1">
+                              <span className={`h-1.5 w-1.5 rounded-full ${DOT[cell[2]]}`} />
+                              {note ? (
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full bg-warning"
+                                  aria-label={L.privateNote}
+                                />
+                              ) : null}
+                            </span>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                {rowStays.map((s) => {
+                  const a = Math.max(0, dates.indexOf(s.from < start ? start : s.from));
+                  const lastNight = addDays(s.to, -1);
+                  const bEnd = lastNight > end ? dates.length - 1 : dates.indexOf(lastNight);
+                  if (bEnd < 0 || s.from > end) return null;
+                  const ch = channelName(s.otaName);
+                  return (
+                    <Link
+                      key={s.bookingId}
+                      href={`/reservations/${s.bookingId}`}
+                      className="absolute top-1/2 z-[5] -translate-y-1/2 truncate rounded-full px-2.5 py-[5px] text-[11px] font-semibold whitespace-nowrap shadow-sm hover:brightness-110"
+                      style={{
+                        left: LABEL_W + a * colW + 4,
+                        width: (bEnd - a + 1) * colW - 8,
+                        background: channelColour(s.otaName),
+                        color: channelInk(s.otaName),
+                      }}
+                      title={`${s.guest || L.guest} · ${ch}`}
+                      data-testid="booking-bar"
+                      onMouseEnter={() => setHover(null)}
+                    >
+                      {s.guest || L.guest} · {ch}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-        {panelOpen && selection ? (
+      {hover && hoverRow?.kind === "rate_plan" && !menu ? (
+        <HoverCard L={L} row={hoverRow} date={dates[hover.c]!} x={hover.x} y={hover.y} />
+      ) : null}
+
+      {menu && current ? (
+        <div
+          ref={menuRef}
+          role="menu"
+          className="fixed z-50 w-[230px] overflow-hidden rounded-card border border-border bg-surface p-1.5 text-[13px] shadow-float"
+          style={{
+            left: Math.min(menu.x, (typeof window === "undefined" ? 0 : window.innerWidth) - 240),
+            top: Math.min(menu.y, (typeof window === "undefined" ? 0 : window.innerHeight) - 330),
+          }}
+          data-testid="context-menu"
+        >
+          <p className="truncate px-2.5 pt-1.5 pb-2 text-[11px] font-bold tracking-wider text-muted uppercase">
+            {(selectedPlans[0]?.property ?? rows[current.r1]?.property)?.title} ·{" "}
+            {rangeLabel(dates[current.c1]!, dates[current.c2]!)}
+          </p>
+          {(
+            [
+              ["price", L.setPrice, "P", selected.length > 0],
+              ["block", L.blockNights, "B", selected.length > 0],
+              ["open", L.open, "O", selected.length > 0],
+              ["min", L.minStayMenu, "M", selected.length > 0],
+              ["note", L.addNote, "N", selected.length > 0],
+              ["new", L.newReservationHere, "R", true],
+              ["copy", L.copyPrice, "⌘C", selected.length > 0],
+              ["paste", L.pastePrice, "⌘V", selected.length > 0],
+            ] as const
+          )
+            .filter(([, , , show]) => show)
+            .map(([id, label, key]) => (
+              <button
+                key={id}
+                type="button"
+                role="menuitem"
+                disabled={id === "paste" && clip === null}
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-start hover:bg-default disabled:opacity-50 disabled:hover:bg-transparent"
+                onClick={() => {
+                  setMenu(null);
+                  if (id === "price") focusPanel("panel-price");
+                  else if (id === "min") focusPanel("panel-min-stay");
+                  else if (id === "note") focusPanel("panel-note");
+                  else if (id === "block") void writeSelection("restrictions", { stopSell: true });
+                  else if (id === "open") void writeSelection("restrictions", { stopSell: false });
+                  else if (id === "copy") copyPrice();
+                  else if (id === "paste") pastePrice();
+                  else newReservationHere();
+                }}
+              >
+                <span>{label}</span>
+                <Kbd>{key}</Kbd>
+              </button>
+            ))}
+        </div>
+      ) : null}
+
+      <div
+        className={`grid items-start gap-5 ${panelOpen ? "lg:grid-cols-[minmax(0,1fr)_340px]" : ""}`}
+      >
+        <div className="flex min-w-0 flex-col gap-3">
+          <ul className="flex flex-wrap gap-4 px-0.5 py-1 text-xs text-muted" aria-label={L.legend}>
+            <li className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
+              {L.legendSynced}
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden="true" />
+              {L.legendSending}
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-danger" aria-hidden="true" />
+              {L.legendFailed}
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span
+                className="h-2.5 w-3.5 rounded-sm text-foreground/60"
+                style={{ backgroundImage: HATCH }}
+                aria-hidden="true"
+              />
+              {L.blocked}
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" />
+              {L.privateNote}
+            </li>
+          </ul>
+          <section
+            className="rounded-card border border-border bg-surface px-[18px] py-3.5"
+            data-testid="calendar-tips-sheet"
+          >
+            <h2 className="font-sans text-sm font-bold">{L.tipsTitle}</h2>
+            <ul className="mt-2.5 grid gap-x-5 gap-y-2 text-[13px] sm:grid-cols-2">
+              {[L.trickDrag, L.trickType, L.trickMenu, L.trickHeader, L.trickKeys, L.trickCopy].map(
+                (t) => (
+                  <li key={t}>{rich(t)}</li>
+                ),
+              )}
+            </ul>
+          </section>
+        </div>
+        {panelOpen && current ? (
           <SelectionPanel
-            key={`${String(selection.r1)}-${String(selection.r2)}-${String(selection.c1)}-${String(selection.c2)}`}
+            key={rects
+              .map((s) => `${String(s.r1)}-${String(s.r2)}-${String(s.c1)}-${String(s.c2)}`)
+              .join("|")}
             L={L}
             nights={nightsCount}
-            from={dates[selection.c1]!}
-            to={dates[selection.c2]!}
+            dates={selectedDates}
+            rangeLabel={rangeLabel(selectedDates[0]!, selectedDates.at(-1)!)}
             plans={selectedPlans}
             cells={selected}
+            data={data}
             derivedOnly={derivedOnly}
             bulk={bulk}
-            onClose={() => {
-              setFocus(null);
-              setAnchor(null);
-              setBulk({});
+            onClose={clearSelection}
+            onSave={async (s) => {
+              const targets: Target[] = [];
+              const plansFor = (p: GridProperty) =>
+                p.roomTypes.flatMap((rt) =>
+                  rt.ratePlans.filter((rp) => rp.parentRatePlanId === null),
+                );
+              if (s.scope === "selection")
+                for (const t of selected)
+                  targets.push({
+                    property: t.row.property,
+                    ratePlan: t.row.ratePlan,
+                    cell: t.cell,
+                  });
+              else {
+                const props =
+                  s.scope === "all" ? data : [...new Set(selectedPlans.map((p) => p.property))];
+                for (const p of props)
+                  for (const rp of plansFor(p))
+                    for (const d of selectedDates) {
+                      const cell = rp.cells.find((x) => x[0] === d);
+                      if (cell) targets.push({ property: p, ratePlan: rp, cell });
+                    }
+              }
+              const list: Array<{ t: Target; kind: "rates" | "restrictions"; values: Values }> = [];
+              for (const t of targets) {
+                if (s.rate !== undefined && t.cell[1].rate !== s.rate)
+                  list.push({ t, kind: "rates", values: { rate: s.rate } });
+                const rv = s.restrictions(t.cell[0], t.cell[1]);
+                if (rv) list.push({ t, kind: "restrictions", values: rv });
+              }
+              const ok = list.length === 0 ? true : await writeTargets(list);
+              if (!ok) return;
+              if (s.note !== null) {
+                const byProp = new Map<
+                  string,
+                  Array<{ ratePlanId: string; date: string; body: string }>
+                >();
+                for (const t of targets)
+                  byProp.set(t.property.id, [
+                    ...(byProp.get(t.property.id) ?? []),
+                    { ratePlanId: t.ratePlan.id, date: t.cell[0], body: s.note },
+                  ]);
+                for (const [pid, notes] of byProp)
+                  await saveNightNotesAction({ propertyId: pid, notes });
+                await load();
+              }
+              setMessage(
+                savedMessage(new Set(targets.map((t) => t.cell[0])).size, [
+                  ...new Set(targets.map((t) => t.property)),
+                ]),
+              );
             }}
-            onPrice={(minor) => void writeSelection("rates", { rate: minor })}
-            onRestriction={(values) => void writeSelection("restrictions", values)}
             onPreviewPercent={(pct) =>
               void runBulk(true, [
                 { op: "adjust_rate_percent", basisPoints: Math.round(pct * 100) },
@@ -1129,223 +1533,540 @@ export function CalendarGrid({
           />
         ) : null}
       </div>
+
+      {message ? (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-40 inline-flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-3 rounded-xl bg-foreground px-3.5 py-2.5 text-[13px] text-background shadow-float lg:left-[268px] lg:translate-x-0"
+          data-testid="calendar-toast"
+        >
+          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span>{message}</span>
+          {undoStack.length > 0 ? (
+            <button
+              type="button"
+              className="font-bold text-teal-300 hover:underline"
+              onClick={() => void undo()}
+            >
+              {L.undo}
+            </button>
+          ) : null}
+          {undoStack.length > 0 ? <Kbd>⌘Z</Kbd> : null}
+          <button
+            type="button"
+            aria-label={L.dismiss}
+            className="ms-1 text-background/60 hover:text-background"
+            onClick={() => setMessage("")}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
 
-/** The editor for the selected nights: price, whether they sell, minimum stay, and the finer restrictions folded away. */
-function ListingLabel({ property }: { property: GridProperty }) {
+/** Restriction values in words, for the conflict prompt. */
+function describe(v: Values, data: GridProperty[], L: CalendarLabels): string {
+  const cur = data[0]?.currency ?? "EUR";
+  return [
+    v.rate !== undefined ? moneyText(v.rate, cur) : "",
+    v.stopSell ? L.blocked : "",
+    v.minStay ? `${L.minNights} ${String(v.minStay)}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function ListingLabel({
+  property,
+  subtitle,
+}: {
+  property: GridProperty;
+  subtitle: Array<string | null | undefined>;
+}) {
   return (
     <>
-      {property.photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- remote listing photo, no loader configured
-        <img
-          src={property.photoUrl}
-          alt=""
-          className="h-8 w-11 shrink-0 rounded-md object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <span className="flex h-8 w-11 shrink-0 items-center justify-center rounded-md bg-surface-secondary text-sm font-medium text-muted">
-          {property.title.slice(0, 1).toUpperCase()}
+      <ListingThumb property={property} />
+      <span className="min-w-0">
+        <strong className="block truncate text-[13px]">{property.title}</strong>
+        <span className="block truncate text-[11px] font-normal text-muted">
+          {subtitle.filter(Boolean).join(" · ")}
         </span>
-      )}
-      <span className="truncate text-[13px] font-semibold text-foreground">{property.title}</span>
+      </span>
     </>
   );
 }
 
+/** What one night costs and shows, everywhere, on hover (design: the night card). */
+function HoverCard({
+  L,
+  row,
+  date,
+  x,
+  y,
+}: {
+  L: CalendarLabels;
+  row: PlanRow;
+  date: string;
+  x: number;
+  y: number;
+}) {
+  const cell = row.ratePlan.cells.find((c) => c[0] === date);
+  const v = cell?.[1];
+  const cur = row.property.currency;
+  const label = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
+  const note = row.property.notes[`${row.ratePlan.id}|${date}`];
+  const otas = row.property.channels.filter((c) => c !== "direct" && c !== "other");
+  const sync: Record<SyncState, [string, string]> = {
+    synced: [L.syncSynced, "text-success-soft-foreground"],
+    pending: [L.syncPending, "text-muted"],
+    in_flight: [L.legendSending, "text-sky-700"],
+    failed: [L.legendFailed, "text-danger"],
+    conflicted: [L.syncConflicted, "text-warning"],
+  };
+  const left = Math.min(x + 8, (typeof window === "undefined" ? 1440 : window.innerWidth) - 262);
+  return (
+    <div
+      className="pointer-events-none fixed z-40 w-[250px] rounded-card border border-border bg-surface px-3.5 py-3 text-xs shadow-float"
+      style={{ left, top: Math.max(8, y - 8) }}
+      data-testid="night-card"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <strong className="truncate text-[13px]">
+          {label} · {row.property.title}
+        </strong>
+        {isWeekend(date) ? <span className="text-muted">{L.weekend}</span> : null}
+      </div>
+      <table className="mt-2 w-full border-collapse">
+        <tbody>
+          <tr>
+            <td className="py-[3px]">{L.yourPrice}</td>
+            <td className="py-[3px] text-end font-bold">{moneyText(v?.rate, cur)}</td>
+          </tr>
+          {v?.rate !== undefined
+            ? otas.map((ch) => {
+                const bps = row.property.pricing.markupBps[ch] ?? 0;
+                const shown = guestPrice(
+                  Money.of(v.rate!, cur),
+                  bps,
+                  row.property.pricing.rounding,
+                );
+                return (
+                  <tr key={ch} className="text-muted">
+                    <td className="py-[3px]">
+                      {channelNameOf(ch as "airbnb")} · +{bps / 100}%
+                    </td>
+                    <td className="py-[3px] text-end">
+                      {fmt(L.guestSees, { price: moneyText(shown.minor, cur) })}
+                    </td>
+                  </tr>
+                );
+              })
+            : null}
+          {v?.rate !== undefined ? (
+            <tr className="text-muted">
+              <td className="py-[3px]">{channelNameOf("direct")}</td>
+              <td className="py-[3px] text-end">
+                {fmt(L.bestPrice, { price: moneyText(v.rate, cur) })}
+              </td>
+            </tr>
+          ) : null}
+          <tr className="text-muted">
+            <td className="py-[3px]">{L.minStayShort}</td>
+            <td className="py-[3px] text-end">
+              {v?.minStay && v.minStay > 1 ? fmt(L.nights, { n: v.minStay }) : L.night}
+            </td>
+          </tr>
+          {v?.stopSell || v?.closedToArrival ? (
+            <tr className="text-muted">
+              <td className="py-[3px]">{L.status}</td>
+              <td className="py-[3px] text-end">{v.stopSell ? L.blocked : L.closedToArrival}</td>
+            </tr>
+          ) : null}
+          {cell ? (
+            <tr>
+              <td className="py-[3px] text-muted">{L.sync}</td>
+              <td className={`py-[3px] text-end ${sync[cell[2]][1]}`}>{sync[cell[2]][0]}</td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+      {note ? (
+        <p className="mt-2 rounded-lg bg-warning-soft px-2 py-1 text-warning-soft-foreground">
+          {note}
+        </p>
+      ) : null}
+      <p className="mt-2 text-muted">{L.hoverHint}</p>
+    </div>
+  );
+}
+
+type SaveSpec = {
+  scope: "selection" | "plans" | "all";
+  rate?: number;
+  /** Restriction values for one night, or null to leave it as it is. */
+  restrictions: (date: string, current: Values) => Values | null;
+  /** The note for every night, or null to leave notes alone. */
+  note: string | null;
+};
+
+/** The editor for the selected nights (design: the side panel), saved with one press. */
 function SelectionPanel({
   L,
   nights,
-  from,
-  to,
+  dates,
+  rangeLabel,
   plans,
   cells,
+  data,
   derivedOnly,
   bulk,
   onClose,
-  onPrice,
-  onRestriction,
+  onSave,
   onPreviewPercent,
   onApply,
   onCancelPreview,
 }: {
   L: CalendarLabels;
   nights: number;
-  from: string;
-  to: string;
+  dates: string[];
+  rangeLabel: string;
   plans: PlanRow[];
   cells: Array<{ row: PlanRow; cell: RateCell }>;
+  data: GridProperty[];
   derivedOnly: boolean;
   bulk: { preview?: { cellCount: number; warnings: string[]; blocked: string[] }; ops?: unknown[] };
   onClose: () => void;
-  onPrice: (minor: number) => void;
-  onRestriction: (values: Values) => void;
+  onSave: (s: SaveSpec) => Promise<void>;
   onPreviewPercent: (pct: number) => void;
   onApply: () => void;
   onCancelPreview: () => void;
 }) {
   const first = cells[0]?.cell[1];
   const currency = plans[0]?.property.currency ?? "EUR";
+  const symbol = moneyText(0, currency).replace(/[\d.,\s−-]/g, "") || currency;
   const uniform = <K extends keyof Values>(k: K): Values[K] | undefined => {
     const v = first?.[k];
     return cells.every((c) => c.cell[1][k] === v) ? v : undefined;
   };
-  const [price, setPrice] = useState(first?.rate !== undefined ? String(first.rate / 100) : "");
-  const [minStay, setMinStay] = useState(String(uniform("minStay") ?? 1));
-  const [pct, setPct] = useState("10");
-  const [priceError, setPriceError] = useState("");
-  const blocked = uniform("stopSell");
-  const cta = uniform("closedToArrival") === true;
-  const ctd = uniform("closedToDeparture") === true;
   const listing = plans.length === 1 ? plans[0]! : null;
-  const savePrice = () => {
-    const n = Math.round(Number(price) * 100);
-    if (!Number.isFinite(n) || n < 0) {
-      setPriceError(L.invalidPrice);
+  const props = [...new Set(plans.map((p) => p.property))];
+  const initialRate = uniform("rate");
+  const initialBlocked = uniform("stopSell") === true;
+  const initialMin = uniform("minStay");
+  const initialMax = uniform("maxStay");
+  const weekdays = L.weekdayShort.split(",");
+  const initialCheckIn = weekdays.map((_, wd) => {
+    const ofDay = cells.filter((c) => mondayIndex(c.cell[0]) === wd);
+    return ofDay.length === 0 || !ofDay.every((c) => c.cell[1].closedToArrival === true);
+  });
+  const notes = cells.map((c) => c.row.property.notes[`${c.row.ratePlan.id}|${c.cell[0]}`] ?? "");
+  const initialNote = notes.every((n) => n === notes[0]) ? (notes[0] ?? "") : "";
+
+  const [price, setPrice] = useState(initialRate !== undefined ? String(initialRate / 100) : "");
+  const [blocked, setBlocked] = useState(initialBlocked);
+  const initialMinText =
+    initialMin !== undefined ? String(initialMin) : cells.length > 1 ? "" : "1";
+  const initialMaxText = initialMax !== undefined ? String(initialMax) : "";
+  const [minStay, setMinStay] = useState(initialMinText);
+  const [maxStay, setMaxStay] = useState(initialMaxText);
+  const [checkIn, setCheckIn] = useState(initialCheckIn);
+  const [note, setNote] = useState(initialNote);
+  const [scope, setScope] = useState<SaveSpec["scope"]>("selection");
+  const [pct, setPct] = useState("10");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [more, setMore] = useState(false);
+  const ctd = uniform("closedToDeparture") === true;
+
+  const priceMinor = price.trim() === "" ? undefined : Math.round(Number(price) * 100);
+  const otas = [...new Set(props.flatMap((p) => p.channels))].filter(
+    (c) => c !== "direct" && c !== "other",
+  );
+  const chanNames = otas.map((c) => channelNameOf(c as "airbnb"));
+  const weekdayList =
+    nights <= 7 ? dates.map((d) => L.weekdayNames.split(",")[mondayIndex(d)]).join(", ") : "";
+  const title = listing
+    ? `${listing.property.title} · ${rangeLabel}`
+    : props.length === 1
+      ? `${props[0]!.title} · ${rangeLabel}`
+      : `${fmt(L.listingsCount, { n: props.length })} · ${rangeLabel}`;
+
+  const save = async () => {
+    if (priceMinor !== undefined && (!Number.isFinite(priceMinor) || priceMinor < 0)) {
+      setError(L.invalidPrice);
       return;
     }
-    setPriceError("");
-    onPrice(n);
+    const min = Number(minStay);
+    const max = maxStay.trim() === "" || maxStay.trim() === "—" ? undefined : Number(maxStay);
+    if (
+      (minStay !== initialMinText && (!Number.isInteger(min) || min < 1)) ||
+      (max !== undefined && (!Number.isInteger(max) || max < Math.max(1, min || 1)))
+    ) {
+      setError(L.invalidStay);
+      return;
+    }
+    setError("");
+    setBusy(true);
+    await onSave({
+      scope,
+      rate: priceMinor !== undefined && priceMinor !== initialRate ? priceMinor : undefined,
+      // only what the manager touched is written; a field left alone keeps each night's own value
+      restrictions: (date, cur) => {
+        const out: Values = {};
+        if (blocked !== initialBlocked && (cur.stopSell === true) !== blocked)
+          out.stopSell = blocked;
+        if (minStay !== initialMinText && (cur.minStay ?? 1) !== min) out.minStay = min;
+        if (maxStay !== initialMaxText && max !== undefined && cur.maxStay !== max)
+          out.maxStay = max;
+        const wd = mondayIndex(date);
+        if (checkIn[wd] !== initialCheckIn[wd] && (cur.closedToArrival === true) === checkIn[wd])
+          out.closedToArrival = !checkIn[wd];
+        return Object.keys(out).length > 0 ? out : null;
+      },
+      note: note !== initialNote ? note : null,
+    });
+    setBusy(false);
   };
+
   return (
     <aside
-      className="flex h-fit flex-col gap-4 rounded-2xl border border-border bg-surface p-4 text-sm lg:sticky lg:top-4"
+      className="flex flex-col gap-3 rounded-card border border-border bg-surface px-5 py-[18px] text-xs lg:sticky lg:top-4"
       data-testid="selection-panel"
-      aria-label={`${from} – ${to}`}
+      aria-label={title}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-base font-semibold">
+        <div className="min-w-0">
+          <h2 className="truncate font-sans text-[15px] font-bold">{title}</h2>
+          <p className="mt-0.5 text-xs text-muted">
             {nights === 1 ? L.night : fmt(L.nights, { n: nights })}
-          </p>
-          <p className="text-xs text-muted">
-            {shortDate(from)}
-            {nights > 1 ? ` – ${shortDate(to)}` : ""}
-          </p>
-          <p className="mt-1 truncate text-xs text-muted">
-            {listing
-              ? listing.hero
-                ? listing.property.title
-                : `${listing.property.title} · ${listing.ratePlan.title}`
-              : plans
-                  .map((p) => p.property.title)
-                  .filter((t, i, a) => a.indexOf(t) === i)
-                  .join(", ")}
+            {weekdayList ? ` · ${weekdayList}` : ""}
           </p>
         </div>
         <button
           type="button"
-          className="rounded-full p-1 text-muted hover:bg-surface-secondary hover:text-foreground"
+          className="text-xs text-muted hover:text-foreground"
           onClick={onClose}
           aria-label={L.cancel}
         >
-          ✕
+          Esc
         </button>
       </div>
 
       {derivedOnly ? (
-        <p className="rounded-xl bg-surface-secondary p-3 text-xs text-muted">{L.derivedNote}</p>
+        <p className="rounded-xl bg-default p-3 text-muted">{L.derivedNote}</p>
       ) : (
         <>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted" htmlFor="panel-price">
-              {L.pricePerNight}
-            </label>
-            <div className="flex gap-2">
-              <div className="flex flex-1 items-center rounded-xl border border-border bg-surface px-3 focus-within:ring-2 focus-within:ring-accent">
-                <span className="me-1 text-muted">{currency}</span>
-                <input
-                  id="panel-price"
-                  data-testid="panel-price"
-                  inputMode="decimal"
-                  className="h-10 w-full bg-transparent text-lg font-semibold outline-none"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") savePrice();
-                  }}
-                />
-              </div>
-              <Button className="h-10 px-4" onClick={savePrice} data-testid="panel-save-price">
-                {L.save}
-              </Button>
-            </div>
-            {priceError ? <p className="text-xs text-danger">{priceError}</p> : null}
+          <label className="flex flex-col gap-1.5 font-semibold" htmlFor="panel-price">
+            {L.pricePerNight}
+            <span className="flex items-center overflow-hidden rounded-[10px] border border-border focus-within:ring-2 focus-within:ring-accent">
+              <span className="px-3 font-medium text-muted">{symbol}</span>
+              <input
+                id="panel-price"
+                data-testid="panel-price"
+                inputMode="decimal"
+                className="h-[42px] min-w-0 flex-1 bg-transparent text-lg font-bold outline-none"
+                value={price}
+                placeholder={initialRate === undefined && cells.length > 1 ? L.mixed : ""}
+                onChange={(e) => setPrice(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void save();
+                }}
+              />
+              <button
+                type="button"
+                className="flex h-[42px] items-center border-s border-border px-3 font-semibold text-accent"
+                onClick={() => {
+                  setMore(true);
+                  requestAnimationFrame(() => document.getElementById("panel-pct")?.focus());
+                }}
+              >
+                ±%
+              </button>
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {initialRate !== undefined && priceMinor !== undefined && priceMinor !== initialRate ? (
+              <span className="rounded-full bg-default px-2.5 py-[3px] font-semibold text-muted">
+                {fmt(L.was, { price: moneyText(initialRate, currency) })}
+              </span>
+            ) : null}
+            {priceMinor !== undefined && Number.isFinite(priceMinor) && priceMinor >= 0
+              ? otas.slice(0, 2).map((ch) => {
+                  const p0 = props[0]!;
+                  const shown = guestPrice(
+                    Money.of(priceMinor, currency),
+                    p0.pricing.markupBps[ch] ?? 0,
+                    p0.pricing.rounding,
+                  );
+                  return (
+                    <span
+                      key={ch}
+                      className="rounded-full bg-default px-2.5 py-[3px] font-semibold text-muted"
+                    >
+                      {fmt(L.channelShows, {
+                        channel: channelNameOf(ch as "airbnb"),
+                        price: moneyText(shown.minor, currency),
+                      })}
+                    </span>
+                  );
+                })
+              : null}
           </div>
-
-          <div className="grid grid-cols-2 gap-2" role="group">
+          <div className="flex gap-1.5" role="group">
             <button
               type="button"
-              aria-pressed={blocked === false}
+              aria-pressed={!blocked}
               data-testid="panel-open"
-              onClick={() => onRestriction({ stopSell: false })}
-              className={`rounded-xl border px-3 py-2 text-sm font-medium ${blocked === false ? "border-foreground bg-foreground text-background" : "border-border hover:bg-surface-secondary"}`}
+              onClick={() => setBlocked(false)}
+              className={`flex-1 rounded-[10px] p-[9px] text-[13px] font-semibold ${!blocked ? "bg-foreground text-background" : "border border-border text-muted"}`}
             >
               {L.open}
             </button>
             <button
               type="button"
-              aria-pressed={blocked === true}
+              aria-pressed={blocked}
               data-testid="panel-block"
-              onClick={() => onRestriction({ stopSell: true })}
-              className={`rounded-xl border px-3 py-2 text-sm font-medium ${blocked === true ? "border-foreground bg-foreground text-background" : "border-border hover:bg-surface-secondary"}`}
+              onClick={() => setBlocked(true)}
+              className={`flex-1 rounded-[10px] p-[9px] text-[13px] font-semibold ${blocked ? "bg-foreground text-background" : "border border-border text-muted"}`}
             >
-              {L.blocked}
+              {L.block}
             </button>
           </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted" htmlFor="panel-min-stay">
-              {L.minStay}
-            </label>
-            <div className="flex items-center gap-2">
+          <div className="font-semibold">
+            {L.openOn}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {[...otas, "direct"].map((ch) => (
+                <span
+                  key={ch}
+                  className={`rounded-full px-2.5 py-[5px] text-[11px] font-semibold ${blocked ? "border border-border text-muted" : "bg-foreground text-background"}`}
+                >
+                  {channelNameOf(ch as "airbnb")}
+                </span>
+              ))}
+            </div>
+            <span className="mt-1 block text-[11px] font-normal text-muted">{L.openOnNote}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1 font-semibold" htmlFor="panel-min-stay">
+              {L.minNights}
               <input
                 id="panel-min-stay"
-                type="number"
-                min={1}
-                className="h-9 w-20 rounded-xl border border-border bg-surface px-3 outline-none focus:ring-2 focus:ring-accent"
+                inputMode="numeric"
+                className="h-9 rounded-[10px] border border-border bg-surface text-center font-semibold outline-none focus:ring-2 focus:ring-accent"
                 value={minStay}
                 onChange={(e) => setMinStay(e.target.value)}
               />
-              <span className="text-xs text-muted">{L.nightsUnit}</span>
-              <Button
-                variant="secondary"
-                className="ms-auto h-9 px-3"
-                onClick={() => {
-                  const n = Number(minStay);
-                  if (Number.isInteger(n) && n >= 1) onRestriction({ minStay: n });
-                }}
-              >
-                {L.save}
-              </Button>
+            </label>
+            <label className="flex flex-col gap-1 font-semibold" htmlFor="panel-max-stay">
+              {L.maxNights}
+              <input
+                id="panel-max-stay"
+                inputMode="numeric"
+                placeholder="—"
+                className="h-9 rounded-[10px] border border-border bg-surface text-center font-semibold outline-none focus:ring-2 focus:ring-accent"
+                value={maxStay}
+                onChange={(e) => setMaxStay(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="font-semibold">
+            {L.checkInAllowed}
+            <div className="mt-1.5 flex gap-1" role="group" aria-label={L.checkInAllowed}>
+              {weekdays.map((d, i) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={checkIn[i]}
+                  onClick={() => setCheckIn((x) => x.map((v, j) => (j === i ? !v : v)))}
+                  className={`flex-1 rounded-lg py-1.5 text-[11px] font-semibold ${checkIn[i] ? "bg-foreground text-background" : "border border-border text-muted"}`}
+                >
+                  {d}
+                </button>
+              ))}
             </div>
           </div>
-
-          <details className="group rounded-xl border border-border">
-            <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-muted">
+          <label className="flex flex-col gap-1 font-semibold" htmlFor="panel-note">
+            {L.privateNote}
+            <input
+              id="panel-note"
+              placeholder={L.privateNotePlaceholder}
+              className="h-9 rounded-[10px] border border-border bg-surface px-2.5 text-[13px] font-normal outline-none focus:ring-2 focus:ring-accent"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+            />
+          </label>
+          <label className="flex flex-col gap-1 font-semibold" htmlFor="panel-scope">
+            {L.applyTo}
+            <select
+              id="panel-scope"
+              className="h-9 rounded-[10px] border border-border bg-surface px-2.5 text-[13px] font-normal"
+              value={scope}
+              onChange={(e) => setScope(e.target.value as SaveSpec["scope"])}
+            >
+              <option value="selection">
+                {listing
+                  ? fmt(L.applySelection, {
+                      plan: `${listing.property.title} · ${listing.ratePlan.title}`,
+                    })
+                  : L.applySelected}
+              </option>
+              <option value="plans">{L.applyAllPlans}</option>
+              {data.length > 1 ? <option value="all">{L.applyAll}</option> : null}
+            </select>
+          </label>
+          {error ? <p className="text-danger">{error}</p> : null}
+          <button
+            type="button"
+            className="flex h-11 items-center justify-center gap-2.5 rounded-[10px] bg-accent text-sm font-bold text-accent-foreground disabled:opacity-60"
+            onClick={() => void save()}
+            disabled={busy}
+            data-testid="panel-save-price"
+          >
+            {nights === 1 ? L.saveNight : fmt(L.saveNights, { n: nights })}
+            <Kbd>↵</Kbd>
+          </button>
+          <p className="text-[11px] text-muted">
+            {chanNames.length > 0
+              ? fmt(L.panelReaches, { channels: chanNames.join(` ${L.andWord} `) })
+              : L.panelReachesNone}{" "}
+            <Kbd>⌘Z</Kbd> {L.undoesHint}
+          </p>
+          <details
+            className="rounded-xl border border-border"
+            open={more}
+            onToggle={(e) => setMore((e.target as HTMLDetailsElement).open)}
+          >
+            <summary className="cursor-pointer px-3 py-2 font-semibold text-muted select-none">
               {L.advanced}
             </summary>
             <div className="space-y-3 border-t border-border p-3">
-              <label className="flex items-center gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={cta}
-                  onChange={(e) => onRestriction({ closedToArrival: e.target.checked })}
-                />
-                {L.closedToArrival}
-              </label>
-              <label className="flex items-center gap-2 text-xs">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={ctd}
-                  onChange={(e) => onRestriction({ closedToDeparture: e.target.checked })}
+                  onChange={(e) =>
+                    void onSave({
+                      scope: "selection",
+                      restrictions: () => ({ closedToDeparture: e.target.checked }),
+                      note: null,
+                    })
+                  }
                 />
                 {L.closedToDeparture}
               </label>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted" htmlFor="panel-pct">
+                <label className="font-semibold text-muted" htmlFor="panel-pct">
                   {L.adjustPercent}
                 </label>
                 <div className="flex items-center gap-2">
@@ -1353,14 +2074,14 @@ function SelectionPanel({
                     id="panel-pct"
                     data-testid="panel-pct"
                     type="number"
-                    className="h-9 w-20 rounded-xl border border-border bg-surface px-3 outline-none focus:ring-2 focus:ring-accent"
+                    className="h-9 w-20 rounded-[10px] border border-border bg-surface px-3 outline-none focus:ring-2 focus:ring-accent"
                     value={pct}
                     onChange={(e) => setPct(e.target.value)}
                   />
-                  <span className="text-xs text-muted">%</span>
-                  <Button
-                    variant="secondary"
-                    className="ms-auto h-9 px-3"
+                  <span className="text-muted">%</span>
+                  <button
+                    type="button"
+                    className="ms-auto h-9 rounded-full border border-border px-3 font-semibold"
                     data-testid="panel-preview-pct"
                     onClick={() => {
                       const n = Number(pct);
@@ -1368,14 +2089,11 @@ function SelectionPanel({
                     }}
                   >
                     {L.preview}
-                  </Button>
+                  </button>
                 </div>
               </div>
               {bulk.preview ? (
-                <div
-                  className="space-y-2 rounded-xl bg-surface-secondary p-3 text-xs"
-                  data-testid="bulk-preview"
-                >
+                <div className="space-y-2 rounded-xl bg-default p-3" data-testid="bulk-preview">
                   <p className="font-medium">
                     {fmt(L.wouldChange, { n: bulk.preview.cellCount })} {L.nothingChanged}
                   </p>
@@ -1390,27 +2108,27 @@ function SelectionPanel({
                     </p>
                   ))}
                   <div className="flex gap-2">
-                    <Button
-                      className="h-8 px-3 text-xs"
+                    <button
+                      type="button"
+                      className="h-8 rounded-full bg-accent px-3 font-semibold text-accent-foreground disabled:opacity-50"
                       data-testid="bulk-apply"
                       disabled={bulk.preview.blocked.length > 0 || !bulk.ops}
                       onClick={onApply}
                     >
                       {fmt(L.apply, { n: bulk.preview.cellCount })}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="h-8 px-3 text-xs"
+                    </button>
+                    <button
+                      type="button"
+                      className="h-8 rounded-full border border-border px-3 font-semibold"
                       onClick={onCancelPreview}
                     >
                       {L.cancel}
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ) : null}
             </div>
           </details>
-          <p className="text-[11px] text-muted">{L.panelNote}</p>
         </>
       )}
     </aside>

@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import type { RestrictionValues, SyncState } from "@pms/core";
+import {
+  channelKey,
+  parsePricingDefaults,
+  type PriceRounding,
+  type PricingDefaults,
+  type RestrictionValues,
+  type SyncState,
+} from "@pms/core";
 import { rawRows, type Tx } from "../tenant.js";
 
 /** Compact wire format for the grid (CAL-7): one array per cell. */
@@ -34,6 +41,14 @@ export interface GridProperty {
   groups: string[];
   /** The listing's main photo (its own library first, else the content an import kept). */
   photoUrl: string | null;
+  /** The address's city, for the row's subtitle. */
+  city: string | null;
+  /** Channels with an active connection (`airbnb`, `booking_com`...), so a night can say what each guest sees. */
+  channels: string[];
+  /** Per-channel markup and rounding (spec 06 §6.6). */
+  pricing: { markupBps: PricingDefaults["markupBps"]; rounding: PriceRounding };
+  /** Private notes on nights in the range, keyed `${ratePlanId}|${date}`. */
+  notes: Record<string, string>;
   roomTypes: GridRoomType[];
 }
 
@@ -65,9 +80,17 @@ export async function loadGrid(tx: Tx, q: GridQuery): Promise<GridProperty[]> {
     state: string;
     groups: string[] | null;
     photo_url: string | null;
+    city: string | null;
+    pricing: unknown;
+    notes: Record<string, string> | null;
+    channels: string[] | null;
   }>(
     tx,
     sql`select p.id, p.title, p.kind, p.currency, p.state,
+      nullif(p.address->>'city', '') as city, p.settings->'pricing' as pricing,
+      (select jsonb_object_agg(n.key, n.value) from jsonb_each_text(coalesce(p.settings->'nightNotes', '{}'::jsonb)) n
+        where split_part(n.key, '|', 2) between ${q.dateFrom} and ${q.dateTo}) as notes,
+      (select array_agg(distinct c.adapter_code) from channel_connection c where c.property_id = p.id and c.archived_at is null and c.is_active) as channels,
       (select array_agg(g.name order by g.name) from property_group g join property_group_membership m on m.group_id = g.id where m.property_id = p.id) as groups,
       coalesce(
         (select ph.storage_key from photo ph where ph.property_id = p.id order by ph.position, ph.id limit 1),
@@ -163,8 +186,98 @@ export async function loadGrid(tx: Tx, q: GridQuery): Promise<GridProperty[]> {
     state: p.state,
     groups: p.groups ?? [],
     photoUrl: p.photo_url,
+    city: p.city,
+    channels: [...new Set((p.channels ?? []).map((c) => channelKey(c)))].sort(),
+    pricing: (({ markupBps, rounding }) => ({ markupBps, rounding }))(
+      parsePricingDefaults(p.pricing),
+    ),
+    notes: p.notes ?? {},
     roomTypes: rtByProp.get(p.id) ?? [],
   }));
+}
+
+/** A stay drawn as a bar across its nights (CAL-2a), and a block drawn as hatched nights. */
+export interface GridStay {
+  bookingId: string;
+  propertyId: string;
+  roomTypeId: string | null;
+  /** First night. */
+  from: string;
+  /** Departure: the night before it is the last one (half-open, rule 5). */
+  to: string;
+  guest: string;
+  otaName: string | null;
+}
+export interface GridBlock {
+  propertyId: string;
+  roomTypeId: string;
+  from: string;
+  /** Exclusive. */
+  to: string;
+  reason: string;
+}
+
+/**
+ * The bookings and unit blocks that overlap a range, for the bars on the calendar. Names
+ * come from the room's guest list (what the channel sent), the same source the room rack
+ * and the arrivals board read under `booking:read`.
+ */
+export async function loadStays(
+  tx: Tx,
+  q: { dateFrom: string; dateTo: string; propertyIds: readonly string[] },
+): Promise<{ stays: GridStay[]; blocks: GridBlock[] }> {
+  if (q.propertyIds.length === 0) return { stays: [], blocks: [] };
+  const ids = sql.join(
+    q.propertyIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
+  const stays = await rawRows<GridStay>(
+    tx,
+    sql`select b.id as "bookingId", b.property_id as "propertyId", br.room_type_id as "roomTypeId",
+        br.checkin_date::text as "from", br.checkout_date::text as "to", b.ota_name as "otaName",
+        trim(coalesce(br.guest_names->0->>'name', '') || ' ' || coalesce(br.guest_names->0->>'surname', '')) as guest
+      from booking_room br join booking b on b.id = br.booking_id
+      where b.property_id in (${ids}) and b.status <> 'cancelled'
+        and br.checkout_date > ${q.dateFrom} and br.checkin_date <= ${q.dateTo}
+      order by br.checkin_date, b.id`,
+  );
+  const blocks = await rawRows<GridBlock>(
+    tx,
+    sql`select property_id as "propertyId", room_type_id as "roomTypeId", date_from::text as "from", date_to::text as "to", reason
+      from unit_block where property_id in (${ids}) and cancelled_at is null
+        and date_to > ${q.dateFrom} and date_from <= ${q.dateTo}
+      order by date_from`,
+  );
+  return { stays, blocks };
+}
+
+/**
+ * Private notes on nights: what a manager wants the team to know about a date ("owner's
+ * cousin may ask"). Kept with the property, keyed by plan and night; an empty body removes
+ * the note. One statement, so two people noting different nights never lose each other's.
+ */
+export async function saveNightNotes(
+  tx: Tx,
+  propertyId: string,
+  notes: ReadonlyArray<{ ratePlanId: string; date: string; body: string }>,
+): Promise<void> {
+  if (notes.length === 0) return;
+  const set: Record<string, string> = {};
+  const drop: string[] = [];
+  for (const n of notes) {
+    const key = `${n.ratePlanId}|${n.date}`;
+    if (n.body.trim()) set[key] = n.body.trim().slice(0, 500);
+    else drop.push(key);
+  }
+  const dropKeys = drop.length
+    ? sql`array[${sql.join(
+        drop.map((d) => sql`${d}`),
+        sql`, `,
+      )}]::text[]`
+    : sql`'{}'::text[]`;
+  await tx.execute(sql`update property set settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{nightNotes}',
+      (coalesce(settings->'nightNotes', '{}'::jsonb) || ${JSON.stringify(set)}::jsonb) - ${dropKeys}), updated_at = now()
+    where id = ${propertyId}`);
 }
 
 export interface CellEdit {

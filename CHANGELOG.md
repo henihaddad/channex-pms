@@ -42,6 +42,26 @@ All notable changes to this project are documented here. The format follows
   "?" opens a Keyboard shortcuts page listing every key by where it works.
 - On a phone the console has a bottom bar (Today, Inbox, Calendar, Bookings, More) and a header
   with the page's name, search and the alerts bell.
+- The calendar matches the design canvas (spec 06 CAL-2, CAL-2a, CAL-9 to CAL-11). The strip
+  shows bookings as bars in their channel's colour with the guest and the channel, listing
+  rows with photo, city, plan and rooms ("N left" for several rooms), hatched owner and
+  maintenance blocks, a night card on hover (your price, what each OTA's guest sees after
+  markup, minimum stay, sync), and a panel that saves price, open or blocked, stay limits,
+  check-in weekdays, a private note and where to apply it in one press. ⌘-click adds a range,
+  ⌘C/⌘V copy a price, ←/→ move a week, 1–4 pick the range, Y opens the year, and a toast
+  names the nights saved and the channels told, with Undo. A phone opens one listing's month
+  with a bottom sheet; the one-night close-out stays a link away. A Year view shows twelve
+  months of occupancy and average price with seasons, which can be added and removed. The
+  gear opens Pricing & availability: base and weekend price and stay limits applied to future
+  nights through a preview, price-tips mode, floor and ceiling, per-channel markup with
+  rounding, discounts, promotions, availability, taxes and sync. Markup, rounding and
+  discounts are stored per property; markup and discounts are not yet sent to channels, and
+  the page says so. An organization with no property sees "No calendar yet" with Add a
+  property. Older links with `property` and `date` open the same nights as `propertyId` and
+  `from`.
+- Pricing import leads with where prices come from: source, last import, nights set by hand
+  and the next pull, then rails per rate plan, the future nights outside the rails, and the
+  connector. Floor and ceiling are typed in the property currency, not minor units.
 
 - The console rail is near-black again, as the design canvas has it: Tailwind resolved the colour
   tokens once at the root, so the rail's dark scope never reached its utilities. The tokens now
