@@ -1,25 +1,22 @@
 import type React from "react";
 import { getTranslations } from "next-intl/server";
-import { Logo } from "@/components/logo";
 
-/** The public funnel shell: no console chrome, no third-party scripts (BE-11), keyboard-first (BE-10). */
+/**
+ * The public funnel shell: no console chrome, no third-party scripts (BE-11),
+ * keyboard-first (BE-10). Each page draws the manager's branded header and footer,
+ * because the brand comes from the property or organization the page is about.
+ */
 export default async function BookLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations("book");
   return (
-    <div className="mx-auto min-h-screen max-w-4xl p-4 sm:p-6" data-testid="booking-engine">
+    <div className="flex min-h-screen flex-col bg-background" data-testid="booking-engine">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:rounded-xl focus:bg-surface focus:p-2 focus:shadow-surface"
+        className="sr-only focus:not-sr-only focus:absolute focus:start-2 focus:top-2 focus:z-10 focus:rounded-xl focus:bg-surface focus:p-2 focus:shadow-surface"
       >
-        Skip to content
+        {t("skip")}
       </a>
-      <main id="main" className="flex flex-col gap-5">
-        {children}
-      </main>
-      <footer className="mt-10 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted">
-        <Logo size={18} />
-        <span>{t("poweredBy")}</span>
-      </footer>
+      {children}
     </div>
   );
 }

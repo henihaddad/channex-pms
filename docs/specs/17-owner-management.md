@@ -106,7 +106,7 @@ login, in the owner's language.
 
 | Area | Contents |
 |---|---|
-| **Dashboard** | This month: nights sold, occupancy, gross revenue, projected net. Next arrivals. YoY sparkline. |
+| **Dashboard** | "Your property, this month": the month so far (projected net payable after the split, or gross until the statement is drafted), occupancy, ADR, the next payout (the latest sent, unpaid statement). Statements to the cent with status and PDF, the next 60 nights as booked/blocked tiles, blocking nights for themselves, upcoming stays (dates, nights, channel; no guest names). YoY sparkline. |
 | **Calendar** | Their units' bookings (guest first name, dates, channel — no contact details, no financial detail beyond their share basis), blocks, and **self-service owner-stay booking** subject to agreement terms and existing reservations. |
 | **Statements** | Every statement with drill-down to line level; PDF download; a dispute button that opens a thread with the manager rather than an email into the void. |
 | **Expenses** | Receipts and photos for everything billed to them. |

@@ -10,9 +10,9 @@ test("200 listings × 90 days grid loads under 2 s", async ({ page, request }) =
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Perf Org");
   await page.getByLabel("URL slug").fill(`perf-${stamp}`);
-  await page.getByLabel("Country (ISO code)").fill("PT");
-  await page.getByLabel("Currency (ISO code)").fill("EUR");
-  await page.getByRole("button", { name: "Create your organization" }).click();
+  await page.getByLabel("Country", { exact: true }).selectOption("PT");
+  await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
+  await page.getByRole("button", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
   const orgId = (await page.context().cookies()).find((c) => c.name === "pms_org")?.value ?? "";
   const seeded = await request.post("/api/v1/test/seed-portfolio", {

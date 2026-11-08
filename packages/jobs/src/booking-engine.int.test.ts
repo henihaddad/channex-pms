@@ -12,6 +12,7 @@ import { createTestDb } from "@pms/db/testing";
 import {
   asSystem,
   DrizzleBookingEngineRepository,
+  DrizzleChannelRepository,
   DrizzleGuideRepository,
   DrizzlePropertyRepository,
   rawRows,
@@ -395,5 +396,56 @@ describe("confirm (BE-6, BE-7)", () => {
     const gone = await run((tx) => guestPortal(deps, tx, ORG, bookingId));
     expect(gone?.status).toBe("cancelled");
     expect(gone?.cancellation.allowed).toBe(false);
+  });
+});
+
+describe("storefront card (spec 10 §10.3)", () => {
+  it("says who a place sleeps, its visible reviews and the channels it is listed on with their markup", async () => {
+    await run((tx) => enableDirectChannel(deps, tx, ORG, propertyId, true));
+    const card = async () =>
+      (
+        await run((tx) =>
+          new DrizzleBookingEngineRepository(tx, ORG, crypto).storefront({ propertyId }),
+        )
+      )[0]!;
+    const before = await card();
+    expect(before.kind).toBe("single_unit");
+    expect(before.sleeps).toBeGreaterThan(0);
+    expect(before.listedOn).toEqual([]);
+    const airbnb = Id.next();
+    await run(async (tx) => {
+      const channels = new DrizzleChannelRepository(tx, ORG);
+      await channels.insertConnection({
+        id: airbnb,
+        propertyId,
+        adapterCode: "AirBNB",
+        settings: {},
+      });
+      await channels.updateConnection(airbnb, { state: "active", isActive: true });
+      await tx.execute(
+        sql`update property set settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{pricing}', '{"markupBps":{"airbnb":1000},"rounding":"unit"}'::jsonb) where id = ${propertyId}`,
+      );
+      for (const [i, rating, hidden] of [
+        [1, 10, false],
+        [2, 8, false],
+        [3, 2, true],
+      ] as const)
+        await tx.insert(schema.review).values({
+          id: Id.next(),
+          orgId: ORG,
+          propertyId,
+          providerReviewId: `rv-${String(i)}`,
+          ota: "AirBNB",
+          rating,
+          body: "ok",
+          insertedAt: "2026-05-01T00:00:00Z",
+          hidden,
+        });
+    });
+    const after = await card();
+    expect(after.listedOn).toEqual(["airbnb"]);
+    expect(after.pricing.markupBps).toEqual({ airbnb: 1000 });
+    // the hidden review (Airbnb holds it back until the host reviews) does not count
+    expect(after.reviews).toEqual({ count: 2, ratingSum: 18 });
   });
 });

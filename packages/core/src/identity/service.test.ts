@@ -257,4 +257,27 @@ describe("IdentityService", () => {
     clock.advance({ minutes: 16 });
     expect((await svc.consumeMagicLink(t2!, "dev-3")).ok).toBe(false);
   });
+
+  it("a console sign-in link replaces the password, never the second factor", async () => {
+    const { svc } = setup();
+    const su = await svc.signUp(signup);
+    if (!su.ok) throw new Error();
+    await svc.beginTotpEnrolment(su.value.user.id);
+    await svc.confirmTotpEnrolment(su.value.user.id, "123456");
+    // a TOTP challenge is not a sign-in link
+    const login = await svc.login(signup.email, signup.password, "dev-4");
+    if (!login.ok || login.value.kind !== "totp_required") throw new Error();
+    expect((await svc.consumeMagicLink(login.value.challengeToken, "dev-4")).ok).toBe(false);
+    // the link leads to the same challenge a password login gives
+    const { token } = await svc.requestMagicLink(signup.email, "login", "en");
+    const r = await svc.consumeMagicLink(token!, "dev-4");
+    if (!r.ok || r.value.kind !== "totp_required") throw new Error("expected totp challenge");
+    expect(r.value.purpose).toBe("login");
+    expect((await svc.completeTotpLogin(r.value.challengeToken, "123456")).ok).toBe(true);
+    // an owner-portal link signs in directly: the owner role has no TOTP requirement
+    const { token: owner } = await svc.requestMagicLink(signup.email, "owner_portal", "en");
+    const o = await svc.consumeMagicLink(owner!, "dev-4");
+    expect(o.ok && o.value.kind).toBe("session");
+    expect(o.ok && o.value.purpose).toBe("owner_portal");
+  });
 });

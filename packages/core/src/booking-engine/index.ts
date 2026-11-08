@@ -7,6 +7,7 @@ export {
   activeHoldsByDate,
   icsFor,
   accessRevealOpen,
+  nightlyPrices,
 } from "./search.js";
 export {
   FakePaymentProvider,

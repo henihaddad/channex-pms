@@ -8,6 +8,7 @@ import {
   quote,
   searchOffers,
   accessRevealOpen,
+  nightlyPrices,
 } from "./search.js";
 import type { Offer, PromoCode, SearchableRoomType } from "./types.js";
 
@@ -162,6 +163,40 @@ describe("direct search (BE-2, BE-4, BE-5)", () => {
     expect(searchOffers("p", [rt], { ...q, adults: 1 })[0]!.roomMinor).toBe(16000);
     expect(searchOffers("p", [rt], { ...q, adults: 3 })[0]!.roomMinor).toBe(24000);
     expect(searchOffers("p", [rt], { ...q, adults: 4 })).toHaveLength(0);
+  });
+
+  it("prices each night at the lowest sellable rate; taken or stop-sold nights have none", () => {
+    const plan = (id: string, rates: Array<number | undefined>, stop: number[] = []) => ({
+      ratePlanId: id,
+      title: id,
+      currency: "EUR",
+      directOnly: false,
+      mealPlan: null,
+      cells: rates.map((rate, i) => ({
+        ratePlanId: id,
+        date: day(i + 1),
+        values: { ...(rate === undefined ? {} : { rate }), stopSell: stop.includes(i + 1) },
+      })),
+    });
+    const rt: SearchableRoomType = {
+      roomTypeId: "rt",
+      title: "Loft",
+      maxOccupancy: 2,
+      availability: new Map([
+        [day(1), 1],
+        [day(2), 0],
+        [day(3), 1],
+        [day(4), 1],
+      ]),
+      ratePlans: [
+        plan("std", [11000, 12000, 13000, undefined]),
+        plan("nr", [9900, 9000, 15000, 8000], [4]),
+      ],
+    };
+    const dates = [1, 2, 3, 4, 5].map(day);
+    expect([...nightlyPrices([rt], dates, 2).values()]).toEqual([9900, null, 13000, null, null]);
+    // a party the room cannot sleep sees no price at all
+    expect([...nightlyPrices([rt], dates, 3).values()].every((v) => v === null)).toBe(true);
   });
 
   it("quotes itemise room, extras, discount, VAT and city tax and state what is due now (BE-1)", () => {

@@ -4,6 +4,7 @@ import { Money } from "../shared/money.js";
 import {
   DEFAULT_PRICING,
   MAX_MARKUP_BPS,
+  channelComparison,
   channelKey,
   guestPrice,
   parsePricingDefaults,
@@ -75,6 +76,40 @@ describe("pricing defaults (spec 06 §6.6)", () => {
           expect(shown).toBeGreaterThanOrEqual(minor);
           expect(shown).toBeGreaterThanOrEqual(markup === 0 ? minor : exact);
           expect(shown - exact).toBeLessThan(rounding === "five" ? 500 : 100);
+        },
+      ),
+    );
+  });
+
+  it("compares with a channel the property is listed on, Airbnb first", () => {
+    const local = Money.of(11_000, "EUR");
+    const pricing = { markupBps: { airbnb: 1000, booking_com: 1500 }, rounding: "unit" as const };
+    expect(channelComparison(local, pricing, ["airbnb", "booking_com"])).toEqual({
+      channel: "airbnb",
+      price: Money.of(12_100, "EUR"),
+    });
+    // not listed on Airbnb: the dearest listed channel
+    expect(channelComparison(local, pricing, ["booking_com", "direct"])?.channel).toBe(
+      "booking_com",
+    );
+    // a markup on a channel it is not listed on is no comparison at all
+    expect(channelComparison(local, pricing, ["vrbo"])).toBeNull();
+    expect(channelComparison(local, { markupBps: {}, rounding: "unit" }, ["airbnb"])).toBeNull();
+  });
+
+  it("never compares with a channel price below the direct price", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 10_000_000 }),
+        fc.integer({ min: 0, max: MAX_MARKUP_BPS }),
+        (minor, markup) => {
+          const c = channelComparison(
+            Money.of(minor, "EUR"),
+            { markupBps: { booking_com: markup }, rounding: "five" },
+            ["booking_com"],
+          );
+          if (markup === 0) expect(c).toBeNull();
+          else expect(c!.price.minor).toBeGreaterThanOrEqual(minor);
         },
       ),
     );

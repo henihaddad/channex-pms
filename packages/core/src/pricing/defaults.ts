@@ -133,3 +133,26 @@ export function guestPrice(
   const up = Math.ceil(raised.minor / unit) * unit;
   return Money.of(up, rate.currency);
 }
+
+/**
+ * The booking site's "€122 on Airbnb" (spec 10 §10.3, persona: the guest comparing):
+ * the price this stay shows on a channel the property is actually listed on, when that
+ * channel carries a markup. Airbnb first, the guest's usual comparison; otherwise the
+ * dearest listed channel. Null when no listed channel costs more than booking direct.
+ */
+export function channelComparison(
+  local: Money,
+  pricing: Pick<PricingDefaults, "markupBps" | "rounding">,
+  listedOn: readonly ChannelKey[],
+): { channel: OtaChannel; price: Money } | null {
+  const candidates = OTA_CHANNELS.filter(
+    (ch) => listedOn.includes(ch) && (pricing.markupBps[ch] ?? 0) > 0,
+  ).map((channel) => ({
+    channel,
+    price: guestPrice(local, pricing.markupBps[channel] ?? 0, pricing.rounding),
+  }));
+  if (candidates.length === 0) return null;
+  const airbnb = candidates.find((c) => c.channel === "airbnb");
+  if (airbnb) return airbnb;
+  return candidates.reduce((best, c) => (c.price.minor > best.price.minor ? c : best));
+}

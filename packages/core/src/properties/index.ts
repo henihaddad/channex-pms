@@ -25,7 +25,7 @@ export {
 export {
   listingImportPreview,
   fieldsToApply,
-  nightlyPrices,
+  importPriceSummary,
   usualMinStay,
   type ImportNight,
   type ListingSnapshot,

@@ -71,6 +71,18 @@ Requirements:
 - **Portfolio storefront is the default**: multi-listing search with a map, dates,
   guests and attribute filters (pets, pool, workspace) — an STR manager sells a
   portfolio, not a property. Single-property pages exist per listing beneath it.
+- **The site wears the manager's brand** (organization name in the header) with a
+  hero, a search pill (dates, guests, promo code; attribute filters behind a
+  "Filters" disclosure), one card per place (photo or tint, a badge — direct-only
+  rate, rooms left on a multi-unit, or the first attribute — visible review rating,
+  city, who it sleeps, the average nightly price for the dates) and a "why book
+  direct" band. When the place is live on an OTA whose per-channel markup (spec 06
+  §6.6) makes it dearer there, the card strikes through that price and the property
+  page and checkout say "€122 on Airbnb" / "You save €37 vs Airbnb"; no listed
+  channel with a markup, no comparison. The property page shows a month of nightly
+  prices read from our own ARI (taken or stop-sold nights greyed, a night links to a
+  stay starting there), "good to know" from the policy and taxes, and a booking card
+  whose price breakdown is the same `quote` the hold uses.
 - **White-label theming**: logo, colours, fonts, custom CSS, per property.
 - **Localisation**: full i18n, RTL, per-locale currency display with a clear
   statement of the charge currency.
@@ -98,6 +110,10 @@ properties already using it.
 - Refunds and cancellation fees are computed from the policy and executed under
   step-up auth.
 - Multi-currency: display currency vs charge currency always stated explicitly.
+- The checkout ("Almost there") is numbered sections — who is staying, payment, and
+  the guest ticking that they accept the rate's cancellation policy, written out
+  with its free-until date — beside a summary of the stay and the itemised quote with
+  what is due now. The accept box is required; the pay button says the amount.
 
 ## 10.4b Payment rules
 
@@ -160,6 +176,14 @@ in the guest's language, with a fresh portal link (`message:send`). **Export reg
 downloads the named guests as CSV (`booking:read_pii`, audited). "What guests fill in" lists what
 the portal actually asks; "Rules" states how the code release and reminders work today rather
 than offering settings that do nothing. Hotel-kind portfolios reach the front desk from here.
+
+Layout: the manager's brand and the booking reference in the header; a dark card
+that greets the guest by first name and counts down to arrival, with the times, a
+"Message <host>" jump to the thread, directions (a plain link to OpenStreetMap, no
+embedded map, BE-11), an `.ics` download and the door-code panel; then pre-check-in,
+the published guide sections, the house manual and check-out as tiles; then the bill
+(paid and balance, extras, cancel with its fee) beside the messages. One column on a
+phone.
 
 ## 10.6b Guest guide
 

@@ -124,7 +124,7 @@ const isWeekendNight = (iso: string): boolean => {
 };
 
 /** The prices a calendar carries: the median night, the median weekend night, how many nights are priced. */
-export function nightlyPrices(
+export function importPriceSummary(
   nights: readonly ImportNight[],
   currency: string,
 ): Extract<ImportValue, { kind: "prices" }> | null {
@@ -217,8 +217,8 @@ export function listingImportPreview(
     listRow("photos", remote.photos, local?.photos),
     row(
       "prices",
-      nightlyPrices(remote.nights, remote.currency),
-      local ? nightlyPrices(local.nights, local.currency) : null,
+      importPriceSummary(remote.nights, remote.currency),
+      local ? importPriceSummary(local.nights, local.currency) : null,
     ),
     (() => {
       const a = usualMinStay(remote.nights);

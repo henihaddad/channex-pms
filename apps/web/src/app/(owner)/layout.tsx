@@ -4,14 +4,18 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { currentSession } from "@/server/session";
 import { logoutAction } from "../(auth)/auth.actions";
-import { Button } from "@/components/ui";
-import { Logo } from "@/components/logo";
+import { Brand, SiteFooter, SiteHeader } from "@/components/site";
+import { loadPortalWho } from "./owner/portal.actions";
 
-/** The owner portal shell (spec 17 §17.5): mobile-first, the owner's own things only. */
+/**
+ * The owner portal shell (spec 17 §17.5; persona: the owner checking on their place):
+ * the manager's brand, who is signed in, the owner's own pages. Mobile-first.
+ */
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const session = await currentSession();
   if (!session) redirect("/owner-login");
   const t = await getTranslations("owner.nav");
+  const who = await loadPortalWho().catch(() => null);
   const links = [
     ["/owner", t("dashboard")],
     ["/owner/calendar", t("calendar")],
@@ -22,29 +26,46 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
     ["/owner/documents", t("documents")],
   ] as const;
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-5 p-4 sm:p-6" data-testid="owner-portal">
-      <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <Logo size={26} suffix={t("portal")} />
-          <form action={logoutAction}>
-            <Button type="submit" variant="secondary" size="sm">
-              {t("signOut")}
-            </Button>
-          </form>
-        </div>
-        <nav className="scrollbar-none flex gap-1 overflow-x-auto rounded-2xl bg-default p-1 text-sm">
-          {links.map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              className="shrink-0 rounded-xl px-3 py-1.5 font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-      </header>
-      <main className="flex flex-col gap-4">{children}</main>
+    <div className="flex min-h-screen flex-col bg-background" data-testid="owner-portal">
+      <SiteHeader brand={<Brand name={who?.orgName || "OTAbridge"} href="/owner" />}>
+        <span className="text-[13px] text-muted max-sm:hidden">
+          {t("portalLong")}
+          {who ? ` · ${who.ownerName}` : ""}
+        </span>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="rounded-full border border-[#d5d9d7] px-4 py-2 text-sm font-medium text-foreground hover:bg-default"
+          >
+            {t("signOut")}
+          </button>
+        </form>
+      </SiteHeader>
+      <nav
+        aria-label={t("portalLong")}
+        className="scrollbar-none mx-auto flex w-full max-w-[1100px] gap-1 overflow-x-auto px-4 pt-4 text-sm sm:px-6"
+      >
+        {links.map(([href, label]) => (
+          <Link
+            key={href}
+            href={href}
+            className="shrink-0 rounded-full px-3 py-1.5 font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+      <main className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 px-4 pt-5 pb-12 sm:px-6">
+        {children}
+      </main>
+      <SiteFooter
+        left={<span>© {who?.orgName}</span>}
+        right={
+          <span>
+            {t("poweredBy")} <strong className="font-semibold text-accent">OTAbridge</strong>
+          </span>
+        }
+      />
     </div>
   );
 }

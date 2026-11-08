@@ -3,7 +3,7 @@ import fc from "fast-check";
 import {
   fieldsToApply,
   listingImportPreview,
-  nightlyPrices,
+  importPriceSummary,
   usualMinStay,
   type ImportNight,
   type ListingSnapshot,
@@ -48,7 +48,7 @@ const local: LocalSnapshot = {
 
 describe("calendar figures", () => {
   it("takes the median night, the median Friday/Saturday night and the usual minimum stay", () => {
-    expect(nightlyPrices(nights, "EUR")).toEqual({
+    expect(importPriceSummary(nights, "EUR")).toEqual({
       kind: "prices",
       medianMinor: 14000,
       weekendMinor: 14000,
@@ -56,7 +56,7 @@ describe("calendar figures", () => {
       currency: "EUR",
     });
     expect(usualMinStay(nights)).toBe(2);
-    expect(nightlyPrices([], "EUR")).toBeNull();
+    expect(importPriceSummary([], "EUR")).toBeNull();
     expect(usualMinStay([])).toBeNull();
   });
 });

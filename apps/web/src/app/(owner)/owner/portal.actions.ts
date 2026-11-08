@@ -68,6 +68,20 @@ export const loadPortalHome = withPermission<[], PortalHome>(
   },
 );
 
+/** Who is signed in to the portal and whose portal it is, for the header. */
+export const loadPortalWho = withPermission<[], { ownerName: string; orgName: string }>(
+  "statement:read_own",
+  ownScope,
+  async (ctx) => {
+    const o = await portalOwner(ctx);
+    const [org] = await rawRows<{ name: string }>(
+      ctx.tx,
+      sql`select name from organization where id = ${ctx.orgId}`,
+    );
+    return { ownerName: o.name, orgName: org?.name ?? "" };
+  },
+);
+
 export const loadPortalCalendar = withPermission<
   [{ from: string; to: string }],
   {
@@ -137,6 +151,7 @@ export const ownerStayAction = withPermission<[FormData], void>(
       to,
     });
     revalidatePath("/owner/calendar");
+    revalidatePath("/owner");
   },
 );
 
