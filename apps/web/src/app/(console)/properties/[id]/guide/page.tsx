@@ -28,6 +28,12 @@ import { publishGuideAction, saveGuideSectionAction } from "./guide.actions";
 
 const LOCALES = ["en", "fr", "ar", "es", "pt"] as const;
 
+/** "saved just now", "saved 12 min ago". */
+function savedAgo(iso: string, t: (k: "savedNow" | "savedAgo", v?: { ago: string }) => string) {
+  const ago = elapsed(iso);
+  return ago === "0 min" ? t("savedNow") : t("savedAgo", { ago });
+}
+
 const loadGuide = withPermission<
   [{ propertyId: string; locale: string }],
   { title: string; guide: PropertyGuide; written: string[] } | null
@@ -240,7 +246,7 @@ export default async function GuidePage({
                 <span className="flex-1" />
                 <span className="text-xs text-muted">
                   {g.published ? t("published") : t("draft")}
-                  {g.updatedAt ? ` · ${t("savedAgo", { ago: elapsed(g.updatedAt) })}` : ""}
+                  {g.updatedAt ? ` · ${savedAgo(g.updatedAt, t)}` : ""}
                 </span>
               </div>
             </form>

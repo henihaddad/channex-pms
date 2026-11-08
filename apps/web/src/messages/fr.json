@@ -2029,7 +2029,8 @@
       "departure": "En partant",
       "emergency": "En cas de problème"
     },
-    "leftCount": "{count, plural, one {# question de voyageur arrive encore dans votre boîte.} other {# questions de voyageurs arrivent encore dans votre boîte.}}"
+    "leftCount": "{count, plural, one {# question de voyageur arrive encore dans votre boîte.} other {# questions de voyageurs arrivent encore dans votre boîte.}}",
+    "savedNow": "enregistré à l'instant"
   },
   "pricing": {
     "title": "Import des tarifs",

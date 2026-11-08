@@ -2038,7 +2038,8 @@
       "departure": "On the way out",
       "emergency": "If something goes wrong"
     },
-    "leftCount": "{count, plural, one {# guest question still goes to your inbox.} other {# guest questions still go to your inbox.}}"
+    "leftCount": "{count, plural, one {# guest question still goes to your inbox.} other {# guest questions still go to your inbox.}}",
+    "savedNow": "saved just now"
   },
   "pricing": {
     "title": "Pricing import",
