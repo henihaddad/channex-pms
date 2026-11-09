@@ -13,7 +13,18 @@ import {
 } from "../channels.actions";
 import { ADAPTERS } from "@/api/schemas";
 import { MappingEditor } from "../mapping-editor";
-import { Alert, Button, Input, Label, Select } from "@/components/ui";
+import { Alert, Button, buttonClasses, Input, Label, Select } from "@/components/ui";
+
+export interface WizardLabels {
+  steps: string[];
+  channel: string;
+  property: string;
+  account: string;
+  none: string;
+  next: string;
+  airbnbBody: string;
+  airbnbButton: string;
+}
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
@@ -22,10 +33,12 @@ export function ConnectionWizard({
   properties,
   accounts,
   initialPropertyId,
+  labels,
 }: {
   properties: Array<{ id: string; title: string }>;
   accounts: Array<{ id: string; label: string; adapterCode: string }>;
   initialPropertyId?: string;
+  labels: WizardLabels;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
@@ -64,16 +77,7 @@ export function ConnectionWizard({
   return (
     <div className="space-y-4" data-testid="connection-wizard" data-step={step}>
       <ol className="flex flex-wrap gap-1 text-xs">
-        {[
-          "Pick channel",
-          "Settings",
-          "Test",
-          "Load both sides",
-          "Mapping",
-          "Create",
-          "Readiness",
-          "Activate",
-        ].map((s, i) => (
+        {labels.steps.map((s, i) => (
           <li
             key={s}
             className={`rounded px-2 py-0.5 ${i + 1 === step ? "bg-success text-white" : i + 1 < step ? "bg-success-soft text-success-soft-foreground" : "bg-background text-muted"}`}
@@ -84,19 +88,15 @@ export function ConnectionWizard({
       </ol>
       {error ? <Alert>{error}</Alert> : null}
       {step === 1 && adapterCode === "AirBNB" ? (
-        <Alert tone="info" data-testid="airbnb-via-channex">
-          Airbnb is authorised inside Channex.{" "}
-          <a className="font-medium underline" href={`/channels/connect?propertyId=${propertyId}`}>
-            Connect through Channex
-          </a>{" "}
-          for this property instead of the settings wizard.
+        <Alert tone="info" data-testid="airbnb-oauth">
+          {labels.airbnbBody}
         </Alert>
       ) : null}
       {step === 1 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <Select
-              label={"Channel"}
+              label={labels.channel}
               value={adapterCode}
               onChange={(v) => setAdapterCode(v as (typeof ADAPTERS)[number])}
             >
@@ -108,7 +108,7 @@ export function ConnectionWizard({
             </Select>
           </div>
           <div>
-            <Select label={"Property"} value={propertyId} onChange={(v) => setPropertyId(v)}>
+            <Select label={labels.property} value={propertyId} onChange={(v) => setPropertyId(v)}>
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -117,12 +117,8 @@ export function ConnectionWizard({
             </Select>
           </div>
           <div>
-            <Select
-              label={"Shared account (optional)"}
-              value={accountId}
-              onChange={(v) => setAccountId(v)}
-            >
-              <option value="">None</option>
+            <Select label={labels.account} value={accountId} onChange={(v) => setAccountId(v)}>
+              <option value="">{labels.none}</option>
               {accounts
                 .filter((a) => a.adapterCode === adapterCode)
                 .map((a) => (
@@ -132,19 +128,30 @@ export function ConnectionWizard({
                 ))}
             </Select>
           </div>
-          <Button
-            className="w-fit sm:col-span-3"
-            disabled={pending || !propertyId}
-            onClick={() =>
-              run(async () => {
-                setDescriptor(await getDescriptor({ adapterCode }));
-                setStep(2);
-              })
-            }
-            data-testid="wizard-next"
-          >
-            Next
-          </Button>
+          {adapterCode === "AirBNB" ? (
+            // Airbnb is authorised with Airbnb's own sign-in (CH-5): no settings to fill in here
+            <a
+              href={`/api/v1/channels/oauth/airbnb/start?propertyId=${encodeURIComponent(propertyId)}`}
+              className={buttonClasses("primary", "md", "w-fit sm:col-span-3")}
+              data-testid="wizard-connect-airbnb"
+            >
+              {labels.airbnbButton}
+            </a>
+          ) : (
+            <Button
+              className="w-fit sm:col-span-3"
+              disabled={pending || !propertyId}
+              onClick={() =>
+                run(async () => {
+                  setDescriptor(await getDescriptor({ adapterCode }));
+                  setStep(2);
+                })
+              }
+              data-testid="wizard-next"
+            >
+              {labels.next}
+            </Button>
+          )}
         </div>
       ) : null}
       {step === 2 && descriptor ? (

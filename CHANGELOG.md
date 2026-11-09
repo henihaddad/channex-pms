@@ -33,6 +33,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- Choosing Airbnb in "Connect a channel" now shows a "Connect Airbnb" button that starts
+  Airbnb's own sign-in for that property, instead of a note sending the host to Channex. The
+  embedded screen for other sites is called "More channels", says it shows only the chosen
+  property, and no longer opens Channex in a new tab. The wizard's steps and fields are
+  translated.
+
 - Channels, Sync health, Operations and the cleaner app match the design canvas. Channels
   is a board of channel cards with tiles for what is connected, rooms assigned, changes
   waiting and the last check; a "Rooms per channel" tab lists each room's channel room, and

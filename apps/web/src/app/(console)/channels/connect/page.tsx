@@ -49,18 +49,8 @@ export default async function ConnectViaChannexPage({
       </Card>
       {screen ? (
         <Card
-          title="Channex"
-          description={t("connectScreenHint")}
-          actions={
-            <a
-              href={screen.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-accent hover:underline"
-            >
-              {t("openInChannex")}
-            </a>
-          }
+          title={t("connectScreenCard")}
+          description={t("connectScreenScope")}
           contentClassName="overflow-hidden rounded-2xl"
         >
           <iframe
