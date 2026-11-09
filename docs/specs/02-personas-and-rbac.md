@@ -227,6 +227,9 @@ access).
   are always audited with actor, reason and IP: payment capture/refund, **executing
   an owner payout**, reading card metadata or channel credentials, deleting a
   property or org, transferring ownership, removing the last owner's access.
+  An install still in development can set `PMS_STEP_UP=off` to skip the password
+  re-check (the permission, scope and audit checks still run); the default is on, and it
+  must be on before real customers sign in.
 - **Optional four-eyes mode** (per org) for bulk ARI operations above a configurable
   blast radius, and for owner payouts above a configurable amount.
 - Enforceable IP allowlists per grant for `service_account` and `platform_operator`.

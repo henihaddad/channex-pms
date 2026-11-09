@@ -216,7 +216,8 @@ export function withPermission<A extends unknown[], O>(
           })),
         });
         if (!decision.allow) throw forbidden(decision.missing, decision.reason);
-        if (decision.stepUp || opts.stepUp) {
+        // PMS_STEP_UP=off (a development install) skips only the password re-check
+        if ((decision.stepUp || opts.stepUp) && c.config.PMS_STEP_UP !== "off") {
           // same transaction: a second connection would deadlock a single-connection driver (PGlite)
           const row = await repo.findSessionById(session.sessionId);
           const fresh =

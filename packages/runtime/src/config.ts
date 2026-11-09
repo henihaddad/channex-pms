@@ -22,6 +22,12 @@ export const configSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().default("OTAbridge <no-reply@otabridge.com>"),
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  /**
+   * "off" skips the password re-check before sensitive actions (spec 02 §2.6). For an install
+   * still in development whose only users are its builders; every other check (permission,
+   * scope, audit) still runs. Turn it back on before real customers sign in.
+   */
+  PMS_STEP_UP: z.enum(["on", "off"]).default("on"),
 });
 
 export type Config = z.infer<typeof configSchema>;

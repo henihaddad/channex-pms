@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `PMS_STEP_UP=off` skips the password re-check before sensitive actions (refunds, channel
+  credentials, payouts…) for an install still in development. Permissions, scope and the
+  audit log are unchanged; the default stays on.
+
 - Reservations › Check-in (spec 10 §10.6): the online check-in board. Arrivals in the next seven
   days and guests in house with their check-in form, guests listed, ID, balance and door code;
   tiles for arrivals, forms done, reminders scheduled and registrations; "Send reminders" writes
