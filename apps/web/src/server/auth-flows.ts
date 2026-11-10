@@ -17,6 +17,7 @@ import {
   currentSession,
   deviceFingerprint,
   requestId,
+  setAccessCookie,
   setSessionCookies,
   COOKIES,
 } from "./session";
@@ -233,6 +234,11 @@ export async function refreshFlow(): Promise<boolean> {
     new DrizzleIdentityRepository(tx).findSessionById(r.value.sessionId),
   );
   if (!session) return false;
+  if (r.value.refreshToken === null) {
+    // another tab rotated this token a moment ago and the browser already holds the new one
+    await setAccessCookie(session.userId, r.value.sessionId);
+    return true;
+  }
   await setSessionCookies({
     userId: session.userId,
     sessionId: r.value.sessionId,

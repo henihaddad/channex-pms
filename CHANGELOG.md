@@ -231,6 +231,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Signed-in people were sent back to the login page every fifteen minutes: nothing used the
+  30-day refresh token once the access token lapsed. Open tabs now renew it quietly, a page
+  load after a pause refreshes and continues, and two tabs refreshing at the same moment both
+  stay signed in (the replaced token works for one more minute). Migration
+  `0029_session_refresh_grace` adds two nullable columns to `session`.
+
 - Bookings taken by staff, by phone or on the booking site got a reference from the start of
   their id, which is a timestamp, so two bookings made within the same minute shared a code.
   New references come from the random end of the id. Existing codes are unchanged.

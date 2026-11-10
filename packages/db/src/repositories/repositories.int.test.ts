@@ -241,10 +241,15 @@ describe("identity repository", () => {
     const r = await withoutTenant(handle.db, (tx) =>
       svcFor(tx).refresh(accept.value.tokens.refreshToken, "d2"),
     );
-    expect(r.ok).toBe(true);
+    expect(r.ok && typeof r.value.refreshToken).toBe("string");
+    // the token just replaced still works for a moment (another tab), without rotating again
     const reuse = await withoutTenant(handle.db, (tx) =>
       svcFor(tx).refresh(accept.value.tokens.refreshToken, "d2"),
     );
-    expect(reuse.ok).toBe(false);
+    expect(reuse.ok && reuse.value.refreshToken).toBe(null);
+    const elsewhere = await withoutTenant(handle.db, (tx) =>
+      svcFor(tx).refresh(accept.value.tokens.refreshToken, "d3"),
+    );
+    expect(elsewhere.ok).toBe(false);
   });
 });

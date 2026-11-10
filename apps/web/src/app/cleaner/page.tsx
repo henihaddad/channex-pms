@@ -1,3 +1,4 @@
+import { SessionKeepAlive } from "@/components/session-keep-alive";
 import { redirect } from "next/navigation";
 import { currentSession } from "@/server/session";
 import { CleanerApp } from "./cleaner-app";
@@ -6,5 +7,10 @@ import { CleanerApp } from "./cleaner-app";
 export default async function CleanerPage() {
   const session = await currentSession();
   if (!session) redirect("/login");
-  return <CleanerApp today={new Date().toISOString().slice(0, 10)} />;
+  return (
+    <>
+      <SessionKeepAlive />
+      <CleanerApp today={new Date().toISOString().slice(0, 10)} />
+    </>
+  );
 }

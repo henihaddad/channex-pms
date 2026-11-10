@@ -16,13 +16,34 @@ const PUBLIC_PREFIXES = [
   "/icon",
 ];
 
-/** Redirect unauthenticated console requests to the login page. The server verifies the token; this only routes. */
+/**
+ * Routing only; the server verifies every token. With no session at all a console page goes
+ * to the login page. With the short-lived access token lapsed but the 30-day refresh token
+ * still there, a page load goes through the refresh route and comes straight back, so a
+ * signed-in person is not asked for their password every fifteen minutes (spec 02 §2.6).
+ */
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
-  if (!request.cookies.get("pms_at") && !request.cookies.get("pms_rt")) {
+  const access = request.cookies.get("pms_at");
+  const refresh = request.cookies.get("pms_rt");
+  if (!access && !refresh) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+  // prefetches and form posts are left alone: the first would rotate the token behind the
+  // user's back, the second cannot survive a redirect; the shell renews those sessions itself
+  const prefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.has("next-router-segment-prefetch") ||
+    request.headers.get("purpose") === "prefetch" ||
+    request.headers.get("sec-purpose")?.includes("prefetch") === true;
+  if (!access && refresh && request.method === "GET" && !prefetch) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/api/v1/auth/refresh";
+    url.search = `?next=${encodeURIComponent(pathname + search)}`;
     return NextResponse.redirect(url);
   }
   return NextResponse.next();

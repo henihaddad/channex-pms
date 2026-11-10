@@ -58,6 +58,9 @@ export interface Session {
   id: Id;
   userId: Id;
   refreshHash: string;
+  /** The refresh token this one replaced, accepted for REFRESH_GRACE_SECONDS after rotation. */
+  prevRefreshHash?: string | null;
+  rotatedAt?: string | null;
   deviceFingerprint: string;
   expiresAt: string;
   lastSeenAt: string;
@@ -79,5 +82,16 @@ export interface MagicLink {
 export interface IssuedTokens {
   sessionId: Id;
   refreshToken: string;
+  refreshExpiresAt: string;
+}
+
+/**
+ * A refresh: a new refresh token, or null when the caller presented the token rotated a
+ * moment ago (another tab or a parallel request won the race) and should keep the one the
+ * browser already holds.
+ */
+export interface RefreshedSession {
+  sessionId: Id;
+  refreshToken: string | null;
   refreshExpiresAt: string;
 }

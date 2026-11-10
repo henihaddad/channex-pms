@@ -58,6 +58,19 @@ export async function deviceFingerprint(): Promise<string> {
     .digest("hex");
 }
 
+/**
+ * The access token. The cookie lapses a minute before the token does, so a request that
+ * carries it never meets an expired token; with the cookie gone the proxy refreshes first.
+ */
+export async function setAccessCookie(userId: Id, sessionId: Id): Promise<void> {
+  const c = await container();
+  const access = await c.tokens.issueAccess({ sub: userId, sid: sessionId, gv: 0 });
+  (await cookies()).set(COOKIES.access, access, {
+    ...base,
+    maxAge: Math.max(60, c.tokens.accessTtlSeconds - 60),
+  });
+}
+
 export async function setSessionCookies(input: {
   userId: Id;
   sessionId: Id;
@@ -65,10 +78,8 @@ export async function setSessionCookies(input: {
   refreshExpiresAt: string;
   orgId?: Id;
 }): Promise<void> {
-  const c = await container();
   const jar = await cookies();
-  const access = await c.tokens.issueAccess({ sub: input.userId, sid: input.sessionId, gv: 0 });
-  jar.set(COOKIES.access, access, { ...base, maxAge: c.tokens.accessTtlSeconds });
+  await setAccessCookie(input.userId, input.sessionId);
   jar.set(COOKIES.refresh, input.refreshToken, {
     ...base,
     expires: new Date(input.refreshExpiresAt),

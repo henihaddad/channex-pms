@@ -54,6 +54,8 @@ export interface IdentityRepository {
 
   createSession(session: Session): Promise<void>;
   findSessionByRefreshHash(hash: string): Promise<Session | null>;
+  /** The session whose previous refresh token hashes to this (the rotation grace window). */
+  findSessionByPrevRefreshHash(hash: string): Promise<Session | null>;
   findSessionById(id: Id): Promise<Session | null>;
   updateSession(id: Id, patch: Partial<Omit<Session, "id" | "userId">>): Promise<void>;
   revokeAllSessions(userId: Id, at: string): Promise<void>;

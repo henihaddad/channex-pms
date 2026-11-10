@@ -183,6 +183,9 @@ export const session = pgTable(
       .notNull()
       .references(() => user.id),
     refreshHash: text("refresh_hash").notNull(),
+    /** The token this one replaced, still accepted for a few seconds so two tabs refreshing at once both keep the session. */
+    prevRefreshHash: text("prev_refresh_hash"),
+    rotatedAt: ts("rotated_at"),
     deviceFingerprint: text("device_fingerprint").notNull(),
     expiresAt: ts("expires_at").notNull(),
     lastSeenAt: ts("last_seen_at").notNull().default(now()),

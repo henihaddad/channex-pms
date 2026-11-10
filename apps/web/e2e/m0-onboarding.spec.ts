@@ -24,6 +24,18 @@ test("sign up, invite a colleague, accept, and see it audited", async ({
   await page.getByRole("button", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
 
+  // fifteen minutes later the access token has lapsed: the refresh token keeps the session,
+  // and a second tab presenting the same, just-rotated refresh token stays signed in too
+  const jar = await page.context().cookies();
+  const oldRefresh = jar.find((c) => c.name === "pms_rt")!;
+  await page.context().clearCookies({ name: "pms_at" });
+  await page.goto("/reservations");
+  await expect(page).toHaveURL(/\/reservations$/);
+  await page.context().clearCookies({ name: "pms_at" });
+  await page.context().addCookies([oldRefresh]);
+  await page.goto("/calendar");
+  await expect(page).toHaveURL(/\/calendar$/);
+
   // invite a colleague as property_manager
   await page.goto("/settings/members");
   await page.getByLabel("Email").fill(`bob-${stamp}@example.com`);

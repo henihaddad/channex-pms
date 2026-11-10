@@ -1,3 +1,4 @@
+import { SessionKeepAlive } from "@/components/session-keep-alive";
 import type React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -388,6 +389,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         labels={paletteLabels}
         onLocale={setLocaleAction}
       />
+      <SessionKeepAlive />
       <ConsoleShell
         sections={sections}
         footerSections={footerSections}

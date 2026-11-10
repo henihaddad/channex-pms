@@ -8,10 +8,14 @@ import type {
   Invitation,
   IssuedTokens,
   MagicLink,
+  RefreshedSession,
   Organization,
   Session,
   User,
 } from "./types.js";
+
+/** How long a just-rotated refresh token still works: covers parallel requests and other tabs. */
+export const REFRESH_GRACE_SECONDS = 60;
 
 export interface IdentityDeps {
   repo: IdentityRepository;
@@ -231,11 +235,31 @@ export class IdentityService {
   }
 
   /** Rotating refresh: the presented token is invalidated, a new one issued. Reuse of a rotated token revokes the session (theft signal). */
-  async refresh(refreshToken: string, deviceFingerprint: string): Promise<Result<IssuedTokens>> {
+  async refresh(
+    refreshToken: string,
+    deviceFingerprint: string,
+  ): Promise<Result<RefreshedSession>> {
     const hash = this.deps.crypto.sha256Hex(refreshToken);
-    const session = await this.deps.repo.findSessionByRefreshHash(hash);
     const invalid = new DomainError("identity.session_invalid", "Session expired");
-    if (!session) return err(invalid);
+    const session = await this.deps.repo.findSessionByRefreshHash(hash);
+    if (!session) {
+      // two tabs, or a page and its prefetch, refreshing with the same token: the loser of the
+      // race keeps the session for a few seconds instead of being signed out
+      const rotated = await this.deps.repo.findSessionByPrevRefreshHash(hash);
+      if (
+        rotated?.rotatedAt &&
+        !rotated.revokedAt &&
+        rotated.expiresAt > this.now() &&
+        rotated.deviceFingerprint === deviceFingerprint &&
+        this.withinGrace(rotated.rotatedAt)
+      )
+        return ok({
+          sessionId: rotated.id,
+          refreshToken: null,
+          refreshExpiresAt: rotated.expiresAt,
+        });
+      return err(invalid);
+    }
     if (session.revokedAt || session.expiresAt <= this.now()) return err(invalid);
     if (session.deviceFingerprint !== deviceFingerprint) {
       await this.deps.repo.updateSession(session.id, { revokedAt: this.now() });
@@ -243,14 +267,24 @@ export class IdentityService {
         new DomainError("identity.session_device_mismatch", "Session bound to another device"),
       );
     }
+    // rotated a moment ago: a burst of parallel requests (prefetches, tabs) gets access tokens
+    // without rotating again, so none of them is left holding a token two generations old
+    if (session.rotatedAt && this.withinGrace(session.rotatedAt))
+      return ok({ sessionId: session.id, refreshToken: null, refreshExpiresAt: session.expiresAt });
     const next = this.deps.crypto.randomToken(32);
     const expiresAt = this.plus({ days: this.cfg.refreshTtlDays });
     await this.deps.repo.updateSession(session.id, {
       refreshHash: this.deps.crypto.sha256Hex(next),
+      prevRefreshHash: hash,
+      rotatedAt: this.now(),
       expiresAt,
       lastSeenAt: this.now(),
     });
     return ok({ sessionId: session.id, refreshToken: next, refreshExpiresAt: expiresAt });
+  }
+
+  private withinGrace(rotatedAt: string): boolean {
+    return Date.parse(this.now()) - Date.parse(rotatedAt) <= REFRESH_GRACE_SECONDS * 1000;
   }
 
   async revokeSession(sessionId: Id): Promise<void> {

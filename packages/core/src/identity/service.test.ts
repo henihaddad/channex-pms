@@ -64,6 +64,9 @@ class MemoryRepo implements IdentityRepository {
   async findSessionByRefreshHash(h: string) {
     return [...this.sessions.values()].find((s) => s.refreshHash === h) ?? null;
   }
+  async findSessionByPrevRefreshHash(h: string) {
+    return [...this.sessions.values()].find((s) => s.prevRefreshHash === h) ?? null;
+  }
   async findSessionById(id: string) {
     return this.sessions.get(id) ?? null;
   }
@@ -172,17 +175,25 @@ describe("IdentityService", () => {
     expect((await svc.completeTotpLogin(login2.value.challengeToken, "123456")).ok).toBe(true);
   });
 
-  it("rotates refresh tokens and revokes on device mismatch", async () => {
-    const { svc } = setup();
+  it("rotates refresh tokens, lets the previous one through for a minute, and revokes on device mismatch", async () => {
+    const { svc, clock } = setup();
     const su = await svc.signUp(signup);
     if (!su.ok) throw new Error();
     const first = su.value.tokens.refreshToken;
     const r1 = await svc.refresh(first, "dev-1");
-    expect(r1.ok).toBe(true);
-    expect((await svc.refresh(first, "dev-1")).ok).toBe(false); // old token dead
-    if (!r1.ok) return;
-    expect((await svc.refresh(r1.value.refreshToken, "other-device")).ok).toBe(false);
-    expect((await svc.refresh(r1.value.refreshToken, "dev-1")).ok).toBe(false); // revoked by mismatch
+    if (!r1.ok || !r1.value.refreshToken) throw new Error("expected a rotated token");
+    // a second tab refreshing with the same token a moment later keeps the session, without rotating again
+    const raced = await svc.refresh(first, "dev-1");
+    expect(raced.ok && raced.value.refreshToken).toBe(null);
+    const current = r1.value.refreshToken;
+    // the new token, used within the same minute (parallel prefetches), does not rotate again
+    const burst = await svc.refresh(current, "dev-1");
+    expect(burst.ok && burst.value.refreshToken).toBe(null);
+    expect((await svc.refresh(first, "other-device")).ok).toBe(false);
+    clock.advance({ seconds: 61 });
+    expect((await svc.refresh(first, "dev-1")).ok).toBe(false); // old token dead after the grace window
+    expect((await svc.refresh(current, "other-device")).ok).toBe(false);
+    expect((await svc.refresh(current, "dev-1")).ok).toBe(false); // revoked by mismatch
   });
 
   it("invites a colleague and creates the intended grant on acceptance", async () => {

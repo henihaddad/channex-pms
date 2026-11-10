@@ -198,6 +198,15 @@ export class DrizzleIdentityRepository implements IdentityRepository {
     return row ? toSession(row) : null;
   }
 
+  async findSessionByPrevRefreshHash(hash: string): Promise<Session | null> {
+    const [row] = await this.tx
+      .select()
+      .from(s.session)
+      .where(eq(s.session.prevRefreshHash, hash))
+      .limit(1);
+    return row ? toSession(row) : null;
+  }
+
   async findSessionById(id: Id): Promise<Session | null> {
     const [row] = await this.tx.select().from(s.session).where(eq(s.session.id, id)).limit(1);
     return row ? toSession(row) : null;
@@ -302,6 +311,8 @@ function toSession(row: typeof s.session.$inferSelect): Session {
     id: row.id as Id,
     userId: row.userId as Id,
     refreshHash: row.refreshHash,
+    prevRefreshHash: row.prevRefreshHash,
+    rotatedAt: row.rotatedAt,
     deviceFingerprint: row.deviceFingerprint,
     expiresAt: row.expiresAt,
     lastSeenAt: row.lastSeenAt,

@@ -223,6 +223,11 @@ access).
   it), and derives the URL slug from the organization name, editable in place.
 - Sessions are short-lived JWT access tokens (≤15 min) with rotating refresh tokens
   bound to a device fingerprint; server-side revocation for "sign out everywhere".
+  The refresh token (30 days) keeps a person signed in: an open console tab renews the
+  access token every ten minutes and on return to the tab, and a page load whose access
+  token has lapsed passes through `GET /api/v1/auth/refresh` and back. A refresh token
+  just replaced still works for 60 seconds on the same device, so two tabs (or a page
+  and its request) refreshing at once both stay signed in; after that it is dead.
 - **Step-up (`!`) actions** require re-authentication within the last 5 minutes and
   are always audited with actor, reason and IP: payment capture/refund, **executing
   an owner payout**, reading card metadata or channel credentials, deleting a
