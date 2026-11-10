@@ -74,7 +74,20 @@ had to be a graph rather than a tree.
 | `finance` | Bookkeeper / accountant | organization or group | Folios, invoices, owner statements, payouts, commission and tax reports, exports. Read-only on operations. |
 | `owner` | **Property owner (external)** | property (their own) | Their own listings only: calendar, bookings (limited guest detail), statements, payouts, expenses, and blocking dates for their own stays. Never sees other owners' anything. |
 | `viewer` | Investor, asset manager, analyst | any | Read-only dashboards and reports. No guest PII by default. |
-| `service_account` | Integration / script | any | API-key or OAuth identity. Permissions always explicitly enumerated — no role defaults. |
+| `service_account` | Integration / script, or the host's AI assistant | organization | API-key or OAuth identity. Permissions always explicitly enumerated — no role defaults. |
+
+**Persona without a role of its own: the host who runs the business through Claude.** An
+independent host or a small manager (one to twenty listings, often the `org_owner` themselves)
+who would rather say "raise the weekends in December by 15 %", "who arrives tomorrow?", "answer
+the parking question" to Claude (claude.ai, Claude Desktop, Claude Code) than open five
+channel extranets. Claude cannot reach Airbnb or Booking.com on its own; we are that
+connection. The person creates an API key on Settings → API & AI with one of four access
+levels (§2.8) and connects Claude to our MCP server
+([04 §4.7b](./04-architecture.md#47b-mcp-server-for-ai-assistants)). Claude then acts as that
+key's **service account**: every tool call is a permission-checked, audited request like any
+other, attributed "via API key ‘Claude’" and to the person who created the key. Features
+built for this persona: API keys, the operations API ([04 §4.7a](./04-architecture.md#47a-api-keys-and-the-operations-api)),
+the MCP server.
 
 **Not a role: the guest.** Guests exist in a separate identity space with no
 staff-console access ([10](./10-booking-engine.md)): magic-link authentication to a
@@ -256,13 +269,47 @@ operators to authorise.
 
 ## 2.8 Service accounts
 
-- Belong to an organization, hold explicitly enumerated permissions, never a role.
-- Credentials: API key (`cx_live_…` / `cx_test_…`, shown once, stored hashed) or
-  OAuth2 client-credentials for partner integrations.
+- Belong to an organization, hold explicitly enumerated permissions, never a role: the
+  grant is `(service_account, role service_account, organization, overrides.allow = […])`,
+  and the role `service_account` holds nothing on its own, so the permission engine
+  evaluates a key exactly like a person and only the enumerated list counts.
+- Credentials: API key (`otab_` + at least 32 URL-safe random characters, shown once,
+  stored as its SHA-256, the first twelve characters kept visible to tell keys apart) or
+  OAuth2 client-credentials for partner integrations (not built yet).
+- **One service account per key**, created with the key on Settings → API & AI
+  (`api_key:create`). The host picks an access level, each an explicit permission list
+  (core `apiKeyPermissions`), narrowed to what the creating person holds at organization
+  scope (no escalation by authoring, as for custom roles §2.5):
+
+  | Access level | What the key can do |
+  |---|---|
+  | Full access | Every permission except the list below |
+  | Read only | Every `:read`, `:read_pii`, `:read_financial` permission except the list below |
+  | Messages only | Read properties and bookings (with guest names), read and send guest messages, close threads, read templates, read and answer reviews, read channels |
+  | Prices & availability only | Read properties, inventory, bookings and channels; read and change rates, availability and restrictions; bulk edits |
+
+  **Never on a key**, whatever the level: `api_key:*`, `webhook:manage`, `member:invite`,
+  `member:update_role`, `member:remove`, `role:manage_custom`, `org:update`, `org:delete`,
+  `org:transfer_ownership`, `billing:manage`, `impersonation:execute`,
+  `channel:read_credentials`, `channel_account:manage`, `channel:delete`,
+  `booking:read_payment_instrument`, `payment:capture`, `payment:refund`, `payout:execute`,
+  `property:delete`, `plugin:install`, `plugin:configure`, `access_credential:*`,
+  `audit:read`.
+- **Step-up never applies to a key.** A key cannot re-enter a password, so `withPermission`
+  skips the step-up check for it; what needs step-up for a person (payouts, refunds, card
+  metadata, channel credentials, deletions, ownership) is on the never-list above, so no key
+  can reach it with or without step-up.
+- A key is bound to its organization: `x-pms-org` and the org cookie are ignored, there is
+  no impersonation, and a revoked key (its grant and service account revoked with it) is a
+  `401 invalid_api_key` on the next request. An unknown or malformed `otab_` bearer is the
+  same 401, never a fall-through to a cookie session.
 - Mandatory: 90-day rotation reminders, per-key rate limits and scopes, optional IP
   allowlist, and a last-used timestamp so dead keys can be found.
 - Actions appear in the audit log attributed to the key **and** the human who
-  created it.
+  created it: `actor = {type: service_account, id, label: <key name>, createdBy: <user>}`,
+  `surface = api | mcp`; the activity log reads "via API key ‘Claude’".
+- Still to build: 90-day rotation reminders, per-key rate limits, the per-key IP allowlist.
+  `last_used_at` is stamped by the key resolver at most once a minute.
 
 ## 2.9 Requirements
 

@@ -124,3 +124,9 @@ export {
   type SyncSummary,
   type DifferingNight,
 } from "./sync-health.js";
+export {
+  DrizzleApiKeyRepository,
+  resolveApiKey,
+  type ApiKeyRow,
+  type ResolvedApiKey,
+} from "./api-keys.js";

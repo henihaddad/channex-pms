@@ -7,6 +7,10 @@ export interface Actor {
   type: "user" | "service_account" | "system" | "guest" | "owner" | "automation";
   id: string;
   impersonatedBy?: string;
+  /** A service account's API key name, for the activity log. */
+  label?: string;
+  /** Who created that key. */
+  createdBy?: string;
 }
 
 export interface TenantContext {

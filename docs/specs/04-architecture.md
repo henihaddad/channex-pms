@@ -254,6 +254,98 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
   `org:{id}:property:{id}:{topic}` for calendar cells, inbox, booking feed,
   sync/channel health.
 
+## 4.7a API keys and the operations API
+
+*Persona: the host who runs the business through Claude ([02 §2.2](./02-personas-and-rbac.md#22-personas-and-system-roles)), and any script.*
+
+- **Authentication.** `Authorization: Bearer otab_…` on any `/api/v1` route.
+  `withPermission` resolves the key before looking for a session: its SHA-256 goes to the
+  `SECURITY DEFINER` function `resolve_api_key` (migration `0030_api_key_resolver`), which
+  returns the organization, key and service account and stamps `last_used_at` at most once
+  a minute in the same round trip. The request then runs in that organization's tenant
+  transaction with the service account's grants, evaluated by the same engine as a person's;
+  no step-up ([02 §2.8](./02-personas-and-rbac.md#28-service-accounts)); audit
+  `surface = api`. Unknown, revoked or expired: `401 invalid_api_key`.
+- **Operations.** What a host does every day is described once, in
+  `apps/web/src/server/agent/ops.ts`: permission, scope, input schema (Zod), code. The REST
+  route and the MCP tool are two doors onto the same operation; each REST route is a
+  one-line `withPermission.route("<permission>", restOptions(op), …)`, and a unit test
+  checks that the route's literal permission is the op's own. Writes that change a property
+  take its `propertyId` and are scoped to that property.
+
+  | Method and path | Permission | MCP tool |
+  |---|---|---|
+  | `GET /api/v1/today` | `booking:read` | `get_today` |
+  | `GET /api/v1/properties/inventory` | `property:read` | `list_properties` |
+  | `GET /api/v1/ari/calendar?firstNight&lastNight&propertyId` (≤ 62 nights) | `ari:read` | `get_calendar` |
+  | `PUT /api/v1/ari/prices` | `ari:update_rate` | `set_prices` |
+  | `PUT /api/v1/ari/availability` (open/close = stop-sell) | `ari:update_restriction` | `set_availability` |
+  | `PUT /api/v1/ari/min-stay` | `ari:update_restriction` | `set_min_stay` |
+  | `GET /api/v1/reservations` (views, filters, `q`) | `booking:read` | `list_reservations` |
+  | `GET /api/v1/reservations/{id}` | `booking:read` | `get_reservation` |
+  | `POST /api/v1/reservations` (direct booking) | `booking:create` | `create_reservation` |
+  | `POST /api/v1/reservations/{id}/cancel` (direct only) | `booking:cancel` | `cancel_reservation` |
+  | `GET /api/v1/conversations?filter=needs_reply\|all…` | `message:read` | `list_conversations` |
+  | `GET /api/v1/conversations/{id}` (audited) | `message:read` | `read_conversation` |
+  | `POST /api/v1/conversations/{id}/messages` | `message:send` | `send_message` |
+  | `POST /api/v1/conversations/{id}/notes` | `message:send` | `add_note` |
+  | `GET /api/v1/reviews?filter=needs_reply\|all` | `review:read` | `list_reviews` |
+  | `POST /api/v1/reviews/{id}/reply` | `review:respond` | `reply_to_review` |
+  | `GET /api/v1/channels` | `channel:read` | `list_channels` |
+  | `GET /api/v1/sync-health` | `ari:read` | `get_sync_health` |
+
+  Range edits take `firstNight` and `lastNight`, both included, because that is how a host
+  says it; core `nightRange` turns them into the half-open `DateRange` (rule 5), refuses
+  more than 366 nights or 2,000 cells rather than truncating, and the edits go through the
+  calendar's own path (`applyCellEdits`: version check, undo record, push queue) with source
+  `manual`, so a rate import never overwrites what the host's assistant set. Money is
+  integer minor units (`priceMinor`, `totalMinor`). A guest message goes out through the
+  same queue as the console's composer (the channel, or email for a direct booking); an
+  internal note needs `message:send` here (the console's note composer sits under
+  `message:read`) so a read-only key never writes. Reading a conversation does not mark it
+  read for the team. Searching reservations by `q` also matches the lead guest's decrypted
+  name on a bounded page, since names are sealed in SQL. The existing per-cell routes
+  (`PATCH /api/v1/ari/rates`, `/restrictions`, `POST /api/v1/ari/bulk`, `GET
+  /api/v1/ari/grid`, `GET|POST /api/v1/properties`) stay as they were. The OpenAPI document
+  lists the operations from the same table; `@channex-pms/sdk` has a method for each.
+- **Settings → API & AI** (`/settings/api`): create a key (name, access level), shown once
+  with a copy button; the list shows name, access, visible prefix, created, last used and
+  creator, with Revoke; and how to connect Claude Code, Claude Desktop, claude.ai and curl,
+  with copy buttons, built on `NEXT_PUBLIC_APP_URL` and filled with the new key right after
+  creation.
+- **Decision (2026-11-10): writes execute directly while the product is in test.** No preview
+  or confirm step between the assistant and the calendar, the inbox or a booking: what
+  Claude calls happens, permission-checked and audited, as if the host had clicked it. The
+  MCP tools carry `readOnlyHint`/`destructiveHint` annotations so the client asks the person
+  before a destructive one, and the server instructions tell the model to act only on the
+  host's request. A preview mode (dry run returned to the model, a person confirms in the
+  console) is the candidate for general availability.
+
+## 4.7b MCP server for AI assistants
+
+*Persona: the host who runs the business through Claude.*
+
+- **Endpoint** `POST /api/mcp`: the Model Context Protocol over Streamable HTTP, stateless
+  (a fresh `McpServer` and `WebStandardStreamableHTTPServerTransport` per request from
+  `@modelcontextprotocol/sdk`, JSON responses, no session id). Auth: `Authorization: Bearer
+  otab_…`; for clients that cannot send a header (a claude.ai custom connector without
+  OAuth), the key may be the last path segment, `/api/mcp/<key>`. That URL is a secret and
+  the settings page says so in red. No key, or a dead one: `401 invalid_api_key` with
+  `WWW-Authenticate: Bearer`. The route is `publicRoute("mcp")` because the transport itself
+  carries no permission; the key is resolved once per request and every tool runs inside
+  `withPermission` as that key, so permission, scope, audit (`surface = mcp`) and tenant
+  isolation are exactly the REST path's.
+- **Tools** are the operations of §4.7a, one each, with descriptions written for the model
+  (ids come from `list_properties` and `get_today`; money in minor units; dates YYYY-MM-DD).
+  A refusal is a tool result with `isError: true` that names the missing permission, the
+  key's access level and the level that would allow it, so the model can tell the host what
+  to change, never a protocol error. Validation and domain errors come back the same way.
+- **Connecting.** Claude Code: `claude mcp add --transport http otabridge <app>/api/mcp
+  --header "Authorization: Bearer <key>"`. Claude Desktop: `mcp-remote` in
+  `claude_desktop_config.json` with the header from an environment variable. claude.ai:
+  Settings → Connectors → custom connector with `<app>/api/mcp/<key>`. OAuth for claude.ai
+  connectors is the next step, which retires the key-in-URL form.
+
 ## 4.8 Deployment topology
 
 | Target | Contents |

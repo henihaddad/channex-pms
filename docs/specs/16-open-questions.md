@@ -53,6 +53,19 @@ rejected because D4 makes relicensing rights necessary. Consequence for wording:
 where older text in these specs says "open source", read "source-available,
 fair-code". Rationale in [01 §1.10](./01-vision-and-scope.md#110-licence-and-governance).
 
+### ✅ D6 — The AI layer: **API keys and an MCP server; writes execute directly while in test**
+*(decided 2026-11-10)*
+
+The founder's goal is the first AI-driven channel manager: a host connects Claude to
+OTAbridge and runs the business by talking to it. Keys are service accounts with an access
+level ([02 §2.8](./02-personas-and-rbac.md#28-service-accounts)); the operations API and the
+MCP server share one operation table
+([04 §4.7a/b](./04-architecture.md#47a-api-keys-and-the-operations-api)). While the product
+is in test, what the assistant calls executes immediately, with no preview or confirm step,
+but always through `withPermission` and the audit log. Step-up never applies to a key, and
+everything that would need it is kept off keys. Revisit before general availability: a
+preview mode, OAuth for claude.ai connectors, per-key rate limits.
+
 ## Open
 
 ### Q6 — Commercial relationship with Channex

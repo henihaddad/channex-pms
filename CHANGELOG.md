@@ -10,6 +10,19 @@ All notable changes to this project are documented here. The format follows
 
 - An "Upgrade" pill in the console header: the days left in the trial, or the Starter plan's
   name, with a link to Billing. Hidden on Growth, Scale and complimentary plans.
+- Claude can run the business (spec 04 §4.7a/b, persona "the host who runs the business
+  through Claude", spec 02). Settings → API & AI creates API keys (`otab_…`, shown once,
+  stored hashed) with an access level: Full access, Read only, Messages only, or Prices &
+  availability only; the list shows when each was created and last used and by whom, and a
+  key can be revoked. Every `/api/v1` route accepts `Authorization: Bearer otab_…` and
+  checks it like a person's session, without step-up; the activity log reads "via API key
+  ‘Claude’". New routes for what a host does every day: today's summary, the calendar for a
+  range, nightly prices, open/close nights, minimum stay, reservations (list, search, read,
+  create, cancel), conversations (list, read, reply to the guest, internal note), reviews
+  (list, reply), channels and sync health; in the OpenAPI document and the SDK. A remote MCP
+  server at `/api/mcp` (Streamable HTTP) serves the same eighteen operations as tools, with
+  the same permissions and audit; the settings page shows how to connect Claude Code, Claude
+  Desktop and claude.ai. While the product is in test, actions run immediately.
 
 - `PMS_STEP_UP=off` skips the password re-check before sensitive actions (refunds, channel
   credentials, payouts…) for an install still in development. Permissions, scope and the

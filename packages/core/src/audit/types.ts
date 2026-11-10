@@ -4,6 +4,10 @@ export interface AuditActor {
   type: "user" | "service_account" | "system" | "guest" | "owner" | "automation";
   id: string;
   impersonatedBy?: string;
+  /** For a service account: the API key's name, so the log reads "via API key ‘Claude’". */
+  label?: string;
+  /** For a service account: the person who created the key (spec 02 §2.8). */
+  createdBy?: string;
 }
 
 /** One audit entry before hashing. `before`/`after` are redacted by the caller. */

@@ -211,6 +211,13 @@
       "when": 1794307868100,
       "tag": "0029_session_refresh_grace",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794311930391,
+      "tag": "0030_api_key_resolver",
+      "breakpoints": true
     }
   ]
 }

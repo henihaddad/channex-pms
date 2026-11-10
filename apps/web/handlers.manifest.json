@@ -1371,6 +1371,30 @@
     "permission": "booking:check_in_out"
   },
   {
+    "file": "src/app/(console)/settings/api/api-keys.actions.ts",
+    "export": "createApiKeyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:create",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/api/api-keys.actions.ts",
+    "export": "listApiKeys",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/api/api-keys.actions.ts",
+    "export": "revokeApiKeyAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:revoke",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(console)/settings/audit/audit.actions.ts",
     "export": "listAudit",
     "kind": "action",
@@ -1693,6 +1717,55 @@
     "publicReason": "health"
   },
   {
+    "file": "src/app/api/mcp/[key]/route.ts",
+    "export": "DELETE",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/mcp/[key]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/mcp/[key]/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/mcp/route.ts",
+    "export": "DELETE",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/mcp/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/mcp/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "mcp"
+  },
+  {
+    "file": "src/app/api/v1/ari/availability/route.ts",
+    "export": "PUT",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:update_restriction"
+  },
+  {
     "file": "src/app/api/v1/ari/bulk/[id]/undo/route.ts",
     "export": "POST",
     "kind": "route",
@@ -1707,6 +1780,13 @@
     "wrapper": "withPermission.route",
     "permission": "ari:bulk_execute",
     "scope": "property"
+  },
+  {
+    "file": "src/app/api/v1/ari/calendar/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:read"
   },
   {
     "file": "src/app/api/v1/ari/events/route.ts",
@@ -1731,6 +1811,20 @@
     "wrapper": "withPermission.route",
     "permission": "audit:read",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/ari/min-stay/route.ts",
+    "export": "PUT",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:update_restriction"
+  },
+  {
+    "file": "src/app/api/v1/ari/prices/route.ts",
+    "export": "PUT",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:update_rate"
   },
   {
     "file": "src/app/api/v1/ari/rates/route.ts",
@@ -1829,6 +1923,13 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/channels/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:read"
+  },
+  {
     "file": "src/app/api/v1/cleaner/day/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1843,6 +1944,34 @@
     "wrapper": "withPermission.route",
     "permission": "turnover:complete",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/conversations/[id]/messages/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "message:send"
+  },
+  {
+    "file": "src/app/api/v1/conversations/[id]/notes/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "message:send"
+  },
+  {
+    "file": "src/app/api/v1/conversations/[id]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "message:read"
+  },
+  {
+    "file": "src/app/api/v1/conversations/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "message:read"
   },
   {
     "file": "src/app/api/v1/exports/[id]/route.ts",
@@ -1882,6 +2011,13 @@
     "publicReason": "catalogue"
   },
   {
+    "file": "src/app/api/v1/properties/inventory/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "property:read"
+  },
+  {
     "file": "src/app/api/v1/properties/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1906,6 +2042,20 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/reservations/[id]/cancel/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:cancel"
+  },
+  {
+    "file": "src/app/api/v1/reservations/[id]/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read"
+  },
+  {
     "file": "src/app/api/v1/reservations/export/route.ts",
     "export": "GET",
     "kind": "route",
@@ -1922,12 +2072,47 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/reservations/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read"
+  },
+  {
+    "file": "src/app/api/v1/reservations/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:create"
+  },
+  {
+    "file": "src/app/api/v1/reviews/[id]/reply/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "review:respond"
+  },
+  {
+    "file": "src/app/api/v1/reviews/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "review:read"
+  },
+  {
     "file": "src/app/api/v1/support/diagnostics/route.ts",
     "export": "GET",
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "org:read",
     "scope": "organization"
+  },
+  {
+    "file": "src/app/api/v1/sync-health/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "ari:read"
   },
   {
     "file": "src/app/api/v1/test/channex-screen/route.ts",
@@ -2040,6 +2225,13 @@
     "kind": "route",
     "wrapper": "publicRoute",
     "publicReason": "test_hook"
+  },
+  {
+    "file": "src/app/api/v1/today/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "booking:read"
   },
   {
     "file": "src/app/ops/ops.actions.ts",
