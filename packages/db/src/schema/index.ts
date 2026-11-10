@@ -13,3 +13,4 @@ export * from "./booking-engine.js";
 export * from "./guides.js";
 export * from "./pricing.js";
 export * from "./platform-m8.js";
+export * from "./oauth.js";

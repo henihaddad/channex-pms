@@ -10,9 +10,11 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ link?: string }>;
+  searchParams: Promise<{ link?: string; next?: string }>;
 }) {
   const sp = await searchParams;
+  // the action checks it is a same-site path before following it
+  const next = typeof sp.next === "string" ? sp.next : "";
   const t = await getTranslations("auth");
   const linkOnly = sp.link === "1";
   return (
@@ -20,6 +22,7 @@ export default async function LoginPage({
       {linkOnly ? <p className="-mt-2 text-sm text-muted">{t("linkHint")}</p> : null}
       <LoginForm
         linkOnly={linkOnly}
+        next={next}
         labels={{
           email: t("email"),
           password: t("password"),

@@ -38,7 +38,7 @@ export default async function AuditPage() {
                 </Td>
                 <Td>
                   {r.actor.type === "service_account" && r.actor.label
-                    ? t("viaKey", { name: r.actor.label })
+                    ? t(r.actor.via === "app" ? "viaApp" : "viaKey", { name: r.actor.label })
                     : `${r.actor.type}:${r.actor.id.slice(0, 8)}`}
                 </Td>
                 <Td>

@@ -102,6 +102,7 @@ describe("agent operations", () => {
         scopes: ["read_only"],
         createdBy: null,
         surface: "mcp",
+        oauth: false,
       },
     );
     expect(r.isError).toBe(true);

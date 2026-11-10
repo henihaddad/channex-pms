@@ -118,6 +118,11 @@ export const TENANCY: Readonly<Record<string, Tenancy>> = {
   plugin_delivery: "org",
   data_export: "org",
   platform_job_request: "global",
+  // MCP sign-in (spec 04 §4.7b): clients, codes and refresh tokens are found before a tenant exists
+  oauth_client: "global",
+  oauth_grant: "org",
+  oauth_code: "global",
+  oauth_refresh_token: "global",
 };
 
 export const ORG_TABLES = Object.entries(TENANCY)

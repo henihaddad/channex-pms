@@ -64,7 +64,15 @@ MCP server share one operation table
 is in test, what the assistant calls executes immediately, with no preview or confirm step,
 but always through `withPermission` and the audit log. Step-up never applies to a key, and
 everything that would need it is kept off keys. Revisit before general availability: a
-preview mode, OAuth for claude.ai connectors, per-key rate limits.
+preview mode, per-key rate limits.
+
+*Update (2026-11-10): "Sign in with OTAbridge".* claude.ai (and any MCP client) connects by
+OAuth 2.1 with PKCE, dynamic client registration and protected resource metadata, as the MCP
+authorization spec asks ([04 §4.7b](./04-architecture.md#47b-mcp-server-for-ai-assistants)).
+Approving a client creates the same thing an API key does, a service account with an access
+level's explicit grant, so the permission engine, the audit log and the never-on-a-key list
+apply unchanged; the access token is an hour-long row in `api_key`. A connection is listed and
+disconnected on Settings → API & AI. The key-in-URL form stays as a fallback only.
 
 ## Open
 

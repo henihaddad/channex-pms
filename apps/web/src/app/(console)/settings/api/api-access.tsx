@@ -61,8 +61,10 @@ function Snippet({
 }
 
 /**
- * Settings → API & AI (spec 04 §4.7a): create a key (shown once), then the four ways to connect,
- * filled with that key when there is one. Persona: the host who runs the business through Claude.
+ * Settings → API & AI (spec 04 §4.7a/b): create a key (shown once), then the ways to connect.
+ * claude.ai first: paste the server URL and sign in, no key. Claude Code, Claude Desktop and
+ * scripts use a key, filled in when there is one; the key-in-URL form stays as a fallback.
+ * Persona: the host who runs the business through Claude.
  */
 export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: ReactNode }) {
   const t = useTranslations("apiKeys");
@@ -144,6 +146,12 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
         description={state.secret ? t("connectWithKey") : t("connectPlaceholder")}
       >
         <div className="flex flex-col gap-6">
+          <Snippet
+            testId="connect-claude-ai-oauth"
+            title={t("claudeAiOAuth")}
+            hint={t("claudeAiOAuthHint")}
+            text={mcp}
+          />
           <Snippet
             testId="connect-claude-code"
             title={t("claudeCode")}

@@ -8,6 +8,8 @@ export interface AuditActor {
   label?: string;
   /** For a service account: the person who created the key (spec 02 §2.8). */
   createdBy?: string;
+  /** For a service account: an API key, or an app connected by sign-in ("via Claude (claude.ai)"). */
+  via?: "api_key" | "app";
 }
 
 /** One audit entry before hashing. `before`/`after` are redacted by the caller. */

@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import * as s from "../schema/index.js";
+import { OAUTH_ACCESS_TOKEN_PREFIX } from "@pms/core";
 import { rawRows, type Tx } from "../tenant.js";
 
 /** One row of the key list on Settings → API & AI. Never the secret, never its hash. */
@@ -51,6 +52,28 @@ export class DrizzleApiKeyRepository {
     keyHash: string;
     createdBy: string;
   }): Promise<void> {
+    await this.createServiceAccount(k);
+    await this.tx.insert(s.apiKey).values({
+      id: k.apiKeyId,
+      orgId: this.orgId,
+      serviceAccountId: k.serviceAccountId,
+      prefix: k.prefix,
+      keyHash: k.keyHash,
+      scopes: [k.access],
+    });
+  }
+
+  /**
+   * The service account and its explicit grant, without a key: an API key adds one at once,
+   * an MCP sign-in (spec 04 §4.7b) adds short-lived ones as the client exchanges tokens.
+   */
+  async createServiceAccount(k: {
+    serviceAccountId: string;
+    grantId: string;
+    name: string;
+    permissions: readonly string[];
+    createdBy: string;
+  }): Promise<void> {
     await this.tx.insert(s.serviceAccount).values({
       id: k.serviceAccountId,
       orgId: this.orgId,
@@ -68,17 +91,12 @@ export class DrizzleApiKeyRepository {
       overrides: { allow: [...k.permissions] },
       createdBy: k.createdBy,
     });
-    await this.tx.insert(s.apiKey).values({
-      id: k.apiKeyId,
-      orgId: this.orgId,
-      serviceAccountId: k.serviceAccountId,
-      prefix: k.prefix,
-      keyHash: k.keyHash,
-      scopes: [k.access],
-    });
   }
 
-  /** Newest first; revoked keys stay listed (greyed) so the activity log still has a name. */
+  /**
+   * Newest first; revoked keys stay listed (greyed) so the activity log still has a name. The
+   * short-lived access tokens of connected apps are not keys: they are listed as connections.
+   */
   async list(): Promise<ApiKeyRow[]> {
     return rawRows<ApiKeyRow>(
       this.tx,
@@ -88,7 +106,7 @@ export class DrizzleApiKeyRepository {
         from api_key k join service_account sa on sa.id = k.service_account_id
         left join lateral (select created_by from "grant" where subject_type = 'service_account' and subject_id = k.service_account_id order by created_at limit 1) g on true
         left join "user" u on u.id = g.created_by
-        where k.org_id = ${this.orgId}
+        where k.org_id = ${this.orgId} and left(k.prefix, ${OAUTH_ACCESS_TOKEN_PREFIX.length}) <> ${OAUTH_ACCESS_TOKEN_PREFIX}
         order by k.revoked_at is not null, k.created_at desc`,
     );
   }

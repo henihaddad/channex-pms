@@ -2,7 +2,9 @@ import type { NextRequest } from "next/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { isOAuthAccessToken } from "@pms/core";
 import { HttpProblem } from "../errors";
+import { oauthUrls } from "../oauth";
 import { invalidApiKey, resolvePresentedKey, runAsApiKey, type ApiKeyPrincipal } from "../api-key";
 import { invoke, type Op } from "./op";
 import { OPS } from "./ops";
@@ -33,7 +35,9 @@ export function toolError(e: unknown, principal: ApiKeyPrincipal): CallToolResul
     if (e.status === 403 && e.code === "forbidden") {
       const missing = String(e.extras.missing ?? "");
       const level = ACCESS_LABEL[principal.scopes[0] ?? ""] ?? "this access level";
-      text = `Not allowed: this API key ("${principal.name}", ${level}) does not include ${missing}. The host can create a key with ${accessFor(missing)} on Settings → API & AI.`;
+      text = principal.oauth
+        ? `Not allowed: this connection ("${principal.name}", ${level}) does not include ${missing}. The host can disconnect it on Settings → API & AI and connect again with ${accessFor(missing)}.`
+        : `Not allowed: this API key ("${principal.name}", ${level}) does not include ${missing}. The host can create a key with ${accessFor(missing)} on Settings → API & AI.`;
     } else {
       text = [e.title, e.detail, e.extras.issues ? JSON.stringify(e.extras.issues) : ""]
         .filter(Boolean)
@@ -77,9 +81,12 @@ function buildServer(principal: ApiKeyPrincipal): McpServer {
   return server;
 }
 
-/** The key from `Authorization: Bearer otab_…`, or the last path segment for clients that cannot set headers. */
+/**
+ * The key from `Authorization: Bearer otab_…`, or the last path segment for clients that
+ * cannot set headers. An OAuth access token never travels in a URL (MCP authorization spec).
+ */
 function presentedKey(req: NextRequest, fromPath?: string): string | null {
-  if (fromPath) return fromPath;
+  if (fromPath) return isOAuthAccessToken(fromPath) ? null : fromPath;
   const auth = req.headers.get("authorization");
   return auth?.startsWith("Bearer ") ? auth.slice(7).trim() : null;
 }
@@ -92,8 +99,13 @@ export async function handleMcp(req: NextRequest, fromPath?: string): Promise<Re
   const secret = presentedKey(req, fromPath);
   const principal = secret ? await resolvePresentedKey(secret, "mcp") : null;
   if (!principal) {
+    // RFC 9728 §5.1: point the client at the protected resource metadata, so it can sign in
     const res = invalidApiKey().toResponse();
-    res.headers.set("www-authenticate", 'Bearer realm="otabridge"');
+    const { resourceMetadata } = await oauthUrls();
+    res.headers.set(
+      "www-authenticate",
+      `Bearer realm="otabridge", resource_metadata="${resourceMetadata}"${secret ? ', error="invalid_token"' : ""}`,
+    );
     return res;
   }
   return runAsApiKey(principal, async () => {

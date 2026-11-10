@@ -22,6 +22,11 @@ export interface FormState {
 
 const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 
+/** Where to go after signing in: a same-site path only, so the parameter is never an open redirect. */
+function safeNext(raw: string): string {
+  return raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\") ? raw : "/";
+}
+
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(12),
@@ -67,10 +72,13 @@ export const signUpAction = publicAction<[FormState, FormData], FormState>(
 export const loginAction = publicAction<[FormState, FormData], FormState>(
   "auth",
   async (_prev, fd) => {
-    let next = "/";
+    // spec 02 §2.6: back to the page that asked for a sign-in (an MCP client's consent screen)
+    const after = safeNext(field(fd, "next"));
+    let next = after;
     const state = await guarded(async () => {
       const r = await loginFlow(field(fd, "email"), field(fd, "password"));
-      if (r.kind === "totp_required") next = "/totp";
+      if (r.kind === "totp_required")
+        next = after === "/" ? "/totp" : `/totp?next=${encodeURIComponent(after)}`;
     });
     if (state.error) return state;
     redirect(next);
@@ -82,7 +90,7 @@ export const totpAction = publicAction<[FormState, FormData], FormState>(
   async (_prev, fd) => {
     const state = await guarded(() => totpFlow(field(fd, "code")));
     if (state.error) return state;
-    redirect("/");
+    redirect(safeNext(field(fd, "next")));
   },
 );
 
@@ -137,7 +145,6 @@ export const stepUpAction = publicAction<[FormState, FormData], FormState>(
   async (_prev, fd) => {
     const state = await guarded(() => stepUpFlow(field(fd, "password")));
     if (state.error) return state;
-    const next = field(fd, "next");
-    redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+    redirect(safeNext(field(fd, "next")));
   },
 );

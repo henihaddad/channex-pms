@@ -8,6 +8,20 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- "Sign in with OTAbridge" for Claude (spec 04 §4.7b, persona "the host who runs the business
+  through Claude", spec 02). On claude.ai, add `https://app.otabridge.com/api/mcp` as a custom
+  connector, sign in, pick the organization and the access level (the four of API keys, never
+  above your own), and approve: no key to copy. OTAbridge implements the MCP authorization spec
+  (2025-06-18): protected resource metadata and a `WWW-Authenticate` pointer on the MCP
+  server's 401, authorization server metadata, dynamic client registration, PKCE (S256),
+  one-hour access tokens and rotating 60-day refresh tokens, and token revocation. A replayed
+  code or refresh token ends the connection. Settings → API & AI lists connected apps with
+  their access and last use, with Disconnect; the activity log reads "via Claude (claude.ai)".
+  The connect instructions now lead with signing in; the key in the URL is kept as a fallback.
+  Signing in from a link now returns to that page afterwards (`/login?next=`, same-site paths
+  only). New tables `oauth_client`, `oauth_grant`, `oauth_code`, `oauth_refresh_token`
+  (migration `0031_oauth`).
+
 - An "Upgrade" pill in the console header: the days left in the trial, or the Starter plan's
   name, with a link to Billing. Hidden on Growth, Scale and complimentary plans.
 - Claude can run the business (spec 04 §4.7a/b, persona "the host who runs the business

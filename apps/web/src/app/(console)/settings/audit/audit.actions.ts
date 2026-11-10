@@ -6,7 +6,7 @@ import { withPermission } from "@/server/with-permission";
 export interface AuditRow {
   seq: number;
   action: string;
-  actor: { type: string; id: string; label?: string };
+  actor: { type: string; id: string; label?: string; via?: "api_key" | "app" };
   subject: { kind: string; id: string };
   surface: string;
   occurredAt: string;

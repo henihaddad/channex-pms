@@ -2,18 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  apiKeyPermissions,
   apiKeyVisiblePrefix,
   formatApiKey,
   hashApiKey,
   Id,
   isApiKeyAccess,
+  isOAuthAccessToken,
   type ApiKeyAccess,
 } from "@pms/core";
-import { evaluate, PERMISSIONS, type RoleKey } from "@pms/authz";
-import { DrizzleApiKeyRepository, DrizzleIdentityRepository, type ApiKeyRow } from "@pms/db";
-import { withPermission, type ActorCtx } from "@/server/with-permission";
+import {
+  DrizzleApiKeyRepository,
+  DrizzleOAuthGrantRepository,
+  type ApiKeyRow,
+  type ConnectedAppRow,
+} from "@pms/db";
+import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
+import { permissionsFor } from "@/server/key-permissions";
 
 export interface CreateKeyState {
   error?: string;
@@ -29,33 +34,6 @@ export const listApiKeys = withPermission<[], ApiKeyRow[]>(
   async (ctx) => new DrizzleApiKeyRepository(ctx.tx, ctx.orgId).list(),
 );
 
-/**
- * The access level's permissions, narrowed to what the creator holds at organization scope:
- * a key never does more than the person who made it (spec 02 §2.5, no escalation by authoring).
- */
-async function permissionsFor(ctx: ActorCtx, access: ApiKeyAccess): Promise<string[]> {
-  const grants = await new DrizzleIdentityRepository(ctx.tx).listGrantsForSubject(
-    "user",
-    ctx.userId,
-  );
-  const graph = { orgId: ctx.orgId, groupProperties: new Map() };
-  const mine = grants.map((g) => ({
-    role: (g.roleKey ?? "viewer") as RoleKey,
-    scope: { kind: g.scopeType, id: g.scopeId },
-    ...(g.overrides ? { overrides: g.overrides as never } : {}),
-    expiresAt: g.expiresAt,
-  }));
-  return apiKeyPermissions(access, PERMISSIONS).filter(
-    (p) =>
-      evaluate({
-        grants: mine,
-        permission: p,
-        target: { kind: "organization", id: ctx.orgId },
-        graph,
-      }).allow,
-  );
-}
-
 /** Settings → API & AI: a key for Claude (or any script), with one of four access levels. */
 export const createApiKeyAction = withPermission<[CreateKeyState, FormData], CreateKeyState>(
   "api_key:create",
@@ -70,7 +48,9 @@ export const createApiKeyAction = withPermission<[CreateKeyState, FormData], Cre
     if (name.length < 1 || name.length > 60) return { error: "name" };
     if (!isApiKeyAccess(access)) return { error: "access" };
     const c = await container();
-    const secret = formatApiKey(c.crypto.randomToken(30));
+    // a key never looks like a connected app's access token (`otab_oat_…`), which only the MCP server takes
+    let secret = formatApiKey(c.crypto.randomToken(30));
+    while (isOAuthAccessToken(secret)) secret = formatApiKey(c.crypto.randomToken(30));
     await new DrizzleApiKeyRepository(ctx.tx, ctx.orgId).create({
       apiKeyId: Id.next(),
       serviceAccountId: Id.next(),
@@ -94,6 +74,30 @@ export const revokeApiKeyAction = withPermission<[FormData], void>(
     const c = await container();
     await new DrizzleApiKeyRepository(ctx.tx, ctx.orgId).revoke(
       String(fd.get("keyId")),
+      c.clock.now().toString(),
+    );
+    revalidatePath("/settings/api");
+  },
+);
+
+/** Apps connected by "Sign in with OTAbridge" (spec 04 §4.7b): Claude on claude.ai, and the like. */
+export const listConnectedApps = withPermission<[], ConnectedAppRow[]>(
+  "api_key:read",
+  { scope: "organization", audit: false },
+  async (ctx) => new DrizzleOAuthGrantRepository(ctx.tx, ctx.orgId).list(),
+);
+
+/** Disconnect: the consent, its service account and every token it holds end at once. */
+export const disconnectAppAction = withPermission<[FormData], void>(
+  "api_key:revoke",
+  {
+    scope: "organization",
+    subject: (fd) => ({ kind: "oauth_grant", id: String(fd.get("grantId")) }),
+  },
+  async (ctx, fd) => {
+    const c = await container();
+    await new DrizzleOAuthGrantRepository(ctx.tx, ctx.orgId).revoke(
+      String(fd.get("grantId")),
       c.clock.now().toString(),
     );
     revalidatePath("/settings/api");

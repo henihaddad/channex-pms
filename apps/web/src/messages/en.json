@@ -429,7 +429,8 @@
     "actor": "Actor",
     "subject": "Subject",
     "when": "When",
-    "viaKey": "via API key ‘{name}’"
+    "viaKey": "via API key ‘{name}’",
+    "viaApp": "via {name}"
   },
   "properties": {
     "title": "Properties",
@@ -3623,7 +3624,7 @@
   "apiKeys": {
     "title": "API & AI",
     "intro": "Let Claude run the day-to-day with you: read the calendar and reservations, change prices and availability, answer guests and reviews. Claude cannot reach Airbnb, Booking.com or your other channels on its own; OTAbridge is that connection. Create a key, then connect Claude below.",
-    "testNotice": "While OTAbridge is in test, what Claude does through a key happens at once, with no confirmation step. Every action is checked against the key's access and written to the activity log as “via API key”.",
+    "testNotice": "While OTAbridge is in test, what Claude does happens at once, with no confirmation step. Every action is checked against the key's or the connection's access and written to the activity log as “via API key” or “via” the app's name.",
     "stepUp": "A key cannot re-enter a password, so nothing that asks a person to confirm their password (payouts, refunds, card details, deleting a property, managing people or keys) is ever available to a key.",
     "create": "Create a key",
     "createHint": "One key per assistant or script, so you can revoke one without touching the others.",
@@ -3667,10 +3668,37 @@
     "claudeCodeHint": "Run this in a terminal.",
     "desktop": "Claude Desktop",
     "desktopHint": "Add this to claude_desktop_config.json (Settings → Developer → Edit config), then restart Claude Desktop. Needs Node.js.",
-    "claudeAi": "claude.ai (custom connector)",
-    "claudeAiHint": "Settings → Connectors → Add custom connector, and paste this URL.",
+    "claudeAi": "claude.ai with a key (fallback)",
+    "claudeAiHint": "Only if signing in does not work for you: paste this URL instead.",
     "claudeAiWarning": "This URL contains your key: anyone who has it can act on your account. Never share it; revoke the key if it leaks.",
     "rest": "REST API",
-    "restHint": "Scripts can call the same operations. Reference: {url}"
+    "restHint": "Scripts can call the same operations. Reference: {url}",
+    "claudeAiOAuth": "claude.ai (recommended)",
+    "claudeAiOAuthHint": "Settings → Connectors → Add custom connector, paste this URL, then sign in to OTAbridge and approve. No key to copy; it appears under Connected apps, where you can disconnect it.",
+    "apps": "Connected apps",
+    "appsHint": "Apps you approved with “Sign in with OTAbridge”. Disconnecting ends their access at once.",
+    "appsEmpty": "No connected apps yet.",
+    "colApp": "App",
+    "colConnected": "Connected",
+    "colApprovedBy": "Approved by",
+    "disconnect": "Disconnect"
+  },
+  "oauth": {
+    "title": "Connect {client} to OTAbridge",
+    "intro": "{client} ({host}) asks to act on your OTAbridge account: read the calendar and reservations and, with the access you choose, change prices, answer guests and more.",
+    "introLocal": "{client}, running on this computer, asks to act on your OTAbridge account: read the calendar and reservations and, with the access you choose, change prices, answer guests and more.",
+    "org": "Organization",
+    "orgOne": "Organization:",
+    "access": "Access",
+    "never": "Whatever you choose, it can never handle payouts, refunds, card details, people, keys or deletions. Its actions appear in the activity log under its name, and you can disconnect it on Settings → API & AI.",
+    "approve": "Approve",
+    "deny": "Deny",
+    "footnote": "Approve only an app you have just added yourself.",
+    "errorTitle": "This link cannot be used",
+    "errorBody": "The app that sent you here is not registered with OTAbridge, or gave a return address we do not recognise. Start the connection again from the app.",
+    "errorAccess": "Choose an access level.",
+    "errorRequest": "This request is no longer valid. Start the connection again from the app.",
+    "noOrg": "Connecting an app needs the right to create API keys in an organization (owners and managers). Ask one of them to connect it.",
+    "back": "Back to OTAbridge"
   }
 }
