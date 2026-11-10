@@ -10,7 +10,9 @@ export type PublicReason =
   | "guest_portal"
   | "catalogue"
   | "calendar_export"
-  | "test_hook";
+  | "test_hook"
+  /** The MCP transport: the route checks the API key itself, every tool runs through withPermission. */
+  | "mcp";
 
 const PUBLIC = Symbol.for("pms.public");
 

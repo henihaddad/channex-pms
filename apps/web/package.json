@@ -19,6 +19,7 @@
     "deploy:cf": "wrangler deploy"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@opennextjs/cloudflare": "^1.20.6",
     "@pms/authz": "workspace:*",
     "@pms/cloudflare": "workspace:*",

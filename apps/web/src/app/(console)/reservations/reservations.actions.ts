@@ -7,7 +7,6 @@ import {
   cancellationFee,
   checkSellable,
   directBookingChange,
-  directBookingRevision,
   Id,
   planPayments,
   splitFullName,
@@ -32,8 +31,15 @@ import {
   sql,
   type TaskRow,
 } from "@pms/db";
-import { applyDirectRevision, issueCredential, recomputeAvailability } from "@pms/jobs";
+import { issueCredential, recomputeAvailability } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
+import {
+  applyDirect,
+  cancelDirectBooking,
+  createStaffBooking,
+  DIRECT_SOURCES,
+  staffCheck,
+} from "@/server/reservations";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
 
@@ -650,47 +656,6 @@ export interface StaffQuote {
   dueNow: { name: string; amountMinor: number } | null;
 }
 
-/** The sellability check and price the staff form shows before saving; the same check the create runs. */
-async function staffCheck(
-  ctx: ActorCtx,
-  i: {
-    propertyId: string;
-    roomTypeId: string;
-    ratePlanId: string;
-    arrivalDate: string;
-    departureDate: string;
-  },
-) {
-  const rateCells = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).rateCells(
-    i.ratePlanId,
-    i.arrivalDate,
-    i.departureDate,
-  );
-  const avail = await new DrizzleAriStore(ctx.tx).loadDesired(
-    i.propertyId,
-    i.arrivalDate,
-    i.departureDate,
-  );
-  const check = checkSellable({
-    arrivalDate: i.arrivalDate,
-    departureDate: i.departureDate,
-    rateCells,
-    availability: new Map(
-      avail.availability
-        .filter((a) => a.roomTypeId === i.roomTypeId)
-        .map((a) => [a.date, a.availability]),
-    ),
-  });
-  const [prop] = await rawRows<{ currency: string }>(
-    ctx.tx,
-    sql`select currency from property where id = ${i.propertyId}`,
-  );
-  const first = rateCells.find((c) => c.date === i.arrivalDate)?.values;
-  const longest = Math.max(first?.minStayArrival ?? 0, first?.minStay ?? 0);
-  const minStay = longest > 1 ? longest : null;
-  return { check, currency: prop?.currency ?? "EUR", minStay };
-}
-
 export const quoteStaffBookingAction = withPermission<
   [
     {
@@ -761,7 +726,6 @@ export const createStaffBookingAction = withPermission<
     redact: ["email", "phone", "fullName", "name", "surname", "note"],
   },
   async (ctx, _prev, fd) => {
-    const c = await container();
     const p = staffSchema.safeParse(Object.fromEntries(fd.entries()));
     if (!p.success)
       return { error: p.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
@@ -772,52 +736,16 @@ export const createStaffBookingAction = withPermission<
         ? { name: input.name, surname: input.surname }
         : null;
     if (!who) return { error: "Write the guest's full name: first name and surname." };
-    const { check, currency } = await staffCheck(ctx, input);
     const totalMinor = input.total?.trim() ? Math.round(Number(input.total) * 100) : null;
     if (totalMinor !== null && (!Number.isFinite(totalMinor) || totalMinor < 0))
       return { error: "The total must be an amount, like 375.00." };
-    const priced =
-      totalMinor !== null && check.ok
-        ? { ...check, nightly: spreadTotal(check.nightly, totalMinor), totalMinor }
-        : check;
-    const rev = directBookingRevision(
-      {
-        bookingId: Id.next(),
-        propertyId: input.propertyId,
-        roomTypeId: input.roomTypeId,
-        ratePlanId: input.ratePlanId,
-        arrivalDate: input.arrivalDate,
-        departureDate: input.departureDate,
-        currency,
-        occupancy: { adults: input.adults, children: input.children, infants: 0 },
-        customer: {
-          ...who,
-          ...(input.email ? { email: input.email } : {}),
-          ...(input.phone ? { phone: input.phone } : {}),
-          ...(input.language ? { language: input.language } : {}),
-        },
-        source: input.source,
-        nowIso: c.clock.now().toString(),
-      },
-      priced,
-    );
-    if (!rev.ok) return { error: rev.error.message, reasons: check.reasons };
-    const id = await applyDirect(ctx, rev.value);
-    if (input.payment !== "later") {
-      const billing = new DrizzleBillingRepository(ctx.tx, ctx.orgId);
-      await billing.addPayment(
-        await billing.ensureFolio(id),
-        { method: input.payment, amountMinor: priced.totalMinor, state: "captured" },
-        ctx.userId,
-      );
-    }
-    if (input.note?.trim())
-      await new DrizzleOperationsRepository(ctx.tx, ctx.orgId).addNote({
-        subjectType: "booking",
-        subjectId: id,
-        body: input.note.trim(),
-        authorId: ctx.userId,
-      });
+    const r = await createStaffBooking(ctx, {
+      ...input,
+      guest: who,
+      totalMinor,
+    });
+    if (!r.ok) return { error: r.error, reasons: r.reasons };
+    const id = r.bookingId;
     revalidatePath("/reservations");
     return { bookingId: id };
   },
@@ -843,12 +771,6 @@ export const findReturningGuestsAction = withPermission<[{ q: string }], Returni
     return new DrizzleReservationRepository(ctx.tx, ctx.orgId, c.crypto).findGuests(q, 6);
   },
 );
-
-/** One apply path for staff, phone, walk-in and direct bookings (spec 08 §8.11); the engine uses the same function. */
-async function applyDirect(ctx: ActorCtx, rev: BookingRevisionPayload): Promise<string> {
-  const c = await container();
-  return applyDirectRevision(c, ctx.tx, ctx.orgId, rev, "direct_booking");
-}
 
 /**
  * Change the dates of a direct booking (spec 08 §8.4 Modify): the nights it already holds count
@@ -915,50 +837,13 @@ export const changeDatesAction = withPermission<[FormData], void>(
   },
 );
 
-const DIRECT_SOURCES = ["direct", "staff", "phone", "walk_in"];
-
 /** OTA bookings are modified at the OTA (spec 08 §8.4); direct ones cancel here with the policy fee. */
 export const cancelDirectBookingAction = withPermission<[FormData], void>(
   "booking:cancel",
   { ...bookingScope, subject: (fd) => ({ kind: "booking", id: String(fd.get("bookingId")) }) },
   async (ctx, fd) => {
-    await assertBookingInProperty(ctx, fd);
-    const c = await container();
-    const bookingId = String(fd.get("bookingId"));
-    const d = (await reservations(ctx, c).detail(bookingId))!;
-    if (!["direct", "staff", "phone", "walk_in"].includes(d.otaName ?? ""))
-      throw new HttpProblem(409, "ota_booking", "OTA bookings are modified at the OTA");
-    const last = await rawRows<{ normalised: BookingRevisionPayload; n: number }>(
-      ctx.tx,
-      sql`select normalised, (select count(*)::int from booking_revision where booking_id = ${bookingId}) as n from booking_revision where booking_id = ${bookingId} order by inserted_at desc limit 1`,
-    );
-    const prev = last[0]!.normalised;
-    const cancel = directBookingChange(
-      { ...prev, raw: {} },
-      { status: "cancelled", nowIso: c.clock.now().toString(), sequence: last[0]!.n + 1 },
-    );
-    await applyDirect(ctx, cancel);
-    const fee = cancellationFee(
-      { type: "flexible", freeUntilDaysBefore: 3, lateFeePercent: 100 },
-      {
-        arrivalDate: d.arrivalDate,
-        totalMinor: d.totalAmountMinor,
-        firstNightMinor: d.rooms[0]?.days[0]?.amountMinor ?? 0,
-      },
-      c.clock.today(d.timezone).toString(),
-    );
-    const billing = new DrizzleBillingRepository(ctx.tx, ctx.orgId);
-    if (fee > 0)
-      await billing.addLine(
-        await billing.ensureFolio(bookingId),
-        {
-          kind: "cancellation_fee",
-          description: "Cancellation fee",
-          date: c.clock.today(d.timezone).toString(),
-          amountMinor: fee,
-        },
-        ctx.userId,
-      );
+    const bookingId = await assertBookingInProperty(ctx, fd);
+    await cancelDirectBooking(ctx, bookingId, String(fd.get("propertyId")));
     revalidatePath(`/reservations/${bookingId}`);
   },
 );

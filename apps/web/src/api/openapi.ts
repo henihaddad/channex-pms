@@ -6,6 +6,8 @@ import {
   rateEditSchema,
   restrictionEditSchema,
 } from "./schemas";
+import { OPS } from "../server/agent/ops";
+import type { Op } from "../server/agent/op";
 
 const schema = (s: z.ZodType) =>
   z.toJSONSchema(s, { target: "openapi-3.0", unrepresentable: "any" }) as Record<string, unknown>;
@@ -17,15 +19,67 @@ const problem = {
   content: { "application/problem+json": { schema: { $ref: "#/components/schemas/Problem" } } },
 };
 
+type Json = Record<string, unknown>;
+
+/**
+ * The paths of the day-to-day operations (spec 04 §4.7a), from the same op table the routes
+ * and the MCP tools use: GET takes the schema as query parameters, writes as a JSON body.
+ */
+export function opPaths(ops: readonly Op[] = OPS): Record<string, Json> {
+  const paths: Record<string, Json> = {};
+  for (const o of ops) {
+    const idKey = o.rest.idKey;
+    const input = z.toJSONSchema(idKey ? o.schema.omit({ [idKey]: true } as never) : o.schema, {
+      target: "openapi-3.0",
+      unrepresentable: "any",
+      io: "input",
+    }) as { properties?: Record<string, Json>; required?: string[] };
+    const parameters: Json[] = idKey
+      ? [{ name: "id", in: "path", required: true, schema: { type: "string" } }]
+      : [];
+    if (o.rest.method === "GET")
+      for (const [name, s] of Object.entries(input.properties ?? {}))
+        parameters.push({
+          name,
+          in: "query",
+          required: input.required?.includes(name) ?? false,
+          schema: s,
+          ...(typeof s.description === "string" ? { description: s.description } : {}),
+        });
+    const path = (paths[o.rest.path] ??= {});
+    path[o.rest.method.toLowerCase()] = {
+      operationId: o.name.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase()),
+      summary: o.title,
+      description: `${o.description}\n\nPermission: \`${o.permission}\`. MCP tool: \`${o.name}\`.`,
+      tags: [o.write ? "operations (write)" : "operations (read)"],
+      ...(parameters.length ? { parameters } : {}),
+      ...(o.rest.method === "GET"
+        ? {}
+        : { requestBody: { required: true, content: { "application/json": { schema: input } } } }),
+      responses: {
+        [String(o.rest.status ?? 200)]: {
+          description: "OK",
+          content: { "application/json": { schema: { type: "object" } } },
+        },
+        "400": problem,
+        "401": problem,
+        "403": problem,
+        ...(o.write ? { "404": problem, "409": problem, "422": problem } : {}),
+      },
+    };
+  }
+  return paths;
+}
+
 /** OpenAPI 3.1 for /api/v1 (spec 04 §4.7). Generated from the same Zod schemas the handlers validate with. */
 export function openApiDocument(baseUrl: string) {
   return {
     openapi: "3.1.0",
     info: {
       title: "OTAbridge API",
-      version: "0.1.0",
+      version: "0.2.0",
       description:
-        "Public API v1. Authenticate with the session cookie or `Authorization: Bearer <access token>` from POST /api/v1/auth/login; select the organization with `x-pms-org`.",
+        "Public API v1. Authenticate with an API key (`Authorization: Bearer otab_…`, created on Settings → API & AI; the key carries its organization), or with the session cookie or `Authorization: Bearer <access token>` from POST /api/v1/auth/login and `x-pms-org`. The same operations are served to Claude as an MCP server at /api/mcp.",
       license: {
         name: "Sustainable Use License",
         url: "https://github.com/henihaddad/channex-pms/blob/main/LICENSE.md",
@@ -35,7 +89,11 @@ export function openApiDocument(baseUrl: string) {
     security: [{ bearer: [] }, { cookie: [] }],
     components: {
       securitySchemes: {
-        bearer: { type: "http", scheme: "bearer" },
+        bearer: {
+          type: "http",
+          scheme: "bearer",
+          description: "An API key `otab_…` (Settings → API & AI) or an access token",
+        },
         cookie: { type: "apiKey", in: "cookie", name: "pms_at" },
       },
       schemas: {
@@ -99,6 +157,7 @@ export function openApiDocument(baseUrl: string) {
       },
     },
     paths: {
+      ...opPaths(),
       "/api/v1/properties": {
         get: {
           operationId: "listProperties",

@@ -16,5 +16,24 @@ await pms.ari.editRates({
 });
 ```
 
-The OpenAPI document is served at `/api/v1/openapi.json`. Money is integer minor units; dates are
+With an API key from Settings → API & AI (it carries its organization, no `orgId` needed):
+
+```ts
+const pms = createClient({ baseUrl: "https://app.otabridge.com", token: process.env.OTAB_KEY });
+const { arrivals, needsYou } = await pms.today();
+await pms.ari.setPrices({
+  propertyId,
+  firstNight: "2026-12-19",
+  lastNight: "2026-12-21",
+  priceMinor: 15500,
+});
+const { conversations } = await pms.conversations.list({ filter: "needs_reply" });
+await pms.conversations.send(
+  conversations[0].id,
+  conversations[0].propertyId,
+  "Yes, free parking.",
+);
+```
+
+The same operations are an MCP server at `/api/mcp` for Claude. The OpenAPI document is served at `/api/v1/openapi.json`. Money is integer minor units; dates are
 ISO calendar dates in the property's timezone.
