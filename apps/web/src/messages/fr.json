@@ -166,7 +166,9 @@
       "overview": "Vue d'ensemble"
     },
     "switchOrg": "Changer d'organisation",
-    "bookings": "Réservations"
+    "bookings": "Réservations",
+    "upgrade": "Passer au plan supérieur",
+    "trialLeft": "{n, plural, =0 {L’essai se termine aujourd’hui} one {# jour d’essai restant} other {# jours d’essai restants}}"
   },
   "auth": {
     "signIn": "Se connecter",

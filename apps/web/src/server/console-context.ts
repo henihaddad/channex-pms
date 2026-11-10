@@ -15,6 +15,11 @@ export interface ConsoleContext {
    * new account is never shown twelve things at once.
    */
   onboarding: OnboardingTrack[] | null;
+  /**
+   * What the header's upgrade pill needs: the plan and, during the trial, the days left.
+   * Null when self-hosted (no subscription row).
+   */
+  plan: { key: string; name: string; trialDaysLeft: number | null } | null;
 }
 
 export interface OnboardingTrack {
@@ -110,7 +115,29 @@ export async function consoleContext(orgId: string): Promise<ConsoleContext> {
     previousDone = previousDone && t.done;
   }
   const imp = await currentImpersonation();
+  // the trial ends on the subscription's date, or the starter plan's trial length after sign-up
+  // (the same rule as the expireTrials sweep in @pms/jobs)
+  const [sub] = await withoutTenant(c.db.db, (tx) =>
+    rawRows<{ key: string | null; name: string | null; days_left: number | null }>(
+      tx,
+      sql`select p.key, p.name,
+            (coalesce(s.trial_ends_on, (o.created_at::date + (select trial_days from plan where key = 'starter')))
+              - current_date)::int as days_left
+          from organization o left join subscription s on s.org_id = o.id left join plan p on p.id = s.plan_id
+          where o.id = ${orgId}`,
+    ),
+  );
   return {
+    plan:
+      state === "trial"
+        ? {
+            key: sub?.key ?? "trial",
+            name: sub?.name ?? "Trial",
+            trialDaysLeft: Math.max(0, sub?.days_left ?? 0),
+          }
+        : sub?.key
+          ? { key: sub.key, name: sub.name ?? sub.key, trialDaysLeft: null }
+          : null,
     state,
     access: consoleAccess(state),
     announcements,

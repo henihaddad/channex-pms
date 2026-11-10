@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- An "Upgrade" pill in the console header: the days left in the trial, or the Starter plan's
+  name, with a link to Billing. Hidden on Growth, Scale and complimentary plans.
+
 - `PMS_STEP_UP=off` skips the password re-check before sensitive actions (refunds, channel
   credentials, payouts…) for an install still in development. Permissions, scope and the
   audit log are unchanged; the default stays on.

@@ -277,6 +277,21 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           ))}
         </form>
       </HeaderMenu>
+      {cx?.plan && (cx.plan.trialDaysLeft !== null || cx.plan.key === "starter") ? (
+        // the upgrade pill: always in view during the trial and on the entry plan (spec 12 §12.5)
+        <Link
+          href="/settings/billing"
+          className="hidden items-center gap-2 rounded-full border border-[#f59e0b]/50 bg-[#fffbeb] py-1 ps-3 pe-1 text-[13px] font-medium text-[#92400e] hover:border-[#f59e0b] sm:inline-flex"
+          data-testid="upgrade-pill"
+        >
+          {cx.plan.trialDaysLeft !== null
+            ? t("trialLeft", { n: cx.plan.trialDaysLeft })
+            : cx.plan.name}
+          <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 font-semibold text-[#141716]">
+            {t("upgrade")}
+          </span>
+        </Link>
+      ) : null}
       {bell}
       <LinkButton href="/reservations/new" variant="primary" className="hidden sm:inline-flex">
         + {t("newReservation")}

@@ -174,7 +174,9 @@
       "overview": "Overview"
     },
     "switchOrg": "Switch organization",
-    "bookings": "Bookings"
+    "bookings": "Bookings",
+    "upgrade": "Upgrade",
+    "trialLeft": "{n, plural, =0 {Trial ends today} one {# day left in trial} other {# days left in trial}}"
   },
   "auth": {
     "signIn": "Sign in",

@@ -85,6 +85,12 @@ ack are exempt. Losing a booking to a quota would be indefensible.
 
 ## 12.5 Billing (hosted service; v1 scope)
 
+The console header carries an upgrade pill wherever the plan can grow: during the trial it
+reads "N days left in trial · Upgrade" (the trial ends on the subscription's date, else the
+starter plan's trial length after sign-up, as the expiry sweep counts it), and on Starter it
+names the plan with "Upgrade". It links to Settings › Billing and is hidden on Growth, Scale,
+the complimentary plan and self-hosted installs.
+
 - **Plan model** — **per active unit per month** with volume tiers (STR managers
   count units, not properties), plus optional add-ons (priority support). The
   booking engine and owner portal are included in every plan — they are product,
