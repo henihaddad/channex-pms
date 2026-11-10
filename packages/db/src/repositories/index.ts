@@ -130,3 +130,11 @@ export {
   type ApiKeyRow,
   type ResolvedApiKey,
 } from "./api-keys.js";
+export {
+  DrizzleOAuthStore,
+  DrizzleOAuthGrantRepository,
+  type OAuthClientRow,
+  type OAuthCodeRow,
+  type OAuthRefreshRow,
+  type ConnectedAppRow,
+} from "./oauth.js";

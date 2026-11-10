@@ -13,9 +13,12 @@ import { Alert, Button, Field, Input, Label } from "@/components/ui";
 export function LoginForm({
   labels,
   linkOnly,
+  next = "",
 }: {
   labels: Record<"email" | "password" | "submit" | "forgot" | "or" | "emailLink", string>;
   linkOnly: boolean;
+  /** The page to return to after signing in. */
+  next?: string;
 }) {
   const [state, action, pending] = useActionState(loginAction, {});
   const [link, linkAction, linkPending] = useActionState(requestSignInLinkAction, {});
@@ -24,6 +27,7 @@ export function LoginForm({
     <form action={action} className="flex flex-col gap-[18px]">
       {error ? <Alert>{error}</Alert> : null}
       {link.message ? <Alert tone="success">{link.message}</Alert> : null}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Field label={labels.email} name="email" type="email" autoComplete="email" />
       {linkOnly ? null : (
         <>

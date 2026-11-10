@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { headers } from "next/headers";
-import { hashApiKey, isApiKey } from "@pms/core";
+import { hashApiKey, isApiKey, isOAuthAccessToken } from "@pms/core";
 import { resolveApiKey, withoutTenant, type ResolvedApiKey } from "@pms/db";
 import { container } from "./container";
 import { HttpProblem } from "./errors";
@@ -9,6 +9,8 @@ import { HttpProblem } from "./errors";
 export interface ApiKeyPrincipal extends ResolvedApiKey {
   /** Where the call came in, for the audit entry's `surface`. */
   surface: "api" | "mcp";
+  /** An access token from "Sign in with OTAbridge" (spec 04 §4.7b), not a key a person created. */
+  oauth: boolean;
 }
 
 const store = new AsyncLocalStorage<{ principal: ApiKeyPrincipal }>();
@@ -21,16 +23,22 @@ export const invalidApiKey = () =>
     "Create a key on Settings → API & AI and send it as Authorization: Bearer otab_…",
   );
 
-/** Look a presented secret up by its hash; null for an unknown, revoked or expired key. */
+/**
+ * Look a presented secret up by its hash; null for an unknown, revoked or expired key. An
+ * OAuth access token is issued for the MCP server alone (its audience, RFC 8707), so the
+ * REST API does not take one.
+ */
 export async function resolvePresentedKey(
   secret: string,
   surface: ApiKeyPrincipal["surface"],
 ): Promise<ApiKeyPrincipal | null> {
   if (!isApiKey(secret)) return null;
+  const oauth = isOAuthAccessToken(secret);
+  if (oauth && surface !== "mcp") return null;
   const c = await container();
   const hash = hashApiKey(c.sha256Hex, secret);
   const r = await withoutTenant(c.db.db, (tx) => resolveApiKey(tx, hash));
-  return r ? { ...r, surface } : null;
+  return r ? { ...r, surface, oauth } : null;
 }
 
 /** Run `fn` as this key: the MCP route resolves once per request, every tool call inside reuses it. */

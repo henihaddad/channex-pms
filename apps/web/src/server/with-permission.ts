@@ -87,7 +87,16 @@ export interface PermissionOptions<A extends unknown[]> {
   audit?: boolean;
   /** Set by `withPermission.route`: the route flavour builds its own step-up redirect. */
   routeFlavour?: boolean;
+  /**
+   * The organization the action lands in, when the person picks it in the form instead of the
+   * console's current one (the MCP consent screen, spec 04 §4.7b). A person only: an API key
+   * always acts in its own organization. Membership is still the grant check's: no grant in
+   * that organization, no permission.
+   */
+  org?: (...args: A) => string | null | undefined;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const WRAPPED = Symbol.for("pms.wrapped");
 const STEP_UP_WINDOW_MS = 5 * 60 * 1000;
@@ -123,7 +132,10 @@ export function withPermission<A extends unknown[], O>(
     const key = await currentApiKey();
     const session = key ? null : await currentSession();
     if (!key && !session) throw unauthorized();
-    const orgId = key ? (key.orgId as Id) : await currentOrgId();
+    const picked = !key && opts.org ? opts.org(...args) : null;
+    if (picked != null && !UUID.test(picked))
+      throw new HttpProblem(400, "no_organization", "No organization selected");
+    const orgId = key ? (key.orgId as Id) : ((picked as Id | null) ?? (await currentOrgId()));
     if (!orgId) throw new HttpProblem(400, "no_organization", "No organization selected");
     const subjectId = (key ? key.serviceAccountId : session!.userId) as Id;
     const c = await container();
@@ -138,6 +150,7 @@ export function withPermission<A extends unknown[], O>(
           type: "service_account",
           id: key.serviceAccountId,
           label: key.name,
+          via: key.oauth ? "app" : "api_key",
           ...(key.createdBy ? { createdBy: key.createdBy } : {}),
         }
       : imp

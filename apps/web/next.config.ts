@@ -24,6 +24,19 @@ const nextConfig: NextConfig = {
   ...(cloudflare ? { turbopack: { resolveAlias: workerShims } } : {}),
   experimental: { authInterrupts: true },
   agentRules: false,
+  // spec 04 §4.7b: OAuth discovery documents live at well-known paths; the handlers live under /oauth
+  rewrites: async () => [
+    { source: "/.well-known/oauth-protected-resource", destination: "/oauth/metadata/resource" },
+    {
+      source: "/.well-known/oauth-protected-resource/:path*",
+      destination: "/oauth/metadata/resource",
+    },
+    { source: "/.well-known/oauth-authorization-server", destination: "/oauth/metadata/server" },
+    {
+      source: "/.well-known/oauth-authorization-server/:path*",
+      destination: "/oauth/metadata/server",
+    },
+  ],
   // spec 10 §10.3: the funnel may be framed by the property's own site; everything else stays same-origin
   headers: async () => [
     {

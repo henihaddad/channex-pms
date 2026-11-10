@@ -11,6 +11,8 @@ export interface Actor {
   label?: string;
   /** Who created that key. */
   createdBy?: string;
+  /** An API key, or an app connected by sign-in (spec 04 §4.7b): the activity log says which. */
+  via?: "api_key" | "app";
 }
 
 export interface TenantContext {

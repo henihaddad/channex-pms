@@ -56,6 +56,14 @@
     "publicReason": "auth"
   },
   {
+    "file": "src/app/(auth)/oauth/authorize/authorize.actions.ts",
+    "export": "approveAuthorizationAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:create",
+    "scope": "organization"
+  },
+  {
     "file": "src/app/(book)/book/book.actions.ts",
     "export": "confirmAction",
     "kind": "action",
@@ -1380,7 +1388,23 @@
   },
   {
     "file": "src/app/(console)/settings/api/api-keys.actions.ts",
+    "export": "disconnectAppAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:revoke",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/api/api-keys.actions.ts",
     "export": "listApiKeys",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "api_key:read",
+    "scope": "organization"
+  },
+  {
+    "file": "src/app/(console)/settings/api/api-keys.actions.ts",
+    "export": "listConnectedApps",
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "api_key:read",
@@ -2232,6 +2256,76 @@
     "kind": "route",
     "wrapper": "withPermission.route",
     "permission": "booking:read"
+  },
+  {
+    "file": "src/app/oauth/metadata/resource/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/metadata/resource/route.ts",
+    "export": "OPTIONS",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/metadata/server/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/metadata/server/route.ts",
+    "export": "OPTIONS",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/register/route.ts",
+    "export": "OPTIONS",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/register/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/revoke/route.ts",
+    "export": "OPTIONS",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/revoke/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/token/route.ts",
+    "export": "OPTIONS",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
+  },
+  {
+    "file": "src/app/oauth/token/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "publicRoute",
+    "publicReason": "oauth"
   },
   {
     "file": "src/app/ops/ops.actions.ts",

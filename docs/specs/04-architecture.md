@@ -334,17 +334,81 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
   `WWW-Authenticate: Bearer`. The route is `publicRoute("mcp")` because the transport itself
   carries no permission; the key is resolved once per request and every tool runs inside
   `withPermission` as that key, so permission, scope, audit (`surface = mcp`) and tenant
-  isolation are exactly the REST path's.
+  isolation are exactly the REST path's. The 401 carries `WWW-Authenticate: Bearer
+  realm="otabridge", resource_metadata="<app>/.well-known/oauth-protected-resource/api/mcp"`
+  (plus `error="invalid_token"` when a bearer was sent), which starts the sign-in below.
 - **Tools** are the operations of §4.7a, one each, with descriptions written for the model
   (ids come from `list_properties` and `get_today`; money in minor units; dates YYYY-MM-DD).
   A refusal is a tool result with `isError: true` that names the missing permission, the
   key's access level and the level that would allow it, so the model can tell the host what
   to change, never a protocol error. Validation and domain errors come back the same way.
-- **Connecting.** Claude Code: `claude mcp add --transport http otabridge <app>/api/mcp
-  --header "Authorization: Bearer <key>"`. Claude Desktop: `mcp-remote` in
-  `claude_desktop_config.json` with the header from an environment variable. claude.ai:
-  Settings → Connectors → custom connector with `<app>/api/mcp/<key>`. OAuth for claude.ai
-  connectors is the next step, which retires the key-in-URL form.
+- **Sign in with OTAbridge** (OAuth 2.1, the MCP authorization spec of 2025-06-18). OTAbridge
+  is both the resource server and the authorization server; the issuer is
+  `NEXT_PUBLIC_APP_URL`. Rules in `@pms/core` (`agent/oauth.ts`), endpoints in
+  `apps/web/src/server/oauth.ts` behind `publicRoute("oauth")` adapters.
+  - *Discovery.* `GET /.well-known/oauth-protected-resource` and
+    `/.well-known/oauth-protected-resource/api/mcp` (RFC 9728): `resource` =
+    `<app>/api/mcp`, `authorization_servers` = [`<app>`], `bearer_methods_supported`
+    [`header`], `scopes_supported` [`mcp`]. `GET /.well-known/oauth-authorization-server`
+    (RFC 8414): authorization, token, registration and revocation endpoints; response type
+    `code`; grants `authorization_code`, `refresh_token`; PKCE `S256` only; client
+    authentication `none` (public clients), `client_secret_post` or `client_secret_basic`;
+    `authorization_response_iss_parameter_supported`. Both are rewrites (next.config.ts) onto
+    `/oauth/metadata/*`. Metadata, registration, token and revocation answer CORS (`*`).
+  - *Registration* `POST /oauth/register` (RFC 7591, JSON): redirect URIs must be `https`, or
+    `http` on `localhost`/`127.0.0.1`/`[::1]` (desktop and CLI clients); no fragment, no
+    credentials, at most ten; no allowlist of hosts (`https://claude.ai/api/mcp/auth_callback`
+    and `https://claude.com/api/mcp/auth_callback` pass the rule like any other). Returns
+    `client_id` (`otab_client_…`), and a `client_secret` only for a client that asked for a
+    secret-based method (stored as its SHA-256). At most 20 registrations per address per
+    hour (429). Table `oauth_client` (global).
+  - *Authorization* `GET /oauth/authorize`, a page in the sign-in layout. An unknown
+    `client_id` or a `redirect_uri` that is not exactly a registered one (a loopback URI may
+    change port, OAuth 2.1 §8.4.2) shows an error and never redirects. Otherwise protocol
+    errors go back to the client: `response_type` must be `code`, `code_challenge` with
+    `code_challenge_method=S256` is required, `resource` (RFC 8707), when sent, must be
+    `<app>/api/mcp` (`invalid_target`). `state` is echoed whenever sent; it is optional,
+    because PKCE carries the CSRF protection and some SDK clients omit it. Not signed in: the
+    proxy (or the page) sends the person to `/login?next=…` and back; the login and two-factor
+    forms follow `next` only when it is a same-site path. The consent screen names the client
+    and its redirect host ("Claude (claude.ai)", or "on this computer" for loopback), lets the
+    person pick the organization (only those where they hold `api_key:create`) and the access
+    level (the four of §4.7a, Full access preselected). Approve is
+    `withPermission("api_key:create")` in the picked organization (the `org` option of
+    `withPermission`, a person only; membership is still the grant check): it creates a
+    service account named after the client with the level's permissions narrowed to the
+    approver's own, the consent row `oauth_grant` (org-scoped, RLS), and a single-use code
+    (`otab_oac_…`, SHA-256 at rest, 5 minutes, table `oauth_code`, global) bound to client,
+    redirect URI, PKCE challenge, resource and service account; the browser then goes to
+    `redirect_uri?code&state&iss`. Deny goes to `redirect_uri?error=access_denied&state&iss`.
+  - *Token* `POST /oauth/token` (form-encoded). `authorization_code`: the code is consumed
+    atomically on first presentation; then client, redirect URI, expiry, resource and
+    `BASE64URL(SHA256(code_verifier)) = code_challenge` are checked. Any failure is
+    `invalid_grant` and withdraws the consent (the code is burned); a second presentation is a
+    replay and also revokes every token the first one issued. Success returns `access_token`
+    (`otab_oat_…`: an `api_key` row with `expires_at` one hour on, so `resolve_api_key` and
+    `withPermission` take it unchanged), `token_type` `Bearer`, `expires_in` 3600,
+    `refresh_token` (`otab_ort_…`, SHA-256 at rest, 60 days, table `oauth_refresh_token`,
+    global) and `scope` `mcp`, with `Cache-Control: no-store`. `refresh_token`: one-time
+    rotation; a rotated token presented again revokes the connection (OAuth 2.1 §4.3.1).
+    Errors are RFC 6749 JSON; an unknown client or a bad secret is `401 invalid_client`.
+    Issuing a token clears that connection's expired access tokens.
+  - *Audience.* An access token is for the MCP server only (RFC 8707): `/api/v1` answers
+    `401 invalid_api_key` to one, and `/api/mcp/<key>` refuses one in the path (tokens never
+    travel in a URL).
+  - *Revocation* `POST /oauth/revoke` (RFC 7009): a refresh token ends the whole connection, an
+    access token ends itself; unknown tokens and another client's tokens get the same 200.
+  - *Settings → API & AI › Connected apps*: name, access, connected on, last used, approved
+    by, and Disconnect (`withPermission("api_key:revoke")`), which revokes the consent, the
+    service account and its grant, every access token and every refresh token at once. The
+    connections' access tokens are not listed as keys. The activity log reads "via Claude
+    (claude.ai)" (the audit actor carries `via: "app"`); a refused tool tells the model to
+    disconnect and connect again with the access that would allow it.
+- **Connecting.** claude.ai (recommended): Settings → Connectors → custom connector with
+  `<app>/api/mcp`, then sign in and approve. Claude Code: `claude mcp add --transport http
+  otabridge <app>/api/mcp --header "Authorization: Bearer <key>"`. Claude Desktop:
+  `mcp-remote` in `claude_desktop_config.json` with the header from an environment variable.
+  The key-in-URL form `<app>/api/mcp/<key>` stays, documented as a fallback only.
 
 ## 4.8 Deployment topology
 

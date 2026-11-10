@@ -14,6 +14,13 @@ const PUBLIC_PREFIXES = [
   "/_next/",
   "/favicon",
   "/icon",
+  // OAuth discovery and the endpoints MCP clients call without a session (spec 04 §4.7b);
+  // /oauth/authorize is a console page and goes through the session logic below
+  "/.well-known/",
+  "/oauth/metadata",
+  "/oauth/register",
+  "/oauth/token",
+  "/oauth/revoke",
 ];
 
 /**
@@ -28,9 +35,13 @@ export function proxy(request: NextRequest) {
   const access = request.cookies.get("pms_at");
   const refresh = request.cookies.get("pms_rt");
   if (!access && !refresh) {
+    // a page load comes back here after signing in (the login page follows same-site paths only)
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.search = "";
+    url.search =
+      request.method === "GET" && pathname !== "/"
+        ? `?next=${encodeURIComponent(pathname + search)}`
+        : "";
     return NextResponse.redirect(url);
   }
   // prefetches and form posts are left alone: the first would rotate the token behind the

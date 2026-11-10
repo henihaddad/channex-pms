@@ -12,7 +12,13 @@ export type PublicReason =
   | "calendar_export"
   | "test_hook"
   /** The MCP transport: the route checks the API key itself, every tool runs through withPermission. */
-  | "mcp";
+  | "mcp"
+  /**
+   * "Sign in with OTAbridge" for MCP clients (spec 04 §4.7b): discovery metadata, client
+   * registration, token and revocation endpoints. They authenticate the client and the code or
+   * token themselves; consent is a withPermission action on the authorize page.
+   */
+  | "oauth";
 
 const PUBLIC = Symbol.for("pms.public");
 

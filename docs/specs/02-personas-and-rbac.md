@@ -81,13 +81,17 @@ independent host or a small manager (one to twenty listings, often the `org_owne
 who would rather say "raise the weekends in December by 15 %", "who arrives tomorrow?", "answer
 the parking question" to Claude (claude.ai, Claude Desktop, Claude Code) than open five
 channel extranets. Claude cannot reach Airbnb or Booking.com on its own; we are that
-connection. The person creates an API key on Settings → API & AI with one of four access
-levels (§2.8) and connects Claude to our MCP server
-([04 §4.7b](./04-architecture.md#47b-mcp-server-for-ai-assistants)). Claude then acts as that
-key's **service account**: every tool call is a permission-checked, audited request like any
-other, attributed "via API key ‘Claude’" and to the person who created the key. Features
-built for this persona: API keys, the operations API ([04 §4.7a](./04-architecture.md#47a-api-keys-and-the-operations-api)),
-the MCP server.
+connection. On claude.ai the person pastes our MCP server's address as a custom connector,
+signs in to OTAbridge and approves Claude at one of four access levels (§2.8): "Sign in with
+OTAbridge" ([04 §4.7b](./04-architecture.md#47b-mcp-server-for-ai-assistants)), no key to
+copy. For Claude Code, Claude Desktop or a script they create an API key on Settings → API &
+AI instead. Either way Claude acts as a **service account**: every tool call is a
+permission-checked, audited request like any other, attributed "via Claude (claude.ai)" for a
+connected app or "via API key ‘Claude’" for a key, and to the person who approved or created
+it. Approving needs the same right as creating a key (`api_key:create`), and the access is
+never more than the approving person holds. Features built for this persona: API keys, the
+operations API ([04 §4.7a](./04-architecture.md#47a-api-keys-and-the-operations-api)), the MCP
+server and its sign-in.
 
 **Not a role: the guest.** Guests exist in a separate identity space with no
 staff-console access ([10](./10-booking-engine.md)): magic-link authentication to a

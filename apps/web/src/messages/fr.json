@@ -421,7 +421,8 @@
     "actor": "Acteur",
     "subject": "Objet",
     "when": "Quand",
-    "viaKey": "via la clé API ‘{name}’"
+    "viaKey": "via la clé API ‘{name}’",
+    "viaApp": "via {name}"
   },
   "properties": {
     "title": "Biens",
@@ -3614,7 +3615,7 @@
   "apiKeys": {
     "title": "API & IA",
     "intro": "Laissez Claude gérer le quotidien avec vous : lire le calendrier et les réservations, changer les prix et les disponibilités, répondre aux voyageurs et aux avis. Claude ne peut pas joindre Airbnb, Booking.com ni vos autres canaux seul ; OTAbridge est ce lien. Créez une clé, puis connectez Claude ci-dessous.",
-    "testNotice": "Tant qu'OTAbridge est en test, ce que Claude fait avec une clé s'exécute aussitôt, sans étape de confirmation. Chaque action est vérifiée selon l'accès de la clé et inscrite au journal d'activité « via la clé API ».",
+    "testNotice": "Tant qu'OTAbridge est en test, ce que fait Claude s'exécute aussitôt, sans étape de confirmation. Chaque action est vérifiée selon l'accès de la clé ou de la connexion et inscrite au journal d'activité « via la clé API » ou « via » le nom de l'application.",
     "stepUp": "Une clé ne peut pas ressaisir de mot de passe : rien de ce qui demande à une personne de confirmer son mot de passe (versements, remboursements, données de carte, suppression d'un logement, gestion des personnes ou des clés) n'est jamais accessible à une clé.",
     "create": "Créer une clé",
     "createHint": "Une clé par assistant ou script, pour pouvoir en révoquer une sans toucher aux autres.",
@@ -3658,10 +3659,37 @@
     "claudeCodeHint": "À lancer dans un terminal.",
     "desktop": "Claude Desktop",
     "desktopHint": "Ajoutez ceci à claude_desktop_config.json (Réglages → Développeur → Modifier la config), puis redémarrez Claude Desktop. Nécessite Node.js.",
-    "claudeAi": "claude.ai (connecteur personnalisé)",
-    "claudeAiHint": "Réglages → Connecteurs → Ajouter un connecteur personnalisé, et collez cette URL.",
+    "claudeAi": "claude.ai avec une clé (solution de secours)",
+    "claudeAiHint": "Seulement si la connexion ne fonctionne pas pour vous : collez plutôt cette URL.",
     "claudeAiWarning": "Cette URL contient votre clé : quiconque la détient peut agir sur votre compte. Ne la partagez jamais ; révoquez la clé si elle fuite.",
     "rest": "API REST",
-    "restHint": "Vos scripts peuvent appeler les mêmes opérations. Référence : {url}"
+    "restHint": "Vos scripts peuvent appeler les mêmes opérations. Référence : {url}",
+    "claudeAiOAuth": "claude.ai (recommandé)",
+    "claudeAiOAuthHint": "Réglages → Connecteurs → Ajouter un connecteur personnalisé, collez cette URL, puis connectez-vous à OTAbridge et approuvez. Aucune clé à copier ; elle apparaît dans Applications connectées, où vous pouvez la déconnecter.",
+    "apps": "Applications connectées",
+    "appsHint": "Les applications approuvées avec « Se connecter avec OTAbridge ». Les déconnecter coupe leur accès immédiatement.",
+    "appsEmpty": "Aucune application connectée.",
+    "colApp": "Application",
+    "colConnected": "Connectée le",
+    "colApprovedBy": "Approuvée par",
+    "disconnect": "Déconnecter"
+  },
+  "oauth": {
+    "title": "Connecter {client} à OTAbridge",
+    "intro": "{client} ({host}) demande à agir sur votre compte OTAbridge : lire le calendrier et les réservations et, selon l'accès choisi, modifier les prix, répondre aux voyageurs, etc.",
+    "introLocal": "{client}, sur cet ordinateur, demande à agir sur votre compte OTAbridge : lire le calendrier et les réservations et, selon l'accès choisi, modifier les prix, répondre aux voyageurs, etc.",
+    "org": "Organisation",
+    "orgOne": "Organisation :",
+    "access": "Accès",
+    "never": "Quel que soit votre choix, elle ne pourra jamais gérer les versements, remboursements, données de carte, personnes, clés ou suppressions. Ses actions figurent au journal d'activité sous son nom, et vous pouvez la déconnecter dans Réglages → API et IA.",
+    "approve": "Approuver",
+    "deny": "Refuser",
+    "footnote": "N'approuvez qu'une application que vous venez d'ajouter vous-même.",
+    "errorTitle": "Ce lien ne peut pas être utilisé",
+    "errorBody": "L'application qui vous a envoyé ici n'est pas enregistrée auprès d'OTAbridge, ou a donné une adresse de retour inconnue. Relancez la connexion depuis l'application.",
+    "errorAccess": "Choisissez un niveau d'accès.",
+    "errorRequest": "Cette demande n'est plus valable. Relancez la connexion depuis l'application.",
+    "noOrg": "Connecter une application demande le droit de créer des clés API dans une organisation (propriétaires et gestionnaires). Demandez à l'un d'eux de la connecter.",
+    "back": "Retour à OTAbridge"
   }
 }
