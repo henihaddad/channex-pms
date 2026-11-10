@@ -27,3 +27,4 @@ export * from "./owners/index.js";
 export * from "./analytics/index.js";
 export * from "./booking-engine/index.js";
 export * from "./platform/index.js";
+export * from "./agent/index.js";

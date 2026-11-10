@@ -28,6 +28,7 @@ import { currentImpersonation } from "./operator";
 import { consoleAccess, type TenantState } from "@pms/core";
 import { DrizzleOperatorRepository, withoutTenant } from "@pms/db";
 import { kickOutbox } from "./outbox-kick";
+import { currentApiKey } from "./api-key";
 
 /** Permissions that reveal guest PII or message bodies: never available to an impersonating operator (OPCON-1). */
 const IMPERSONATION_BLOCKED: ReadonlySet<string> = new Set([
@@ -56,6 +57,7 @@ const BILLING_ONLY_ALLOWED: ReadonlySet<string> = new Set([
 /** What a permission-wrapped handler receives. Everything it needs; nothing it could misuse. */
 export interface ActorCtx {
   orgId: Id;
+  /** The acting person, or the API key's service account (then `actor.type` is `service_account`). */
   userId: Id;
   actor: Actor;
   tx: Tx;
@@ -116,20 +118,31 @@ export function withPermission<A extends unknown[], O>(
   const wrapped = async (...rawArgs: A): Promise<O> => {
     const args = rawArgs;
     if (opts.schema) args[0] = parseInput(opts.schema, rawArgs[0]);
-    const session = await currentSession();
-    if (!session) throw unauthorized();
-    const orgId = await currentOrgId();
+    // spec 04 §4.7a: an API key acts as its service account, in the key's organization, with
+    // the key's grant; no cookie, no impersonation, no step-up (a key cannot re-enter a password)
+    const key = await currentApiKey();
+    const session = key ? null : await currentSession();
+    if (!key && !session) throw unauthorized();
+    const orgId = key ? (key.orgId as Id) : await currentOrgId();
     if (!orgId) throw new HttpProblem(400, "no_organization", "No organization selected");
+    const subjectId = (key ? key.serviceAccountId : session!.userId) as Id;
     const c = await container();
     const [rid, locale, ip] = await Promise.all([requestId(), currentLocale(), clientIp()]);
     // spec 02 §2.7: an operator inside an approved impersonation session acts as that tenant's
     // org_owner-level reader; PII and message bodies stay closed; writes only when approved.
-    const imp = await currentImpersonation();
+    const imp = key ? null : await currentImpersonation();
     if (imp && imp.orgId !== orgId)
       throw forbidden(permission, "impersonation session is for another organization");
-    const actor: Actor = imp
-      ? { type: "user", id: session.userId, impersonatedBy: session.userId }
-      : { type: "user", id: session.userId };
+    const actor: Actor = key
+      ? {
+          type: "service_account",
+          id: key.serviceAccountId,
+          label: key.name,
+          ...(key.createdBy ? { createdBy: key.createdBy } : {}),
+        }
+      : imp
+        ? { type: "user", id: subjectId, impersonatedBy: subjectId }
+        : { type: "user", id: subjectId };
     if (imp) {
       if (IMPERSONATION_BLOCKED.has(permission))
         throw forbidden(permission, "redacted during impersonation (OPCON-1)");
@@ -171,7 +184,7 @@ export function withPermission<A extends unknown[], O>(
                 id: "impersonation" as never,
                 orgId: orgId,
                 subjectType: "user" as const,
-                subjectId: session.userId,
+                subjectId,
                 roleKey: "org_owner",
                 customRoleId: null,
                 scopeType: "organization" as const,
@@ -181,7 +194,7 @@ export function withPermission<A extends unknown[], O>(
                 createdBy: null,
               },
             ]
-          : await repo.listGrantsForSubject("user", session.userId);
+          : await repo.listGrantsForSubject(key ? "service_account" : "user", subjectId);
         const target = opts.resolveScope
           ? await opts.resolveScope(...args)
           : { kind: "organization" as const, id: orgId };
@@ -217,7 +230,8 @@ export function withPermission<A extends unknown[], O>(
         });
         if (!decision.allow) throw forbidden(decision.missing, decision.reason);
         // PMS_STEP_UP=off (a development install) skips only the password re-check
-        if ((decision.stepUp || opts.stepUp) && c.config.PMS_STEP_UP !== "off") {
+        // an API key never meets step-up: what needs it for a person is never on a key (NEVER_ON_A_KEY)
+        if (session && (decision.stepUp || opts.stepUp) && c.config.PMS_STEP_UP !== "off") {
           // same transaction: a second connection would deadlock a single-connection driver (PGlite)
           const row = await repo.findSessionById(session.sessionId);
           const fresh =
@@ -233,14 +247,14 @@ export function withPermission<A extends unknown[], O>(
             action: permission,
             subject,
             after: redact(opts.auditInput ? opts.auditInput(...args) : args[0], opts.redact),
-            surface: "web",
+            surface: key ? key.surface : "web",
             ...(ip ? { ip } : {}),
             requestId: rid,
             occurredAt: c.clock.now().toString(),
           });
         const ctx: ActorCtx = {
           orgId,
-          userId: session.userId,
+          userId: subjectId,
           actor,
           tx,
           audit,

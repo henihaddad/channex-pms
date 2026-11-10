@@ -418,7 +418,8 @@
     "action": "Action",
     "actor": "Acteur",
     "subject": "Objet",
-    "when": "Quand"
+    "when": "Quand",
+    "viaKey": "via la clé API ‘{name}’"
   },
   "properties": {
     "title": "Biens",
@@ -3605,6 +3606,60 @@
   "settings": {
     "pages": "Pages des paramètres",
     "team": "Équipe et rôles",
-    "webhooks": "Webhooks et plugins"
+    "webhooks": "Webhooks et plugins",
+    "api": "API & IA"
+  },
+  "apiKeys": {
+    "title": "API & IA",
+    "intro": "Laissez Claude gérer le quotidien avec vous : lire le calendrier et les réservations, changer les prix et les disponibilités, répondre aux voyageurs et aux avis. Claude ne peut pas joindre Airbnb, Booking.com ni vos autres canaux seul ; OTAbridge est ce lien. Créez une clé, puis connectez Claude ci-dessous.",
+    "testNotice": "Tant qu'OTAbridge est en test, ce que Claude fait avec une clé s'exécute aussitôt, sans étape de confirmation. Chaque action est vérifiée selon l'accès de la clé et inscrite au journal d'activité « via la clé API ».",
+    "stepUp": "Une clé ne peut pas ressaisir de mot de passe : rien de ce qui demande à une personne de confirmer son mot de passe (versements, remboursements, données de carte, suppression d'un logement, gestion des personnes ou des clés) n'est jamais accessible à une clé.",
+    "create": "Créer une clé",
+    "createHint": "Une clé par assistant ou script, pour pouvoir en révoquer une sans toucher aux autres.",
+    "name": "Nom de la clé",
+    "nameHint": "Affiché dans le journal d'activité : « via la clé API ‘Claude’ ».",
+    "access": "Accès",
+    "level": {
+      "full": "Accès complet",
+      "read_only": "Lecture seule",
+      "messages": "Messages uniquement",
+      "prices": "Prix et disponibilités uniquement"
+    },
+    "levelHint": {
+      "full": "tout ce qu'un hôte fait au quotidien : calendrier, réservations, voyageurs, avis.",
+      "read_only": "voit tout, ne change rien.",
+      "messages": "lire et répondre aux voyageurs et aux avis ; ni prix, ni réservations.",
+      "prices": "lire le calendrier, changer les prix, les disponibilités et les durées minimales."
+    },
+    "submit": "Créer la clé",
+    "errorName": "Donnez un nom à la clé (60 caractères au plus).",
+    "errorAccess": "Choisissez un niveau d'accès.",
+    "created": "Clé « {name} » créée",
+    "shownOnce": "Copiez-la maintenant et gardez-la en lieu sûr : elle n'est affichée qu'une seule fois. Nous n'en conservons qu'une empreinte.",
+    "copy": "Copier",
+    "copied": "Copié",
+    "keys": "Clés",
+    "colName": "Nom",
+    "colAccess": "Accès",
+    "colKey": "Clé",
+    "colCreated": "Créée le",
+    "colLastUsed": "Dernière utilisation",
+    "colCreatedBy": "Créée par",
+    "never": "Jamais",
+    "revoke": "Révoquer",
+    "revoked": "Révoquée",
+    "empty": "Aucune clé pour l'instant.",
+    "connect": "Connecter Claude",
+    "connectWithKey": "Ces exemples utilisent la clé que vous venez de créer.",
+    "connectPlaceholder": "Remplacez <key> par une clé que vous avez créée.",
+    "claudeCode": "Claude Code",
+    "claudeCodeHint": "À lancer dans un terminal.",
+    "desktop": "Claude Desktop",
+    "desktopHint": "Ajoutez ceci à claude_desktop_config.json (Réglages → Développeur → Modifier la config), puis redémarrez Claude Desktop. Nécessite Node.js.",
+    "claudeAi": "claude.ai (connecteur personnalisé)",
+    "claudeAiHint": "Réglages → Connecteurs → Ajouter un connecteur personnalisé, et collez cette URL.",
+    "claudeAiWarning": "Cette URL contient votre clé : quiconque la détient peut agir sur votre compte. Ne la partagez jamais ; révoquez la clé si elle fuite.",
+    "rest": "API REST",
+    "restHint": "Vos scripts peuvent appeler les mêmes opérations. Référence : {url}"
   }
 }

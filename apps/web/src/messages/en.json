@@ -426,7 +426,8 @@
     "action": "Action",
     "actor": "Actor",
     "subject": "Subject",
-    "when": "When"
+    "when": "When",
+    "viaKey": "via API key ‘{name}’"
   },
   "properties": {
     "title": "Properties",
@@ -3614,6 +3615,60 @@
   "settings": {
     "pages": "Settings pages",
     "team": "Team & roles",
-    "webhooks": "Webhooks & plugins"
+    "webhooks": "Webhooks & plugins",
+    "api": "API & AI"
+  },
+  "apiKeys": {
+    "title": "API & AI",
+    "intro": "Let Claude run the day-to-day with you: read the calendar and reservations, change prices and availability, answer guests and reviews. Claude cannot reach Airbnb, Booking.com or your other channels on its own; OTAbridge is that connection. Create a key, then connect Claude below.",
+    "testNotice": "While OTAbridge is in test, what Claude does through a key happens at once, with no confirmation step. Every action is checked against the key's access and written to the activity log as “via API key”.",
+    "stepUp": "A key cannot re-enter a password, so nothing that asks a person to confirm their password (payouts, refunds, card details, deleting a property, managing people or keys) is ever available to a key.",
+    "create": "Create a key",
+    "createHint": "One key per assistant or script, so you can revoke one without touching the others.",
+    "name": "Key name",
+    "nameHint": "Shown in the activity log: “via API key ‘Claude’”.",
+    "access": "Access",
+    "level": {
+      "full": "Full access",
+      "read_only": "Read only",
+      "messages": "Messages only",
+      "prices": "Prices & availability only"
+    },
+    "levelHint": {
+      "full": "everything a host does day to day: calendar, reservations, guests, reviews.",
+      "read_only": "can look at everything, change nothing.",
+      "messages": "read and answer guests and reviews; no prices, no bookings.",
+      "prices": "read the calendar, change prices, availability and minimum stays."
+    },
+    "submit": "Create key",
+    "errorName": "Give the key a name (up to 60 characters).",
+    "errorAccess": "Choose an access level.",
+    "created": "Key “{name}” created",
+    "shownOnce": "Copy it now and keep it somewhere safe: it is shown only this once. We store only a fingerprint of it.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "keys": "Keys",
+    "colName": "Name",
+    "colAccess": "Access",
+    "colKey": "Key",
+    "colCreated": "Created",
+    "colLastUsed": "Last used",
+    "colCreatedBy": "Created by",
+    "never": "Never",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "empty": "No keys yet.",
+    "connect": "Connect Claude",
+    "connectWithKey": "These use the key you just created.",
+    "connectPlaceholder": "Replace <key> with a key you created.",
+    "claudeCode": "Claude Code",
+    "claudeCodeHint": "Run this in a terminal.",
+    "desktop": "Claude Desktop",
+    "desktopHint": "Add this to claude_desktop_config.json (Settings → Developer → Edit config), then restart Claude Desktop. Needs Node.js.",
+    "claudeAi": "claude.ai (custom connector)",
+    "claudeAiHint": "Settings → Connectors → Add custom connector, and paste this URL.",
+    "claudeAiWarning": "This URL contains your key: anyone who has it can act on your account. Never share it; revoke the key if it leaks.",
+    "rest": "REST API",
+    "restHint": "Scripts can call the same operations. Reference: {url}"
   }
 }
