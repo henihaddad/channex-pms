@@ -291,12 +291,7 @@ describe("one Airbnb listing, one property (spec 07 CH-5)", () => {
       return { id: "m" };
     };
     await expect(
-      activateConnection(
-        { db: handle.db, provider, clock, log },
-        ORG,
-        dup,
-        systemRunner(handle.db, ORG),
-      ),
+      activateConnection({ provider, clock, log }, ORG, dup, systemRunner(handle.db, ORG)),
     ).rejects.toThrow(/listing L1 is already linked to "Chiado Studio" \(active\)/);
     expect(mapped).toBe(0);
     // and the duplicate stays where it was: nothing half-activated
