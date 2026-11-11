@@ -3,6 +3,7 @@ import type {
   ConnectionHealth,
   ConnectionState,
   DerivedOption,
+  ListingClaim,
   MappingRow,
   Readiness,
 } from "@pms/core";
@@ -198,6 +199,34 @@ export class DrizzleChannelRepository {
       ...(r.occupancy ? { occupancy: Number(r.occupancy) } : {}),
       ...(r.rateType ? { rateType: r.rateType } : {}),
       ...(r.derivedOption ? { derivedOption: r.derivedOption as DerivedOption } : {}),
+    }));
+  }
+  /**
+   * Every listing linked on one Airbnb account (one provider channel), by which connection and
+   * property: what a new link of the same listing would collide with (spec 07 CH-5).
+   */
+  async listingClaims(channexChannelId: string): Promise<ListingClaim[]> {
+    const rows = await rawRows<{
+      listing_id: string;
+      connection_id: string;
+      property_id: string;
+      property_title: string;
+      state: string;
+    }>(
+      this.tx,
+      sql`select m.ota_room_code as listing_id, c.id as connection_id, c.property_id, p.title as property_title, c.state
+          from channel_mapping m
+          join channel_connection c on c.id = m.connection_id
+          join property p on p.id = c.property_id
+          where c.channex_channel_id = ${channexChannelId} and c.archived_at is null and m.status = 'active'
+          order by case when c.state in ('active','paused') then 0 else 1 end, c.created_at, c.id`,
+    );
+    return rows.map((r) => ({
+      listingId: r.listing_id,
+      connectionId: r.connection_id,
+      propertyId: r.property_id,
+      propertyTitle: r.property_title,
+      state: r.state,
     }));
   }
   /** Replace the connection's mapping set atomically; the audit entry carries before/after (MAP-6). */

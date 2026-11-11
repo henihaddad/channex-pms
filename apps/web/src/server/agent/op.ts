@@ -19,6 +19,8 @@ export interface Op<S extends z.ZodObject = z.ZodObject, O = unknown> {
   scope: ScopeKind;
   /** False for reads: MCP clients can run those without asking. */
   write: boolean;
+  /** A write that lands on the organization, not one property: it may create the property. */
+  orgWide?: boolean;
   /** Cannot be undone from here (a cancellation, a message the guest already read). */
   destructive?: boolean;
   schema: S;

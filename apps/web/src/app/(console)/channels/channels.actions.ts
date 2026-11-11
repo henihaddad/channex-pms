@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   coverageWarnings,
-  createProperty,
   Id,
+  listingConflictMessage,
+  listingConflicts,
   mappingDiff,
   nameSimilarity,
   sortWorstFirst,
@@ -18,10 +19,8 @@ import {
   type OurRatePlan,
   type Suggestion,
   type TheirRoom,
-  LocalDate,
 } from "@pms/core";
 import {
-  DrizzleAriStore,
   DrizzleChannelRepository,
   DrizzlePropertyRepository,
   type ChannelAccountRow,
@@ -44,6 +43,7 @@ import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { icalPath, icalToken } from "@/server/ical";
 import { HttpProblem } from "@/server/errors";
+import { airbnbAccount, importAirbnbListing } from "@/server/airbnb";
 import { ADAPTERS } from "@/api/schemas";
 
 const byProperty = {
@@ -517,6 +517,17 @@ export const saveMappingsAction = withPermission<
     const errors = validateMappings(mappings, ours, connection.propertyId, rooms);
     if (errors.length > 0)
       throw new HttpProblem(422, "mapping_invalid", errors.map((e) => e.message).join("; "));
+    // one Airbnb listing links to one property: the duplicates that left drafts stuck (CH-5)
+    if (connection.adapterCode === "AirBNB" && connection.channexChannelId) {
+      const taken = listingConflicts(
+        mappings.map((m) => m.roomCode),
+        await ch.listingClaims(connection.channexChannelId),
+        connectionId,
+        "save",
+      );
+      if (taken.length > 0)
+        throw new HttpProblem(409, "listing_already_linked", listingConflictMessage(taken));
+    }
     const before = await ch.listMappings(connectionId);
     const diff = mappingDiff(before, mappings);
     await ch.replaceMappings(connectionId, mappings, () => Id.next());
@@ -557,46 +568,6 @@ export interface ListingCandidate {
   city?: string;
   match: { propertyId: string; title: string; confidence: number } | null;
 }
-
-const IMPORT_HORIZON_DAYS = 365;
-const TZ_BY_COUNTRY: Record<string, string> = {
-  DE: "Europe/Berlin",
-  FR: "Europe/Paris",
-  ES: "Europe/Madrid",
-  PT: "Europe/Lisbon",
-  IT: "Europe/Rome",
-  NL: "Europe/Amsterdam",
-  BE: "Europe/Brussels",
-  AT: "Europe/Vienna",
-  CH: "Europe/Zurich",
-  GB: "Europe/London",
-  IE: "Europe/Dublin",
-  GR: "Europe/Athens",
-  HR: "Europe/Zagreb",
-  PL: "Europe/Warsaw",
-  CZ: "Europe/Prague",
-  SE: "Europe/Stockholm",
-  NO: "Europe/Oslo",
-  DK: "Europe/Copenhagen",
-  FI: "Europe/Helsinki",
-  TR: "Europe/Istanbul",
-  MA: "Africa/Casablanca",
-  TN: "Africa/Tunis",
-  EG: "Africa/Cairo",
-  AE: "Asia/Dubai",
-  SA: "Asia/Riyadh",
-  US: "America/New_York",
-  CA: "America/Toronto",
-  MX: "America/Mexico_City",
-  BR: "America/Sao_Paulo",
-  AU: "Australia/Sydney",
-  NZ: "Pacific/Auckland",
-  JP: "Asia/Tokyo",
-  TH: "Asia/Bangkok",
-  ID: "Asia/Jakarta",
-  IN: "Asia/Kolkata",
-  ZA: "Africa/Johannesburg",
-};
 
 async function airbnbChannelOf(ctx: ActorCtx, connectionId: string) {
   const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
@@ -644,23 +615,7 @@ export const importListingsPreview = withPermission<[{ connectionId: string }], 
   },
 );
 
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s.length === 0 ? 0 : s[Math.floor(s.length / 2)]!;
-};
-const mode = (xs: number[]) => {
-  const counts = new Map<number, number>();
-  for (const x of xs) counts.set(x, (counts.get(x) ?? 0) + 1);
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-};
-
-/**
- * Match-or-create (CH-5): a matched listing gets a connection on that property; an unmatched
- * one becomes a property built from the listing itself — title, place, capacity, photos and
- * description as Airbnb reports them, a Standard plan at the median of the host's prices for
- * the coming year, and the host's per-day prices and minimum stays written into the calendar.
- * Availability is not copied: Airbnb's blocks are its own bookings, imported on activation.
- */
+/** Match-or-create (CH-5), one listing at a time through the shared import (server/airbnb). */
 export const importListingsAction = withPermission<
   [
     {
@@ -676,124 +631,21 @@ export const importListingsAction = withPermission<
     subject: (i) => ({ kind: "channel_connection", id: i.connectionId }),
   },
   async (ctx, { connectionId, decisions }) => {
-    const c = await container();
-    const { channelId, mapped } = await airbnbChannelOf(ctx, connectionId);
-    const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
-    const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
-    const store = new DrizzleAriStore(ctx.tx);
-    const today = LocalDate.today("UTC");
-    const range = { from: today.toString(), to: today.plusDays(IMPORT_HORIZON_DAYS).toString() };
+    const account = await airbnbAccount(ctx, connectionId);
+    const claims = await new DrizzleChannelRepository(ctx.tx, ctx.orgId).listingClaims(
+      account.channelId,
+    );
     let created = 0;
     let connected = 0;
     for (const d of decisions) {
-      if (mapped.has(d.code)) continue;
-      let propertyId = d.propertyId;
-      let calendar: Awaited<ReturnType<typeof c.provider.getChannelListingCalendar>> | null = null;
-      if (!propertyId) {
-        const details = await c.provider.getChannelListingDetails(
-          { id: channelId },
-          d.code,
-          meta(ctx, `airbnb.listing:${d.code}`),
-        );
-        calendar = await c.provider.getChannelListingCalendar(
-          { id: channelId },
-          d.code,
-          range,
-          meta(ctx, `airbnb.calendar:${d.code}`),
-        );
-        const prices = calendar.days
-          .map((x) => x.price)
-          .filter((p): p is number => p !== null && p > 0);
-        const currency = /^[A-Z]{3}$/.test(calendar.currency) ? calendar.currency : "EUR";
-        const country = details.countryCode ?? "DE";
-        const r = await createProperty(
-          {
-            repo,
-            clock: c.clock,
-            orgId: ctx.orgId,
-            webhookCredentials: async () => ({
-              token: c.crypto.randomToken(24),
-              secretSealed: await c.crypto.seal(c.crypto.randomToken(32)),
-            }),
-          },
-          {
-            title: details.title || d.title,
-            kind: "single_unit",
-            currency,
-            timezone: TZ_BY_COUNTRY[country] ?? "UTC",
-            address: { city: details.city ?? "", country },
-            ratePlans: [
-              {
-                title: "Standard",
-                baseRateMinor: Math.round(median(prices) * 100) || 10000,
-                minStay: mode(calendar.days.map((x) => x.minNights ?? 1)) ?? 1,
-              },
-            ],
-            settings: {
-              content: {
-                source: "airbnb",
-                listingId: d.code,
-                summary: details.summary ?? "",
-                photos: details.photos,
-                amenities: details.amenities,
-                capacity: details.capacity ?? null,
-                bedrooms: details.bedrooms ?? null,
-              },
-            },
-          },
-        );
-        if (!r.ok) throw new HttpProblem(422, r.error.code, r.error.message);
-        await repo.saveProvisioning(r.value.property.id, {
-          step: "group",
-          refs: {},
-          attempts: 0,
-          lastError: null,
-        });
-        propertyId = r.value.property.id;
-        created++;
-      }
-      const detail = await repo.get(propertyId);
-      const plan = detail?.ratePlans[0];
-      if (calendar && plan) {
-        for (const day of calendar.days) {
-          if (day.price === null || day.price <= 0) continue;
-          await store.setRate(
-            propertyId,
-            ctx.orgId,
-            plan.id,
-            day.date,
-            {
-              rate: Math.round(day.price * 100),
-              ...(day.minNights !== undefined ? { minStay: day.minNights } : {}),
-              ...(day.maxNights !== undefined ? { maxStay: day.maxNights } : {}),
-              ...(day.closedToArrival !== undefined
-                ? { closedToArrival: day.closedToArrival }
-                : {}),
-              ...(day.closedToDeparture !== undefined
-                ? { closedToDeparture: day.closedToDeparture }
-                : {}),
-            },
-            "airbnb_import",
-          );
-        }
-      }
-      const id = Id.next();
-      await ch.insertConnection({
-        id,
-        propertyId,
-        adapterCode: "AirBNB",
-        settings: { managedIn: "channex" },
-      });
-      await ch.updateConnection(id, { channexChannelId: channelId });
-      if (plan) {
-        await ch.replaceMappings(
-          id,
-          [{ ratePlanId: plan.id, roomCode: d.code, rateCode: d.code }],
-          () => Id.next(),
-        );
-        await ch.updateConnection(id, { state: "mapped", readiness: { ready: true, issues: [] } });
-      }
-      mapped.add(d.code);
+      if (claims.some((x) => x.listingId === d.code)) continue;
+      const r = await importAirbnbListing(
+        ctx,
+        account,
+        { listingId: d.code, title: d.title, propertyId: d.propertyId },
+        claims,
+      );
+      if (r.createdProperty) created++;
       connected++;
     }
     revalidatePath("/channels");

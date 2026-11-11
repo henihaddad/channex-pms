@@ -6,6 +6,9 @@ export {
   coverageWarnings,
   validateMappings,
   mappingDiff,
+  listingConflicts,
+  listingConflictMessage,
+  type ListingClaim,
 } from "./mapping.js";
 export {
   describeChannelEvent,

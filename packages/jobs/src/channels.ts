@@ -5,6 +5,8 @@ import {
   type CallMeta,
   describeChannelEvent,
   Id,
+  listingConflictMessage,
+  listingConflicts,
   transition,
   type ChannelSpec,
   type Clock,
@@ -87,6 +89,7 @@ export async function activateConnection(
     );
   }
   if (isAirbnbViaChannex(conn)) {
+    await refuseTakenListings(orgId, connectionId, channexChannelId, mappings, run);
     await ensureListingMappings(deps, {
       channexChannelId,
       remotePropertyId: idMap.property.remote,
@@ -256,13 +259,15 @@ export async function pauseConnection(
         listingIds: wanted.map((w) => w.listingId),
         meta,
       });
-    else
+    else {
+      await refuseTakenListings(orgId, connectionId, conn.channexChannelId, mappings, run);
       await ensureListingMappings(deps, {
         channexChannelId: conn.channexChannelId,
         remotePropertyId: idMap.property.remote,
         wanted,
         meta,
       });
+    }
   } else if (conn.channexChannelId) {
     await deps.provider.setChannelActive(
       { id: conn.channexChannelId },
@@ -281,6 +286,29 @@ export async function pauseConnection(
       await queueAriPush(tx, orgId, conn.propertyId, now, "channel.resume");
     }
   });
+}
+
+/**
+ * A listing another property already holds on the provider cannot be mapped again (Channex
+ * rejects it as "rate plan already exists"): refused here, by name, before any provider call.
+ */
+async function refuseTakenListings(
+  orgId: string,
+  connectionId: string,
+  channexChannelId: string,
+  mappings: readonly { roomCode: string }[],
+  run: TxRunner,
+): Promise<void> {
+  const claims = await run((tx) =>
+    new DrizzleChannelRepository(tx, orgId).listingClaims(channexChannelId),
+  );
+  const taken = listingConflicts(
+    mappings.map((m) => m.roomCode),
+    claims,
+    connectionId,
+    "activate",
+  );
+  if (taken.length > 0) throw new Error(listingConflictMessage(taken));
 }
 
 /** Airbnb authorised through Channex (CH-5): the provider channel belongs to the host's account. */

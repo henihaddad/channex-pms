@@ -3,6 +3,8 @@ import fc from "fast-check";
 import { transition } from "./state.js";
 import {
   coverageWarnings,
+  listingConflictMessage,
+  listingConflicts,
   mappingDiff,
   nameSimilarity,
   suggestMappings,
@@ -235,5 +237,71 @@ describe("channel health (CH-7, worst first)", () => {
       { ...base, id: "p1", state: "active" as const, openP1: 1 },
     ];
     expect(sortWorstFirst(rows).map((r) => r.id)).toEqual(["err", "gaps", "p1", "ok"]);
+  });
+});
+
+describe("one Airbnb listing, one property (CH-5)", () => {
+  const claim = (listingId: string, connectionId: string, state: string) => ({
+    listingId,
+    connectionId,
+    propertyId: `p-${connectionId}`,
+    propertyTitle: `Property ${connectionId}`,
+    state,
+  });
+  const claims = [
+    claim("L1", "live", "active"),
+    claim("L1", "dup", "draft"),
+    claim("L2", "paused", "paused"),
+    claim("L3", "draft", "mapped"),
+  ];
+
+  it("saving refuses a listing any other connection holds, naming the property", () => {
+    const taken = listingConflicts(["L1", "L3", "L9"], claims, "new", "save");
+    expect(taken.map((t) => t.listingId)).toEqual(["L1", "L3"]);
+    expect(taken[0]!.connectionId).toBe("live");
+    expect(listingConflictMessage(taken)).toContain('"Property live"');
+  });
+
+  it("a connection never collides with itself", () => {
+    expect(listingConflicts(["L1"], [claim("L1", "me", "active")], "me", "save")).toEqual([]);
+  });
+
+  it("activating only collides with links the channel manager holds", () => {
+    // the stuck duplicate cannot go live over the active link...
+    expect(listingConflicts(["L1"], claims, "dup", "activate").map((t) => t.connectionId)).toEqual([
+      "live",
+    ]);
+    // ...a paused link still holds its listing...
+    expect(listingConflicts(["L2"], claims, "x", "activate")).toHaveLength(1);
+    // ...and a draft does not lock out the connection that is going live
+    expect(listingConflicts(["L3"], claims, "x", "activate")).toEqual([]);
+    expect(listingConflicts(["L1"], claims, "live", "activate")).toEqual([]);
+  });
+
+  it("reports each listing once, whatever the number of claims", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            listingId: fc.constantFrom("A", "B", "C"),
+            connectionId: fc.constantFrom("c1", "c2", "c3"),
+            state: fc.constantFrom("active", "paused", "draft", "mapped"),
+          }),
+        ),
+        fc.subarray(["A", "B", "C"]),
+        fc.constantFrom("save" as const, "activate" as const),
+        (raw, wanted, mode) => {
+          const all = raw.map((r) => ({ ...r, propertyId: "p", propertyTitle: "P" }));
+          const out = listingConflicts(wanted, all, "c1", mode);
+          const ids = out.map((o) => o.listingId);
+          expect(new Set(ids).size).toBe(ids.length);
+          for (const o of out) {
+            expect(wanted).toContain(o.listingId);
+            expect(o.connectionId).not.toBe("c1");
+            if (mode === "activate") expect(["active", "paused"]).toContain(o.state);
+          }
+        },
+      ),
+    );
   });
 });

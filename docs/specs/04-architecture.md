@@ -293,6 +293,26 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
   | `POST /api/v1/reviews/{id}/reply` | `review:respond` | `reply_to_review` |
   | `GET /api/v1/channels` | `channel:read` | `list_channels` |
   | `GET /api/v1/sync-health` | `ari:read` | `get_sync_health` |
+  | `GET /api/v1/channels/airbnb/connect-link?propertyId` | `channel:read` | `connect_airbnb` |
+  | `GET /api/v1/channels/airbnb/listings?connectionId` (reads Airbnb live) | `channel:read` | `list_airbnb_listings` |
+  | `POST /api/v1/channels/airbnb/import` (organization scope: may create the property) | `channel:create` | `import_airbnb_listing` |
+  | `POST /api/v1/channels/{id}/activate` | `channel:activate` | `activate_channel` |
+  | `POST /api/v1/channels/{id}/pause` | `channel:deactivate` | `pause_channel` |
+  | `POST /api/v1/channels/{id}/resume` | `channel:activate` | `resume_channel` |
+
+  The channel operations (added 2026-11-11) let the assistant run the whole Airbnb path.
+  Airbnb's consent is the one step it cannot take: `connect_airbnb` returns a console link
+  (`/channels/airbnb/connect`, so a lapsed session signs in first) that the host opens in their
+  browser; it starts the CH-5 authorisation under the host's own session, so the key never
+  needs `channel_account:manage`. `list_airbnb_listings` shows every listing on the account,
+  which property links it and with what connection state, and the closest property by name.
+  `import_airbnb_listing` is the console's match-or-create import (shared code,
+  `server/airbnb.ts`) for one listing, and the only write landing on the organization rather
+  than one property (`orgWide`); a new property is provisioned by the worker, so
+  `activate_channel` answers "still being set up, try again in a minute" until the property
+  and its plans exist on the channel manager. The connection tools take `propertyId` with the
+  connection id, and refuse a connection of another property, so a key scoped to one property
+  cannot reach another.
 
   Range edits take `firstNight` and `lastNight`, both included, because that is how a host
   says it; core `nightRange` turns them into the half-open `DateRange` (rule 5), refuses

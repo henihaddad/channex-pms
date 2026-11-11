@@ -17,6 +17,14 @@ import { applyCellEdits } from "../ari";
 import { assertThreadInProperty, messaging, providerLabel, queueDelivery } from "../inbox";
 import { cancelDirectBooking, createStaffBooking } from "../reservations";
 import { op, type Op } from "./op";
+import {
+  activateChannel,
+  connectAirbnb,
+  importAirbnbListingOp,
+  listAirbnbListings,
+  pauseChannel,
+  resumeChannel,
+} from "./channel-ops";
 
 // ---- shared bits -------------------------------------------------------------------------
 
@@ -813,4 +821,10 @@ export const OPS: readonly Op[] = [
   replyToReview,
   listChannels,
   getSyncHealth,
+  connectAirbnb,
+  listAirbnbListings,
+  importAirbnbListingOp,
+  activateChannel,
+  pauseChannel,
+  resumeChannel,
 ] as unknown as readonly Op[];

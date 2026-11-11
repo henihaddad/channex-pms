@@ -12,6 +12,7 @@ import { OPS } from "./ops";
 const INSTRUCTIONS = `OTAbridge is the host's channel manager: it holds the calendar (prices, availability, restrictions), reservations, guest conversations and reviews for every property, and pushes changes to Airbnb, Booking.com and the other connected channels.
 Start with get_today or list_properties. Ids returned by one tool are what the others take; write tools that change a property also need its propertyId.
 Money is always an integer in minor units of the property's currency (12000 = 120.00 EUR). Dates are YYYY-MM-DD; a range is firstNight..lastNight, both included.
+Airbnb: list_airbnb_listings shows every listing on the host's Airbnb account and which property links it; import_airbnb_listing links an unlinked one, then activate_channel switches it on. If no Airbnb account is connected, connect_airbnb gives the host a link to approve on airbnb.com: that approval is theirs to give, not yours.
 Write tools act immediately and are recorded in the host's activity log under this API key. Before sending a guest message, replying to a review or cancelling, be sure the host asked for it.`;
 
 /** Which access level would allow a permission this key lacks, in the words of Settings → API & AI. */

@@ -251,6 +251,69 @@ describe("channel activation and health (CH-4, CH-6, CH-8, spec 07 §7.4)", () =
   });
 });
 
+describe("one Airbnb listing, one property (spec 07 CH-5)", () => {
+  it("refuses to activate a listing another live connection holds, before calling the provider", async () => {
+    const rp = (await asSystem(handle.db, ORG, (tx) =>
+      new DrizzlePropertyRepository(tx, ORG).get(propertyId),
+    ))!.ratePlans[0]!;
+    const live = Id.next();
+    const dup = Id.next();
+    await asSystem(handle.db, ORG, async (tx) => {
+      const ch = new DrizzleChannelRepository(tx, ORG);
+      for (const [id, state] of [
+        [live, "active"],
+        [dup, "mapped"],
+      ] as const) {
+        await ch.insertConnection({
+          id,
+          propertyId,
+          adapterCode: "AirBNB",
+          settings: { managedIn: "channex" },
+        });
+        await ch.updateConnection(id, { channexChannelId: "airbnb-account-1", state });
+        await ch.replaceMappings(id, [{ ratePlanId: rp.id, roomCode: "L1", rateCode: "L1" }], () =>
+          Id.next(),
+        );
+      }
+    });
+    const claims = await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).listingClaims("airbnb-account-1"),
+    );
+    // the live link comes first, whatever the order the connections were made in
+    expect(claims.map((c) => [c.connectionId, c.state])).toEqual([
+      [live, "active"],
+      [dup, "mapped"],
+    ]);
+    const provider = new FakeProvider();
+    let mapped = 0;
+    provider.mapListing = async () => {
+      mapped++;
+      return { id: "m" };
+    };
+    await expect(
+      activateConnection(
+        { db: handle.db, provider, clock, log },
+        ORG,
+        dup,
+        systemRunner(handle.db, ORG),
+      ),
+    ).rejects.toThrow(/listing L1 is already linked to "Chiado Studio" \(active\)/);
+    expect(mapped).toBe(0);
+    // and the duplicate stays where it was: nothing half-activated
+    const c = (await asSystem(handle.db, ORG, (tx) =>
+      new DrizzleChannelRepository(tx, ORG).getConnection(dup),
+    ))!;
+    expect(c).toMatchObject({ state: "mapped", isActive: false });
+    // tidy up: the other suites count this property's connections
+    await asSystem(handle.db, ORG, (tx) =>
+      rawRows(
+        tx,
+        sql`update channel_connection set archived_at = now(), state = 'removed' where id in (${live}, ${dup})`,
+      ),
+    );
+  });
+});
+
 describe("channel state from the provider (docs: Webhook Collection, Channel API)", () => {
   const cd = () => ({ db: handle.db, provider: fake, clock, log });
   const webhook = async (event: string, payload: Record<string, unknown>, key: string) => {

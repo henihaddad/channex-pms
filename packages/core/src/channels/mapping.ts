@@ -238,3 +238,51 @@ export function mappingDiff(
   for (const [id, row] of b) if (!a.has(id)) diff.stopsSelling.push(row);
   return diff;
 }
+
+/** A listing of an Airbnb account linked by one connection (one OTAbridge property). */
+export interface ListingClaim {
+  listingId: string;
+  connectionId: string;
+  propertyId: string;
+  propertyTitle: string;
+  state: string;
+}
+
+/** The connection states in which the provider holds the listing's mapping. */
+const HELD_ON_PROVIDER = new Set(["active", "paused"]);
+
+/**
+ * One Airbnb listing maps once: "mapping the same listing twice is rejected" (docs:
+ * channel-api-examples/airbnb › 5. Map the listings), as "rate plan already exists". Which of the wanted
+ * listings another connection of the same account already claims: any claim when saving a
+ * mapping or importing, only the ones the provider holds when activating, so two drafts of the
+ * same listing do not lock each other out.
+ */
+export function listingConflicts(
+  wanted: readonly string[],
+  claims: readonly ListingClaim[],
+  connectionId: string,
+  mode: "save" | "activate",
+): ListingClaim[] {
+  const want = new Set(wanted);
+  const seen = new Set<string>();
+  const out: ListingClaim[] = [];
+  for (const c of claims) {
+    if (c.connectionId === connectionId || !want.has(c.listingId) || seen.has(c.listingId))
+      continue;
+    if (mode === "activate" && !HELD_ON_PROVIDER.has(c.state)) continue;
+    seen.add(c.listingId);
+    out.push(c);
+  }
+  return out;
+}
+
+/** The refusal a host reads: which listing, and which property already has it. */
+export function listingConflictMessage(conflicts: readonly ListingClaim[]): string {
+  return conflicts
+    .map(
+      (c) =>
+        `Airbnb listing ${c.listingId} is already linked to "${c.propertyTitle}" (${c.state}); one listing can be linked to one property only. Pause or remove that link first, or pick another listing.`,
+    )
+    .join(" ");
+}

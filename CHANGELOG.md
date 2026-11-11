@@ -8,6 +8,14 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Claude can run the Airbnb account end to end (spec 04 §4.7a, spec 07 CH-5, persona "the host
+  who runs the business through Claude", spec 02). New tools and API routes:
+  `connect_airbnb` (the link to approve OTAbridge on airbnb.com, the one step only the host
+  can take), `list_airbnb_listings` (every listing on the account, linked or not, and which
+  property holds it), `import_airbnb_listing` (link a listing to a new property built from it,
+  or to an existing one), and `activate_channel`, `pause_channel`, `resume_channel`. The
+  import is the console's own code, now shared.
+
 - "Sign in with OTAbridge" for Claude (spec 04 §4.7b, persona "the host who runs the business
   through Claude", spec 02). On claude.ai, add `https://app.otabridge.com/api/mcp` as a custom
   connector, sign in, pick the organization and the access level (the four of API keys, never
@@ -260,6 +268,11 @@ All notable changes to this project are documented here. The format follows
 
 
 ### Fixed
+
+- An Airbnb listing could be linked to a second property from the mapping screen; Channex
+  refuses that ("rate plan already exists") and the connection stayed in draft. Saving a
+  mapping, importing, activating and resuming now refuse a listing another property already
+  holds, and say which property.
 
 - Signed-in people were sent back to the login page every fifteen minutes: nothing used the
   30-day refresh token once the access token lapsed. Open tabs now renew it quietly, a page

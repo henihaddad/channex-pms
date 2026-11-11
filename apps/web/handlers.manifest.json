@@ -1931,6 +1931,48 @@
     "scope": "organization"
   },
   {
+    "file": "src/app/api/v1/channels/[id]/activate/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:activate"
+  },
+  {
+    "file": "src/app/api/v1/channels/[id]/pause/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:deactivate"
+  },
+  {
+    "file": "src/app/api/v1/channels/[id]/resume/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:activate"
+  },
+  {
+    "file": "src/app/api/v1/channels/airbnb/connect-link/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:read"
+  },
+  {
+    "file": "src/app/api/v1/channels/airbnb/import/route.ts",
+    "export": "POST",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:create"
+  },
+  {
+    "file": "src/app/api/v1/channels/airbnb/listings/route.ts",
+    "export": "GET",
+    "kind": "route",
+    "wrapper": "withPermission.route",
+    "permission": "channel:read"
+  },
+  {
     "file": "src/app/api/v1/channels/oauth/airbnb/callback/route.ts",
     "export": "GET",
     "kind": "route",

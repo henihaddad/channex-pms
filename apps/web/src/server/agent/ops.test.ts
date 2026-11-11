@@ -46,6 +46,12 @@ describe("agent operations", () => {
         "list_channels",
         "get_sync_health",
         "get_today",
+        "connect_airbnb",
+        "list_airbnb_listings",
+        "import_airbnb_listing",
+        "activate_channel",
+        "pause_channel",
+        "resume_channel",
       ]),
     );
   });
@@ -62,7 +68,10 @@ describe("agent operations", () => {
 
   it("every write lands on a property scope and reads never claim to write", () => {
     for (const o of OPS) {
-      if (o.write) {
+      if (o.write && o.orgWide) {
+        expect(o.scope, o.name).toBe("organization");
+        expect(o.rest.method).not.toBe("GET");
+      } else if (o.write) {
         expect(o.scope, o.name).toBe("property");
         expect(o.resolveScope, o.name).toBeDefined();
         expect(o.rest.method).not.toBe("GET");
