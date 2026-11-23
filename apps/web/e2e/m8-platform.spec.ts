@@ -169,7 +169,9 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await op.goto("/reservations");
   await expect(op.getByTestId("reservations-table")).toBeVisible();
   await op.goto("/inbox");
-  await expect(op.getByRole("heading", { name: "Permission denied" })).toBeVisible();
+  await expect(
+    op.getByRole("heading", { name: "You don't have access to this page" }),
+  ).toBeVisible();
   await op.goto("/ops/impersonation");
   await expect(
     op
@@ -193,7 +195,9 @@ test("onboarding → billing → plugins → operator console → impersonation 
   await expect(page.locator('[data-testid="tenant-banner"][data-state="past_due"]')).toBeVisible();
   await request.post("/api/v1/test/tenant-state", { data: { orgId, event: "dunning_exhausted" } });
   await page.goto("/reservations");
-  await expect(page.getByRole("heading", { name: "Permission denied" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "You don't have access to this page" }),
+  ).toBeVisible();
   await page.goto("/settings/billing");
   await expect(page.getByTestId("tenant-state")).toHaveText("suspended");
   const publicPage = await request.get(`/book/${propertyId}`);

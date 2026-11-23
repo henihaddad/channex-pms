@@ -6,7 +6,15 @@ import { guard } from "@/server/guard";
 import { currentOrgId, currentSession } from "@/server/session";
 import { consoleContext } from "@/server/console-context";
 import { currentUserProfile, memberships } from "@/server/auth-flows";
-import { channelLabel, day as dayLabel, dayMonth, elapsed, money, percent } from "@/lib/format";
+import {
+  channelLabel,
+  clock,
+  day as dayLabel,
+  dayMonth,
+  elapsed,
+  money,
+  percent,
+} from "@/lib/format";
 import { FirstRun } from "./first-run";
 import { startLabels } from "./start-labels";
 import { loadDashboard } from "./reports/reports.actions";
@@ -26,13 +34,17 @@ export default async function TodayPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const t = await getTranslations("dashboard");
-  const tt = await getTranslations("dashboard.t");
-  const tn = await getTranslations("nav");
-  const locale = await getLocale();
-  const d = await guard(() => loadDashboard({ propertyId: sp.property ?? null }));
-  const session = (await currentSession())!;
-  const orgId = await currentOrgId();
+  // independent reads in one round; the session, org and context are cached from the layout
+  const [t, tt, tn, locale, d, session, orgId] = await Promise.all([
+    getTranslations("dashboard"),
+    getTranslations("dashboard.t"),
+    getTranslations("nav"),
+    getLocale(),
+    guard(() => loadDashboard({ propertyId: sp.property ?? null })),
+    currentSession(),
+    currentOrgId(),
+  ]);
+  if (!session) throw new Error("no session");
   const [orgs, me, cx] = await Promise.all([
     memberships(session.userId),
     currentUserProfile(session.userId),
@@ -64,7 +76,7 @@ export default async function TodayPage({
           issuesText={tt("need.failedSync", { n: d.queue.failedCells + d.queue.conflictedCells })}
           okText={
             d.details.lastSyncAt
-              ? tt("syncedAgo", { ago: elapsed(d.details.lastSyncAt) })
+              ? tt("syncedAgo", { ago: elapsed(d.details.lastSyncAt, new Date(), locale) })
               : tt("noChannel")
           }
         />
@@ -192,7 +204,7 @@ export default async function TodayPage({
       key: "breaching",
       title: tt("need.breaching", { n: d.inbox.breaching }),
       sub: det.oldestBreachingSince
-        ? tt("need.breachingSub", { ago: elapsed(det.oldestBreachingSince) })
+        ? tt("need.breachingSub", { ago: elapsed(det.oldestBreachingSince, new Date(), locale) })
         : "",
       href: "/inbox?view=breaching_sla",
       cta: tt("need.cta.breaching"),
@@ -324,8 +336,8 @@ export default async function TodayPage({
   const when = (iso: string) => {
     const at = new Date(iso);
     const sameDay = iso.slice(0, 10) === d.today;
-    if (sameDay)
-      return `${String(at.getUTCHours()).padStart(2, "0")}:${String(at.getUTCMinutes()).padStart(2, "0")}`;
+    // the dashboard's day is the UTC day (loadDashboard), so its times read on the same clock
+    if (sameDay) return clock(at.toISOString(), "UTC", locale);
     return iso.slice(0, 10) === yesterday ? tt("act.yesterday") : dayMonth(iso, locale);
   };
   const activity = [
@@ -402,26 +414,22 @@ export default async function TodayPage({
           data-testid="today-board"
           aria-label={t("today")}
         >
-          <Link href="/reservations?view=arrivals_today" className="contents">
-            <Stat
-              label={t("arrivals")}
-              value={String(d.board.arrivals)}
-              hint={
-                d.board.arrivals > 0 ? tt("formsDone", { n: det.arrivalsFormsDone }) : undefined
-              }
-            />
-          </Link>
-          <Link href="/reservations?view=departures_today" className="contents">
-            <Stat
-              label={t("departures")}
-              value={String(d.board.departures)}
-              hint={
-                det.sameDayChangeovers > 0
-                  ? tt("changeovers", { n: det.sameDayChangeovers })
-                  : undefined
-              }
-            />
-          </Link>
+          <Stat
+            href="/reservations?view=arrivals_today"
+            label={t("arrivals")}
+            value={String(d.board.arrivals)}
+            hint={d.board.arrivals > 0 ? tt("formsDone", { n: det.arrivalsFormsDone }) : undefined}
+          />
+          <Stat
+            href="/reservations?view=departures_today"
+            label={t("departures")}
+            value={String(d.board.departures)}
+            hint={
+              det.sameDayChangeovers > 0
+                ? tt("changeovers", { n: det.sameDayChangeovers })
+                : undefined
+            }
+          />
           <Stat
             className="hidden lg:flex"
             label={t("occupancyTonight")}
@@ -593,7 +601,7 @@ export default async function TodayPage({
                         a.tone === "danger"
                           ? "bg-danger"
                           : a.tone === "warning"
-                            ? "bg-[#f59e0b]"
+                            ? "bg-badge"
                             : "bg-accent",
                       )}
                     />
@@ -624,15 +632,15 @@ export default async function TodayPage({
                           n.occupancyBps === null
                             ? "bg-default"
                             : occ < 5000
-                              ? "bg-[#99f6e4]"
+                              ? "bg-accent/45"
                               : "bg-accent",
                         )}
                         style={{ height: `${Math.max(12, occ / 100)}%` }}
-                        title={`${dayLabel(n.date, locale)}: ${percent(n.occupancyBps === null ? null : occ / 10_000)}`}
+                        title={`${dayLabel(n.date, locale)}: ${percent(n.occupancyBps === null ? null : occ / 10_000, { locale })}`}
                       />
                     </div>
                     <span className="font-semibold tabular-nums">
-                      {percent(n.occupancyBps === null ? null : occ / 10_000)}
+                      {percent(n.occupancyBps === null ? null : occ / 10_000, { locale })}
                     </span>
                   </div>
                 );

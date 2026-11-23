@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import { navIcons } from "./nav-icons";
 
 /**
- * Header menus built on <details>: no client JavaScript, the browser handles
- * open and close, Escape and focus. A click on an item navigates or submits.
+ * Header menus built on <details>: they open and work without JavaScript. The console shell
+ * closes them on Escape (focus back on the summary), on a click outside and after navigation,
+ * which <details> does not do by itself.
  */
 export function HeaderMenu({
   label,
@@ -12,8 +13,11 @@ export function HeaderMenu({
   children,
   testId,
   align = "end",
+  ariaLabel,
 }: {
   label: string;
+  /** The menu's accessible name when the visible label is short ("EN"). */
+  ariaLabel?: string;
   icon?: ReactNode;
   children: ReactNode;
   testId?: string;
@@ -21,7 +25,10 @@ export function HeaderMenu({
 }) {
   return (
     <details className="group relative" data-testid={testId}>
-      <summary className="flex h-9.5 cursor-pointer list-none items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-default hover:text-foreground [&::-webkit-details-marker]:hidden">
+      <summary
+        aria-label={ariaLabel}
+        className="flex h-9.5 cursor-pointer list-none items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-default hover:text-foreground [&::-webkit-details-marker]:hidden"
+      >
         {icon}
         <span className="hidden sm:inline">{label}</span>
         <span aria-hidden="true" className="text-[10px]">
@@ -106,7 +113,7 @@ export function BellLink({ href, count, label }: { href: string; count: number; 
     >
       {navIcons.bell}
       {count > 0 ? (
-        <span className="absolute -top-1 -end-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#f59e0b] px-1.25 text-[11px] font-bold text-[#141716] tabular-nums">
+        <span className="absolute -top-1 -end-1 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-badge px-1.25 text-[11px] font-bold text-badge-foreground tabular-nums">
           {count > 99 ? "99+" : count}
         </span>
       ) : null}

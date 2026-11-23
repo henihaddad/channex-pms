@@ -97,7 +97,7 @@
       "whyTitle": "Why these",
       "whyBody": "Airbnb has no shortcuts and no palette; Guesty and Smoobu neither. A manager with 15 units touches the calendar and the inbox fifty times a day, so this is where speed is felt. The letters follow Gmail and Linear, which most hosts already know."
     },
-    "contactSupport": "Email support",
+    "contactSupport": "Support access & diagnostics",
     "account": "Account",
     "languages": {
       "en": "English",
@@ -176,7 +176,12 @@
     "switchOrg": "Switch organization",
     "bookings": "Bookings",
     "upgrade": "Upgrade",
-    "trialLeft": "{n, plural, =0 {Trial ends today} one {# day left in trial} other {# days left in trial}}"
+    "trialLeft": "{n, plural, =0 {Trial ends today} one {# day left in trial} other {# days left in trial}}",
+    "skipToContent": "Skip to content",
+    "languageMenu": "Language: {name}",
+    "dunning": "Your last payment failed. We'll retry on days 3, 5 and 7; after 14 days the console is suspended. Your channels keep syncing.",
+    "inboxBadge": "{unread, plural, one {# unread conversation} other {# unread conversations}}",
+    "inboxBadgeLate": "{unread, plural, one {# unread conversation} other {# unread conversations}}, {late} past the reply target"
   },
   "auth": {
     "signIn": "Sign in",
@@ -3700,5 +3705,18 @@
     "errorRequest": "This request is no longer valid. Start the connection again from the app.",
     "noOrg": "Connecting an app needs the right to create API keys in an organization (owners and managers). Ask one of them to connect it.",
     "back": "Back to OTAbridge"
+  },
+  "system": {
+    "errorTitle": "Something went wrong",
+    "errorBody": "This page didn't load. Nothing you saved was lost. Try again, and if it keeps happening, reload the page.",
+    "tryAgain": "Try again",
+    "backToToday": "Back to Today",
+    "backHome": "Go to the home page",
+    "errorRef": "Reference: {digest}",
+    "notFoundTitle": "This page doesn't exist",
+    "notFoundBody": "The link may be old, or you may not have access to what it points to.",
+    "forbiddenTitle": "You don't have access to this page",
+    "forbiddenBody": "Your role doesn't include what this page needs. Ask an admin of your organization to give you access.",
+    "loading": "Loading…"
   }
 }

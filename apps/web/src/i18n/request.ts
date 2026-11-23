@@ -1,7 +1,12 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 
-export const LOCALES = ["en", "fr", "ar", "es", "pt"] as const;
+/**
+ * The interface languages offered and resolved. Spanish and Portuguese (messages/es.json,
+ * pt.json) cover about 6% of the console, so offering them showed English under a Spanish label
+ * and a wrong `lang` attribute (WCAG 3.1.1); they come back here once complete.
+ */
+export const LOCALES = ["en", "fr", "ar"] as const;
 export type Locale = (typeof LOCALES)[number];
 export const RTL_LOCALES: ReadonlySet<string> = new Set(["ar"]);
 
@@ -31,10 +36,18 @@ function merge(base: Messages, over: Messages): Messages {
   return out;
 }
 
+/** The merged catalogue per locale, built once per server instance instead of on every request. */
+const merged = new Map<Locale, Messages>();
+
 export default getRequestConfig(async () => {
   const locale = await resolveLocale();
-  const en = (await import("../messages/en.json")).default as Messages;
-  const own =
-    locale === "en" ? en : ((await import(`../messages/${locale}.json`)).default as Messages);
-  return { locale, messages: locale === "en" ? en : merge(en, own) };
+  let messages = merged.get(locale);
+  if (!messages) {
+    const en = (await import("../messages/en.json")).default as Messages;
+    const own =
+      locale === "en" ? en : ((await import(`../messages/${locale}.json`)).default as Messages);
+    messages = locale === "en" ? en : merge(en, own);
+    merged.set(locale, messages);
+  }
+  return { locale, messages };
 });

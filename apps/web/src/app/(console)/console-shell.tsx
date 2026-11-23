@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SectionTabs, SectionTabsContext } from "@/components/ui";
@@ -49,7 +49,14 @@ export function ConsoleShell({
   search: ReactNode;
   actions: ReactNode;
   banners: ReactNode;
-  labels: { menu: string; close: string; sectionPages: string; more: string; search: string };
+  labels: {
+    menu: string;
+    close: string;
+    sectionPages: string;
+    more: string;
+    search: string;
+    skip: string;
+  };
   /** The alerts bell, shown in the phone header as well. */
   bell: ReactNode;
   /** The phone's bottom bar (design canvas "Today — phone"); "More" opens the full menu. */
@@ -58,14 +65,54 @@ export function ConsoleShell({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const drawer = useRef<HTMLDivElement>(null);
+  const page = useRef<HTMLDivElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  // the phone menu is a modal: focus moves in, Tab stays in (the page behind is inert), Escape
+  // closes it and focus goes back to "More" (WCAG 2.4.3, 2.1.2)
   useEffect(() => {
     if (!open) return;
+    const behind = page.current;
+    behind?.setAttribute("inert", "");
+    drawer.current?.querySelector<HTMLElement>("a, button")?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      behind?.removeAttribute("inert");
+      moreButton.current?.focus();
+    };
   }, [open]);
+
+  // header and account menus are <details>: close them on navigation, Escape and outside clicks
+  useEffect(() => {
+    for (const d of document.querySelectorAll<HTMLDetailsElement>("details[open]"))
+      if (d.closest("header, [data-menu]")) d.open = false;
+  }, [pathname]);
+  useEffect(() => {
+    const openMenus = () =>
+      [...document.querySelectorAll<HTMLDetailsElement>("details[open]")].filter((d) =>
+        d.closest("header, [data-menu]"),
+      );
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      for (const d of openMenus()) {
+        d.open = false;
+        d.querySelector("summary")?.focus();
+      }
+    };
+    const onDown = (e: PointerEvent) => {
+      for (const d of openMenus()) if (!d.contains(e.target as Node)) d.open = false;
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, []);
 
   const all = [...sections, ...footerSections];
   const current = all.find((s) => inSection(pathname, s));
@@ -109,12 +156,20 @@ export function ConsoleShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-[60] focus:rounded-control focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-float"
+        data-testid="skip-link"
+      >
+        {labels.skip}
+      </a>
+      {/* a plain box: the rail's <nav> is the landmark (a second one confused screen readers) */}
+      <div
         className="dark sticky top-0 hidden h-screen w-[236px] shrink-0 flex-col bg-background text-foreground lg:flex"
         data-theme="dark"
       >
         {rail}
-      </aside>
+      </div>
 
       {open ? (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -125,6 +180,7 @@ export function ConsoleShell({
             onClick={() => setOpen(false)}
           />
           <div
+            ref={drawer}
             className="dark absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col bg-background text-foreground shadow-float"
             data-theme="dark"
             role="dialog"
@@ -141,7 +197,7 @@ export function ConsoleShell({
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div ref={page} className="flex min-w-0 flex-1 flex-col">
         <div className="bridge-rail h-[3px] w-full" aria-hidden="true" />
         <header className="sticky top-0 z-30 border-b border-border bg-surface">
           <div className="flex items-center gap-3 px-4 py-2.5 lg:hidden">
@@ -177,7 +233,11 @@ export function ConsoleShell({
             {actions}
           </div>
         </header>
-        <main className="console-main flex-1 px-4 pt-6 pb-24 lg:px-8 lg:pt-7 lg:pb-10">
+        <main
+          id="main"
+          tabIndex={-1}
+          className="console-main flex-1 outline-none px-4 pt-6 pb-24 lg:px-8 lg:pt-7 lg:pb-10"
+        >
           <div className="flex w-full max-w-[1200px] flex-col gap-5">
             {banners}
             {tabsEl ? <div className="section-tabs-top">{tabsEl}</div> : null}
@@ -207,7 +267,7 @@ export function ConsoleShell({
                 />
                 {tab.label}
                 {tab.badge ? (
-                  <span className="absolute top-1 end-[calc(50%-1.75rem)] inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#f59e0b] px-1 text-[10px] font-bold text-[#141716]">
+                  <span className="absolute top-1 end-[calc(50%-1.75rem)] inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-badge px-1 text-[10px] font-bold text-badge-foreground">
                     {tab.badge}
                   </span>
                 ) : null}
@@ -216,8 +276,10 @@ export function ConsoleShell({
           })}
           <button
             type="button"
+            ref={moreButton}
             onClick={() => setOpen(true)}
             aria-expanded={open}
+            aria-haspopup="dialog"
             className="flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold text-muted"
             data-testid="nav-menu"
           >

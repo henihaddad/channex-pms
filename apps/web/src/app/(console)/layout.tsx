@@ -18,6 +18,7 @@ import { paletteSearch } from "./palette.actions";
 import { ConsoleShell, type NavSectionDef } from "./console-shell";
 import { BellLink, HeaderMenu, MenuButton, MenuLink } from "./header-menus";
 import { navIcons } from "./nav-icons";
+import { clock } from "@/lib/format";
 
 /**
  * The console shell (design canvas, November 2026). Ten destinations in one
@@ -87,6 +88,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         label: t("inbox"),
         badge: badge.unread,
         alert: badge.breaching > 0,
+        badgeLabel:
+          badge.breaching > 0
+            ? t("inboxBadgeLate", { unread: badge.unread, late: badge.breaching })
+            : t("inboxBadge", { unread: badge.unread }),
         testId: "nav-inbox",
       },
       firstTab: t("tabs.conversations"),
@@ -205,9 +210,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   const roleLabel = roleKey ? t(`roles.${roleKey}` as never) : null;
   const footer = (
-    <details className="group relative">
+    <details className="group relative" data-menu>
       <summary
-        className="flex cursor-pointer list-none items-center gap-2.5 rounded-[10px] px-3 py-2.25 text-[#b6c0bd] hover:bg-surface-secondary [&::-webkit-details-marker]:hidden"
+        className="flex cursor-pointer list-none items-center gap-2.5 rounded-[10px] px-3 py-2.25 text-rail-foreground hover:bg-surface-secondary [&::-webkit-details-marker]:hidden"
         data-testid="account-menu"
       >
         <span className="grid h-6.5 w-6.5 shrink-0 place-items-center rounded-full bg-linear-to-br from-[#34d399] to-[#22d3ee] text-[11px] font-bold text-[#0b1020]">
@@ -267,7 +272,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         placeholder={t("searchPlaceholder")}
         aria-label={t("search")}
         data-testid="global-search"
-        className="h-9.5 w-full rounded-full border border-border bg-background ps-10 pe-13 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        className="h-9.5 w-full rounded-full border border-border-control bg-background ps-10 pe-13 text-sm text-foreground placeholder:text-muted focus:border-accent"
       />
       <kbd
         aria-hidden="true"
@@ -294,7 +299,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           {t("shortcuts.title")}
         </MenuLink>
       </HeaderMenu>
-      <HeaderMenu label={locale.toUpperCase()} testId="language-menu">
+      <HeaderMenu
+        label={locale.toUpperCase()}
+        ariaLabel={t("languageMenu", { name: t(`languages.${locale}` as never) })}
+        testId="language-menu"
+      >
         <form action={setLocaleAction} className="flex flex-col">
           {LOCALES.map((l) => (
             <MenuButton key={l} name="locale" value={l} current={l === locale}>
@@ -307,13 +316,13 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         // the upgrade pill: always in view during the trial and on the entry plan (spec 12 §12.5)
         <Link
           href="/settings/billing"
-          className="hidden items-center gap-2 rounded-full border border-[#f59e0b]/50 bg-[#fffbeb] py-1 ps-3 pe-1 text-[13px] font-medium text-[#92400e] hover:border-[#f59e0b] sm:inline-flex"
+          className="hidden items-center gap-2 rounded-full border border-badge/50 bg-warning-soft py-1 ps-3 pe-1 text-[13px] font-medium text-warning-soft-foreground hover:border-badge sm:inline-flex"
           data-testid="upgrade-pill"
         >
           {cx.plan.trialDaysLeft !== null
             ? t("trialLeft", { n: cx.plan.trialDaysLeft })
             : cx.plan.name}
-          <span className="rounded-full bg-[#f59e0b] px-2.5 py-0.5 font-semibold text-[#141716]">
+          <span className="rounded-full bg-badge px-2.5 py-0.5 font-semibold text-badge-foreground">
             {t("upgrade")}
           </span>
         </Link>
@@ -328,10 +337,11 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   const banners = (
     <>
       {cx?.impersonation ? (
-        <Alert tone="warning" data-testid="impersonation-banner">
+        <Alert tone="warning" live={false} data-testid="impersonation-banner">
           {to("banner", {
             org: cx.impersonation.orgName,
-            time: cx.impersonation.expiresAt.slice(11, 16),
+            // the operator's own clock zone is unknown on the server: say which zone it is
+            time: `${clock(cx.impersonation.expiresAt, "UTC", locale)} UTC`,
           })}{" "}
           <Link href="/ops/impersonation" className="font-medium underline">
             {to("leave")}
@@ -339,8 +349,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         </Alert>
       ) : null}
       {cx?.state === "past_due" ? (
-        <Alert tone="warning" data-testid="tenant-banner" data-state="past_due">
-          {tb("dunning", { date: "" })}{" "}
+        <Alert tone="warning" live={false} data-testid="tenant-banner" data-state="past_due">
+          {t("dunning")}{" "}
           <Link href="/settings/billing" className="font-medium underline">
             {t("billing")}
           </Link>
@@ -351,13 +361,14 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           key={a.id}
           tone={a.level === "incident" ? "error" : a.level === "warning" ? "warning" : "info"}
           title={a.title}
+          live={false}
           data-testid="announcement-banner"
         >
           {a.body}
         </Alert>
       ))}
       {cx?.access === "billing_only" ? (
-        <Alert tone="error" data-testid="tenant-banner" data-state={cx.state}>
+        <Alert tone="error" live={false} data-testid="tenant-banner" data-state={cx.state}>
           {cx.state === "expired" ? tb("expired") : tb("suspended")}{" "}
           <Link href="/settings/billing" className="font-medium underline">
             {t("billing")}
@@ -445,6 +456,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           sectionPages: t("sectionPages"),
           more: t("more"),
           search: t("search"),
+          skip: t("skipToContent"),
         }}
         bell={bell}
         phoneTabs={[

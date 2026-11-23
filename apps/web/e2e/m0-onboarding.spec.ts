@@ -78,7 +78,7 @@ test("cross-tenant: a user cannot act inside an organization they hold no grant 
   await page.context().addCookies([{ name: "pms_org", value: a.orgId, url: baseURL! }]);
   const res = await page.goto("/settings/members");
   expect(res?.status()).toBe(403);
-  await expect(page.getByRole("heading", { name: /Permission denied/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /have access to this page/ })).toBeVisible();
 });
 
 async function signUp(

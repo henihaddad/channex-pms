@@ -96,7 +96,7 @@
       "whyTitle": "Pourquoi ceux-là",
       "whyBody": "Airbnb n'a ni raccourcis ni palette ; Guesty et Smoobu non plus. Un gestionnaire de 15 logements touche le calendrier et la boîte cinquante fois par jour : c'est là que la vitesse se sent. Les lettres suivent Gmail et Linear, que la plupart des hôtes connaissent déjà."
     },
-    "contactSupport": "Écrire au support",
+    "contactSupport": "Accès support et diagnostic",
     "account": "Compte",
     "palette": {
       "placeholder": "Rechercher un client, une réservation, un logement, ou taper une page…",
@@ -168,7 +168,20 @@
     "switchOrg": "Changer d'organisation",
     "bookings": "Réservations",
     "upgrade": "Passer au plan supérieur",
-    "trialLeft": "{n, plural, =0 {L’essai se termine aujourd’hui} one {# jour d’essai restant} other {# jours d’essai restants}}"
+    "trialLeft": "{n, plural, =0 {L’essai se termine aujourd’hui} one {# jour d’essai restant} other {# jours d’essai restants}}",
+    "skipToContent": "Aller au contenu",
+    "languageMenu": "Langue : {name}",
+    "dunning": "Votre dernier paiement a échoué. Nous réessaierons aux jours 3, 5 et 7 ; après 14 jours, la console est suspendue. Vos canaux continuent de se synchroniser.",
+    "inboxBadge": "{unread, plural, one {# conversation non lue} other {# conversations non lues}}",
+    "inboxBadgeLate": "{unread, plural, one {# conversation non lue} other {# conversations non lues}}, {late} en retard de réponse",
+    "searchHint": "⌘K",
+    "languages": {
+      "en": "English",
+      "fr": "Français",
+      "ar": "العربية",
+      "es": "Español",
+      "pt": "Português"
+    }
   },
   "auth": {
     "signIn": "Se connecter",
@@ -3691,5 +3704,18 @@
     "errorRequest": "Cette demande n'est plus valable. Relancez la connexion depuis l'application.",
     "noOrg": "Connecter une application demande le droit de créer des clés API dans une organisation (propriétaires et gestionnaires). Demandez à l'un d'eux de la connecter.",
     "back": "Retour à OTAbridge"
+  },
+  "system": {
+    "errorTitle": "Un problème est survenu",
+    "errorBody": "Cette page ne s'est pas chargée. Rien de ce que vous avez enregistré n'est perdu. Réessayez, et si le problème persiste, rechargez la page.",
+    "tryAgain": "Réessayer",
+    "backToToday": "Retour à Aujourd'hui",
+    "backHome": "Aller à l'accueil",
+    "errorRef": "Référence : {digest}",
+    "notFoundTitle": "Cette page n'existe pas",
+    "notFoundBody": "Le lien est peut-être ancien, ou vous n'avez pas accès à ce qu'il désigne.",
+    "forbiddenTitle": "Vous n'avez pas accès à cette page",
+    "forbiddenBody": "Votre rôle ne comprend pas ce dont cette page a besoin. Demandez l'accès à un administrateur de votre organisation.",
+    "loading": "Chargement…"
   }
 }

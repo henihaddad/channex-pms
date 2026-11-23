@@ -31,7 +31,7 @@ export const metadata: Metadata = {
  * the server. Sending the whole catalogue (about 45 KB gzipped) on every page, the booking site
  * included, was the largest part of each payload.
  */
-const CLIENT_NAMESPACES = ["apiKeys", "oauth", "payments"] as const;
+const CLIENT_NAMESPACES = ["apiKeys", "oauth", "payments", "system"] as const;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
