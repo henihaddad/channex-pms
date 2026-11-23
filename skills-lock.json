@@ -1,125 +1,174 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "accessibility": {
+      "source": "addyosmani/web-quality-skills",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+      "sourceType": "github",
+      "skillPath": "skills/accessibility/SKILL.md",
+      "computedHash": "c668809f5df57feb87cc06f1bc37fb340d1d92e26bacb6edbeab9258d22e76a5"
+    },
+    "core-web-vitals": {
+      "source": "addyosmani/web-quality-skills",
+      "commit": "afa8da942115f2961fdbfa80807ea0b232ff6c00",
+      "sourceType": "github",
+      "skillPath": "skills/core-web-vitals/SKILL.md",
+      "computedHash": "de50c203aa9dafa8dee9dd8c06782e3fc610704b83c1c408e4c5ee2337c4cd2a"
+    },
     "crafting-effective-readmes": {
       "source": "softaworks/agent-toolkit",
       "sourceType": "github",
       "skillPath": "skills/crafting-effective-readmes/SKILL.md",
-      "computedHash": "c931a8c22160e8925400778fcb2266b5d1df762f3052edba65f72479f79f2d6c"
+      "computedHash": ""
     },
     "create-readme": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
       "skillPath": "skills/create-readme/SKILL.md",
-      "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
+      "computedHash": ""
     },
     "design": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
       "skillPath": ".claude/skills/design/SKILL.md",
-      "computedHash": "be91a09fb3b0e12290ca24c43eb9f53db1a7e95c272e5024fdb89b90b54cecd4"
+      "computedHash": ""
     },
     "design-system": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",
       "skillPath": ".claude/skills/design-system/SKILL.md",
-      "computedHash": "56b14cf0a7773abe4c62532db223b541a67d55f7f0686e27e98047044878211a"
+      "computedHash": ""
     },
     "drizzle-orm-patterns": {
       "source": "giuseppe-trisciuoglio/developer-kit",
       "sourceType": "github",
       "skillPath": "plugins/developer-kit-typescript/skills/drizzle-orm-patterns/SKILL.md",
-      "computedHash": "d63e6d73a9f579b505a5694af2f3b3200c2b5eeea147e88b9b6d1e5fce23bcbb"
+      "computedHash": ""
     },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
-      "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+      "computedHash": ""
     },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
-      "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
+      "computedHash": ""
     },
     "information-architecture": {
       "source": "owl-listener/designer-skills",
       "sourceType": "github",
       "skillPath": "ux-strategy/skills/information-architecture/SKILL.md",
-      "computedHash": "0ff58c8128b6c278d7fa6d8f9a202a338b089bd70c6afb32b61d520ca24fdeee"
+      "computedHash": ""
     },
     "landing-page-copywriter": {
       "source": "onewave-ai/claude-skills",
       "sourceType": "github",
       "skillPath": "landing-page-copywriter/SKILL.md",
-      "computedHash": "f86f1a5d1f6138f935b1d2760c958a7f8179a8584e8526fbd176bdcf7ab48304"
+      "computedHash": ""
     },
     "landing-page-design": {
       "source": "skills-101/superpowers",
       "sourceType": "github",
       "skillPath": "guides/design/landing-page-design/SKILL.md",
-      "computedHash": "435af3919183e91ded83197f9238740593cac886f45067dc729d8a7095fbfb5a"
+      "computedHash": ""
+    },
+    "migrate-to-vinext": {
+      "source": "cloudflare/vinext",
+      "commit": "516cbea80795830df8e2350c93b2a171bd899384",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/migrate-to-vinext/SKILL.md",
+      "computedHash": "a989206e5d67f43fc45d4b0c845c802a331d70417bacb3b8c1eed0c14e61a09f"
     },
     "nextjs-app-router-patterns": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/frontend-mobile-development/skills/nextjs-app-router-patterns/SKILL.md",
-      "computedHash": "b4fea42eecf1f803155ef7fa133d5286ee8f2dbba3e616954e9e43c6f0ffc144"
+      "computedHash": ""
+    },
+    "nextjs-on-cloudflare": {
+      "source": "cloudflare/skills",
+      "commit": "5108325ecceabc899c761e07aa617b09c02445ee",
+      "sourceType": "github",
+      "skillPath": "skills/nextjs-on-cloudflare/SKILL.md",
+      "computedHash": "5da56bb44703eb542ee923ddf428a4c12c3d97cbeb50bd34b9d8aa3b68d33836"
     },
     "open-source-strategy": {
       "source": "kostja94/marketing-skills",
       "sourceType": "github",
       "skillPath": "skills/strategies/commercial/open-source/SKILL.md",
-      "computedHash": "16b1d1e1aeed64f13b25b7ca59131ef20092aa3e232790840bf3b811c532c100"
+      "computedHash": ""
     },
     "open-sourcing": {
       "source": "trailofbits/skills",
       "sourceType": "github",
       "skillPath": "plugins/open-sourcing/skills/open-sourcing/SKILL.md",
-      "computedHash": "2274e2b09904d5585cfbbf25aa83762a231cfa3f8f62a2515d7f6b86448e8e0e"
+      "computedHash": ""
     },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "a86630dd9b32722a4ea6846abc6756d5da8f06bdc2343dbc625923cc5c7a758b"
+      "computedHash": ""
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
-      "computedHash": "e14e276241805c97dbcfe40dcbea1a3035269cc7293cac4b1832dda41a835e60"
+      "computedHash": ""
     },
     "tailwind-design-system": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
-      "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
+      "computedHash": ""
     },
     "ux-heuristics": {
       "source": "wondelai/skills",
       "sourceType": "github",
       "skillPath": "ux-heuristics/SKILL.md",
-      "computedHash": "078959463a4d191d3ff17fd7a0b036697c79da3e86102251c98f76ffa9e66a28"
+      "computedHash": ""
+    },
+    "vercel-composition-patterns": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "sourceType": "github",
+      "skillPath": "skills/composition-patterns/SKILL.md",
+      "computedHash": "f711ed8b16162eaa712abbcdbbae6c926f86c57e60127735fecc3ad0dd85b3fa"
     },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-best-practices/SKILL.md",
-      "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
+      "computedHash": ""
     },
     "wcag-accessibility-audit": {
       "source": "mastepanoski/claude-skills",
       "sourceType": "github",
       "skillPath": "skills/wcag-accessibility-audit/SKILL.md",
-      "computedHash": "794f471ae3f854ff5184f2b8ef2cbaa31c62feb5fe593d1cf6125c5c56c6ab8e"
+      "computedHash": ""
     },
     "web-design-guidelines": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/web-design-guidelines/SKILL.md",
-      "computedHash": "f3bc47f890f42a44db1007ab390709ec368e4b8c089baee6b0007182236ac474"
+      "computedHash": ""
+    },
+    "wrangler": {
+      "source": "cloudflare/skills",
+      "commit": "5108325ecceabc899c761e07aa617b09c02445ee",
+      "sourceType": "github",
+      "skillPath": "skills/wrangler/SKILL.md",
+      "computedHash": "182e370d8c26e6bcb896a57a63e6cab006b253b9278cc3515f7b9db2c4d07661"
+    },
+    "writing-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "sourceType": "github",
+      "skillPath": "skills/writing-guidelines/SKILL.md",
+      "computedHash": "fe1390adbe2f7ba68d5fb85d3b14a1d55e71ce04cff5c175245c550d1c3a6f7e"
     }
   }
 }
