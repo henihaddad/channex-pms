@@ -78,13 +78,13 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Confirm" }).click();
   await expect(page).toHaveURL(/\/channels\/[0-9a-f-]+$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("AirBNB");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Airbnb");
   await expect(page.getByTestId("mapping-editor")).toBeVisible();
   // CH-5 import: the host's listings become properties with Airbnb's content and prices
   await page.getByTestId("import-listings").click();
   await expect(page.getByTestId("import-row")).toHaveCount(2);
   await page.getByTestId("import-run").click();
-  await expect(page.getByTestId("import-done")).toContainText("2 new properties");
+  await expect(page.getByTestId("import-done")).toContainText("New properties: 2");
   await page.goto("/properties");
   await expect(page.getByRole("link", { name: "Fake Loft by the River" })).toBeVisible();
   await page.goBack();
@@ -115,14 +115,14 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByTestId("wizard-next").click();
   await page.getByTestId("field-hotel_id").fill("12345");
   await page.getByTestId("wizard-test").click();
-  await expect(page.getByText("Connection OK")).toBeVisible();
+  await expect(page.getByText("Connection works.")).toBeVisible();
   await page.getByTestId("wizard-load").click();
   await expect(page.getByTestId("mapping-editor")).toBeVisible();
-  await expect(page.getByText(/Full coverage/)).toBeVisible();
+  await expect(page.getByText(/Every room and rate plan is matched/)).toBeVisible();
   await page.getByTestId("wizard-create").click();
-  await expect(page.getByText(/created inactive/)).toBeVisible();
+  await expect(page.getByText(/not live yet/)).toBeVisible();
   await page.getByTestId("wizard-activate").click();
-  await expect(page.getByText(/Active\. A full ARI push/)).toBeVisible();
+  await expect(page.getByText(/Prices and availability are on their way/)).toBeVisible();
   await page.getByTestId("wizard-done").click();
   await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(2);
 
@@ -137,9 +137,9 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
   await page.getByTestId("sync-connections").click();
   await expect(page.getByTestId("mirrored-connection")).toHaveCount(2);
   await expect(
-    page.getByTestId("mirrored-connection").filter({ hasText: "BookingCom" }),
+    page.getByTestId("mirrored-connection").filter({ hasText: "Booking.com" }),
   ).toHaveCount(1);
-  await expect(page.getByTestId("mirrored-connection").filter({ hasText: "AirBNB" })).toHaveCount(
+  await expect(page.getByTestId("mirrored-connection").filter({ hasText: "Airbnb" })).toHaveCount(
     1,
   );
 

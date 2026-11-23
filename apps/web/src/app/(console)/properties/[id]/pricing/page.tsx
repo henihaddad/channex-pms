@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { AUTOMATED_RATE_SOURCES } from "@pms/core";
@@ -11,6 +12,7 @@ import {
   PageHeader,
   Select,
   Stat,
+  SubmitButton,
   Table,
   TBody,
   Td,
@@ -19,7 +21,8 @@ import {
   Tr,
 } from "@/components/ui";
 import { withPermission } from "@/server/with-permission";
-import { day, elapsed, money } from "@/lib/format";
+import { clock, day, elapsed, money } from "@/lib/format";
+import { minorToDecimal } from "@/lib/amounts";
 import { ImportForm } from "./import-form";
 import { saveRateImportAction } from "./pricing.actions";
 
@@ -37,6 +40,7 @@ const loadPricing = withPermission<
   {
     title: string;
     currency: string;
+    timezone: string;
     settings: RateImportSettings;
     ratePlans: Array<{ id: string; title: string }>;
     plans: PlanRow[];
@@ -52,9 +56,9 @@ const loadPricing = withPermission<
     audit: false,
   },
   async (ctx, { propertyId, today }) => {
-    const [p] = await rawRows<{ title: string; currency: string }>(
+    const [p] = await rawRows<{ title: string; currency: string; timezone: string }>(
       ctx.tx,
-      sql`select title, currency from property where id = ${propertyId} and archived_at is null`,
+      sql`select title, currency, timezone from property where id = ${propertyId} and archived_at is null`,
     );
     if (!p) return null;
     const settings = await new DrizzleRateImportRepository(ctx.tx, ctx.orgId).get(propertyId);
@@ -100,6 +104,7 @@ const loadPricing = withPermission<
     return {
       title: p.title,
       currency: p.currency,
+      timezone: p.timezone,
       settings,
       ratePlans: plans
         .filter((x) => x.parentTitle === null)
@@ -120,8 +125,20 @@ const PROVIDER: Record<string, string> = {
   pricelabs: "PriceLabs",
   wheelhouse: "Wheelhouse",
 };
-/** The worker pulls every scheduled engine at 02:40 UTC (spec 06 §6.5b, `rates.import`). */
+/** The worker pulls every scheduled engine at 02:40 UTC (spec 06 §6.5b, `rates.import`); shown in the property's time zone. */
 const PULL_AT = "02:40";
+
+const today = () => new Date().toISOString().slice(0, 10);
+/** One load per request, shared by the title and the page. */
+const load = cache((propertyId: string, night: string) =>
+  loadPricing({ propertyId, today: night }),
+);
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [d, t] = await Promise.all([load(id, today()), getTranslations("pricing")]);
+  return { title: d ? `${t("title")} · ${d.title}` : t("title") };
+}
 
 /**
  * Rate import (spec 06 §6.5b): prices from PriceLabs, Wheelhouse or a spreadsheet, through
@@ -130,8 +147,8 @@ const PULL_AT = "02:40";
  */
 export default async function PricingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const today = new Date().toISOString().slice(0, 10);
-  const d = await loadPricing({ propertyId: id, today });
+  const todayIso = today();
+  const d = await load(id, todayIso);
   if (!d) notFound();
   const [t, tp, locale] = await Promise.all([
     getTranslations("pricing"),
@@ -144,19 +161,21 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
   const scheduled = s.enabled && s.provider !== "csv";
   const floor = s.guardRails.floorMinor ?? null;
   const ceiling = s.guardRails.ceilingMinor ?? null;
-  const major = (m: number | null) => (m === null ? "" : (m / 100).toFixed(2));
+  const major = (m: number | null) => minorToDecimal(m, d.currency);
   const now = new Date();
-  const pullToday = `${today}T${PULL_AT}:00Z`;
+  const pullToday = `${todayIso}T${PULL_AT}:00Z`;
+  /** The nightly pull as the clock in the property reads it. */
+  const pullAt = clock(pullToday, d.timezone, locale);
   const nextPullToday = now.toISOString() < pullToday;
   const when = (iso: string) => {
     const date = iso.slice(0, 10);
     const label =
-      date === today
+      date === todayIso
         ? t("today")
         : date === new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10)
           ? t("yesterday")
-          : day(date);
-    return `${label} ${iso.slice(11, 16)}`;
+          : day(date, locale);
+    return `${label} ${clock(iso, d.timezone, locale)}`;
   };
   const sourceName = (src: string | null) =>
     src === null
@@ -190,7 +209,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
         <Stat
           label={t("kpiSource")}
           value={provider}
-          hint={scheduled ? t("kpiSourceScheduled", { at: PULL_AT }) : t("kpiSourceManual")}
+          hint={scheduled ? t("kpiSourceScheduled", { at: pullAt }) : t("kpiSourceManual")}
           testId="import-state"
         />
         <Stat
@@ -200,7 +219,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
             d.lastImport
               ? t("kpiLastHint", { n: d.lastImport.cellCount })
               : s.lastRunAt
-                ? t("kpiLastChecked", { when: elapsed(s.lastRunAt) })
+                ? t("kpiLastChecked", { when: elapsed(s.lastRunAt, now, locale) })
                 : t("kpiNever")
           }
         />
@@ -211,7 +230,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
         />
         <Stat
           label={t("kpiNext")}
-          value={scheduled ? `${nextPullToday ? t("today") : t("tomorrow")} ${PULL_AT}` : "—"}
+          value={scheduled ? `${nextPullToday ? t("today") : t("tomorrow")} ${pullAt}` : "—"}
           hint={
             scheduled ? (s.autoApply ? t("kpiNextAuto") : t("kpiNextReview")) : t("kpiNextManual")
           }
@@ -262,7 +281,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
                       <Td>{sourceName(p.todaySource)}</Td>
                       <Td>
                         {!derived && p.todaySource === "rate_import" && d.lastImport
-                          ? t("ago", { when: elapsed(d.lastImport.at) })
+                          ? t("ago", { when: elapsed(d.lastImport.at, now, locale) })
                           : "—"}
                       </Td>
                       <Td>
@@ -308,7 +327,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
                     return (
                       <Tr key={`${o.plan}-${o.date}`}>
                         <Td>
-                          {day(o.date)}
+                          {day(o.date, locale)}
                           {d.ratePlans.length > 1 ? (
                             <span className="block text-xs text-muted">{o.plan}</span>
                           ) : null}
@@ -378,7 +397,7 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
             <div>
               <Label htmlFor="schedule">{t("schedule")}</Label>
               <Select id="schedule" name="schedule" defaultValue={s.enabled ? "nightly" : "manual"}>
-                <option value="nightly">{t("scheduleNightly", { at: PULL_AT })}</option>
+                <option value="nightly">{t("scheduleNightly", { at: pullAt })}</option>
                 <option value="manual">{t("scheduleManual")}</option>
               </Select>
             </div>
@@ -446,13 +465,9 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
               </div>
             ) : null}
             <div>
-              <button
-                type="submit"
-                className="inline-flex h-[38px] items-center rounded-full bg-accent px-4 text-sm font-bold text-accent-foreground"
-                data-testid="save-pricing"
-              >
+              <SubmitButton testId="save-pricing" pendingLabel={t("saving")}>
                 {t("save")}
-              </button>
+              </SubmitButton>
             </div>
           </form>
         </Card>

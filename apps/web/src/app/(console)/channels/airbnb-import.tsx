@@ -8,6 +8,7 @@ import {
   type ListingCandidate,
 } from "./channels.actions";
 import { Alert, Button, Select } from "@/components/ui";
+import { fill } from "./fill";
 
 export interface ImportLabels {
   load: string;
@@ -15,8 +16,11 @@ export interface ImportLabels {
   none: string;
   newProperty: string;
   target: string;
+  /** Raw, with `{n}`. */
   run: string;
+  /** Raw, with `{created}` and `{connected}`. */
   done: string;
+  failed: string;
 }
 
 /**
@@ -36,16 +40,26 @@ export function AirbnbImport({
   const [rows, setRows] = useState<ListingCandidate[] | null>(null);
   const [choice, setChoice] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ created: number; connected: number } | null>(null);
+  const [error, setError] = useState("");
   const [pending, start] = useTransition();
-  const load = () =>
+  const guarded = (fn: () => Promise<void>) =>
     start(async () => {
+      setError("");
+      try {
+        await fn();
+      } catch (e) {
+        setError(e instanceof Error && e.message ? e.message : L.failed);
+      }
+    });
+  const load = () =>
+    guarded(async () => {
       const r = await importListingsPreview({ connectionId });
       setRows(r);
       setChoice(Object.fromEntries(r.map((x) => [x.code, x.match?.propertyId ?? ""])));
       setResult(null);
     });
   const run = () =>
-    start(async () => {
+    guarded(async () => {
       const r = await importListingsAction({
         connectionId,
         decisions: (rows ?? []).map((x) => ({
@@ -61,6 +75,7 @@ export function AirbnbImport({
   return (
     <div className="space-y-3" data-testid="airbnb-import">
       <p className="text-sm text-muted">{L.hint}</p>
+      {error ? <Alert>{error}</Alert> : null}
       {rows === null ? (
         <Button variant="secondary" disabled={pending} onClick={load} data-testid="import-listings">
           {L.load}
@@ -97,15 +112,13 @@ export function AirbnbImport({
             </div>
           ))}
           <Button disabled={pending} onClick={run} data-testid="import-run">
-            {L.run.replace("{n}", String(rows.length))}
+            {fill(L.run, { n: rows.length })}
           </Button>
         </div>
       )}
       {result ? (
         <Alert tone="success" data-testid="import-done">
-          {L.done
-            .replace("{created}", String(result.created))
-            .replace("{connected}", String(result.connected))}
+          {fill(L.done, result)}
         </Alert>
       ) : null}
     </div>

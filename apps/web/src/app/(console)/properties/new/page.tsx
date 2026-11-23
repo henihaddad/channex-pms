@@ -6,6 +6,11 @@ import { PropertyWizard, type WizardLabels } from "./wizard";
 import { loadOrganization } from "../../settings/organization/organization.actions";
 import { TabsOverride } from "../tabs-override";
 
+export async function generateMetadata() {
+  const w = await getTranslations("properties.wizard");
+  return { title: w("pageTitle") };
+}
+
 const TZ: Record<string, string> = {
   DE: "Europe/Berlin",
   FR: "Europe/Paris",
@@ -36,13 +41,15 @@ export default async function NewPropertyPage() {
     kind: w("kind"),
     kindHint: w("kindHint"),
     kinds: {
-      single_unit: w("kinds.single_unit.option"),
-      multi_unit: w("kinds.multi_unit.option"),
-      hotel: w("kinds.hotel.option"),
+      single_unit: t("kinds.single_unit"),
+      multi_unit: t("kinds.multi_unit"),
+      hotel: t("kinds.hotel"),
     },
     country: w("country"),
     city: w("city"),
+    cityPlaceholder: w("cityPlaceholder"),
     street: w("street"),
+    streetPlaceholder: w("streetPlaceholder"),
     postcode: w("postcode"),
     currency: w("currency"),
     timezone: w("timezone"),
@@ -61,6 +68,7 @@ export default async function NewPropertyPage() {
     templateName: w("templateName"),
     saveTemplate: w("saveTemplate"),
     create: w("create"),
+    creating: w("creating"),
     cancel: w("cancel"),
     afterCreate: w("afterCreate"),
   };

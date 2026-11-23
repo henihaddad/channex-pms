@@ -4,6 +4,11 @@ import { DataTable, PageHeader } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadInventory } from "../properties.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("properties.tabs");
+  return { title: t("rooms") };
+}
+
 /** Every room type and its units across the portfolio (spec 03 §3.2a, tab "Rooms & units"). */
 export default async function RoomsPage() {
   const t = await getTranslations("properties");

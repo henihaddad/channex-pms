@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Chip } from "@/components/ui";
 import { elapsed } from "@/lib/format";
 import type { ChannelsOverview } from "./channels.actions";
@@ -7,7 +7,7 @@ import { channelOf } from "./channel-meta";
 
 /** "Which room is which, per channel": each room type against each connected channel, Direct and the last push. */
 export async function RoomsTable({ rooms }: { rooms: ChannelsOverview["rooms"] }) {
-  const t = await getTranslations("channels.board");
+  const [t, locale] = await Promise.all([getTranslations("channels.board"), getLocale()]);
   const channels = [
     ...new Map(
       rooms
@@ -33,7 +33,9 @@ export async function RoomsTable({ rooms }: { rooms: ChannelsOverview["rooms"] }
                 {c.name}
               </th>
             ))}
-            <th className="border-b border-border px-4 py-3 text-start font-semibold">Direct</th>
+            <th className="border-b border-border px-4 py-3 text-start font-semibold">
+              {t("direct")}
+            </th>
             <th className="border-b border-border px-4 py-3 text-start font-semibold">
               {t("lastPush")}
             </th>
@@ -83,7 +85,9 @@ export async function RoomsTable({ rooms }: { rooms: ChannelsOverview["rooms"] }
                   )}
                 </td>
                 <td className="border-b border-default px-4 py-3 text-muted">
-                  {r0.lastPushAt ? t("ago", { ago: elapsed(r0.lastPushAt) }) : "—"}
+                  {r0.lastPushAt
+                    ? t("ago", { ago: elapsed(r0.lastPushAt, new Date(), locale) })
+                    : "—"}
                 </td>
               </tr>
             );

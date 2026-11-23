@@ -1,9 +1,27 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import type { DifferingNight } from "@pms/db";
-import { Button, Card, Chip, PageHeader, Stat } from "@/components/ui";
+import {
+  Card,
+  Chip,
+  PageHeader,
+  Stat,
+  SubmitButton,
+  TBody,
+  THead,
+  Table,
+  Td,
+  Th,
+  Tr,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { day, elapsed, money } from "@/lib/format";
+import { forceResyncAction } from "../properties/[id]/property.actions";
 import { loadSyncHealth, loadSyncOverview, verifyNowAction } from "./sync-health.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("syncHealth");
+  return { title: t("title") };
+}
 
 /** The nightly check compares this many nights from today (RECONCILE_HORIZON_DAYS in the worker). */
 const CHECKED_NIGHTS = 365;
@@ -58,6 +76,7 @@ export default async function SyncHealthPage() {
   const healthy = drift === 0 && s.unackedBookings === 0;
   const rows = ranges(o.differing);
   const peak = Math.max(1, ...s.perHour);
+  const ago = (iso: string) => elapsed(iso, new Date(), locale);
 
   const value = (r: DifferingNight, raw: string): string => {
     if (!raw) return "—";
@@ -97,9 +116,7 @@ export default async function SyncHealthPage() {
         <Stat
           label={t("drift")}
           value={<span className={drift ? "text-warning" : undefined}>{drift}</span>}
-          hint={
-            s.lastVerifiedAt ? t("verified", { ago: elapsed(s.lastVerifiedAt) }) : t("notVerified")
-          }
+          hint={s.lastVerifiedAt ? t("verified", { ago: ago(s.lastVerifiedAt) }) : t("notVerified")}
         />
         <Stat
           label={t("sent")}
@@ -125,9 +142,14 @@ export default async function SyncHealthPage() {
                 </Chip>
               ) : (
                 <form action={verifyNowAction}>
-                  <Button type="submit" size="sm" variant="secondary" data-testid="verify-now">
+                  <SubmitButton
+                    size="sm"
+                    variant="secondary"
+                    testId="verify-now"
+                    pendingLabel={t("verifying")}
+                  >
                     {t("verifyNow")}
-                  </Button>
+                  </SubmitButton>
                 </form>
               )
             }
@@ -138,51 +160,70 @@ export default async function SyncHealthPage() {
                 {t("nothingDiffers")}
               </p>
             ) : (
-              <div className="mt-3 overflow-x-auto rounded-card border border-default">
-                <table className="w-full text-sm" data-testid="differing">
-                  <thead className="bg-surface-secondary text-left text-xs text-muted">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">{t("roomPlan")}</th>
-                      <th className="px-3 py-2 font-medium">{t("nights")}</th>
-                      <th className="px-3 py-2 font-medium">{t("local")}</th>
-                      <th className="px-3 py-2 font-medium">{t("channel")}</th>
-                      <th className="px-3 py-2 font-medium">{t("action")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr
-                        key={`${r.propertyTitle}|${r.roomTitle}|${r.planTitle ?? ""}|${r.kind}|${r.date}`}
-                        className="border-t border-default align-top"
-                      >
-                        <td className="px-3 py-2">
-                          {[r.propertyTitle, r.roomTitle, r.planTitle ?? t("availability")].join(
-                            " · ",
-                          )}
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {r.to === r.date
-                            ? day(r.date, locale)
-                            : `${day(r.date, locale)} → ${day(r.to, locale)}`}
-                        </td>
-                        <td className="px-3 py-2">{value(r, r.local)}</td>
-                        <td className="px-3 py-2">{value(r, r.channel)}</td>
-                        <td className="px-3 py-2">
-                          {r.state === "conflicted" ? (
-                            <Chip size="sm" color="info">
-                              {t("repushed")}
+              <Table className="mt-3" dense data-testid="differing">
+                <THead>
+                  <Tr className="hover:bg-transparent">
+                    <Th>{t("roomPlan")}</Th>
+                    <Th>{t("nights")}</Th>
+                    <Th>{t("local")}</Th>
+                    <Th>{t("channel")}</Th>
+                    <Th>{t("action")}</Th>
+                  </Tr>
+                </THead>
+                <TBody>
+                  {rows.map((r) => (
+                    <Tr
+                      key={`${r.propertyId}|${r.roomTitle}|${r.planTitle ?? ""}|${r.kind}|${r.date}`}
+                      data-testid="differing-row"
+                      data-state={r.state}
+                    >
+                      <Td>
+                        {[r.propertyTitle, r.roomTitle, r.planTitle ?? t("availability")].join(
+                          " · ",
+                        )}
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        {r.to === r.date
+                          ? day(r.date, locale)
+                          : `${day(r.date, locale)} → ${day(r.to, locale)}`}
+                      </Td>
+                      <Td>{value(r, r.local)}</Td>
+                      <Td>{value(r, r.channel)}</Td>
+                      <Td>
+                        {r.state === "conflicted" ? (
+                          <Chip size="sm" color="info">
+                            {t("repushed")}
+                          </Chip>
+                        ) : (
+                          <div className="flex flex-col items-start gap-1.5">
+                            <Chip size="sm" color="warning">
+                              {t("failedPill")}
                             </Chip>
-                          ) : (
-                            <Chip size="sm" color="warning" title={r.lastError ?? undefined}>
-                              {t("failedPill", { why: (r.lastError ?? "?").slice(0, 40) })}
-                            </Chip>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                            {r.lastError ? (
+                              <details className="max-w-xs text-xs text-muted">
+                                <summary className="cursor-pointer">{t("whyFailed")}</summary>
+                                <p className="mt-1 break-words">{r.lastError}</p>
+                              </details>
+                            ) : null}
+                            <form action={forceResyncAction}>
+                              <input type="hidden" name="propertyId" value={r.propertyId} />
+                              <SubmitButton
+                                size="sm"
+                                variant="secondary"
+                                pendingLabel={t("retrying")}
+                                aria-label={t("retryLabel", { property: r.propertyTitle })}
+                                testId="retry-failed"
+                              >
+                                {t("retry")}
+                              </SubmitButton>
+                            </form>
+                          </div>
+                        )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </TBody>
+              </Table>
             )}
           </Card>
 
@@ -196,53 +237,51 @@ export default async function SyncHealthPage() {
                 <dt className="text-xs text-muted">{t("connection")}</dt>
                 <dd>
                   {o.channexEnv === "production" ? t("production") : t("staging")}
-                  {o.channexEnv === "staging" ? (
+                  {o.channexEnv === "staging" && o.selfHosted ? (
                     <span className="block text-xs text-muted">{t("switchHint")}</span>
                   ) : null}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">{t("lastPush")}</dt>
-                <dd>{s.lastPushAt ? t("ago", { ago: elapsed(s.lastPushAt) }) : t("never")}</dd>
+                <dd>{s.lastPushAt ? t("ago", { ago: ago(s.lastPushAt) }) : t("never")}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">{t("incoming")}</dt>
                 <dd>{t("lastReceived", { n: s.bookingsReceived24h })}</dd>
               </div>
             </dl>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="text-left text-muted">
-                  <tr>
-                    <th className="py-1 pe-3 font-medium" />
-                    {STATES.map((st) => (
-                      <th key={st} className="py-1 pe-3 font-medium">
-                        {st.replace("_", " ")}
-                      </th>
-                    ))}
-                    <th className="py-1 font-medium">unacked</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {perProperty.map((p) => (
-                    <tr key={p.propertyId} className="border-t border-default">
-                      <td className="py-1 pe-3 font-medium">{p.title}</td>
-                      {STATES.map((st) => (
-                        <td
-                          key={st}
-                          className={`py-1 pe-3 font-mono ${(st === "failed" || st === "conflicted") && p.cells[st] ? "text-danger" : ""}`}
-                        >
-                          {p.cells[st] ?? 0}
-                        </td>
-                      ))}
-                      <td className={`py-1 font-mono ${p.unackedBookings ? "text-danger" : ""}`}>
-                        {p.unackedBookings}
-                      </td>
-                    </tr>
+            <Table className="mt-4 text-xs" dense variant="secondary">
+              <THead>
+                <Tr className="hover:bg-transparent">
+                  <Th>{t("colProperty")}</Th>
+                  {STATES.map((st) => (
+                    <Th key={st} className="text-end">
+                      {t(`states.${st}`)}
+                    </Th>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                  <Th className="text-end">{t("colUnacked")}</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {perProperty.map((p) => (
+                  <Tr key={p.propertyId}>
+                    <Td className="font-medium">{p.title}</Td>
+                    {STATES.map((st) => (
+                      <Td
+                        key={st}
+                        className={`text-end font-mono ${(st === "failed" || st === "conflicted") && p.cells[st] ? "text-danger" : ""}`}
+                      >
+                        {p.cells[st] ?? 0}
+                      </Td>
+                    ))}
+                    <Td className={`text-end font-mono ${p.unackedBookings ? "text-danger" : ""}`}>
+                      {p.unackedBookings}
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
           </details>
         </div>
 

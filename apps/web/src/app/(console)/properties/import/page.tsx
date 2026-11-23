@@ -30,6 +30,11 @@ const KEYS = [
   "bookings",
 ] as const;
 
+export async function generateMetadata() {
+  const t = await getTranslations("properties.airbnbImport");
+  return { title: t("title") };
+}
+
 /**
  * Import from Airbnb (spec 07 CH-5, design "Import from Airbnb"): step 2 of 4, the preview.
  * Every field the import would write, Airbnb's value beside what the property will hold, and

@@ -106,6 +106,7 @@ export function ImportForm({ propertyId, ratePlans, labels }: Props) {
 
       {result ? (
         <div className="mt-4 space-y-3 text-sm" data-testid="import-result">
+          {result.error ? <Alert tone="error">{result.error}</Alert> : null}
           {result.parseErrors.length > 0 ? (
             <Alert tone="warning" title={labels.parseErrors}>
               <ul className="list-inside list-disc" data-testid="parse-errors">
@@ -123,7 +124,7 @@ export function ImportForm({ propertyId, ratePlans, labels }: Props) {
                 .join(", ")}
             </p>
           ) : null}
-          {!plan ? (
+          {result.error ? null : !plan ? (
             <p data-testid="nothing-read">{labels.nothingRead}</p>
           ) : (
             <>

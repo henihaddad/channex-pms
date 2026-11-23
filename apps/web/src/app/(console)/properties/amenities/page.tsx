@@ -4,6 +4,11 @@ import { Button, Card, Chip, EmptyState, PageHeader, Textarea } from "@/componen
 import { guard } from "@/server/guard";
 import { loadAmenities, saveAmenitiesAction } from "../properties.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("properties.tabs");
+  return { title: t("amenities") };
+}
+
 /**
  * What each property offers (spec 03 §3.2a, tab "Amenities"): the list an Airbnb import
  * carries over, editable here one per line. Channels and the booking site read it from the

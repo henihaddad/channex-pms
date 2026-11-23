@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import {
   createProperty,
   fieldsToApply,
@@ -237,7 +238,10 @@ export const runAirbnbImportAction = withPermission<[RunImportState, FormData], 
     const listingId = String(fd.get("listingId") ?? "");
     const target = String(fd.get("propertyId") ?? "") || null;
     const { channelId, mapped } = await airbnbChannel(ctx, connectionId);
-    if (mapped.has(listingId)) return { error: "This listing is already imported." };
+    if (mapped.has(listingId)) {
+      const t = await getTranslations({ locale: ctx.locale, namespace: "properties" });
+      return { error: t("airbnbImport.alreadyImported") };
+    }
     const today = LocalDate.today("UTC");
     const { snapshot } = await readListing(ctx, channelId, listingId, today);
     const { local, ratePlanId: existingPlan, title } = await readLocal(ctx, target, today);

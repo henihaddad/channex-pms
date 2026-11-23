@@ -1,10 +1,23 @@
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { DrizzleBookingEngineRepository, rawRows, sql } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
-import { Button, Card, Field, Input, Label, PageTitle, Select, Textarea } from "@/components/ui";
+import {
+  Alert,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  PageTitle,
+  Select,
+  SubmitButton,
+  TextareaField,
+} from "@/components/ui";
+import { money, percent } from "@/lib/format";
+import { bpsToPercent, minorToDecimal } from "@/lib/amounts";
 import {
   saveEngineSettingsAction,
   saveExtraAction,
@@ -17,6 +30,7 @@ const loadEngine = withPermission<
   [{ propertyId: string }],
   {
     title: string;
+    currency: string;
     settings: Awaited<ReturnType<DrizzleBookingEngineRepository["settings"]>>;
     promos: Awaited<ReturnType<DrizzleBookingEngineRepository["listPromos"]>>;
     extras: Awaited<ReturnType<DrizzleBookingEngineRepository["extras"]>>;
@@ -32,14 +46,15 @@ const loadEngine = withPermission<
   },
   async (ctx, { propertyId }) => {
     const c = await container();
-    const [p] = await rawRows<{ title: string }>(
+    const [p] = await rawRows<{ title: string; currency: string }>(
       ctx.tx,
-      sql`select title from property where id = ${propertyId} and archived_at is null`,
+      sql`select title, currency from property where id = ${propertyId} and archived_at is null`,
     );
     if (!p) return null;
     const repo = new DrizzleBookingEngineRepository(ctx.tx, ctx.orgId, c.crypto);
     return {
       title: p.title,
+      currency: p.currency,
       settings: await repo.settings(propertyId),
       promos: (await repo.listPromos()).filter((x) => !x.propertyId || x.propertyId === propertyId),
       extras: await repo.extras(propertyId),
@@ -52,17 +67,46 @@ const loadEngine = withPermission<
   },
 );
 
-/** Per-property engine configuration (spec 10 §10.3–10.5): channel on/off, guarantee, taxes, theme, promo codes, extras, direct-only plans, embed. */
-export default async function BookingEnginePage({ params }: { params: Promise<{ id: string }> }) {
+/** One load per request, shared by the title and the page. */
+const load = cache((propertyId: string) => loadEngine({ propertyId }));
+
+const GUARANTEES = [
+  "pay_at_property",
+  "card_on_file",
+  "deposit_fixed",
+  "deposit_percent",
+  "prepay",
+] as const;
+/** Fields the action can send back as unreadable (`?invalid=`), by the label they carry here. */
+const INVALID = ["depositAmount", "depositPercent", "vatPercent", "cityTax", "value", "price"];
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const d = await loadEngine({ propertyId: id });
+  const [d, t] = await Promise.all([load(id), getTranslations("engine")]);
+  return { title: d ? `${t("title")} · ${d.title}` : t("title") };
+}
+
+/** Per-property booking site (spec 10 §10.3–10.5): on/off, guarantee, taxes, theme, promo codes, extras, direct-only plans, embed. */
+export default async function BookingEnginePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ invalid?: string }>;
+}) {
+  const { id } = await params;
+  const { invalid } = await searchParams;
+  const d = await load(id);
   if (!d) notFound();
-  const t = await getTranslations("engine");
+  const [t, locale] = await Promise.all([getTranslations("engine"), getLocale()]);
   const s = d.settings;
   const g = s.guarantee;
+  const cur = d.currency;
+  const bad = invalid && INVALID.includes(invalid) ? invalid : null;
+  const err = (field: string) => (bad === field ? t("invalidAmount") : undefined);
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <PageTitle>
           {t("title")} · {d.title}
         </PageTitle>
@@ -77,9 +121,9 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           <form action={toggleEngineAction}>
             <input type="hidden" name="propertyId" value={id} />
             <input type="hidden" name="enabled" value={s.enabled ? "0" : "1"} />
-            <Button type="submit" variant="secondary" data-testid="toggle-engine" size="sm">
+            <SubmitButton variant="secondary" testId="toggle-engine" size="sm">
               {s.enabled ? t("toggleOff") : t("toggleOn")}
-            </Button>
+            </SubmitButton>
           </form>
           {s.enabled ? (
             <Link
@@ -93,56 +137,62 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           ) : null}
         </div>
       </div>
+      {bad ? (
+        <Alert tone="error" live={false}>
+          {t("invalidBanner")}
+        </Alert>
+      ) : null}
       <Card title={t("settings")}>
         <form action={saveEngineSettingsAction} className="grid gap-3 sm:grid-cols-3">
           <input type="hidden" name="propertyId" value={id} />
           <div>
             <Select label={t("guarantee")} name="guarantee" defaultValue={g.kind}>
-              {[
-                "pay_at_property",
-                "card_on_file",
-                "deposit_fixed",
-                "deposit_percent",
-                "prepay",
-              ].map((k) => (
+              {GUARANTEES.map((k) => (
                 <option key={k} value={k}>
-                  {k}
+                  {t(`guarantees.${k}`)}
                 </option>
               ))}
             </Select>
           </div>
           <Field
-            label="Deposit amount (minor)"
+            label={t("depositAmount", { currency: cur })}
             name="depositAmount"
-            type="number"
+            inputMode="decimal"
             required={false}
-            defaultValue={g.kind === "deposit_fixed" ? String(g.amountMinor) : ""}
+            defaultValue={g.kind === "deposit_fixed" ? minorToDecimal(g.amountMinor, cur) : ""}
+            description={t("depositAmountHint")}
+            error={err("depositAmount")}
           />
           <Field
-            label="Deposit (bps)"
-            name="depositBps"
-            type="number"
+            label={t("depositPercent")}
+            name="depositPercent"
+            inputMode="decimal"
             required={false}
-            defaultValue={g.kind === "deposit_percent" ? String(g.percentBps) : ""}
+            defaultValue={g.kind === "deposit_percent" ? bpsToPercent(g.percentBps) : ""}
+            description={t("depositPercentHint")}
+            error={err("depositPercent")}
           />
           <Field
             label={t("vatBps")}
-            name="vatBps"
-            type="number"
+            name="vatPercent"
+            inputMode="decimal"
             required={false}
-            defaultValue={String(s.taxes.vatBps)}
+            defaultValue={bpsToPercent(s.taxes.vatBps)}
+            error={err("vatPercent")}
           />
           <Field
-            label={t("cityTax")}
+            label={t("cityTax", { currency: cur })}
             name="cityTax"
-            type="number"
+            inputMode="decimal"
             required={false}
-            defaultValue={String(s.taxes.cityTaxPerPersonNightMinor)}
+            defaultValue={minorToDecimal(s.taxes.cityTaxPerPersonNightMinor, cur)}
+            error={err("cityTax")}
           />
           <Field
             label={t("cityTaxMax")}
             name="cityTaxMax"
             type="number"
+            min={0}
             required={false}
             defaultValue={s.taxes.cityTaxMaxNights === null ? "" : String(s.taxes.cityTaxMaxNights)}
           />
@@ -150,17 +200,31 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             label={t("accessReveal")}
             name="accessRevealHours"
             type="number"
+            min={0}
             required={false}
             defaultValue={String(s.accessRevealHours)}
           />
-          <Field label={t("lat")} name="lat" required={false} defaultValue={s.lat ?? ""} />
-          <Field label={t("lng")} name="lng" required={false} defaultValue={s.lng ?? ""} />
+          <Field
+            label={t("lat")}
+            name="lat"
+            inputMode="decimal"
+            required={false}
+            defaultValue={s.lat ?? ""}
+          />
+          <Field
+            label={t("lng")}
+            name="lng"
+            inputMode="decimal"
+            required={false}
+            defaultValue={s.lng ?? ""}
+          />
           <Field
             label={t("themeColour")}
             name="colour"
             required={false}
             defaultValue={s.theme.colour ?? ""}
             placeholder="#0f766e"
+            spellCheck={false}
           />
           <div className="sm:col-span-2">
             <Field
@@ -170,34 +234,42 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
               defaultValue={s.attributes.join(", ")}
             />
           </div>
-          <div className="sm:col-span-3">
-            <Label htmlFor="description">{t("description")}</Label>
-            <Textarea
-              id="description"
-              name="description"
-              rows={2}
-              className="w-full rounded border border-border-secondary p-2 text-sm"
-              defaultValue={s.description ?? ""}
-            />
-          </div>
-          <div className="sm:col-span-3">
-            <Label htmlFor="houseManual">{t("houseManual")}</Label>
-            <Textarea
-              id="houseManual"
-              name="houseManual"
-              rows={3}
-              className="w-full rounded border border-border-secondary p-2 text-sm"
-              defaultValue={s.houseManual ?? ""}
-            />
-          </div>
-          <Label>
-            <input type="checkbox" name="abandonment" defaultChecked={s.abandonmentEmails} />{" "}
+          <TextareaField
+            className="sm:col-span-3"
+            label={t("description")}
+            name="description"
+            rows={2}
+            defaultValue={s.description ?? ""}
+          />
+          <TextareaField
+            className="sm:col-span-3"
+            label={t("houseManual")}
+            name="houseManual"
+            rows={3}
+            defaultValue={s.houseManual ?? ""}
+            description={
+              <>
+                {t("houseManualHint")}{" "}
+                <Link
+                  href={`/properties/${id}/guide?section=arrival`}
+                  className="font-semibold text-accent hover:underline"
+                >
+                  {t("openGuide")}
+                </Link>
+              </>
+            }
+          />
+          <Checkbox
+            name="abandonment"
+            defaultChecked={s.abandonmentEmails}
+            className="sm:col-span-3"
+          >
             {t("abandonment")}
-          </Label>
+          </Checkbox>
           <div>
-            <Button type="submit" data-testid="save-engine-settings">
+            <SubmitButton testId="save-engine-settings" pendingLabel={t("saving")}>
               {t("save")}
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       </Card>
@@ -207,32 +279,38 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
             {d.promos.map((p) => (
               <li key={p.id} data-testid="promo-row">
                 <code>{p.code}</code> ·{" "}
-                {p.kind === "percent" ? `${String(p.value)}%` : `${String(p.value)} minor`} ·{" "}
-                {String(p.uses)} {t("uses")}
+                {p.kind === "percent"
+                  ? percent(p.value, { ratio: false, locale })
+                  : money(p.value, cur, locale)}{" "}
+                · {t("usesCount", { n: p.uses })}
                 {p.singleUse ? ` · ${t("singleUse")}` : ""}
               </li>
             ))}
           </ul>
           <form action={savePromoAction} className="grid gap-2 sm:grid-cols-3">
             <input type="hidden" name="propertyId" value={id} />
-            <Field label={t("code")} name="code" />
+            <Field label={t("code")} name="code" spellCheck={false} />
             <div>
               <Select label={t("kind")} name="kind" defaultValue="percent">
                 <option value="percent">{t("percent")}</option>
-                <option value="amount">{t("amount")}</option>
+                <option value="amount">{t("amountIn", { currency: cur })}</option>
               </Select>
             </div>
-            <Field label={t("value")} name="value" type="number" />
+            <Field
+              label={t("value")}
+              name="value"
+              inputMode="decimal"
+              description={t("valueHint", { currency: cur })}
+              error={err("value")}
+            />
             <Field label={t("validFrom")} name="validFrom" type="date" required={false} />
             <Field label={t("validTo")} name="validTo" type="date" required={false} />
-            <Field label={t("maxUses")} name="maxUses" type="number" required={false} />
-            <Label>
-              <input type="checkbox" name="singleUse" /> {t("singleUse")}
-            </Label>
+            <Field label={t("maxUses")} name="maxUses" type="number" min={1} required={false} />
+            <Checkbox name="singleUse">{t("singleUse")}</Checkbox>
             <div>
-              <Button type="submit" data-testid="add-promo">
+              <SubmitButton testId="add-promo" pendingLabel={t("adding")}>
                 {t("addPromo")}
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </Card>
@@ -240,14 +318,24 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           <ul className="mb-3 space-y-1 text-sm" data-testid="extra-list">
             {d.extras.map((e) => (
               <li key={e.id} data-testid="extra-row">
-                {e.name} · {String(e.priceMinor)} / {e.per}
+                {e.name} · {money(e.priceMinor, cur, locale)} /{" "}
+                {e.per === "night"
+                  ? t("perNight")
+                  : e.per === "person"
+                    ? t("perPerson")
+                    : t("perStay")}
               </li>
             ))}
           </ul>
           <form action={saveExtraAction} className="grid gap-2 sm:grid-cols-3">
             <input type="hidden" name="propertyId" value={id} />
             <Field label={t("extraName")} name="name" />
-            <Field label={t("price")} name="priceMinor" type="number" />
+            <Field
+              label={t("price", { currency: cur })}
+              name="price"
+              inputMode="decimal"
+              error={err("price")}
+            />
             <div>
               <Select label={t("per")} name="per" defaultValue="stay">
                 <option value="stay">{t("perStay")}</option>
@@ -256,9 +344,9 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
               </Select>
             </div>
             <div>
-              <Button type="submit" data-testid="add-extra">
+              <SubmitButton testId="add-extra" pendingLabel={t("adding")}>
                 {t("addExtra")}
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </Card>
@@ -268,7 +356,7 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
           {d.ratePlans.map((rp) => (
             <li
               key={rp.id}
-              className="flex items-center justify-between"
+              className="flex items-center justify-between gap-3"
               data-direct-only={rp.direct_only ? "1" : "0"}
             >
               <span>
@@ -278,14 +366,14 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
                 <input type="hidden" name="propertyId" value={id} />
                 <input type="hidden" name="ratePlanId" value={rp.id} />
                 <input type="hidden" name="directOnly" value={rp.direct_only ? "0" : "1"} />
-                <Button
-                  type="submit"
+                <SubmitButton
                   variant="secondary"
-                  data-testid="toggle-direct-only"
+                  testId="toggle-direct-only"
                   size="sm"
+                  aria-label={`${rp.direct_only ? t("makeShared") : t("makeDirectOnly")}: ${rp.title}`}
                 >
                   {rp.direct_only ? t("makeShared") : t("makeDirectOnly")}
-                </Button>
+                </SubmitButton>
               </form>
             </li>
           ))}
@@ -294,13 +382,13 @@ export default async function BookingEnginePage({ params }: { params: Promise<{ 
       <Card title={t("embedTitle")}>
         <p className="mb-2 text-xs text-muted">{t("embedHint")}</p>
         <pre
-          className="overflow-x-auto rounded bg-foreground p-3 text-xs text-white/80"
+          className="overflow-x-auto rounded bg-foreground p-3 text-xs text-background"
           data-testid="embed-snippet"
         >
           {`<div id="book"></div>\n<script src="${d.appUrl}/widget.js" data-property="${id}" data-target="#book"></script>`}
         </pre>
         <p className="mt-2 text-xs text-muted">
-          <Input readOnly value={`${d.appUrl}/book/${id}`} aria-label="storefront url" />
+          <Input readOnly value={`${d.appUrl}/book/${id}`} aria-label={t("bookingSiteUrl")} />
         </p>
       </Card>
     </div>

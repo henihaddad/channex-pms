@@ -19,7 +19,9 @@ export interface WizardLabels {
   kinds: Record<Kind, string>;
   country: string;
   city: string;
+  cityPlaceholder: string;
   street: string;
+  streetPlaceholder: string;
   postcode: string;
   currency: string;
   timezone: string;
@@ -38,6 +40,7 @@ export interface WizardLabels {
   templateName: string;
   saveTemplate: string;
   create: string;
+  creating: string;
   cancel: string;
   afterCreate: string;
 }
@@ -218,8 +221,8 @@ export function PropertyWizard({
             </option>
           ))}
         </Select>
-        <Field label={L.city} name="city" required={false} placeholder="Lisbon" />
-        <Field label={L.street} name="street" required={false} placeholder="Rua dos Remédios 24" />
+        <Field label={L.city} name="city" required={false} placeholder={L.cityPlaceholder} />
+        <Field label={L.street} name="street" required={false} placeholder={L.streetPlaceholder} />
         <Field label={L.postcode} name="postcode" required={false} placeholder="1100-446" />
         <Select label={L.currency} name="currency" value={currency} onChange={setCurrency}>
           {CURRENCIES.map((c) => (
@@ -396,7 +399,7 @@ export function PropertyWizard({
       <input type="hidden" name="ratePlans" value={rpJson} />
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending} data-testid="create-property">
-          {pending ? "…" : L.create}
+          {pending ? L.creating : L.create}
         </Button>
         <LinkButton href="/properties" variant="secondary">
           {L.cancel}

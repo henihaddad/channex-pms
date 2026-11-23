@@ -102,7 +102,10 @@ Channex's payment application / Stripe tokenisation app is supported for
 properties already using it.
 
 - Policy-driven guarantee: card-on-file, deposit (fixed or %), full prepayment, or
-  pay-at-property.
+  pay-at-property. The settings form takes amounts in the property currency and
+  percentages in % (deposit, VAT, city tax, extras, amount promo codes); the action converts
+  them exactly to minor units and basis points, and a value that does not read is refused
+  with the field named, before anything is saved.
 - SCA / 3-D Secure where applicable; failures surface as recoverable, with a retry
   that does not lose the booking form.
 - **We never see a PAN.** Card fields are provider-hosted elements; our servers

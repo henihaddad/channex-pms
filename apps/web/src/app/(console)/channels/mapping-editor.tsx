@@ -8,6 +8,19 @@ import {
   type TheirRoom,
 } from "@pms/core";
 import { Select, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import { fill } from "./fill";
+
+/** Raw messages from `channels.mapping` (see mapping-labels.ts), filled here. */
+export interface MappingLabels {
+  colOurs: string;
+  colTheirs: string;
+  colSuggestion: string;
+  guests: string;
+  derived: string;
+  notMatched: string;
+  match: string;
+  allMatched: string;
+}
 
 /** The mapping screen (spec 07 §7.3): two panes, one row per rate plan, suggestions with confidence, coverage warnings live. */
 export function MappingEditor({
@@ -16,7 +29,9 @@ export function MappingEditor({
   suggestions,
   rows,
   onChange,
+  labels: L,
 }: {
+  labels: MappingLabels;
   ours: OurRatePlan[];
   theirs: TheirRoom[];
   suggestions: Suggestion[];
@@ -42,11 +57,11 @@ export function MappingEditor({
   return (
     <div className="space-y-3" data-testid="mapping-editor">
       <Table>
-        <THead className="uppercase">
-          <Tr>
-            <Th>Our rate plan</Th>
-            <Th>Channel room / rate</Th>
-            <Th>Suggestion</Th>
+        <THead>
+          <Tr className="hover:bg-transparent">
+            <Th>{L.colOurs}</Th>
+            <Th>{L.colTheirs}</Th>
+            <Th>{L.colSuggestion}</Th>
           </Tr>
         </THead>
         <TBody>
@@ -58,8 +73,8 @@ export function MappingEditor({
                 <Td>
                   {rp.roomTypeTitle} · {rp.title}{" "}
                   <span className="text-xs text-muted">
-                    occ {rp.occupancy}
-                    {rp.isDerived ? " · derived" : ""}
+                    {fill(L.guests, { n: rp.occupancy })}
+                    {rp.isDerived ? ` · ${L.derived}` : ""}
                   </span>
                 </Td>
                 <Td>
@@ -67,25 +82,24 @@ export function MappingEditor({
                     value={row ? `${row.roomCode}::${row.rateCode}` : ""}
                     onChange={(v) => set(rp.id, v)}
                     data-testid={`map-${rp.id}`}
+                    aria-label={`${L.colTheirs}: ${rp.roomTypeTitle} · ${rp.title}`}
                   >
-                    <option value="">— not mapped —</option>
+                    <option value="">{L.notMatched}</option>
                     {theirs.map((room) =>
                       room.rates.map((rate) => (
                         <option
                           key={`${room.code}::${rate.code}`}
                           value={`${room.code}::${rate.code}`}
                         >
-                          {room.title} / {rate.title}
-                          {rate.occupancy ? ` (occ ${rate.occupancy})` : ""}
+                          {room.title}, {rate.title}
+                          {rate.occupancy ? ` (${fill(L.guests, { n: rate.occupancy })})` : ""}
                         </option>
                       )),
                     )}
                   </Select>
                 </Td>
-                <Td>
-                  {s
-                    ? `${Math.round(s.confidence * 100)}% · ${s.reasons.join(", ") || "name similarity"}`
-                    : "—"}
+                <Td className="tabular-nums">
+                  {s ? fill(L.match, { pct: Math.round(s.confidence * 100) }) : "—"}
                 </Td>
               </Tr>
             );
@@ -102,9 +116,7 @@ export function MappingEditor({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-success-soft-foreground">
-          Full coverage: every room type, rate plan and channel room is mapped.
-        </p>
+        <p className="text-xs text-success-soft-foreground">{L.allMatched}</p>
       )}
     </div>
   );

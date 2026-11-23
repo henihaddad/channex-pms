@@ -1,8 +1,25 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Chip, DataTable, EmptyState, PageHeader, Select } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Chip,
+  DataTable,
+  EmptyState,
+  PageHeader,
+  Select,
+  SubmitButton,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { listProperties } from "../../properties/properties.actions";
 import { channexScreenAction, loadHealthBoard, syncConnectionsAction } from "../channels.actions";
+import { channelOf } from "../channel-meta";
+
+export async function generateMetadata() {
+  const t = await getTranslations("channels");
+  return { title: t("connectScreenTitle") };
+}
+
+const STATES = ["draft", "testing", "mapped", "active", "paused", "error", "removed"];
 
 /**
  * Channels that only the provider can authorise (Airbnb's OAuth, CH-5) are
@@ -15,7 +32,7 @@ export default async function ConnectViaChannexPage({
   searchParams: Promise<{ propertyId?: string }>;
 }) {
   const sp = await searchParams;
-  const t = await getTranslations("channels");
+  const [t, tp] = await Promise.all([getTranslations("channels"), getTranslations("properties")]);
   const [properties, board] = await guard(() => Promise.all([listProperties(), loadHealthBoard()]));
   const live = properties.filter((p) => p.state === "live");
   const propertyId = sp.propertyId ?? live[0]?.id ?? properties[0]?.id;
@@ -38,12 +55,12 @@ export default async function ConnectViaChannexPage({
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
-                {p.state !== "live" ? ` (${p.state})` : ""}
+                {p.state !== "live" ? ` (${tp(`states.${p.state}`)})` : ""}
               </option>
             ))}
           </Select>
           <Button type="submit" variant="secondary">
-            {t("property")}
+            {t("showProperty")}
           </Button>
         </form>
       </Card>
@@ -55,7 +72,7 @@ export default async function ConnectViaChannexPage({
         >
           <iframe
             src={screen.url}
-            title="Channex"
+            title={t("connectScreenCard")}
             className="h-[70vh] w-full rounded-2xl border border-border bg-surface"
             data-testid="channex-screen"
           />
@@ -67,9 +84,14 @@ export default async function ConnectViaChannexPage({
           actions={
             <form action={syncConnectionsAction}>
               <input type="hidden" name="propertyId" value={propertyId} />
-              <Button type="submit" variant="secondary" size="sm" data-testid="sync-connections">
+              <SubmitButton
+                variant="secondary"
+                size="sm"
+                testId="sync-connections"
+                pendingLabel={t("syncingConnections")}
+              >
                 {t("syncConnections")}
-              </Button>
+              </SubmitButton>
             </form>
           }
         >
@@ -77,11 +99,11 @@ export default async function ConnectViaChannexPage({
             <EmptyState title={t("noMirrored")} />
           ) : (
             <DataTable
-              columns={["Channel", "State", "Ready"]}
+              columns={[t("cols.channel"), t("cols.state"), t("cols.ready")]}
               rowTestId="mirrored-connection"
               rows={mirrored.map((c) => [
                 <a key="l" href={`/channels/${c.id}`} className="font-medium hover:underline">
-                  {c.adapterCode}
+                  {channelOf(c.adapterCode).name}
                 </a>,
                 <Chip
                   key="s"
@@ -90,9 +112,9 @@ export default async function ConnectViaChannexPage({
                   }
                   size="sm"
                 >
-                  {c.state}
+                  {t(`states.${STATES.includes(c.state) ? c.state : "draft"}`)}
                 </Chip>,
-                c.ready ? "✓" : (c.readiness?.issues ?? []).join("; ") || "—",
+                c.ready ? t("cols.isReady") : (c.readiness?.issues ?? []).join("; ") || "—",
               ])}
               dense
             />

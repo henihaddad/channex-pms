@@ -1,50 +1,93 @@
-import { getTranslations } from "next-intl/server";
-import { Card, PageTitle } from "@/components/ui";
+import { cache } from "react";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Card, Chip, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
-import { loadConnection } from "../channels.actions";
+import { day } from "@/lib/format";
+import { listPropertiesBrief, loadConnection } from "../channels.actions";
+import { channelOf } from "../channel-meta";
+import { mappingLabels } from "../mapping-labels";
 import { ConnectionMapping } from "./connection-mapping";
 import { ActivateButton } from "./activate-button";
 import { AirbnbImport } from "../airbnb-import";
-import { listPropertiesBrief } from "../channels.actions";
+
+/** One load per request, shared by the title and the page. */
+const load = cache((id: string) => guard(() => loadConnection(id)));
+
+const STATES = ["draft", "testing", "mapped", "active", "paused", "error", "removed"];
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const v = await load(id);
+  return {
+    title: `${v.connection.propertyTitle} · ${channelOf(v.connection.adapterCode).name}`,
+  };
+}
 
 export default async function ConnectionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const v = await guard(() => loadConnection(id));
-  const t = await getTranslations("channels");
+  const v = await load(id);
+  const [t, td, tm, tw, locale] = await Promise.all([
+    getTranslations("channels"),
+    getTranslations("channels.detail"),
+    getTranslations("channels.mapping"),
+    getTranslations("channels.wizard"),
+    getLocale(),
+  ]);
+  const c = v.connection;
+  const channel = channelOf(c.adapterCode).name;
+  const state = STATES.includes(c.state) ? c.state : "draft";
+  const settings = Object.entries(c.settings);
   return (
     <div className="space-y-6">
       <PageTitle>
-        {v.connection.propertyTitle} · {v.connection.adapterCode}
+        {c.propertyTitle} · {channel}
       </PageTitle>
       <Card>
         <p
-          className="text-sm text-muted"
+          className="flex flex-wrap items-center gap-2 text-sm text-muted"
           data-testid="connection-state"
-          data-state={v.connection.state}
+          data-state={c.state}
         >
-          State {v.connection.state} ·{" "}
-          {v.connection.readiness.ready
-            ? "ready"
-            : `not ready: ${v.connection.readiness.issues.join("; ")}`}{" "}
-          · Channex channel {v.connection.channexChannelId ?? "—"}
+          <Chip
+            size="sm"
+            color={
+              c.state === "active"
+                ? "success"
+                : c.state === "error"
+                  ? "danger"
+                  : c.state === "paused"
+                    ? "warning"
+                    : "default"
+            }
+          >
+            {t(`states.${state}`)}
+          </Chip>
+          {c.readiness.ready
+            ? td("ready")
+            : td("notReady", { issues: c.readiness.issues.join("; ") })}
         </p>
-        {v.connection.expectedRemovalDate ? (
-          <p className="text-sm text-danger" data-testid="removal-scheduled">
-            {t("removalScheduled", { date: v.connection.expectedRemovalDate })}
+        {c.expectedRemovalDate ? (
+          <p className="mt-2 text-sm text-danger" data-testid="removal-scheduled">
+            {t("removalScheduled", { date: day(c.expectedRemovalDate, locale) })}
           </p>
         ) : null}
-        <p className="text-xs text-muted">
-          Settings:{" "}
-          {Object.entries(v.connection.settings)
-            .map(([k, val]) => `${k}=${val}`)
-            .join(", ") || "—"}{" "}
-          · secrets shown as •••• (CH-2)
-        </p>
+        <details className="mt-3 text-xs text-muted">
+          <summary className="cursor-pointer font-medium">{td("technical")}</summary>
+          <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
+            <dt>{td("channexChannel")}</dt>
+            <dd className="font-mono">{c.channexChannelId ?? "—"}</dd>
+            <dt>{td("settings")}</dt>
+            <dd className="font-mono break-all">
+              {settings.map(([k, val]) => `${k}=${val}`).join(", ") || "—"}
+            </dd>
+          </dl>
+          <p className="mt-1">{td("secretsHidden")}</p>
+        </details>
       </Card>
-      {v.connection.adapterCode === "AirBNB" && v.connection.settings.managedIn === "channex" ? (
+      {c.adapterCode === "AirBNB" && c.settings.managedIn === "channex" ? (
         <Card title={t("importTitle")}>
           <AirbnbImport
-            connectionId={v.connection.id}
+            connectionId={c.id}
             properties={await listPropertiesBrief()}
             labels={{
               load: t("importLoad"),
@@ -52,33 +95,64 @@ export default async function ConnectionPage({ params }: { params: Promise<{ id:
               none: t("importNone"),
               newProperty: t("importNew"),
               target: t("importTarget"),
-              run: t("importRun"),
-              done: t("importDone"),
+              run: t.raw("importRun") as string,
+              done: t.raw("importDone") as string,
+              failed: tw("failed"),
             }}
           />
         </Card>
       ) : null}
-      <Card>
-        <ConnectionMapping view={v} />
+      <Card title={tm("title", { channel })}>
+        <ConnectionMapping
+          view={v}
+          channel={channel}
+          labels={{
+            liveTitle: tm.raw("liveTitle") as string,
+            startSelling: tm.raw("startSelling") as string,
+            stopSelling: tm.raw("stopSelling") as string,
+            move: tm.raw("move") as string,
+            save: tm("save"),
+            saveLive: tm.raw("saveLive") as string,
+            saving: tm("saving"),
+            saved: tm.raw("saved") as string,
+            savedLive: tm.raw("savedLive") as string,
+            failed: tw("failed"),
+            editor: await mappingLabels(),
+          }}
+        />
       </Card>
-      {v.connection.state !== "active" && v.connection.state !== "removed" ? (
-        <Card title="Activate">
-          <p className="mb-3 text-sm text-muted">
-            Save the mappings first. Activation checks readiness, then pushes the full horizon.
-          </p>
-          <ActivateButton connectionId={v.connection.id} label="Activate connection" />
+      {c.state !== "active" && c.state !== "removed" ? (
+        <Card title={td("activateTitle")}>
+          <p className="mb-3 text-sm text-muted">{td("activateBody", { channel })}</p>
+          <ActivateButton
+            connectionId={c.id}
+            channel={channel}
+            labels={{
+              label: td("activateButton"),
+              pending: tw("activating"),
+              live: tw.raw("live") as string,
+              notReadyNoReason: tw.raw("notReadyNoReason") as string,
+              failed: tw("failed"),
+            }}
+          />
         </Card>
       ) : null}
-      <Card title={"Events"}>
-        <ul className="text-sm">
-          {v.events.map((e) => (
-            <li key={e.id} className="border-t border-border py-1">
-              <span className="me-2 text-xs uppercase text-muted">{e.severity}</span>
-              {e.message}
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {v.events.length > 0 ? (
+        <Card title={t("events")}>
+          <ul className="text-sm">
+            {v.events.map((e) => (
+              <li key={e.id} className="border-t border-border py-1 first:border-t-0">
+                {e.severity === "p1" ? (
+                  <Chip size="sm" color="danger" className="me-2">
+                    {t("board.attention")}
+                  </Chip>
+                ) : null}
+                {e.message}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
     </div>
   );
 }

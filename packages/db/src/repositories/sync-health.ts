@@ -20,6 +20,7 @@ export interface SyncSummary {
 }
 
 export interface DifferingNight {
+  propertyId: string;
   propertyTitle: string;
   roomTitle: string;
   planTitle: string | null;
@@ -107,20 +108,22 @@ export class DrizzleSyncHealthRepository {
       local: string | null;
       channel: string | null;
       last_error: string | null;
+      property_id: string;
     }>(
       this.tx,
       sql`(select p.title as property_title, rt.title as room_title, rp.title as plan_title, rp.currency, 'rate' as kind,
-                  r.date::text as date, r.sync_state as state, r.values::text as local, r.synced_values::text as channel, r.last_error
+                  r.date::text as date, r.sync_state as state, r.values::text as local, r.synced_values::text as channel, r.last_error, p.id as property_id
              from rate_day r join rate_plan rp on rp.id = r.rate_plan_id join room_type rt on rt.id = rp.room_type_id join property p on p.id = r.property_id
             where r.org_id = ${this.orgId} and r.sync_state in ('failed', 'conflicted'))
           union all
-          (select p.title, rt.title, null, null, 'availability', a.date::text, a.sync_state, a.available::text, a.synced_available::text, a.last_error
+          (select p.title, rt.title, null, null, 'availability', a.date::text, a.sync_state, a.available::text, a.synced_available::text, a.last_error, p.id
              from availability_day a join room_type rt on rt.id = a.room_type_id join property p on p.id = a.property_id
             where a.org_id = ${this.orgId} and a.sync_state in ('failed', 'conflicted'))
           order by 1, 2, 3 nulls first, 6
           limit ${limit}`,
     );
     return rows.map((r) => ({
+      propertyId: r.property_id,
       propertyTitle: r.property_title,
       roomTitle: r.room_title,
       planTitle: r.plan_title,

@@ -36,6 +36,13 @@ flowchart TD
   S8 --> S9[Health monitoring]
 ```
 
+On screen the host sees six steps, numbered as they reach them: Channel, Settings, Test
+(which also loads both sides), Match rooms (which also creates the connection), Go live
+(readiness, then activation) and Done. Every step after the first has Back; going back from
+Go live to Match rooms saves the rooms onto the connection already created instead of
+creating a second one. The wizard's copy is in the host's language and names the channel,
+never a requirement code. Credential inputs are not autofilled or spellchecked.
+
 Requirements:
 
 - **CH-1** Every settings form field, label, type, validation and help text comes

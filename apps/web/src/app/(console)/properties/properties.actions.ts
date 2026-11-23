@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import {
   contentCompleteness,
   createProperty,
@@ -133,6 +133,36 @@ export interface CreateState {
   createdId?: string;
 }
 
+/** The wizard field a schema path points at, by its label: "Check these fields: Currency, Time zone." */
+const FIELD_LABELS: Record<string, string> = {
+  title: "wizard.title",
+  kind: "wizard.kind",
+  currency: "wizard.currency",
+  timezone: "wizard.timezone",
+  address: "wizard.street",
+  roomTypes: "wizard.roomTypes",
+  ratePlans: "wizard.ratePlans",
+  groupIds: "wizard.groups",
+  templateId: "wizard.template",
+};
+
+async function errorsT(ctx: ActorCtx) {
+  return getTranslations({ locale: ctx.locale, namespace: "properties" });
+}
+
+async function invalidFields(ctx: ActorCtx, issues: ReadonlyArray<{ path: PropertyKey[] }>) {
+  const t = await errorsT(ctx);
+  const fields = [
+    ...new Set(
+      issues.map((i) => {
+        const key = FIELD_LABELS[String(i.path[0] ?? "")];
+        return key ? t(key) : t("errors.otherField");
+      }),
+    ),
+  ];
+  return t("errors.checkFields", { fields: fields.join(", ") });
+}
+
 /** Wizard submit (spec 03 §3.2, MODEL-1): a template pre-fills, the form overrides. */
 export const createPropertyAction = withPermission<[CreateState, FormData], CreateState>(
   "property:create",
@@ -157,10 +187,7 @@ export const createPropertyAction = withPermission<[CreateState, FormData], Crea
       ratePlans: JSON.parse(String(fd.get("ratePlans") || "[]")) as unknown,
       templateId: String(fd.get("templateId") ?? "") || undefined,
     });
-    if (!parsed.success)
-      return {
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-      };
+    if (!parsed.success) return { error: await invalidFields(ctx, parsed.error.issues) };
     const { templateId, ...rest } = parsed.data;
     const sleeps = Number(fd.get("sleeps") ?? "");
     const form: PropertyInput = {
@@ -171,7 +198,7 @@ export const createPropertyAction = withPermission<[CreateState, FormData], Crea
     let input: PropertyInput = form;
     if (templateId) {
       const t = await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).getTemplate(templateId);
-      if (!t) return { error: "Template not found" };
+      if (!t) return { error: (await errorsT(ctx))("errors.templateGone") };
       input = fromTemplate(t, {
         ...form,
         ...(form.ratePlans?.length ? {} : { ratePlans: t.payload.ratePlans }),
@@ -188,6 +215,8 @@ export interface ImportState {
   error?: string;
   created?: number;
   errors?: string[];
+  /** "Created 20 properties; 2 rows skipped", in the host's language. */
+  message?: string;
 }
 
 /** Bulk CSV import (spec 03 §3.2): title,kind,currency,timezone,city,country,base_rate,min_stay per row. */
@@ -207,8 +236,7 @@ export const importCsvAction = withPermission<[ImportState, FormData], ImportSta
     );
     const lines = csv.split(/\r?\n/).filter((l) => l.trim());
     const header = (lines.shift() ?? "").split(",").map((h) => h.trim().toLowerCase());
-    if (!header.includes("title"))
-      return { error: "CSV needs a header row with at least a title column" };
+    if (!header.includes("title")) return { error: (await errorsT(ctx))("errors.csvHeader") };
     const template = templateId
       ? await new DrizzlePropertyRepository(ctx.tx, ctx.orgId).getTemplate(templateId)
       : null;
@@ -222,7 +250,9 @@ export const importCsvAction = withPermission<[ImportState, FormData], ImportSta
         timezone: String(fd.get("timezone") || "UTC"),
       });
       if (!parsed.ok) {
-        errors.push(`row ${String(i + 2)}: ${parsed.error.message}`);
+        errors.push(
+          (await errorsT(ctx))("errors.csvRow", { row: i + 2, message: parsed.error.message }),
+        );
         continue;
       }
       const input = template
@@ -232,7 +262,8 @@ export const importCsvAction = withPermission<[ImportState, FormData], ImportSta
       created++;
     }
     revalidatePath("/properties");
-    return { created, errors };
+    const message = (await errorsT(ctx))("csv.done", { created, skipped: errors.length });
+    return { created, errors, message };
   },
 );
 
@@ -316,7 +347,7 @@ export const adoptPropertyAction = withPermission<[CreateState, FormData], Creat
   async (ctx, _prev, fd) => {
     const c = await container();
     const remoteId = String(fd.get("channexPropertyId") ?? "").trim();
-    if (!remoteId) return { error: "Channex property id is required" };
+    if (!remoteId) return { error: (await errorsT(ctx))("errors.adoptId") };
     const imp = await c.provider.importProperty(
       { id: remoteId },
       { dedupeKey: `adopt:${remoteId}`, requestId: ctx.requestId },

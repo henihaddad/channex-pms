@@ -7,6 +7,11 @@ import { loadInventory } from "../properties.actions";
 import { ChannelDot } from "../channel-dot";
 import { derivedLabel } from "../derived-label";
 
+export async function generateMetadata() {
+  const t = await getTranslations("properties.tabs");
+  return { title: t("plans") };
+}
+
 /** Every rate plan across the portfolio with tonight's rate (spec 03 §3.2a, tab "Rate plans"). */
 export default async function RatePlansPage() {
   const [t, locale] = await Promise.all([getTranslations("properties"), getLocale()]);

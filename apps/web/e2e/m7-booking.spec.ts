@@ -51,8 +51,9 @@ test("direct booking → OTA availability → door code → portal → owner sta
   await expect(page.getByTestId("engine-state")).toHaveAttribute("data-enabled", "0");
   await page.getByTestId("toggle-engine").click();
   await expect(page.getByTestId("engine-state")).toHaveAttribute("data-enabled", "1");
-  await pickOption(page, { label: "Guarantee" }, { value: "prepay" });
-  await page.locator('input[name="cityTax"]').fill("200");
+  await pickOption(page, { label: "Payment at booking" }, { value: "prepay" });
+  // amounts are typed in the currency: 2.00 a guest a night
+  await page.locator('input[name="cityTax"]').fill("2");
   await page.locator('input[name="colour"]').fill("#0f766e");
   await page.locator('textarea[name="houseManual"]').fill("Keys are in the lockbox by the door.");
   await page.getByTestId("save-engine-settings").click();
@@ -62,7 +63,7 @@ test("direct booking → OTA availability → door code → portal → owner sta
   await page.getByTestId("add-promo").click();
   await expect(page.getByTestId("promo-row")).toContainText("DIRECT10");
   await page.locator('input[name="name"]').fill("Breakfast");
-  await page.locator('input[name="priceMinor"]').fill("1500");
+  await page.locator('input[name="price"]').fill("15");
   await page.getByTestId("add-extra").click();
   await expect(page.getByTestId("extra-row")).toContainText("Breakfast");
   await expect(page.getByTestId("embed-snippet")).toContainText("widget.js");

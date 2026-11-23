@@ -1,13 +1,30 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { Alert, AnchorButton, Card, Chip, LinkButton, PageHeader, Stat, cn } from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import {
+  Alert,
+  AnchorButton,
+  Card,
+  Chip,
+  LinkButton,
+  PageHeader,
+  Stat,
+  SubmitButton,
+  cn,
+} from "@/components/ui";
 import { guard } from "@/server/guard";
 import { container } from "@/server/container";
-import { elapsed } from "@/lib/format";
+import { day, elapsed } from "@/lib/format";
 import { acknowledgeEventAction, loadChannelsOverview, loadHealthBoard } from "./channels.actions";
 import { CHANNELS, channelOf, type ChannelKey } from "./channel-meta";
 import { IcalCopy } from "./copy-link";
 import { RoomsTable } from "./rooms-table";
+
+export async function generateMetadata() {
+  const t = await getTranslations("channels");
+  return { title: t("title") };
+}
+
+const STATES = ["draft", "testing", "mapped", "active", "paused", "error", "removed"];
 
 /**
  * Channels (design canvas board): what is connected and whether every room is assigned, one card
@@ -21,6 +38,8 @@ export default async function ChannelsPage({
 }) {
   const t = await getTranslations("channels");
   const tb = await getTranslations("channels.board");
+  const locale = await getLocale();
+  const state = (s: string) => t(`states.${STATES.includes(s) ? s : "draft"}`);
   const { problem } = await searchParams;
   const [board, o] = await Promise.all([
     guard(() => loadHealthBoard()),
@@ -42,7 +61,7 @@ export default async function ChannelsPage({
   const connectedNames = [
     ...new Set([
       ...conns.filter((c) => c.state === "active").map((c) => c.ch.name),
-      ...(directProps.size ? ["Direct"] : []),
+      ...(directProps.size ? [tb("direct")] : []),
     ]),
   ];
   const drift = o.sync.conflictedCells + o.sync.failedCells;
@@ -69,6 +88,7 @@ export default async function ChannelsPage({
               {tb("otherChannels")}
             </LinkButton>
             <LinkButton href="/channels/new" variant="primary" data-testid="connect-channel">
+              <span aria-hidden="true">+</span>
               {tb("connectChannel")}
             </LinkButton>
           </>
@@ -101,7 +121,7 @@ export default async function ChannelsPage({
           label={tb("lastVerify")}
           value={
             o.sync.lastVerifiedAt
-              ? tb("ago", { ago: elapsed(o.sync.lastVerifiedAt) })
+              ? tb("ago", { ago: elapsed(o.sync.lastVerifiedAt, new Date(), locale) })
               : tb("notYet")
           }
           hint={drift ? tb("drift", { n: drift }) : tb("noDrift")}
@@ -112,7 +132,7 @@ export default async function ChannelsPage({
         {keys.map((key) => {
           const meta =
             key === "other"
-              ? { name: "Other", color: "#4b5553" }
+              ? { name: tb("otherName"), color: "#4b5553" }
               : CHANNELS.find((c) => c.key === key)!;
           const mine = conns.filter((c) => c.ch.key === key);
           const active = mine.some((c) => c.state === "active");
@@ -132,7 +152,7 @@ export default async function ChannelsPage({
                   ? { label: tb("statusAttention"), tone: "warning" as const }
                   : active
                     ? { label: tb("statusConnected"), tone: "success" as const }
-                    : { label: mine[0]!.state, tone: "default" as const };
+                    : { label: state(mine[0]!.state), tone: "default" as const };
           const blurb =
             missing.length > 0
               ? tb("notAssigned", {
@@ -174,11 +194,13 @@ export default async function ChannelsPage({
                         {c.propertyTitle}
                       </Link>
                       <span className="shrink-0 text-muted">
-                        {c.lastPushAt ? tb("ago", { ago: elapsed(c.lastPushAt) }) : c.state}
+                        {c.lastPushAt
+                          ? tb("ago", { ago: elapsed(c.lastPushAt, new Date(), locale) })
+                          : state(c.state)}
                       </span>
                       {c.expectedRemovalDate ? (
                         <span className="text-danger" data-testid="removal-scheduled">
-                          {t("removalScheduled", { date: c.expectedRemovalDate })}
+                          {t("removalScheduled", { date: day(c.expectedRemovalDate, locale) })}
                         </span>
                       ) : null}
                     </li>
@@ -222,7 +244,7 @@ export default async function ChannelsPage({
             </Card>
           );
         })}
-        <div className="flex flex-col items-center justify-center gap-3 rounded-card border border-dashed border-[#d5d9d7] p-5 text-center text-sm text-muted md:col-span-2 xl:col-span-1">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-card border border-dashed border-border p-5 text-center text-sm text-muted md:col-span-2 xl:col-span-1">
           <span>{tb("ical")}</span>
           {o.ical.length ? (
             <IcalCopy
@@ -266,15 +288,19 @@ export default async function ChannelsPage({
                     }
                     className="me-2"
                   >
-                    {e.severity === "p1" ? tb("attention") : e.severity.toUpperCase()}
+                    {e.severity === "p1"
+                      ? tb("attention")
+                      : e.severity === "p2"
+                        ? tb("sevWarning")
+                        : tb("sevInfo")}
                   </Chip>
                   {e.message}
                 </span>
                 <form action={acknowledgeEventAction}>
                   <input type="hidden" name="eventId" value={e.id} />
-                  <button className="text-xs font-semibold text-accent hover:underline">
+                  <SubmitButton size="sm" variant="ghost" pendingLabel={t("acking")}>
                     {t("ack")}
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}
@@ -288,7 +314,10 @@ export default async function ChannelsPage({
               <li key={a.id} className="border-b border-default py-2 last:border-b-0">
                 <span className="font-medium">{a.label}</span>{" "}
                 <span className="text-xs text-muted">
-                  · {channelOf(a.adapterCode).name} · {a.state}
+                  · {channelOf(a.adapterCode).name} ·{" "}
+                  {t(
+                    `accountStates.${["expired", "revoked"].includes(a.state) ? a.state : "active"}`,
+                  )}
                 </span>
               </li>
             ))}

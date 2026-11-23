@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Card, Chip, EmptyState, LinkButton, PageHeader, Stat, cn } from "@/components/ui";
 import { PropertiesPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
@@ -9,6 +9,11 @@ import { AdoptForm } from "./adopt-form";
 import { ChannelDot } from "./channel-dot";
 
 const KINDS = ["single_unit", "multi_unit", "hotel"] as const;
+
+export async function generateMetadata() {
+  const t = await getTranslations("properties");
+  return { title: t("title") };
+}
 type Filter = "all" | "attention" | (typeof KINDS)[number];
 
 const pill = (active: boolean, tone: "default" | "warning" = "default") =>
@@ -17,7 +22,7 @@ const pill = (active: boolean, tone: "default" | "warning" = "default") =>
     active
       ? "border-foreground bg-foreground text-background"
       : tone === "warning"
-        ? "border-[#fcd34d] bg-[#fffbeb] text-[#92400e] hover:border-[#f59e0b]"
+        ? "border-warning/60 bg-warning-soft text-warning-soft-foreground hover:border-warning"
         : "border-border bg-surface text-foreground hover:border-muted",
   );
 
@@ -32,7 +37,7 @@ export default async function PropertiesPage({
   searchParams: Promise<{ show?: string }>;
 }) {
   const sp = await searchParams;
-  const t = await getTranslations("properties");
+  const [t, locale] = await Promise.all([getTranslations("properties"), getLocale()]);
   const [{ rows, content }, templates] = await guard(() =>
     Promise.all([loadPortfolio(), listTemplates()]),
   );
@@ -57,7 +62,8 @@ export default async function PropertiesPage({
         titleOnPhone={false}
         actions={
           <LinkButton href="/properties/new" variant="primary" data-testid="new-property">
-            + {t("addProperty")}
+            <span aria-hidden="true">+</span>
+            {t("addProperty")}
           </LinkButton>
         }
       />
@@ -119,7 +125,7 @@ export default async function PropertiesPage({
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-testid="properties-table">
             {shown.map((p) => (
               <li key={p.id} data-state={p.state} className="flex">
-                <PropertyCard p={p} t={t} />
+                <PropertyCard p={p} t={t} locale={locale} />
               </li>
             ))}
             {filter === "all" ? (
@@ -164,7 +170,7 @@ export default async function PropertiesPage({
             <Stat
               label={t("content.guide")}
               value={
-                <span className={content.guide.missing.length ? "text-[#b45309]" : undefined}>
+                <span className={content.guide.missing.length ? "text-warning" : undefined}>
                   {t("content.of", { done: content.guide.done, total: content.guide.total })}
                 </span>
               }
@@ -227,7 +233,15 @@ export default async function PropertiesPage({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-foreground">{t("adopt")}</p>
           <p className="text-xs text-muted">{t("adoptHint")}</p>
-          <AdoptForm label={t("adoptSubmit")} />
+          <AdoptForm
+            labels={{
+              submit: t("adoptSubmit"),
+              submitting: t("adoptSubmitting"),
+              idLabel: t("adoptIdLabel"),
+              done: t("adoptDone"),
+              open: t("adoptOpen"),
+            }}
+          />
         </div>
       </Card>
     </div>
@@ -244,7 +258,7 @@ function missingHint(missing: readonly string[], t: T): string | undefined {
     : t("content.missing", { names });
 }
 
-function syncChip(p: PortfolioRow, t: T) {
+function syncChip(p: PortfolioRow, t: T, locale: string) {
   const a = p.attention;
   if (a?.kind === "unmapped_bookings")
     return <Chip color="warning">{t("chip.unmapped", { count: a.count })}</Chip>;
@@ -260,14 +274,14 @@ function syncChip(p: PortfolioRow, t: T) {
       <Chip color="success">
         {ago < 60_000
           ? t("chip.syncedNow")
-          : t("chip.synced", { ago: elapsed(p.vitals.lastSyncedAt) })}
+          : t("chip.synced", { ago: elapsed(p.vitals.lastSyncedAt, new Date(), locale) })}
       </Chip>
     );
   }
   return <Chip color="success">{t("chip.inSync")}</Chip>;
 }
 
-function PropertyCard({ p, t }: { p: PortfolioRow; t: T }) {
+function PropertyCard({ p, t, locale }: { p: PortfolioRow; t: T; locale: string }) {
   const where = [p.city, p.country].filter(Boolean).join(", ");
   const unitWord = p.kind === "hotel" ? "rooms" : "units";
   const channels = [...p.channels, ...(p.vitals.directEnabled ? ["direct"] : [])];
@@ -277,13 +291,13 @@ function PropertyCard({ p, t }: { p: PortfolioRow; t: T }) {
       href={`/properties/${p.id}`}
       className="group flex w-full flex-col overflow-hidden rounded-card border border-border bg-surface transition-colors hover:border-accent/60"
     >
-      <div className="relative h-[120px] bg-[linear-gradient(135deg,#d8f3ee,#cdeff5)]">
+      <div className="relative h-[120px] bg-accent-soft">
         {p.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- remote OTA photo, no loader configured
           <img src={p.photoUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : null}
         <span className="absolute start-3.5 bottom-3" data-testid="property-sync">
-          {syncChip(p, t)}
+          {syncChip(p, t, locale)}
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
@@ -304,7 +318,7 @@ function PropertyCard({ p, t }: { p: PortfolioRow; t: T }) {
         <span className="mt-auto flex justify-between pt-1.5 text-xs text-muted">
           <span>{t("occupancy30")}</span>
           <strong className="text-foreground tabular-nums">
-            {occ === null ? "—" : percent(occ / 10_000)}
+            {occ === null ? "—" : percent(occ / 10_000, { locale })}
           </strong>
         </span>
         <span
@@ -316,7 +330,7 @@ function PropertyCard({ p, t }: { p: PortfolioRow; t: T }) {
           aria-valuemax={100}
         >
           <span
-            className="block h-full bg-[linear-gradient(90deg,#34d399,#22d3ee)]"
+            className="block h-full bg-accent"
             style={{ width: `${occ === null ? 0 : occ / 100}%` }}
           />
         </span>

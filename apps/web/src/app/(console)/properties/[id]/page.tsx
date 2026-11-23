@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { cache, type ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { PROVISION_STEPS } from "@pms/core";
 import {
@@ -13,6 +13,7 @@ import {
   PageHeader,
   Select,
   Stat,
+  SubmitButton,
   TBody,
   THead,
   Table,
@@ -45,6 +46,15 @@ const stateColor: Record<string, "success" | "accent" | "default" | "warning"> =
 
 type T = Awaited<ReturnType<typeof getTranslations<"properties">>>;
 
+/** One load per request, shared by the title and the page. */
+const load = cache((id: string) => guard(() => loadProperty(id)));
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const d = await load(id);
+  return { title: d.property.title };
+}
+
 /**
  * One property (design "Property"): the photos and four numbers that say how it is doing,
  * its rooms and rate plans, and its details on the left; on the right what is still missing
@@ -53,11 +63,16 @@ type T = Awaited<ReturnType<typeof getTranslations<"properties">>>;
  */
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [t, locale] = await Promise.all([getTranslations("properties"), getLocale()]);
-  const [d, o] = await guard(() => Promise.all([loadProperty(id), loadPropertyOverview(id)]));
+  const [t, ts, locale] = await Promise.all([
+    getTranslations("properties"),
+    getTranslations("syncHealth"),
+    getLocale(),
+  ]);
+  const [d, o] = await Promise.all([load(id), guard(() => loadPropertyOverview(id))]);
   const stepIndex = d.provisioning ? PROVISION_STEPS.indexOf(d.provisioning.step) : -1;
   const state = d.property.state;
   const policy = d.policies[0];
+  const settingUp = state === "syncing" || state === "draft";
   return (
     <div className="space-y-5">
       <PageHeader
@@ -100,20 +115,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </Link>
         </Alert>
       ) : null}
-      {state === "syncing" || state === "draft" ? (
+      {/* re-renders while setup runs, and stops once the property is live */}
+      <AutoRefresh active={settingUp} />
+      {settingUp ? (
         <Alert tone="info" title={t("whatsNext")} data-testid="setup-progress">
           <p>{state === "syncing" ? t("nextSyncing") : t("nextDraft")}</p>
-          <AutoRefresh />
           {d.provisioning?.lastError ? (
             <p className="mt-2 text-danger">
-              {d.provisioning.lastError} (attempt {d.provisioning.attempts})
+              {t("detail.setupStopped", { n: d.provisioning.attempts })}{" "}
+              <span className="text-xs break-words">{d.provisioning.lastError}</span>
             </p>
           ) : null}
           <form action={forceResyncAction} className="mt-3">
             <input type="hidden" name="propertyId" value={d.property.id} />
-            <Button type="submit" variant="secondary" size="sm">
+            <SubmitButton variant="secondary" size="sm" pendingLabel={t("retrying")}>
               {t("retry")}
-            </Button>
+            </SubmitButton>
           </form>
         </Alert>
       ) : null}
@@ -161,12 +178,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <summary className="cursor-pointer text-sm font-medium">{t("policyTitle")}</summary>
               <form action={addPolicyAction} className="mt-3 grid items-end gap-2 sm:grid-cols-4">
                 <input type="hidden" name="propertyId" value={d.property.id} />
-                <Field label={t("policyName")} name="title" placeholder="Flexible" />
+                <Field label={t("policyName")} name="title" placeholder={t("policyPlaceholder")} />
                 <Field label={t("checkIn")} name="checkInTime" defaultValue="15:00" />
                 <Field label={t("checkOut")} name="checkOutTime" defaultValue="11:00" />
-                <Button type="submit" variant="secondary">
+                <SubmitButton variant="secondary" pendingLabel={t("adding")}>
                   {t("addPolicy")}
-                </Button>
+                </SubmitButton>
               </form>
             </details>
           </Card>
@@ -188,7 +205,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               >
                 {(["single_unit", "multi_unit", "hotel"] as const).map((k) => (
                   <option key={k} value={k}>
-                    {t(`wizard.kinds.${k}.option`)}
+                    {t(`kinds.${k}`)}
                   </option>
                 ))}
               </Select>
@@ -228,7 +245,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 {t("detail.timezoneLine", { tz: d.property.timezone.replace(/_/g, " ") })}
               </p>
               <div className="flex gap-2 sm:col-span-2">
-                <Button type="submit">{t("detail.save")}</Button>
+                <SubmitButton pendingLabel={t("saving")}>{t("detail.save")}</SubmitButton>
                 <Button type="reset" variant="secondary">
                   {t("detail.discard")}
                 </Button>
@@ -261,7 +278,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <>
                   <dt className="text-danger">{t("removalDate")}</dt>
                   <dd className="text-danger" data-testid="removal-scheduled">
-                    {day(d.property.expectedRemovalDate)}
+                    {day(d.property.expectedRemovalDate, locale)}
                   </dd>
                 </>
               ) : null}
@@ -270,16 +287,16 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <dt className="text-muted">{t("cells")}</dt>
               <dd>
                 {Object.entries(d.health)
-                  .map(([k, v]) => `${k} ${v}`)
+                  .map(([k, v]) => `${CELL_STATES.includes(k) ? ts(`states.${k}`) : k} ${v}`)
                   .join(", ") || "—"}
               </dd>
             </dl>
             {state === "live" ? (
               <form action={forceResyncAction} className="mt-3">
                 <input type="hidden" name="propertyId" value={d.property.id} />
-                <Button type="submit" variant="ghost" size="sm">
+                <SubmitButton variant="ghost" size="sm" pendingLabel={t("retrying")}>
                   {t("forceResync")}
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
             {d.bulkOps.length > 0 ? (
@@ -288,7 +305,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <ul className="text-xs text-muted">
                   {d.bulkOps.map((op) => (
                     <li key={op.id}>
-                      {day(op.createdAt)} · {op.cellCount} cells · {op.state}
+                      {day(op.createdAt, locale)} · {t("detail.bulkCells", { count: op.cellCount })}
                     </li>
                   ))}
                 </ul>
@@ -498,6 +515,7 @@ const PROVIDERS: Record<string, string> = {
   beyond: "Beyond",
 };
 const providerName = (p: string) => PROVIDERS[p] ?? p;
+const CELL_STATES = ["pending", "in_flight", "synced", "failed", "conflicted"];
 
 function connectionKey(state: string): string {
   return ["active", "mapped", "testing", "paused", "error", "draft"].includes(state)
@@ -546,12 +564,12 @@ function PhotoMosaic({ photos, t }: { photos: string[]; t: T }) {
   const more = Math.max(0, photos.length - 3);
   return (
     <div className="grid h-[220px] grid-cols-[2fr_1fr_1fr] grid-rows-2 gap-2">
-      {tile(0, "row-span-2", "bg-[linear-gradient(135deg,#d8f3ee,#a7e3dc)]")}
-      {tile(1, "", "bg-[#cdeff5]")}
-      {tile(2, "", "bg-[#e0f2fe]")}
+      {tile(0, "row-span-2", "bg-accent-soft")}
+      {tile(1, "", "bg-info-soft")}
+      {tile(2, "", "bg-surface-secondary")}
       <Link
         href="/properties/import"
-        className="col-span-2 flex items-center justify-center rounded-xl bg-[#d1fae5] px-3 text-center text-[13px] font-semibold text-[#115e59] hover:underline"
+        className="col-span-2 flex items-center justify-center rounded-xl bg-success-soft px-3 text-center text-[13px] font-semibold text-success-soft-foreground hover:underline"
       >
         {photos.length === 0
           ? t("detail.noPhotos")
@@ -563,10 +581,12 @@ function PhotoMosaic({ photos, t }: { photos: string[]; t: T }) {
   );
 }
 
-/** "Channex just now", "Channex 12 min ago": when the channel manager last confirmed a cell. */
-function channexAgo(iso: string, t: T): string {
+/** "Checked just now", "Checked 12 min ago": when a channel last confirmed a night. */
+function checkedAgo(iso: string, t: T, locale: string): string {
   const ms = new Date().getTime() - new Date(iso).getTime();
-  return ms < 60_000 ? t("detail.channexNow") : t("detail.channexAgo", { ago: elapsed(iso) });
+  return ms < 60_000
+    ? t("detail.channexNow")
+    : t("detail.channexAgo", { ago: elapsed(iso, new Date(), locale) });
 }
 
 function Kpis({
@@ -587,7 +607,7 @@ function Kpis({
     ? t("detail.syncCheck")
     : o.vitals.pendingCells > 0
       ? t("detail.syncSending")
-      : "OK";
+      : t("detail.syncOk");
   const syncHint =
     a?.kind === "unmapped_bookings"
       ? t("chip.unmapped", { count: a.count })
@@ -600,7 +620,7 @@ function Kpis({
             : o.vitals.pendingCells > 0
               ? t("detail.nightsWaiting", { count: o.vitals.pendingCells })
               : o.vitals.lastSyncedAt
-                ? channexAgo(o.vitals.lastSyncedAt, t)
+                ? checkedAgo(o.vitals.lastSyncedAt, t, locale)
                 : t("detail.inStep");
   return (
     <>
@@ -624,7 +644,7 @@ function Kpis({
       />
       <Stat
         label={t("detail.nextArrival")}
-        value={next ? day(next.date).split(" ").slice(0, 2).join(" ") : "—"}
+        value={next ? day(next.date, locale).split(" ").slice(0, 2).join(" ") : "—"}
         hint={
           next ? (
             <Link href={`/reservations/${next.bookingId}`} className="hover:underline">
@@ -639,7 +659,7 @@ function Kpis({
       />
       <Stat
         label={t("detail.sync")}
-        value={<span className={a ? "text-[#b45309]" : "text-[#166534]"}>{syncValue}</span>}
+        value={<span className={a ? "text-warning" : "text-success"}>{syncValue}</span>}
         hint={syncHint}
       />
     </>
@@ -684,9 +704,14 @@ function RoomsAndPlans({
           className="w-16"
           aria-label={t("wizard.rooms")}
         />
-        <Button type="submit" variant="ghost" size="sm">
+        <SubmitButton
+          variant="ghost"
+          size="sm"
+          pendingLabel={t("saving")}
+          aria-label={`${t("setCount")}: ${rt.title}`}
+        >
           {t("setCount")}
-        </Button>
+        </SubmitButton>
       </form>
     );
     if (plans.length === 0)
@@ -730,7 +755,8 @@ function RoomsAndPlans({
       className="scroll-mt-24"
       actions={
         <LinkButton href="#add-plan" variant="secondary" size="sm">
-          + {t("detail.addRatePlan")}
+          <span aria-hidden="true">+</span>
+          {t("detail.addRatePlan")}
         </LinkButton>
       }
     >
@@ -756,7 +782,7 @@ function RoomsAndPlans({
           data-testid="derived-form"
         >
           <input type="hidden" name="propertyId" value={d.property.id} />
-          <Field label={t("derivedName")} name="title" placeholder="Non-refundable" />
+          <Field label={t("derivedName")} name="title" placeholder={t("derivedPlaceholder")} />
           <Select label={t("parent")} name="parentRatePlanId">
             {d.ratePlans.map((rp) => (
               <option key={rp.id} value={rp.id}>
@@ -781,7 +807,7 @@ function RoomsAndPlans({
               defaultValue={10}
               aria-label={t("value")}
             />
-            <Button type="submit">{t("add")}</Button>
+            <SubmitButton pendingLabel={t("adding")}>{t("add")}</SubmitButton>
           </div>
         </form>
       </details>

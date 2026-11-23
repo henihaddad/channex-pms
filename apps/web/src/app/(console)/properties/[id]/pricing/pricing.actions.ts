@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { parseMinor, parseRateImportCsv, type RateImportPlan } from "@pms/core";
-import { DrizzleRateImportRepository } from "@pms/db";
+import { getTranslations } from "next-intl/server";
+import { Money, parseMinor, parseRateImportCsv, type RateImportPlan } from "@pms/core";
+import { DrizzleRateImportRepository, rawRows, sql } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
+import { HttpProblem } from "@/server/errors";
 import { runRateImport, undoOperation } from "@/server/ari";
 
 const propertyScope = {
@@ -23,6 +25,11 @@ export const saveRateImportAction = withPermission<[FormData], void>(
     const propertyId = str(fd, "propertyId");
     const repo = new DrizzleRateImportRepository(ctx.tx, ctx.orgId);
     const stored = await repo.get(propertyId);
+    const [p] = await rawRows<{ currency: string }>(
+      ctx.tx,
+      sql`select currency from property where id = ${propertyId}`,
+    );
+    const digits = Money.exponent(p?.currency ?? "EUR");
     // Merged, not replaced: the mapping is edited from two places (the settings form and
     // the unmapped listings a dry run turns up), and neither may drop the other's work.
     // An empty value is how a mapping is removed.
@@ -40,8 +47,8 @@ export const saveRateImportAction = withPermission<[FormData], void>(
       enabled: fd.get("schedule") === "nightly",
       autoApply: fd.get("autoApply") === "on",
       guardRails: {
-        floorMinor: parseMinor(str(fd, "floor")),
-        ceilingMinor: parseMinor(str(fd, "ceiling")),
+        floorMinor: parseMinor(str(fd, "floor"), digits),
+        ceilingMinor: parseMinor(str(fd, "ceiling"), digits),
         maxChangeBps:
           intOrNull(fd, "maxChangePercent") === null
             ? null
@@ -64,6 +71,8 @@ export interface ImportPreview {
   > | null;
   applied: boolean;
   undoId: string | null;
+  /** An expected refusal, in the host's language. */
+  error?: string;
 }
 
 /**
@@ -91,19 +100,35 @@ export const importRatesAction = withPermission<[FormData], ImportPreview>(
         undoId: null,
       };
     const settings = await new DrizzleRateImportRepository(ctx.tx, ctx.orgId).get(propertyId);
-    const r = await runRateImport(
-      ctx,
-      propertyId,
-      {
-        rows: parsed.rows,
-        mapping: new Map(Object.entries(settings.mapping)),
-        guardRails: settings.guardRails,
-        holdHours: settings.holdHours,
-        override: fd.get("override") === "on",
-        nowIso: c.clock.now().toString(),
-      },
-      fd.get("apply") !== "1",
-    );
+    let r: Awaited<ReturnType<typeof runRateImport>>;
+    try {
+      r = await runRateImport(
+        ctx,
+        propertyId,
+        {
+          rows: parsed.rows,
+          mapping: new Map(Object.entries(settings.mapping)),
+          guardRails: settings.guardRails,
+          holdHours: settings.holdHours,
+          override: fd.get("override") === "on",
+          nowIso: c.clock.now().toString(),
+        },
+        fd.get("apply") !== "1",
+      );
+    } catch (e) {
+      // a listing matched to another property's rate plan: say so, write nothing
+      if (!(e instanceof HttpProblem) || e.code !== "cross_property") throw e;
+      const t = await getTranslations({ locale: ctx.locale, namespace: "pricing" });
+      return {
+        parseErrors: parsed.errors,
+        columns: parsed.columns,
+        listingRefs,
+        plan: null,
+        applied: false,
+        undoId: null,
+        error: t("otherPropertyPlan"),
+      };
+    }
     if (r.applied) revalidatePath(`/properties/${propertyId}/pricing`);
     return {
       parseErrors: parsed.errors,

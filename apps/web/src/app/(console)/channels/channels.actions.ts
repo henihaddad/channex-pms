@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import {
   coverageWarnings,
@@ -231,16 +232,16 @@ export const testConnectionAction = withPermission<
       },
       meta(ctx, "channel.test"),
     );
-    return r.ok
-      ? r
-      : {
-          ...r,
-          hint: /required|missing/i.test(r.message ?? "")
-            ? "A required field is empty. Check the extranet for the exact value."
-            : /invalid|auth|password|credential/i.test(r.message ?? "")
-              ? "The channel rejected the credentials. Re-copy them from the extranet; passwords are case-sensitive."
-              : "Check the values against the channel's extranet and try again.",
-        };
+    if (r.ok) return r;
+    const t = await getTranslations({ locale: ctx.locale, namespace: "channels.wizard" });
+    return {
+      ...r,
+      hint: /required|missing/i.test(r.message ?? "")
+        ? t("hintRequired")
+        : /invalid|auth|password|credential/i.test(r.message ?? "")
+          ? t("hintCredentials")
+          : t("hintCheck"),
+    };
   },
 );
 
@@ -713,6 +714,7 @@ export const syncConnectionsAction = withPermission<[FormData], void>(
     const remote = await c.provider.listChannels(idMap.property.remote, meta(ctx, "channel.list"));
     const ch = new DrizzleChannelRepository(ctx.tx, ctx.orgId);
     const existing = await ch.listConnections(propertyId);
+    const t = await getTranslations({ locale: ctx.locale, namespace: "channels.detail" });
     for (const r of remote) {
       let rowId = existing.find((e) => e.channexChannelId === r.id)?.id;
       if (!rowId) {
@@ -736,10 +738,12 @@ export const syncConnectionsAction = withPermission<[FormData], void>(
       // signals for every channel are is_active and the mapping set, and the health poll asks
       // check_readiness for the real answer once the row exists
       const issues = [
-        ...(r.mappings.length === 0 ? ["No rate plans mapped on the channel manager"] : []),
-        ...(r.status === "permanent_error" || r.status === "temporal_error"
-          ? [`Channex reports ${r.status.replace("_", " ")}`]
-          : []),
+        ...(r.mappings.length === 0 ? [t("issueNoRooms")] : []),
+        ...(r.status === "permanent_error"
+          ? [t("issuePermanent")]
+          : r.status === "temporal_error"
+            ? [t("issueTemporary")]
+            : []),
       ];
       await ch.updateConnection(rowId, {
         channexChannelId: r.id,

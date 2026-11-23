@@ -3,24 +3,65 @@
 import { useState, useTransition } from "react";
 import { mappingDiff, type MappingRow } from "@pms/core";
 import { saveMappingsAction, type ConnectionView } from "../channels.actions";
-import { MappingEditor } from "../mapping-editor";
+import { MappingEditor, type MappingLabels } from "../mapping-editor";
+import { fill } from "../fill";
 import { Alert, Button } from "@/components/ui";
 
-/** MAP-4: on a live connection the diff is shown and confirmed before saving. */
-export function ConnectionMapping({ view }: { view: ConnectionView }) {
+/** Raw messages from `channels.mapping`, filled here. */
+export interface ConnectionMappingLabels {
+  liveTitle: string;
+  startSelling: string;
+  stopSelling: string;
+  move: string;
+  save: string;
+  saveLive: string;
+  saving: string;
+  saved: string;
+  savedLive: string;
+  failed: string;
+  editor: MappingLabels;
+}
+
+/** MAP-4: on a live connection the change is spelled out before saving, and the button says what it does. */
+export function ConnectionMapping({
+  view,
+  channel,
+  labels: L,
+}: {
+  view: ConnectionView;
+  channel: string;
+  labels: ConnectionMappingLabels;
+}) {
   const [rows, setRows] = useState<MappingRow[]>(view.mappings);
-  const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState("");
+  const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const diff = mappingDiff(view.mappings, rows);
   const changed = diff.startsSelling.length + diff.stopsSelling.length + diff.changed.length > 0;
+  const live = view.connection.state === "active";
+  const plan = (id: string) => view.ours.find((o) => o.id === id)?.title ?? id;
+  const room = (r: MappingRow) => {
+    const theirs = view.theirs.find((x) => x.code === r.roomCode);
+    return {
+      room: theirs?.title ?? r.roomCode,
+      rate: theirs?.rates.find((x) => x.code === r.rateCode)?.title ?? r.rateCode,
+    };
+  };
   const save = () =>
     start(async () => {
-      const r = await saveMappingsAction({ connectionId: view.connection.id, mappings: rows });
-      setSaved(
-        `Saved: ${r.diff.startsSelling.length} start selling, ${r.diff.stopsSelling.length} stop, ${r.diff.changed.length} changed${view.connection.state === "active" ? "; affected plans re-pushed" : ""}`,
-      );
-      setConfirm(false);
+      setError("");
+      try {
+        const r = await saveMappingsAction({ connectionId: view.connection.id, mappings: rows });
+        const counts = {
+          start: r.diff.startsSelling.length,
+          stop: r.diff.stopsSelling.length,
+          changed: r.diff.changed.length,
+          channel,
+        };
+        setSaved(`${fill(L.saved, counts)}${live ? ` ${fill(L.savedLive, counts)}` : ""}`);
+      } catch (e) {
+        setError(e instanceof Error && e.message ? e.message : L.failed);
+      }
     });
   return (
     <div className="space-y-3">
@@ -30,45 +71,52 @@ export function ConnectionMapping({ view }: { view: ConnectionView }) {
         suggestions={view.suggestions}
         rows={rows}
         onChange={setRows}
+        labels={L.editor}
       />
       {saved ? <Alert tone="success">{saved}</Alert> : null}
-      {changed && view.connection.state === "active" && !confirm ? (
+      {error ? <Alert>{error}</Alert> : null}
+      {changed && live ? (
         <div
           className="rounded-md border border-warning/50 bg-warning-soft p-3 text-sm"
           data-testid="mapping-diff"
         >
-          <p className="font-medium">This connection is live. Saving will:</p>
+          <p className="font-medium">{fill(L.liveTitle, { channel })}</p>
           <ul className="list-disc ps-5 text-xs">
             {diff.startsSelling.map((r) => (
               <li key={`s${r.ratePlanId}`}>
-                start selling {view.ours.find((o) => o.id === r.ratePlanId)?.title} as {r.roomCode}/
-                {r.rateCode}
+                {fill(L.startSelling, { plan: plan(r.ratePlanId), ...room(r) })}
               </li>
             ))}
             {diff.stopsSelling.map((r) => (
               <li key={`x${r.ratePlanId}`}>
-                stop selling {view.ours.find((o) => o.id === r.ratePlanId)?.title} ({r.roomCode}/
-                {r.rateCode})
+                {fill(L.stopSelling, { plan: plan(r.ratePlanId), ...room(r) })}
               </li>
             ))}
-            {diff.changed.map((r) => (
-              <li key={`c${r.after.ratePlanId}`}>
-                move {view.ours.find((o) => o.id === r.after.ratePlanId)?.title} from{" "}
-                {r.before.roomCode}/{r.before.rateCode} to {r.after.roomCode}/{r.after.rateCode}
-              </li>
-            ))}
+            {diff.changed.map((r) => {
+              const from = room(r.before);
+              const to = room(r.after);
+              return (
+                <li key={`c${r.after.ratePlanId}`}>
+                  {fill(L.move, {
+                    plan: plan(r.after.ratePlanId),
+                    fromRoom: from.room,
+                    fromRate: from.rate,
+                    toRoom: to.room,
+                    toRate: to.rate,
+                  })}
+                </li>
+              );
+            })}
           </ul>
-          <Button size="sm" className="mt-2" onClick={() => setConfirm(true)}>
-            I understand, continue
-          </Button>
         </div>
       ) : null}
       <Button
-        disabled={pending || !changed || (view.connection.state === "active" && !confirm)}
+        disabled={pending || !changed}
+        aria-busy={pending || undefined}
         onClick={save}
         data-testid="save-mappings"
       >
-        Save mappings
+        {pending ? L.saving : live && changed ? fill(L.saveLive, { channel }) : L.save}
       </Button>
     </div>
   );

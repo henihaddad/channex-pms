@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { getTranslations } from "next-intl/server";
 import {
   GUIDE_SECTIONS,
@@ -60,6 +61,23 @@ const loadGuide = withPermission<
   },
 );
 
+/** One load per request, shared by the title and the page. */
+const load = cache((propertyId: string, locale: string) => loadGuide({ propertyId, locale }));
+const guideLocale = (raw?: string) =>
+  LOCALES.includes((raw ?? "en") as (typeof LOCALES)[number]) ? (raw ?? "en") : "en";
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ locale?: string }>;
+}) {
+  const [{ id }, sp, t] = await Promise.all([params, searchParams, getTranslations("guides")]);
+  const d = await load(id, guideLocale(sp.locale));
+  return { title: d ? `${t("title")} · ${d.title}` : t("title") };
+}
+
 /**
  * The guest guide (spec 10 §10.6b, design "Guest guide"): the sections a guest always asks
  * about on the left with what is still empty, one section open in the middle, and on the
@@ -75,10 +93,8 @@ export default async function GuidePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const locale = LOCALES.includes((sp.locale ?? "en") as (typeof LOCALES)[number])
-    ? (sp.locale ?? "en")
-    : "en";
-  const d = await loadGuide({ propertyId: id, locale });
+  const locale = guideLocale(sp.locale);
+  const d = await load(id, locale);
   if (!d) notFound();
   const t = await getTranslations("guides");
   const tp = await getTranslations("properties");

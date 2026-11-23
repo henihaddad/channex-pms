@@ -4,6 +4,11 @@ import { guard } from "@/server/guard";
 import { loadChannelsOverview } from "../channels.actions";
 import { RoomsTable } from "../rooms-table";
 
+export async function generateMetadata() {
+  const t = await getTranslations("channels.board");
+  return { title: t("roomsTab") };
+}
+
 /** Rooms per channel (Channels tab): every room type against every connected channel. */
 export default async function RoomsPerChannelPage() {
   const t = await getTranslations("channels");

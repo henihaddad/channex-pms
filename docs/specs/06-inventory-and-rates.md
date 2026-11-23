@@ -256,7 +256,7 @@ goes through the same guard rails, dry run, undo and push path as a bulk edit.
 
 **The page** leads with where prices come from and when (source, last import and how many
 nights it changed, nights set by hand that imports leave alone, the next nightly pull at
-02:40 UTC), then the rails per rate plan with today's price and its source, the future nights
+02:40 UTC, shown in the property's time zone), then the price limits (minimum / maximum) per rate plan with today's price and its source, the future nights
 priced outside the rails, the CSV import, and the connector (engine, listing ID, schedule,
 default floor and ceiling in the property currency, largest move, hold, apply without review).
 

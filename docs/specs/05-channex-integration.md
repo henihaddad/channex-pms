@@ -483,7 +483,11 @@ language, and a runbook entry. "Sync failed" with no explanation is a bug.
   reconciliation the nightly job runs (CX-7) for the organization's live properties; the
   worker records `lastVerifiedAt` and the drift it found on each property. A chart shows
   changes sent per hour. Queue counters per property and the connection's environment
-  (staging or production) stay under "Technical details".
+  (staging or production) stay under "Technical details"; the hint to switch environments
+  shows on self-hosted installations only. A night that failed carries "Try again"
+  (`ari:force_resync`, the property's force resync) and the provider's full reason behind a
+  disclosure. The per-property counters are three organization-wide grouped queries, not
+  three per property.
 
 - **CX-9** The Channels page is a board with one card per channel (Airbnb, Booking.com,
   Expedia, Vrbo, Direct, and "Other" for anything else Channex carries): its status, how many
