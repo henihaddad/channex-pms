@@ -8,6 +8,11 @@ import { guard } from "@/server/guard";
 import { loadFinancialOverview, loadFinancials } from "./financials.actions";
 import { TransactionsTable } from "./transactions-table";
 
+export async function generateMetadata() {
+  const t = await getTranslations("financials");
+  return { title: t("title") };
+}
+
 const monthName = (month: string, locale: string, style: "short" | "long" = "short") =>
   new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
     month: style,
@@ -36,6 +41,8 @@ export default async function FinancialsPage() {
   ]);
   const cur = o.currency;
   const fmt = (minor: number, currency: string) => money(minor, currency, locale);
+  // the link column has no visible heading; screen readers still hear what it holds (axe th-has-data-cells)
+  const actionsCol = { label: <span className="sr-only">{t("actions")}</span> };
   const thisMonth = monthName(o.month, locale);
   // "+18% vs Oct same days", only when both sides are in one currency and comparable
   const now = o.revenueMtd.length === 1 ? o.revenueMtd[0]! : null;
@@ -233,7 +240,7 @@ export default async function FinancialsPage() {
         <Card title={t("statementsToApprove")} description={t("statementsToApproveHint")}>
           <DataTable
             testId="statements-to-approve"
-            columns={[t("owner"), t("period"), { label: t("net"), align: "end" }, ""]}
+            columns={[t("owner"), t("period"), { label: t("net"), align: "end" }, actionsCol]}
             empty={t("nothingWaiting")}
             rows={d.statementsToApprove.map((s) => [
               s.owner,
@@ -253,7 +260,7 @@ export default async function FinancialsPage() {
         <Card title={t("statementsToSend")} description={t("statementsToSendHint")}>
           <DataTable
             testId="statements-to-send"
-            columns={[t("owner"), t("period"), { label: t("net"), align: "end" }, ""]}
+            columns={[t("owner"), t("period"), { label: t("net"), align: "end" }, actionsCol]}
             empty={t("nothingWaiting")}
             rows={d.statementsToSend.map((s) => [
               s.owner,
@@ -273,7 +280,7 @@ export default async function FinancialsPage() {
         <Card title={t("payoutsToRecord")} description={t("payoutsToRecordHint")}>
           <DataTable
             testId="payouts-to-record"
-            columns={[t("owner"), t("state"), { label: t("amount"), align: "end" }, ""]}
+            columns={[t("owner"), t("state"), { label: t("amount"), align: "end" }, actionsCol]}
             empty={t("nothingWaiting")}
             rows={d.payoutsToRecord.map((p) => [
               p.owner,
@@ -289,7 +296,7 @@ export default async function FinancialsPage() {
         <Card title={t("expensesToApprove")} description={t("expensesToApproveHint")}>
           <DataTable
             testId="expenses-to-approve"
-            columns={[t("property"), t("what"), { label: t("amount"), align: "end" }, ""]}
+            columns={[t("property"), t("what"), { label: t("amount"), align: "end" }, actionsCol]}
             empty={t("nothingWaiting")}
             rows={d.expensesToApprove.map((e) => [
               e.property,
@@ -310,7 +317,7 @@ export default async function FinancialsPage() {
               t("due"),
               { label: t("amount"), align: "end" },
               t("attempts"),
-              "",
+              actionsCol,
             ]}
             empty={t("nothingWaiting")}
             rows={d.instalmentsDue.map((i) => [
@@ -332,7 +339,7 @@ export default async function FinancialsPage() {
         <Card title={t("unpaidFolios")} description={t("unpaidFoliosHint")}>
           <DataTable
             testId="unpaid-folios"
-            columns={[t("reference"), { label: t("balance"), align: "end" }, ""]}
+            columns={[t("reference"), { label: t("balance"), align: "end" }, actionsCol]}
             empty={t("nothingWaiting")}
             rows={d.unpaidFolios.map((f) => [
               f.reference,

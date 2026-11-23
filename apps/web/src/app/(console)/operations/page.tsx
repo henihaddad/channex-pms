@@ -2,15 +2,15 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import type { TaskRow } from "@pms/db";
 import {
-  Button,
   Card,
   Chip,
+  cn,
   EmptyState,
   LinkButton,
   PageHeader,
   Select,
   Stat,
-  cn,
+  SubmitButton,
 } from "@/components/ui";
 import { OperationsPreview } from "@/components/previews";
 import { guard } from "@/server/guard";
@@ -22,6 +22,11 @@ import {
   suggestRouteAction,
   taskStateAction,
 } from "./operations.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("operations");
+  return { title: t("board.title") };
+}
 
 const shift = (iso: string, n: number) => {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -107,15 +112,15 @@ export default async function OperationsPage({
           </option>
         ))}
       </Select>
-      <Button type="submit" variant="secondary" size="sm">
+      <SubmitButton variant="secondary" size="sm">
         {t("assign")}
-      </Button>
+      </SubmitButton>
       {x.state === "done" ? (
         <button
           formAction={taskStateAction}
           name="state"
           value="inspected"
-          className="text-xs font-semibold text-accent hover:underline"
+          className="text-xs font-semibold text-accent hover:underline pointer-coarse:min-h-11"
         >
           {t("inspect")}
         </button>
@@ -231,7 +236,9 @@ export default async function OperationsPage({
           {w.escalations.map((e) => (
             <p key={e.taskId}>
               {t("escalation", {
-                level: e.level.replace("_", " "),
+                level: t.has(`escalationLevel.${e.level}`)
+                  ? t(`escalationLevel.${e.level}`)
+                  : e.level,
                 minutes: Math.max(0, e.minutesLeft),
               })}
             </p>
@@ -248,7 +255,7 @@ export default async function OperationsPage({
               className={cn(
                 "rounded-full border px-4 py-1.5 text-sm font-medium",
                 v === view
-                  ? "border-[#141716] bg-[#141716] text-white"
+                  ? "border-foreground bg-foreground text-background"
                   : "border-default bg-surface hover:bg-default",
               )}
               aria-current={v === view ? "page" : undefined}
@@ -259,24 +266,28 @@ export default async function OperationsPage({
           <span className="ms-2 inline-flex items-center rounded-full border border-default bg-surface p-0.5 text-sm">
             <Link
               href={href({ date: shift(from, -7) })}
-              className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-default"
+              className="grid size-8 place-items-center rounded-full text-muted hover:bg-default pointer-coarse:size-11"
               aria-label={tb("earlier")}
             >
-              ‹
+              <span aria-hidden="true" className="inline-block rtl:-scale-x-100">
+                ‹
+              </span>
             </Link>
             <Link
               href={href({ date: today })}
-              className="px-2 text-xs font-medium"
+              className="inline-flex min-h-8 items-center px-2 text-xs font-medium pointer-coarse:min-h-11"
               data-testid="board-date"
             >
               {from === today ? tb("today") : day(from, locale)}
             </Link>
             <Link
               href={href({ date: shift(from, 7) })}
-              className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-default"
+              className="grid size-8 place-items-center rounded-full text-muted hover:bg-default pointer-coarse:size-11"
               aria-label={tb("later")}
             >
-              ›
+              <span aria-hidden="true" className="inline-block rtl:-scale-x-100">
+                ›
+              </span>
             </Link>
           </span>
         </div>
@@ -286,9 +297,9 @@ export default async function OperationsPage({
           </LinkButton>
           <form action={suggestRouteAction}>
             <input type="hidden" name="date" value={from} />
-            <Button type="submit" variant="secondary" size="sm">
+            <SubmitButton variant="secondary" size="sm">
               {t("suggestRouting")}
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       </div>

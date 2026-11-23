@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { DrizzlePlatformRepository, type PluginRow } from "@pms/db";
 import { installPlugin } from "@pms/jobs";
 import type { PluginManifest } from "@pms/core";
@@ -32,16 +33,24 @@ export const installPluginAction = withPermission<
   },
   async (ctx, _prev, fd) => {
     const c = await container();
+    const t = await getTranslations("plugins");
     const endpointUrl = str(fd, "endpointUrl");
     let manifest: PluginManifest;
+    const pasted = str(fd, "manifest");
     try {
-      const pasted = str(fd, "manifest");
       manifest = pasted ? (JSON.parse(pasted) as PluginManifest) : await fetchManifest(endpointUrl);
     } catch (e) {
-      return { error: e instanceof Error ? e.message : "manifest unreadable" };
+      // what happened, and what to do about it; never the parser's or the HTTP client's own words
+      return {
+        error: pasted
+          ? t("errors.manifestJson")
+          : e instanceof HttpProblem
+            ? t("errors.manifestUnreachable")
+            : t("errors.endpoint"),
+      };
     }
     if (!manifest.key || !Array.isArray(manifest.events))
-      return { error: "manifest needs a key and an events list" };
+      return { error: t("errors.manifestIncomplete") };
     const r = await installPlugin(c, ctx.tx, ctx.orgId, {
       manifest,
       endpointUrl,

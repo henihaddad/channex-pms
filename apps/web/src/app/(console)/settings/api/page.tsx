@@ -1,5 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Alert, Card, Chip, DataTable, SectionTitle } from "@/components/ui";
+import { Alert, Card, Chip, ConfirmSubmit, DataTable, SectionTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { container } from "@/server/container";
 import { dayMonth } from "@/lib/format";
@@ -11,8 +11,13 @@ import {
 } from "./api-keys.actions";
 import { ApiAccess } from "./api-access";
 
+export async function generateMetadata() {
+  const t = await getTranslations("apiKeys");
+  return { title: t("title") };
+}
+
 /**
- * Settings → API & AI (spec 04 §4.7a/b). Persona: the host who runs the business through
+ * Settings → Connect Claude & API (spec 04 §4.7a/b). Persona: the host who runs the business through
  * Claude (spec 02 §2.2). Keys, the apps connected by signing in, their access, and how to
  * connect Claude to OTAbridge.
  */
@@ -44,7 +49,7 @@ export default async function ApiSettingsPage() {
               t("colCreated"),
               t("colLastUsed"),
               t("colCreatedBy"),
-              { label: "", align: "end" },
+              { label: <span className="sr-only">{t("colActions")}</span>, align: "end" },
             ]}
             rowKey={(_r, i) => keys[i]!.id}
             rows={keys.map((k) => [
@@ -67,9 +72,19 @@ export default async function ApiSettingsPage() {
               ) : (
                 <form key="r" action={revokeApiKeyAction}>
                   <input type="hidden" name="keyId" value={k.id} />
-                  <button type="submit" className="text-xs font-semibold text-danger underline">
+                  <ConfirmSubmit
+                    variant="danger"
+                    size="sm"
+                    title={t("revokeTitle", { name: k.name })}
+                    body={t("revokeBody", { prefix: k.prefix })}
+                    confirmLabel={t("revokeConfirm")}
+                    cancelLabel={t("revokeCancel")}
+                    pendingLabel={t("revoking")}
+                    aria-label={t("revokeLabel", { name: k.name, prefix: k.prefix })}
+                    testId="revoke-key"
+                  >
                     {t("revoke")}
-                  </button>
+                  </ConfirmSubmit>
                 </form>
               ),
             ])}
@@ -85,7 +100,7 @@ export default async function ApiSettingsPage() {
               t("colConnected"),
               t("colLastUsed"),
               t("colApprovedBy"),
-              { label: "", align: "end" },
+              { label: <span className="sr-only">{t("colActions")}</span>, align: "end" },
             ]}
             rowKey={(_r, i) => apps[i]!.grantId}
             rows={apps.map((a) => [
@@ -100,9 +115,19 @@ export default async function ApiSettingsPage() {
               a.createdByName ?? "—",
               <form key="d" action={disconnectAppAction}>
                 <input type="hidden" name="grantId" value={a.grantId} />
-                <button type="submit" className="text-xs font-semibold text-danger underline">
+                <ConfirmSubmit
+                  variant="danger"
+                  size="sm"
+                  title={t("disconnectTitle", { name: a.name })}
+                  body={t("disconnectBody", { name: a.name })}
+                  confirmLabel={t("disconnectConfirm")}
+                  cancelLabel={t("disconnectCancel")}
+                  pendingLabel={t("disconnecting")}
+                  aria-label={t("disconnectLabel", { name: a.name })}
+                  testId="disconnect-app"
+                >
                   {t("disconnect")}
-                </button>
+                </ConfirmSubmit>
               </form>,
             ])}
           />

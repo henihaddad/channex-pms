@@ -56,7 +56,9 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.getByLabel("Checklist name").fill("Standard changeover");
   await page.getByRole("button", { name: "Add checklist" }).click();
   // a single PGlite connection serialises the suite: the portfolio spec's provisioning can hold it for a while
-  await expect(page.getByText("Standard changeover · changeover")).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByText("Standard changeover · Same-day turnover")).toBeVisible({
+    timeout: 90_000,
+  });
 
   // staff booking arriving today, departing tomorrow; a second one arriving tomorrow makes a same-day changeover
   const today = localToday();
@@ -82,7 +84,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.goto(`/operations?date=${d2}`);
   const lane = page.locator(`[data-lane="${d2}"]`);
   await expect(lane.locator("[data-task]")).toHaveCount(1);
-  await expect(lane).toContainText("Turnover clean");
+  await expect(lane).toContainText("Same-day turnover");
   await lane.getByTestId("assignee").selectOption({ label: "Me" });
   await lane.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(lane.locator('[data-state="assigned"]')).toHaveCount(1);
@@ -96,7 +98,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await page.getByTestId("on-site").click();
   await expect(page.getByTestId("item-beds_made")).toBeVisible();
   await context.setOffline(true);
-  await expect(page.getByTestId("online-state")).toHaveText("offline");
+  await expect(page.getByTestId("online-state")).toHaveText("Offline");
   for (const key of ["beds_made", "bathroom_cleaned", "bins_emptied", "keys_in_lockbox"])
     await page.getByTestId(`item-${key}`).check();
   await page.getByTestId("photo-beds_made").setInputFiles({
@@ -113,7 +115,7 @@ test("staff booking → turnover task → cleaner completes offline → folio in
   await expect(page.getByTestId("pending-sync")).toContainText("waiting to sync");
   await expect(page.getByTestId("cleaner-task")).toHaveAttribute("data-state", "done");
   await context.setOffline(false);
-  await expect(page.getByTestId("online-state")).toHaveText("online");
+  await expect(page.getByTestId("online-state")).toHaveText("Online");
   await expect(page.getByTestId("pending-sync")).toHaveCount(0, { timeout: 20_000 });
   await page.reload();
   await page.locator('input[type="date"]').fill(d2);

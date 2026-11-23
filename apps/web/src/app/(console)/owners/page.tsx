@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import type { AgreementModel } from "@pms/core";
 import {
-  Button,
   Card,
   Chip,
   DataTable,
@@ -12,17 +11,24 @@ import {
   PageHeader,
   Select,
   Stat,
+  SubmitButton,
 } from "@/components/ui";
 import { OwnersPreview } from "@/components/previews";
 import { amounts } from "@/components/finance";
 import { money } from "@/lib/format";
 import { guard } from "@/server/guard";
+import { LOCALES } from "@/i18n/request";
 import {
   createOwnerAction,
   generateDueStatementsAction,
   loadOwnersBoard,
   saveStatementScheduleAction,
 } from "./owners.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("owners");
+  return { title: t("title") };
+}
 
 const monthOf = (iso: string, locale: string, month: "short" | "long" = "long") =>
   new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { month, timeZone: "UTC" }).format(
@@ -33,6 +39,12 @@ const lastMonth = (today: string) => {
   const d = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() - 1);
   return d.toISOString().slice(0, 7);
+};
+
+/** A language named in itself, first letter up ("français" → "Français"). */
+const nativeName = (code: string): string => {
+  const n = new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+  return n.charAt(0).toLocaleUpperCase(code) + n.slice(1);
 };
 
 const STATE_TONE: Record<string, "warning" | "info" | "success" | "default"> = {
@@ -198,9 +210,9 @@ export default async function OwnersPage() {
         actions={
           <>
             <form action={generateDueStatementsAction}>
-              <Button type="submit" variant="secondary" size="sm" data-testid="generate-due">
+              <SubmitButton variant="secondary" size="sm" testId="generate-due">
                 {t("generateFor", { month: periodName })}
-              </Button>
+              </SubmitButton>
             </form>
             <LinkButton href="#add-owner" variant="secondary" size="sm">
               + {t("addOwner")}
@@ -252,9 +264,9 @@ export default async function OwnersPage() {
             </div>
             <input type="hidden" name="days" value={b.autoSend.days} />
             <div>
-              <Button type="submit" size="sm" data-testid="save-statement-schedule">
+              <SubmitButton size="sm" testId="save-statement-schedule">
                 {t("save")}
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </Card>
@@ -270,11 +282,20 @@ export default async function OwnersPage() {
           <Field label={t("email")} name="email" type="email" required={false} />
           <Field label={t("phone")} name="phone" required={false} />
           <Field label={t("taxId")} name="taxId" required={false} />
-          <Field label={t("locale")} name="locale" defaultValue="en" />
+          <Select
+            label={t("locale")}
+            name="locale"
+            defaultValue={(LOCALES as readonly string[]).includes(locale) ? locale : "en"}
+            description={t("localeHint")}
+          >
+            {LOCALES.map((code) => (
+              <option key={code} value={code}>
+                {nativeName(code)}
+              </option>
+            ))}
+          </Select>
           <div className="sm:col-span-3">
-            <Button type="submit" data-testid="create-owner">
-              {t("create")}
-            </Button>
+            <SubmitButton testId="create-owner">{t("create")}</SubmitButton>
           </div>
         </form>
       </Card>

@@ -5,6 +5,11 @@ import { money } from "@/lib/format";
 import { guard } from "@/server/guard";
 import { listStatements } from "../owners.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("owners");
+  return { title: t("statements") };
+}
+
 const STATES = ["draft", "approved", "sent", "paid"] as const;
 const STATE_TONE: Record<string, "warning" | "info" | "success" | "default"> = {
   draft: "warning",

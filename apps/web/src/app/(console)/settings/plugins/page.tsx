@@ -1,8 +1,13 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, SectionTitle, TBody, THead, Table, Td, Th, Tr } from "@/components/ui";
+import { Card, SectionTitle, SubmitButton, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { InstallForm } from "./install-form";
 import { loadPlugins, retryDeliveriesAction, setPluginEnabledAction } from "./plugins.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("plugins");
+  return { title: t("title") };
+}
 
 /** Plugins (spec 12 §12.7, ADR-0004): install with an explicit permission grant, enable, retry, watch deliveries. */
 export default async function PluginsPage() {
@@ -47,15 +52,15 @@ export default async function PluginsPage() {
                 <form action={setPluginEnabledAction}>
                   <input type="hidden" name="pluginId" value={p.id} />
                   <input type="hidden" name="enabled" value={p.enabled ? "0" : "1"} />
-                  <Button type="submit" variant="secondary" data-testid="toggle-plugin" size="sm">
+                  <SubmitButton variant="secondary" testId="toggle-plugin" size="sm">
                     {p.enabled ? t("disable") : t("enable")}
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <form action={retryDeliveriesAction}>
                   <input type="hidden" name="pluginId" value={p.id} />
-                  <Button type="submit" variant="secondary" size="sm">
+                  <SubmitButton variant="secondary" size="sm">
                     {t("retry")}
-                  </Button>
+                  </SubmitButton>
                 </form>
               </div>
             </li>

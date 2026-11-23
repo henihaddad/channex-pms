@@ -72,7 +72,7 @@ authorization spec asks ([04 §4.7b](./04-architecture.md#47b-mcp-server-for-ai-
 Approving a client creates the same thing an API key does, a service account with an access
 level's explicit grant, so the permission engine, the audit log and the never-on-a-key list
 apply unchanged; the access token is an hour-long row in `api_key`. A connection is listed and
-disconnected on Settings → API & AI. The key-in-URL form stays as a fallback only.
+disconnected on Settings → Connect Claude & API. The key-in-URL form stays as a fallback only.
 
 ## Open
 

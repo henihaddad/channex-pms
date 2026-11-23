@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
-  Button,
   Card,
   DateInput,
-  PageTitle,
+  EmptyState,
+  LinkButton,
+  PageHeader,
   Select,
+  SubmitButton,
   TBody,
   THead,
   Table,
@@ -14,10 +16,19 @@ import {
   Tr,
 } from "@/components/ui";
 import { guard } from "@/server/guard";
+import { dayMonth } from "@/lib/format";
 import { listProperties } from "../properties/properties.actions";
 import { loadFrontDesk } from "../operations/operations.actions";
 
-/** Front desk (spec 08 §8.10): hotel-kind properties only; an STR portfolio never sees one. */
+export async function generateMetadata() {
+  const t = await getTranslations("operations");
+  return { title: t("frontDesk") };
+}
+
+/**
+ * Front desk (spec 08 §8.10): hotel-kind properties only; an STR portfolio never sees one.
+ * Persona: the front-desk agent of a hotel or guest house.
+ */
 export default async function FrontDeskPage({
   searchParams,
 }: {
@@ -25,15 +36,26 @@ export default async function FrontDeskPage({
 }) {
   const sp = await searchParams;
   const t = await getTranslations("operations");
+  const locale = await getLocale();
+  const unitStatus = (k: string | null) =>
+    k && t.has(`unitState.${k}`) ? t(`unitState.${k}`) : (k ?? t("unitStatusUnknown"));
   const properties = (await guard(() => listProperties())).filter((p) => p.kind === "hotel");
   const propertyId = sp.propertyId ?? properties[0]?.id;
   const date = sp.date ?? new Date().toISOString().slice(0, 10);
   if (!propertyId)
     return (
-      <div className="space-y-4">
-        <PageTitle>{t("frontDesk")}</PageTitle>
+      <div className="flex flex-col gap-5">
+        <PageHeader title={t("frontDesk")} />
         <Card>
-          <p className="text-sm text-muted">{t("noHotel")}</p>
+          <EmptyState
+            title={t("noHotelTitle")}
+            description={t("noHotel")}
+            action={
+              <LinkButton href="/operations" size="sm">
+                {t("openCleaningBoard")}
+              </LinkButton>
+            }
+          />
         </Card>
       </div>
     );
@@ -44,28 +66,30 @@ export default async function FrontDeskPage({
     return d.toISOString().slice(0, 10);
   });
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PageTitle>{t("frontDesk")}</PageTitle>
-        <form method="get" className="flex flex-wrap items-end gap-2">
-          <Select
-            name="propertyId"
-            defaultValue={propertyId}
-
-            size="sm"
-          >
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </Select>{" "}
-          <DateInput name="date" defaultValue={date} className="w-44" />
-          <Button type="submit" variant="secondary" size="sm">
-            Go
-          </Button>
-        </form>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title={t("frontDesk")}
+        actions={
+          <form method="get" className="flex flex-wrap items-end gap-2">
+            <Select
+              name="propertyId"
+              defaultValue={propertyId}
+              aria-label={t("property")}
+              size="sm"
+            >
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </Select>{" "}
+            <DateInput name="date" defaultValue={date} className="w-44" aria-label={t("day")} />
+            <SubmitButton variant="secondary" size="sm">
+              {t("showDay")}
+            </SubmitButton>
+          </form>
+        }
+      />
       <div className="grid gap-4 md:grid-cols-3">
         <Card title={`${t("arrivals")} (${fd.today.arrivals.length})`}>
           <ul className="text-sm">
@@ -74,7 +98,7 @@ export default async function FrontDeskPage({
                 <Link href={`/reservations/${a.bookingId}`} className="hover:underline">
                   {a.guest}
                 </Link>{" "}
-                · {a.unitName ?? t("unassigned")} · unit {a.unitStatus ?? "?"}
+                · {a.unitName ?? t("needsRoom")} · {unitStatus(a.unitStatus)}
               </li>
             ))}
           </ul>
@@ -100,10 +124,10 @@ export default async function FrontDeskPage({
           <Table data-testid="room-rack">
             <THead>
               <Tr>
-                <Th>Room</Th>
+                <Th>{t("room")}</Th>
                 {days.map((d) => (
                   <Th key={d} className="font-normal">
-                    {d.slice(5)}
+                    {dayMonth(d, locale)}
                   </Th>
                 ))}
               </Tr>
@@ -112,7 +136,7 @@ export default async function FrontDeskPage({
               {fd.rack.map((u) => (
                 <Tr key={u.unitId}>
                   <Td>
-                    {u.unitName} <span className="text-xs text-muted">{u.status}</span>
+                    {u.unitName} <span className="text-xs text-muted">{unitStatus(u.status)}</span>
                   </Td>
                   {days.map((d) => {
                     const stay = u.stays.find((s) => s.from <= d && d < s.to);
@@ -132,7 +156,15 @@ export default async function FrontDeskPage({
                       <Td
                         key={d}
                         className={`h-6 w-10 border text-center ${cls}`}
-                        title={stay ? `${stay.guest} ${stay.state}` : (block?.reason ?? "")}
+                        title={
+                          stay
+                            ? stay.guest
+                            : block
+                              ? t.has(`blockReason.${block.reason}`)
+                                ? t(`blockReason.${block.reason}`)
+                                : block.reason
+                              : undefined
+                        }
                       >
                         {stay ? stay.guest.slice(0, 3) : block ? "✕" : ""}
                       </Td>
@@ -143,9 +175,7 @@ export default async function FrontDeskPage({
             </TBody>
           </Table>
         </div>
-        <p className="mt-1 text-xs text-muted">
-          blue arriving · green in house · light green departing · grey blocked · amber dirty
-        </p>
+        <p className="mt-1 text-xs text-muted">{t("rackLegend")}</p>
       </Card>
     </div>
   );

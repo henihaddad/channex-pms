@@ -3,7 +3,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { channelBucket } from "@pms/core";
 import {
   AnchorButton,
-  Button,
   Card,
   DataTable,
   DateInput,
@@ -12,12 +11,14 @@ import {
   FormRow,
   Input,
   Label,
+  LinkButton,
   PageHeader,
   Select,
   Stat,
+  SubmitButton,
 } from "@/components/ui";
 import { BUCKET_COLOR, Columns, Donut } from "@/components/finance";
-import { money } from "@/lib/format";
+import { dayMonth, money } from "@/lib/format";
 import { guard } from "@/server/guard";
 import { MonthOverview } from "./month-overview";
 import { OverviewFilters } from "./overview-filters";
@@ -30,6 +31,11 @@ import {
   saveBudgetAction,
   saveScheduleAction,
 } from "./reports.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("reports");
+  return { title: t("title") };
+}
 
 const monthAgo = () => new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -151,7 +157,7 @@ export default async function ReportsPage({
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="reports-kpis">
         <Stat
-          label={o.dictionary.occupancy.name}
+          label={t("metric.occupancy")}
           value={pct(k.current.occupancyBps)}
           hint={
             deltaPts === null
@@ -160,12 +166,12 @@ export default async function ReportsPage({
           }
         />
         <Stat
-          label={o.dictionary.adr.name}
+          label={t("metric.adr")}
           value={fmt(k.current.adrMinor)}
           hint={deltaMoney(k.current.adrMinor, k.previous.adrMinor)}
         />
         <Stat
-          label={o.dictionary.revpar.name}
+          label={t("metric.revpar")}
           value={fmt(k.current.revparMinor)}
           hint={deltaMoney(k.current.revparMinor, k.previous.revparMinor)}
         />
@@ -196,7 +202,7 @@ export default async function ReportsPage({
             <Columns
               testId="occupancy-by-week"
               columns={o.weeks.map((w) => ({
-                label: `W${String(w.week)}`,
+                label: t("weekShort", { n: w.week }),
                 caption: pct(w.occupancyBps),
                 value: w.occupancyBps ?? 0,
                 max: maxWeek,
@@ -314,9 +320,7 @@ export default async function ReportsPage({
                     </option>
                   ))}
                 </Select>
-                <Button type="submit" data-testid="run-report">
-                  {t("run")}
-                </Button>
+                <SubmitButton testId="run-report">{t("run")}</SubmitButton>
                 <AnchorButton
                   href={`/api/v1/reports/${def.key}.csv?${qs}`}
                   data-testid="export-csv"
@@ -335,7 +339,7 @@ export default async function ReportsPage({
           {result ? (
             <Card
               title={name(def.key, result.name)}
-              description={`${t("basis")}: ${result.basis} · ${result.rows.length} ${t("rows")}`}
+              description={t("resultMeta", { basis: result.basis, n: result.rows.length })}
               data-testid="report-result"
             >
               <DataTable
@@ -367,7 +371,11 @@ export default async function ReportsPage({
                   <Field
                     label={t("recipientsLabel")}
                     name="recipients"
-                    placeholder="a@example.com, b@example.com"
+                    placeholder={t("recipientsPlaceholder")}
+                    description={t("recipientsHint")}
+                    type="text"
+                    inputMode="email"
+                    spellCheck={false}
                     className="w-80"
                   />
                   <Select
@@ -381,12 +389,12 @@ export default async function ReportsPage({
                     <option value="monthly">{t("cadence.monthly")}</option>
                   </Select>
                   <Select name="format" label={t("format")} defaultValue="csv" className="w-28">
-                    <option value="csv">CSV</option>
-                    <option value="pdf">PDF</option>
+                    <option value="csv">{t("exportCsv")}</option>
+                    <option value="pdf">{t("exportPdf")}</option>
                   </Select>
-                  <Button type="submit" variant="secondary" data-testid="save-schedule">
+                  <SubmitButton variant="secondary" testId="save-schedule">
                     {t("schedule")}
-                  </Button>
+                  </SubmitButton>
                 </FormRow>
               </form>
             </Card>
@@ -399,7 +407,15 @@ export default async function ReportsPage({
       <div className="grid gap-5 lg:grid-cols-2">
         <Card title={t("schedules")}>
           {v.schedules.length === 0 ? (
-            <EmptyState title={t("noSchedules")} description={t("noSchedulesHint")} />
+            <EmptyState
+              title={t("noSchedules")}
+              description={t("noSchedulesHint")}
+              action={
+                <LinkButton href={`/reports?key=kpi_summary&${qs}#result`} size="sm">
+                  {t("runFirst")}
+                </LinkButton>
+              }
+            />
           ) : (
             <DataTable
               columns={[
@@ -407,22 +423,22 @@ export default async function ReportsPage({
                 t("cadenceLabel"),
                 t("format"),
                 t("lastSent"),
-                { label: "", align: "end" },
+                { label: <span className="sr-only">{t("actions")}</span>, align: "end" },
               ]}
               rows={v.schedules.map((s) => [
                 <span key="n" data-testid="schedule-row">
                   <span className="font-medium text-foreground">{s.name}</span>
-                  <span className="text-muted"> · {s.reportKey}</span>
+                  <span className="text-muted"> · {name(s.reportKey, s.reportKey)}</span>
                   <span className="block text-xs text-muted">{s.recipients.join(", ")}</span>
                 </span>,
                 t.has(`cadence.${s.cadence}`) ? t(`cadence.${s.cadence}`) : s.cadence,
                 s.format.toUpperCase(),
-                s.lastSentAt ? s.lastSentAt.slice(0, 10) : "—",
+                s.lastSentAt ? dayMonth(s.lastSentAt.slice(0, 10), locale) : "—",
                 <form key="d" action={deleteScheduleAction}>
                   <input type="hidden" name="id" value={s.id} />
-                  <Button type="submit" variant="ghost" size="sm">
+                  <SubmitButton variant="ghost" size="sm">
                     {t("remove")}
-                  </Button>
+                  </SubmitButton>
                 </form>,
               ])}
               dense
@@ -452,9 +468,7 @@ export default async function ReportsPage({
                 required={false}
                 className="w-44"
               />
-              <Button type="submit" variant="secondary">
-                {t("saveBudget")}
-              </Button>
+              <SubmitButton variant="secondary">{t("saveBudget")}</SubmitButton>
             </FormRow>
           </form>
         </Card>

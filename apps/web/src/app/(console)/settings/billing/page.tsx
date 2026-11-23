@@ -1,21 +1,23 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   Alert,
-  Button,
   Card,
+  ConfirmSubmit,
   Field,
   Label,
   SectionTitle,
-  TBody,
-  THead,
+  SubmitButton,
   Table,
+  TBody,
   Td,
   Th,
+  THead,
   Tr,
 } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { CardField } from "@/components/card-field";
 import { money } from "@/server/booking-engine";
+import { percent } from "@/lib/format";
 import {
   attachCardAction,
   cancelSubscriptionAction,
@@ -25,11 +27,24 @@ import {
   requestExportAction,
 } from "./billing.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("billing");
+  return { title: t("title") };
+}
+
 /** Plan, usage, invoices, export and leaving (spec 12 §12.3, §12.5). Self-hosted sees export only. */
 export default async function BillingPage() {
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null;
   const t = await getTranslations("billing");
+  const locale = await getLocale();
   const v = await guard(() => loadBilling());
+  const off = (bps: number) => percent(bps / 10_000, { locale });
+  const kb = (bytes: number) =>
+    new Intl.NumberFormat(locale, {
+      style: "unit",
+      unit: "kilobyte",
+      maximumFractionDigits: 0,
+    }).format(bytes / 1024);
   const sub = v.subscription;
   return (
     <div className="space-y-6">
@@ -92,7 +107,7 @@ export default async function BillingPage() {
                     ))}
                   </ul>
                   <p className="mt-1 text-xs text-muted">
-                    {t("annual", { pct: p.annualDiscountBps / 100 })} ·{" "}
+                    {t("annual", { pct: off(p.annualDiscountBps) })} ·{" "}
                     {p.addOns
                       .map((a) => `${a.name} ${money(a.monthlyMinor, p.currency)}`)
                       .join(", ")}
@@ -122,7 +137,7 @@ export default async function BillingPage() {
             <div className="flex flex-wrap gap-4 text-xs">
               <Label>
                 <input type="checkbox" name="annual" defaultChecked={sub?.annual} />{" "}
-                {t("annual", { pct: 15 })}
+                {t("annual", { pct: off(1500) })}
               </Label>
               <Label>
                 <input
@@ -134,9 +149,9 @@ export default async function BillingPage() {
                 {t("prioritySupport")}
               </Label>
             </div>
-            <Button type="submit" data-testid="choose-plan">
+            <SubmitButton testId="choose-plan">
               {sub ? t("changePlan") : t("subscribe")}
-            </Button>
+            </SubmitButton>
           </form>
         </Card>
       ) : null}
@@ -163,9 +178,7 @@ export default async function BillingPage() {
                 setupUrl="/api/v1/billing/card-setup"
               />
             </div>
-            <Button type="submit" data-testid="attach-card">
-              {t("attachCard")}
-            </Button>
+            <SubmitButton testId="attach-card">{t("attachCard")}</SubmitButton>
           </form>
         </Card>
       ) : null}
@@ -247,9 +260,9 @@ export default async function BillingPage() {
       <Card title={t("export")}>
         <p className="text-xs text-muted">{v.hosted ? t("exportHint") : t("selfHostedExport")}</p>
         <form action={requestExportAction} className="mt-2">
-          <Button type="submit" variant="secondary" data-testid="request-export">
+          <SubmitButton variant="secondary" testId="request-export">
             {t("requestExport")}
-          </Button>
+          </SubmitButton>
         </form>
         <ul className="mt-2 text-sm" data-testid="exports">
           {v.exports.map((e) => (
@@ -262,7 +275,7 @@ export default async function BillingPage() {
                   href={`/api/v1/exports/${e.id}`}
                   data-testid="download-export"
                 >
-                  {t("download")} ({Math.round((e.bytes ?? 0) / 1024)} kB)
+                  {t("downloadSize", { size: kb(e.bytes ?? 0) })}
                 </a>
               ) : null}
             </li>
@@ -273,9 +286,17 @@ export default async function BillingPage() {
         <Card title={t("cancel")}>
           <p className="text-xs text-muted">{t("cancelHint")}</p>
           <form action={cancelSubscriptionAction} className="mt-2">
-            <Button type="submit" variant="secondary" data-testid="cancel-subscription">
+            <ConfirmSubmit
+              size="md"
+              title={t("cancelTitle")}
+              body={t("cancelBody", { date: sub.periodTo })}
+              confirmLabel={t("cancel")}
+              cancelLabel={t("keepSubscription")}
+              pendingLabel={t("cancelling")}
+              testId="cancel-subscription"
+            >
               {t("cancel")}
-            </Button>
+            </ConfirmSubmit>
           </form>
         </Card>
       ) : null}
@@ -283,9 +304,17 @@ export default async function BillingPage() {
         <Card title={t("leave")}>
           <p className="text-xs text-muted">{t("leaveHint")}</p>
           <form action={leavePlatformAction} className="mt-2">
-            <Button type="submit" variant="secondary" data-testid="leave-platform">
+            <ConfirmSubmit
+              size="md"
+              title={t("leaveTitle")}
+              body={t("leaveBody")}
+              confirmLabel={t("leaveConfirm")}
+              cancelLabel={t("leaveCancel")}
+              pendingLabel={t("leaving")}
+              testId="leave-platform"
+            >
               {t("leaveConfirm")}
-            </Button>
+            </ConfirmSubmit>
           </form>
         </Card>
       ) : null}

@@ -93,7 +93,7 @@ test("rollup → dashboard, report and export agree; alerts; 200-property dashbo
   // a schedule
   await page.locator('input[name="recipients"]').fill(`boss-${stamp}@example.com`);
   await page.getByTestId("save-schedule").click();
-  await expect(page.getByTestId("schedule-row")).toContainText("kpi_summary");
+  await expect(page.getByTestId("schedule-row")).toContainText("Key numbers summary");
 
   // alerts: a single-unit listing with empty nights within 7 days is below 40 %
   await page.goto("/alerts");

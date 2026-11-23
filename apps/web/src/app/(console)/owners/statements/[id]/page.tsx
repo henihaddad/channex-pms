@@ -1,24 +1,26 @@
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { statementOtherLines, statementReservations } from "@pms/core";
 import {
   Alert,
-  Button,
   Card,
   Chip,
+  cn,
   DataTable,
   Input,
   PageHeader,
   Select,
-  TBody,
+  SubmitButton,
   Table,
+  TBody,
   Td,
   Tr,
-  cn,
 } from "@/components/ui";
 import { dayMonth, money as fmtMoney, nightsBetween, stay } from "@/lib/format";
 import { guard } from "@/server/guard";
+// the totals table matches the owner portal to the character (the portal prints the same figure)
 import { money } from "@/server/owners";
 import {
   approvePayoutAction,
@@ -60,6 +62,23 @@ const monthYear = (iso: string, locale: string) =>
     timeZone: "UTC",
   }).format(new Date(`${iso.slice(0, 7)}-01T00:00:00Z`));
 
+/** One load per request: the title and the page read the same statement. */
+const statementFor = cache((id: string) => guard(() => loadStatement({ id })));
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [v, t, locale] = await Promise.all([
+    statementFor(id),
+    getTranslations("owners"),
+    getLocale(),
+  ]);
+  return {
+    title: v
+      ? `${v.statement.propertyTitle} · ${monthYear(v.statement.periodFrom, locale)}`
+      : t("statement"),
+  };
+}
+
 /**
  * One owner statement (spec 17 §17.2, STMT-5, design board "Owner statement"): the revenue
  * per reservation with its nights in the period and channel fee, every other line, the
@@ -71,7 +90,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const t = await getTranslations("owners");
   const locale = await getLocale();
-  const v = await guard(() => loadStatement({ id }));
+  const v = await statementFor(id);
   if (!v) notFound();
   const st = v.statement;
   const prev = v.previous;
@@ -299,17 +318,17 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
               {st.state === "draft" ? (
                 <form action={approveStatementAction}>
                   <input type="hidden" name="id" value={st.id} />
-                  <Button type="submit" size="lg" fullWidth data-testid="approve-statement">
+                  <SubmitButton size="lg" fullWidth testId="approve-statement">
                     {t("approveStatement")}
-                  </Button>
+                  </SubmitButton>
                 </form>
               ) : null}
               {st.state === "approved" ? (
                 <form action={sendStatementAction}>
                   <input type="hidden" name="id" value={st.id} />
-                  <Button type="submit" size="lg" fullWidth data-testid="send-statement">
+                  <SubmitButton size="lg" fullWidth testId="send-statement">
                     {t("sendTo", { name: firstName })}
-                  </Button>
+                  </SubmitButton>
                 </form>
               ) : null}
               {st.state === "sent" && st.payouts.every((p) => p.state === "failed") ? (
@@ -322,9 +341,9 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                     </Select>
                     <Input name="reference" placeholder={t("bankReference")} />
                   </div>
-                  <Button type="submit" size="lg" fullWidth data-testid="initiate-payout">
+                  <SubmitButton size="lg" fullWidth testId="initiate-payout">
                     {t("recordPayout")} {fmt(tot("payable"))}
-                  </Button>
+                  </SubmitButton>
                   <span className="text-xs text-muted">
                     {t("fourEyesAbove", { amount: fmt(v.fourEyesThreshold) })}
                   </span>
@@ -339,7 +358,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                   download={`statement-${st.periodFrom.slice(0, 7)}.pdf`}
                   data-testid="pdf-link"
                 >
-                  PDF
+                  {t("downloadPdf")}
                 </a>
               ) : (
                 <p className="text-center text-xs text-muted">{t("pdfOnSend")}</p>
@@ -360,9 +379,9 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                     {t("openThread")}
                   </Link>
                 ) : null}
-                <Button type="submit" variant="secondary" size="sm">
+                <SubmitButton variant="secondary" size="sm">
                   {t("markResolved")}
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
           </Card>
@@ -388,14 +407,9 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
                 {p.state === "awaiting_approval" ? (
                   <form action={approvePayoutAction}>
                     <input type="hidden" name="id" value={p.id} />
-                    <Button
-                      type="submit"
-                      variant="secondary"
-                      data-testid="approve-payout"
-                      size="sm"
-                    >
+                    <SubmitButton variant="secondary" testId="approve-payout" size="sm">
                       {t("approvePayout")}
-                    </Button>
+                    </SubmitButton>
                   </form>
                 ) : (
                   <Chip

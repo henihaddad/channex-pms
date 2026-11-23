@@ -4,6 +4,11 @@ import { guard } from "@/server/guard";
 import { loadTransactions } from "../financials.actions";
 import { TransactionsTable } from "../transactions-table";
 
+export async function generateMetadata() {
+  const t = await getTranslations("financials");
+  return { title: t("transactions") };
+}
+
 /** Every payment, refund, expense and owner payout, newest first (design board "Financials", Transactions tab). */
 export default async function TransactionsPage() {
   const t = await getTranslations("financials");

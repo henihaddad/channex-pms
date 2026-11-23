@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Button, Label, Textarea } from "@/components/ui";
+import { useLocale, useTranslations } from "next-intl";
+import { announce, Button, Label, TextareaField, cn } from "@/components/ui";
+import { day } from "@/lib/format";
 
 type Progress = { key: string; done: boolean; photoRef?: string };
 interface Task {
@@ -64,15 +66,15 @@ const withPending = (serverTasks: Task[]): Task[] => {
   );
 };
 const nowIso = () => new Date().toISOString();
-/** Supplies a cleaner can flag with one tap; anything else goes through "+ Add". */
-const RESTOCK = ["Toilet paper", "Dishwasher tabs", "Coffee pods", "Soap", "Bin bags"];
-const fmtDay = (iso: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${iso}T00:00:00Z`));
+/**
+ * Supplies a cleaner can flag with one tap; anything else goes through "Something else". A flag is
+ * stored as the words the cleaner saw (`restock:Toilet paper`), as a typed one is, so the office
+ * reads it back as written.
+ */
+const RESTOCK = ["toiletPaper", "dishwasherTabs", "coffeePods", "soap", "binBags"] as const;
+/** A finger needs 44px: every control on this screen is at least that tall. */
+const TAP = "min-h-11";
+const FOCUS = "focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none";
 const nowMs = () => Date.now();
 const save = (k: string, v: unknown) => {
   try {
@@ -85,8 +87,11 @@ const save = (k: string, v: unknown) => {
 /**
  * OPS-6: the day is cached; state updates and photos queue locally and sync on
  * reconnect with a visible pending state. Nothing here needs a signal to work.
+ * Persona: the cleaner (spec 02), on a phone in a stairwell, in their own language.
  */
 export function CleanerApp({ today }: { today: string }) {
+  const t = useTranslations("cleaner");
+  const locale = useLocale();
   const [date, setDate] = useState(today);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [queue, setQueue] = useState<Queued[]>(() =>
@@ -104,19 +109,19 @@ export function CleanerApp({ today }: { today: string }) {
     try {
       const res = await fetch(`/api/v1/cleaner/day?date=${date}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      const day = (await res.json()) as { tasks: Task[] };
+      const body = (await res.json()) as { tasks: Task[] };
       // OPS-6: local updates stay authoritative until they are synced, whatever the server says meanwhile
-      setTasks(withPending(day.tasks));
-      save(KEY_DAY, { date, tasks: day.tasks });
+      setTasks(withPending(body.tasks));
+      save(KEY_DAY, { date, tasks: body.tasks });
       setStatus("");
     } catch {
       const cached = load<{ date: string; tasks: Task[] } | null>(KEY_DAY, null);
       if (cached?.date === date) {
         setTasks(cached.tasks);
-        setStatus("Offline: showing the cached day");
+        setStatus(t("cachedDay"));
       }
     }
-  }, [date]);
+  }, [date, t]);
 
   /** Send what is queued; returns how many were delivered. Items queued meanwhile are kept. */
   const flushOnce = useCallback(async (): Promise<number> => {
@@ -133,7 +138,7 @@ export function CleanerApp({ today }: { today: string }) {
         if (res.status >= 500 || res.status === 0) throw new Error("retry");
         if (!res.ok) {
           const p = (await res.json()) as { detail?: string };
-          setStatus(`Rejected: ${p.detail ?? res.status}`);
+          setStatus(t("rejected", { detail: p.detail ?? "" }));
         }
         sent.add(item.id);
       } catch {
@@ -145,7 +150,7 @@ export function CleanerApp({ today }: { today: string }) {
     setQueue(remaining);
     if (remaining.length === 0) await refresh();
     return sent.size;
-  }, [refresh]);
+  }, [refresh, t]);
   const flushing = useRef<Promise<void> | null>(null);
   const flush = useCallback(async () => {
     // one flush at a time: a second one would resend what the first still has in flight
@@ -171,6 +176,21 @@ export function CleanerApp({ today }: { today: string }) {
     if (online) void flush();
   }, [online, flush]);
   /* eslint-enable react-hooks/set-state-in-effect */
+  // say what changed without moving focus: the connection, and the queue filling or emptying (WCAG 4.1.3)
+  const seenOnline = useRef(online);
+  useEffect(() => {
+    if (seenOnline.current === online) return;
+    seenOnline.current = online;
+    announce(online ? t("backOnline") : t("wentOffline"));
+  }, [online, t]);
+  const seenQueue = useRef(queue.length);
+  useEffect(() => {
+    const before = seenQueue.current;
+    seenQueue.current = queue.length;
+    if (queue.length === before) return;
+    if (queue.length === 0) announce(t("synced"));
+    else if (!online) announce(t("waiting", { n: queue.length }));
+  }, [queue.length, online, t]);
   useEffect(() => {
     if ("serviceWorker" in navigator)
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
@@ -179,15 +199,15 @@ export function CleanerApp({ today }: { today: string }) {
   const send = async (taskId: string, body: Queued["body"]) => {
     // optimistic local state, then either deliver now or queue for reconnect
     setTasks((ts) =>
-      ts.map((t) =>
-        t.id === taskId
+      ts.map((x) =>
+        x.id === taskId
           ? {
-              ...t,
+              ...x,
               state: body.state,
-              progress: body.progress ?? t.progress,
-              photos: body.photos ?? t.photos,
+              progress: body.progress ?? x.progress,
+              photos: body.photos ?? x.photos,
             }
-          : t,
+          : x,
       ),
     );
     const item: Queued = {
@@ -201,52 +221,42 @@ export function CleanerApp({ today }: { today: string }) {
     setQueue(q);
     save(KEY_DAY, {
       date,
-      tasks: tasks.map((t) => (t.id === taskId ? { ...t, state: body.state } : t)),
+      tasks: tasks.map((x) => (x.id === taskId ? { ...x, state: body.state } : x)),
     });
     if (navigator.onLine) await flush();
   };
-  const toggle = (t: Task, key: string, photoRef?: string) => {
-    const cur = t.progress.find((p) => p.key === key);
+  const toggle = (task: Task, key: string, photoRef?: string) => {
+    const cur = task.progress.find((p) => p.key === key);
     const next = [
-      ...t.progress.filter((p) => p.key !== key),
+      ...task.progress.filter((p) => p.key !== key),
       {
         key,
         done: photoRef ? true : !cur?.done,
         ...(photoRef ? { photoRef } : cur?.photoRef ? { photoRef: cur.photoRef } : {}),
       },
     ];
-    setTasks((ts) => ts.map((x) => (x.id === t.id ? { ...x, progress: next } : x)));
+    setTasks((ts) => ts.map((x) => (x.id === task.id ? { ...x, progress: next } : x)));
   };
-  const attachPhoto = (t: Task, key: string, file: File | undefined) => {
+  const attachPhoto = (task: Task, key: string, file: File | undefined) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () =>
+    reader.onload = () => {
       toggle(
-        t,
+        task,
         key,
         `data:${file.type};name=${file.name};len=${String(reader.result?.toString().length ?? 0)}`,
       );
+      announce(t("photoAdded"));
+    };
     reader.readAsDataURL(file);
   };
 
-  const typeLabel: Record<string, string> = {
-    changeover: "Turnover",
-    departure: "Check-out clean",
-    mid_stay: "Mid-stay refresh",
-    deep: "Deep clean",
-    inspection: "Inspection",
-    linen: "Linen change",
-  };
-  const stateLabel: Record<string, string> = {
-    assigned: "Assigned to you",
-    accepted: "Accepted",
-    on_site: "In progress",
-    done: "Clean",
-    inspected: "Inspected",
-  };
-  const restock = (t: Task) =>
-    t.progress.filter((p) => p.key.startsWith("restock:") && p.done).map((p) => p.key.slice(8));
-  const toggleRestock = (t: Task, item: string) => toggle(t, `restock:${item}`);
+  const typeLabel = (type: string) => (t.has(`type.${type}`) ? t(`type.${type}`) : type);
+  const stateLabel = (state: string) => (t.has(`state.${state}`) ? t(`state.${state}`) : state);
+  const restockLabels: string[] = RESTOCK.map((k) => t(`supply.${k}`));
+  const restock = (task: Task) =>
+    task.progress.filter((p) => p.key.startsWith("restock:") && p.done).map((p) => p.key.slice(8));
+  const toggleRestock = (task: Task, item: string) => toggle(task, `restock:${item}`);
 
   return (
     <main
@@ -256,20 +266,20 @@ export function CleanerApp({ today }: { today: string }) {
       data-queued={queue.length}
     >
       <header className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-bold">My day</h1>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="h-8 rounded-input border border-default bg-surface px-2"
-            aria-label="Day"
+            className={cn(TAP, FOCUS, "rounded-input border border-border-control bg-surface px-2")}
+            aria-label={t("day")}
           />
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${online ? "bg-success-soft text-success-soft-foreground" : "bg-warning-soft text-warning-soft-foreground"}`}
             data-testid="online-state"
           >
-            {online ? "online" : "offline"}
+            {online ? t("online") : t("offline")}
           </span>
         </div>
       </header>
@@ -278,117 +288,121 @@ export function CleanerApp({ today }: { today: string }) {
           className="rounded-card bg-warning-soft p-2 text-xs text-warning-soft-foreground"
           data-testid="pending-sync"
         >
-          {queue.length} update(s) waiting to sync{online ? "…" : " (will send when back online)"}
+          {t("waiting", { n: queue.length })}
+          {online ? "…" : ` ${t("waitingOffline")}`}
         </p>
       ) : null}
-      {status ? (
-        <p className="text-xs text-muted" role="status">
-          {status}
-        </p>
-      ) : null}
+      {/* always mounted, so a message written into it is announced (WCAG 4.1.3) */}
+      <p className={status ? "text-xs text-muted" : "sr-only"} role="status">
+        {status}
+      </p>
       {tasks.length === 0 ? (
         <p className="rounded-card border border-default bg-surface p-4 text-muted">
-          No tasks assigned for this day.
+          {t("noTasks")}
         </p>
       ) : null}
-      {tasks.map((t) => {
+      {tasks.map((task) => {
         // the server's rule (checklistBlockers): every item ticked, and a photo where one is required
         const complete = (c: Task["checklist"][number]) => {
-          const p = t.progress.find((x) => x.key === c.key);
+          const p = task.progress.find((x) => x.key === c.key);
           return Boolean(p?.done && (!c.requiresPhoto || p.photoRef));
         };
-        const done = t.checklist.filter(complete).length;
-        const left = t.checklist.length - done;
-        const needed = restock(t);
-        const extra = needed.filter((n) => !RESTOCK.includes(n));
+        const done = task.checklist.filter(complete).length;
+        const left = task.checklist.length - done;
+        const needed = restock(task);
+        const extra = needed.filter((n) => !restockLabels.includes(n));
+        const supplyId = `supply-${task.id}`;
         return (
           <section
-            key={t.id}
+            key={task.id}
             className="overflow-hidden rounded-card border border-default bg-surface shadow-sm"
             data-testid="cleaner-task"
-            data-state={t.state}
+            data-state={task.state}
           >
-            <div className="border-t-4 border-accent bg-[#141716] p-4 text-white">
-              <div className="flex items-center justify-between text-xs text-[#b6c0bd]">
+            <div className="border-t-4 border-accent bg-foreground p-4 text-background">
+              <div className="flex items-center justify-between text-xs text-background/75">
                 <span>
-                  {fmtDay(t.date)} · {t.windowFrom}–{t.windowTo}
+                  {day(task.date, locale)} · {task.windowFrom}–{task.windowTo}
                 </span>
-                {t.checklist.length ? (
-                  <span className="font-medium text-[#5eead4]">
-                    {done} of {t.checklist.length} done
+                {task.checklist.length ? (
+                  <span className="font-medium text-background">
+                    {t("progress", { done, total: task.checklist.length })}
                   </span>
                 ) : null}
               </div>
               <h2 className="mt-1 text-xl font-bold">
-                {t.unitName && t.unitName !== t.propertyTitle
-                  ? `${t.propertyTitle} · ${t.unitName}`
-                  : t.propertyTitle}
+                {task.unitName && task.unitName !== task.propertyTitle
+                  ? `${task.propertyTitle} · ${task.unitName}`
+                  : task.propertyTitle}
               </h2>
-              <p className="mt-1 text-xs text-[#b6c0bd]">
-                {typeLabel[t.type] ?? t.type}
-                {t.isSameDay ? " · same-day" : ""}
-                {t.arrivalTime ? ` · next arrives ${t.arrivalTime}` : ""}
+              <p className="mt-1 text-xs text-background/75">
+                {typeLabel(task.type)}
+                {task.isSameDay && task.type !== "changeover" ? ` · ${t("sameDay")}` : ""}
+                {task.arrivalTime ? ` · ${t("nextArrives", { time: task.arrivalTime })}` : ""}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#e0f2fe] px-2 py-0.5 text-xs font-medium text-[#075985]">
-                  {stateLabel[t.state] ?? t.state}
+                <span className="rounded-full bg-info-soft px-2 py-0.5 text-xs font-medium text-info-soft-foreground">
+                  {stateLabel(task.state)}
                 </span>
-                {t.address.city ? (
+                {task.address.city ? (
                   <a
-                    className="text-xs text-white underline underline-offset-2"
-                    href={`https://maps.google.com/?q=${encodeURIComponent(Object.values(t.address).join(" "))}`}
+                    className={cn(
+                      TAP,
+                      "inline-flex items-center px-1 text-xs text-background underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-background focus-visible:outline-none",
+                    )}
+                    href={`https://maps.google.com/?q=${encodeURIComponent(Object.values(task.address).join(" "))}`}
                   >
-                    Navigate
+                    {t("navigate")}
                   </a>
                 ) : null}
               </div>
             </div>
             <div className="flex flex-col gap-3 p-3">
-              {t.notes ? (
-                <div className="rounded-card border border-[#fde68a] bg-[#fffbeb] p-3 text-xs">
-                  <p className="font-semibold">Note</p>
-                  <p>{t.notes}</p>
+              {task.notes ? (
+                <div className="rounded-card border border-warning/40 bg-warning-soft p-3 text-xs text-warning-soft-foreground">
+                  <p className="font-semibold">{t("note")}</p>
+                  <p>{task.notes}</p>
                 </div>
               ) : null}
-              {t.state === "assigned" ? (
+              {task.state === "assigned" ? (
                 <Button
                   className="w-full"
                   variant="primary"
                   size="lg"
-                  onClick={() => void send(t.id, { state: "accepted" })}
+                  onClick={() => void send(task.id, { state: "accepted" })}
                   data-testid="accept"
                 >
-                  Accept
+                  {t("accept")}
                 </Button>
               ) : null}
-              {t.state === "accepted" ? (
+              {task.state === "accepted" ? (
                 <Button
                   className="w-full"
                   variant="primary"
                   size="lg"
-                  onClick={() => void send(t.id, { state: "on_site" })}
+                  onClick={() => void send(task.id, { state: "on_site" })}
                   data-testid="on-site"
                 >
-                  I&apos;m on site
+                  {t("onSite")}
                 </Button>
               ) : null}
-              {t.state === "on_site" ? (
+              {task.state === "on_site" ? (
                 <>
                   <ul className="flex flex-col rounded-card border border-default">
-                    {t.checklist.map((c) => {
-                      const p = t.progress.find((x) => x.key === c.key);
+                    {task.checklist.map((c) => {
+                      const p = task.progress.find((x) => x.key === c.key);
                       return (
                         <li
                           key={c.key}
-                          className="flex items-center gap-3 border-b border-default px-3 py-3 last:border-b-0"
+                          className="flex items-center gap-3 border-b border-default px-3 py-1.5 last:border-b-0"
                         >
-                          <Label className="flex flex-1 items-center gap-3">
+                          <Label className={cn(TAP, "flex flex-1 items-center gap-3")}>
                             <input
                               type="checkbox"
                               checked={p?.done ?? false}
-                              onChange={() => toggle(t, c.key)}
+                              onChange={() => toggle(task, c.key)}
                               data-testid={`item-${c.key}`}
-                              className="h-6 w-6 shrink-0 accent-[#0f766e]"
+                              className="h-6 w-6 shrink-0 accent-accent"
                             />
                             <span className={p?.done ? "text-muted line-through" : ""}>
                               {c.label}
@@ -396,17 +410,24 @@ export function CleanerApp({ today }: { today: string }) {
                           </Label>
                           {c.requiresPhoto ? (
                             p?.photoRef ? (
-                              <span className="text-xs font-medium text-success">photo ✓</span>
+                              <span className="text-xs font-medium text-success">
+                                {t("photoDone")}
+                              </span>
                             ) : (
-                              <label className="shrink-0 cursor-pointer rounded-full border border-default px-3 py-1 text-xs font-medium hover:bg-default">
-                                Add photo
+                              <label
+                                className={cn(
+                                  TAP,
+                                  "inline-flex shrink-0 cursor-pointer items-center rounded-full border border-border-control px-3 text-xs font-medium hover:bg-default focus-within:ring-2 focus-within:ring-accent",
+                                )}
+                              >
+                                {t("addPhoto")}
                                 <input
                                   type="file"
                                   accept="image/*"
                                   capture="environment"
                                   className="sr-only"
-                                  aria-label={`Photo: ${c.label}`}
-                                  onChange={(e) => attachPhoto(t, c.key, e.target.files?.[0])}
+                                  aria-label={t("photoFor", { item: c.label })}
+                                  onChange={(e) => attachPhoto(task, c.key, e.target.files?.[0])}
                                   data-testid={`photo-${c.key}`}
                                 />
                               </label>
@@ -417,17 +438,24 @@ export function CleanerApp({ today }: { today: string }) {
                     })}
                   </ul>
                   <div className="rounded-card border border-default p-3">
-                    <p className="font-semibold">Supplies to restock</p>
+                    <p className="font-semibold">{t("restockTitle")}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {[...RESTOCK, ...extra].map((item) => {
+                      {[...restockLabels, ...extra].map((item) => {
                         const on = needed.includes(item);
                         return (
                           <button
                             key={item}
                             type="button"
                             aria-pressed={on}
-                            onClick={() => toggleRestock(t, item)}
-                            className={`rounded-full px-3 py-1 text-xs ${on ? "bg-accent text-white" : "bg-default text-foreground"}`}
+                            onClick={() => toggleRestock(task, item)}
+                            className={cn(
+                              TAP,
+                              FOCUS,
+                              "rounded-full px-3 text-xs",
+                              on
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-default text-foreground",
+                            )}
                           >
                             {item}
                           </button>
@@ -435,38 +463,56 @@ export function CleanerApp({ today }: { today: string }) {
                       })}
                     </div>
                     <form
-                      className="mt-2 flex gap-2"
+                      className="mt-3 flex flex-col gap-1.5"
                       onSubmit={(e) => {
                         e.preventDefault();
                         const input = e.currentTarget.elements.namedItem(
                           "item",
                         ) as HTMLInputElement;
                         const v = input.value.trim();
-                        if (v && !needed.includes(v)) toggleRestock(t, v);
+                        if (v && !needed.includes(v)) {
+                          toggleRestock(task, v);
+                          announce(t("supplyAdded", { item: v }));
+                        }
                         input.value = "";
                       }}
                     >
-                      <input
-                        name="item"
-                        placeholder="+ Add"
-                        aria-label="Add a supply"
-                        className="h-8 flex-1 rounded-input border border-default px-2 text-xs"
-                      />
+                      <Label htmlFor={supplyId}>{t("otherSupply")}</Label>
+                      <div className="flex gap-2">
+                        <input
+                          id={supplyId}
+                          name="item"
+                          autoComplete="off"
+                          className={cn(
+                            TAP,
+                            FOCUS,
+                            "min-w-0 flex-1 rounded-input border border-border-control bg-surface px-2 text-sm",
+                          )}
+                        />
+                        <Button type="submit" variant="secondary" size="lg">
+                          {t("add")}
+                        </Button>
+                      </div>
                     </form>
                   </div>
                   <button
                     type="button"
-                    className="text-center text-xs font-semibold text-danger underline-offset-2 hover:underline"
-                    onClick={() => setIssueFor(t.id)}
+                    className={cn(
+                      TAP,
+                      FOCUS,
+                      "rounded-full text-center text-xs font-semibold text-danger underline-offset-2 hover:underline",
+                    )}
+                    aria-expanded={issueFor === task.id}
+                    onClick={() => setIssueFor(issueFor === task.id ? null : task.id)}
                   >
-                    Report a problem, with photo
+                    {t("reportProblem")}
                   </button>
-                  {issueFor === t.id ? (
+                  {issueFor === task.id ? (
                     <IssueForm
-                      taskId={t.id}
-                      onDone={() => {
-                        setIssueFor(null);
-                        setStatus("Issue reported");
+                      taskId={task.id}
+                      onDone={(ok) => {
+                        if (ok) setIssueFor(null);
+                        setStatus(ok ? t("issueSent") : t("issueFailed"));
                       }}
                     />
                   ) : null}
@@ -475,10 +521,10 @@ export function CleanerApp({ today }: { today: string }) {
                     variant="primary"
                     size="lg"
                     onClick={() =>
-                      void send(t.id, {
+                      void send(task.id, {
                         state: "done",
-                        progress: t.progress,
-                        photos: t.progress
+                        progress: task.progress,
+                        photos: task.progress
                           .filter((p) => p.photoRef)
                           .map((p) => ({ ref: p.photoRef!, takenAt: nowIso() })),
                       })
@@ -486,12 +532,16 @@ export function CleanerApp({ today }: { today: string }) {
                     data-testid="done"
                     disabled={left > 0}
                   >
-                    {left > 0 ? `Mark clean · ${left} of ${t.checklist.length} left` : "Mark clean"}
+                    {left > 0
+                      ? t("markCleanLeft", { left, total: task.checklist.length })
+                      : t("markClean")}
                   </Button>
                 </>
               ) : null}
-              {(t.state === "done" || t.state === "inspected") && needed.length ? (
-                <p className="text-xs text-muted">Restock: {needed.join(", ")}</p>
+              {(task.state === "done" || task.state === "inspected") && needed.length ? (
+                <p className="text-xs text-muted">
+                  {t("restockList", { items: needed.join(", ") })}
+                </p>
               ) : null}
             </div>
           </section>
@@ -501,30 +551,44 @@ export function CleanerApp({ today }: { today: string }) {
   );
 }
 
-function IssueForm({ taskId, onDone }: { taskId: string; onDone: () => void }) {
-  const [text, setText] = useState("");
+function IssueForm({ taskId, onDone }: { taskId: string; onDone: (ok: boolean) => void }) {
+  const t = useTranslations("cleaner");
+  const [sending, setSending] = useState(false);
   return (
     <form
-      className="mt-2 space-y-1"
+      className="mt-2 flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
+        const description = String(new FormData(e.currentTarget).get("description") ?? "").trim();
+        if (!description) return;
+        setSending(true);
         void import("@/app/(console)/operations/operations.actions")
-          .then((m) =>
-            m.reportIssueFromTaskAction({ taskId, description: text, severity: "normal" }),
+          .then((m) => m.reportIssueFromTaskAction({ taskId, description, severity: "normal" }))
+          .then(
+            () => onDone(true),
+            () => onDone(false),
           )
-          .then(onDone);
+          .finally(() => setSending(false));
       }}
     >
-      <Textarea
-        className="w-full rounded border border-border-secondary p-1 text-sm"
-        rows={2}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="What is wrong? (photos in 3 taps: attach above)"
+      <TextareaField
+        id={`issue-${taskId}`}
+        name="description"
+        label={t("issueLabel")}
+        description={t("issueHint")}
+        rows={3}
         required
       />
-      <Button variant="danger" className="w-full bg-danger text-white" data-testid="report-issue">
-        Send issue
+      <Button
+        type="submit"
+        variant="danger"
+        size="lg"
+        className="w-full"
+        disabled={sending}
+        aria-busy={sending || undefined}
+        data-testid="report-issue"
+      >
+        {sending ? t("sendingIssue") : t("sendIssue")}
       </Button>
     </form>
   );

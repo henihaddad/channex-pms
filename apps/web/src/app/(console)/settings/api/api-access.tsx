@@ -1,23 +1,50 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Alert, Button, Card, Field, Select } from "@/components/ui";
+import { Alert, announce, Button, Card, Field, Select } from "@/components/ui";
 import { createApiKeyAction, type CreateKeyState } from "./api-keys.actions";
 
 const LEVELS = ["full", "read_only", "messages", "prices"] as const;
 
-function CopyButton({ text, label, done }: { text: string; label: string; done: string }) {
+function CopyButton({
+  text,
+  label,
+  done,
+  announced,
+  disabled,
+  describedBy,
+}: {
+  text: string;
+  label: string;
+  done: string;
+  announced: string;
+  disabled?: boolean;
+  describedBy?: string;
+}) {
   const [copied, setCopied] = useState(false);
+  const timer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
   return (
     <Button
       type="button"
       size="sm"
       variant="secondary"
+      disabled={disabled}
+      aria-describedby={describedBy}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
           setCopied(true);
+          announce(announced);
+          if (timer.current) window.clearTimeout(timer.current);
+          // the label goes back after two seconds, so a second copy reads as a second copy
+          timer.current = window.setTimeout(() => setCopied(false), 2000);
         } catch {
           window.prompt(label, text);
         }
@@ -34,13 +61,17 @@ function Snippet({
   hint,
   text,
   testId,
+  needsKey = false,
 }: {
   title: string;
   hint: ReactNode;
   text: string;
   testId: string;
+  /** The text carries a key placeholder: nothing worth copying until a key exists. */
+  needsKey?: boolean;
 }) {
   const t = useTranslations("apiKeys");
+  const hintId = useId();
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
@@ -48,7 +79,21 @@ function Snippet({
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
           <div className="text-sm text-muted">{hint}</div>
         </div>
-        <CopyButton text={text} label={t("copy")} done={t("copied")} />
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <CopyButton
+            text={text}
+            label={t("copy")}
+            done={t("copied")}
+            announced={t("copiedAnnounce", { what: title })}
+            disabled={needsKey}
+            describedBy={needsKey ? hintId : undefined}
+          />
+          {needsKey ? (
+            <span id={hintId} className="text-xs text-muted">
+              {t("createKeyFirst")}
+            </span>
+          ) : null}
+        </div>
       </div>
       <pre
         data-testid={testId}
@@ -61,7 +106,7 @@ function Snippet({
 }
 
 /**
- * Settings → API & AI (spec 04 §4.7a/b): create a key (shown once), then the ways to connect.
+ * Settings → Connect Claude & API (spec 04 §4.7a/b): create a key (shown once), then the ways to connect.
  * claude.ai first: paste the server URL and sign in, no key. Claude Code, Claude Desktop and
  * scripts use a key, filled in when there is one; the key-in-URL form stays as a fallback.
  * Persona: the host who runs the business through Claude.
@@ -69,7 +114,7 @@ function Snippet({
 export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: ReactNode }) {
   const t = useTranslations("apiKeys");
   const [state, action, pending] = useActionState<CreateKeyState, FormData>(createApiKeyAction, {});
-  const key = state.secret ?? "<key>";
+  const key = state.secret ?? "YOUR_KEY";
   const mcp = `${baseUrl}/api/mcp`;
   const desktop = JSON.stringify(
     {
@@ -100,7 +145,7 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
               defaultValue="Claude"
               description={t("nameHint")}
             />
-            <Select label={t("access")} name="access" defaultValue="full">
+            <Select label={t("access")} name="access" defaultValue="read_only">
               {LEVELS.map((l) => (
                 <option key={l} value={l}>
                   {t(`level.${l}`)}
@@ -118,8 +163,8 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
             ))}
           </ul>
           <div>
-            <Button type="submit" disabled={pending}>
-              {t("submit")}
+            <Button type="submit" disabled={pending} aria-busy={pending || undefined}>
+              {pending ? t("submitting") : t("submit")}
             </Button>
           </div>
         </form>
@@ -135,7 +180,12 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
               >
                 {state.secret}
               </code>
-              <CopyButton text={state.secret} label={t("copy")} done={t("copied")} />
+              <CopyButton
+                text={state.secret}
+                label={t("copy")}
+                done={t("copied")}
+                announced={t("copiedAnnounce", { what: t("keyWord") })}
+              />
             </div>
           </div>
         ) : null}
@@ -154,18 +204,21 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
           />
           <Snippet
             testId="connect-claude-code"
+            needsKey={!state.secret}
             title={t("claudeCode")}
             hint={t("claudeCodeHint")}
             text={`claude mcp add --transport http otabridge ${mcp} --header "Authorization: Bearer ${key}"`}
           />
           <Snippet
             testId="connect-desktop"
+            needsKey={!state.secret}
             title={t("desktop")}
             hint={t("desktopHint")}
             text={desktop}
           />
           <Snippet
             testId="connect-claude-ai"
+            needsKey={!state.secret}
             title={t("claudeAi")}
             hint={
               <>
@@ -177,6 +230,7 @@ export function ApiAccess({ baseUrl, children }: { baseUrl: string; children: Re
           />
           <Snippet
             testId="connect-curl"
+            needsKey={!state.secret}
             title={t("rest")}
             hint={t("restHint", { url: `${baseUrl}/api/v1/openapi.json` })}
             text={`curl -H "Authorization: Bearer ${key}" ${baseUrl}/api/v1/today`}

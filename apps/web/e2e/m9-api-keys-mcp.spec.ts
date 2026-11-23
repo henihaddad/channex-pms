@@ -82,9 +82,9 @@ test("API keys, the public API and the MCP server, permission-checked and audite
   await page.getByRole("button", { name: "Start free" }).click();
   await expect(page.getByRole("heading", { name: /Welcome/ })).toBeVisible();
 
-  // Settings → API & AI is in the settings nav, and warns that the URL form is a secret
+  // Settings → Connect Claude & API is in the settings nav, and warns that the URL form is a secret
   await page.goto("/settings/organization");
-  await page.getByRole("link", { name: "API & AI" }).click();
+  await page.getByRole("link", { name: "Connect Claude & API" }).click();
   await expect(page).toHaveURL(/\/settings\/api$/);
   await expect(page.getByText(/contains your key/)).toBeVisible();
 
@@ -287,11 +287,9 @@ test("API keys, the public API and the MCP server, permission-checked and audite
 
   // ---- revoke: the next request is a 401 -----------------------------------------------
   await page.goto("/settings/api");
-  await page
-    .getByTestId("api-keys")
-    .locator("tr", { hasText: "Reader" })
-    .getByRole("button", { name: "Revoke" })
-    .click();
+  const readerRow = page.getByTestId("api-keys").locator("tr", { hasText: "Reader" });
+  await readerRow.getByRole("button", { name: /^Revoke key/ }).click();
+  await readerRow.getByTestId("revoke-key-confirm").click();
   await expect(
     page.getByTestId("api-keys").locator("tr", { hasText: "Reader" }).getByText("Revoked"),
   ).toBeVisible();

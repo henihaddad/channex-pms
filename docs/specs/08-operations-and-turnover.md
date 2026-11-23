@@ -182,7 +182,10 @@ A PWA designed for a phone in a stairwell, in the cleaner's language.
   time windows. One tap to navigate.
 - Per task: a header with the place, the window and the next arrival, the manager's note,
   big checklist rows, one-tap "supplies to restock" chips (saved with the task's progress as
-  `restock:<item>` and shown on the coordinator's card), and a "Mark clean · n left" button.
+  `restock:<item>`, the item in the words the cleaner saw, and shown on the coordinator's card),
+  and a "Mark clean · n left" button. Every control is at least 44px tall; going offline,
+  coming back and the queue emptying are announced to screen readers. Checklist item keys are
+  made from the label in any script, and fall back to the item's position when two would clash.
 - Per task: checklist (photo-required items enforced), supplies notes, "report
   issue" (creates a `MaintenanceIssue` with photos in ≤3 taps), guest-facing
   info they need (arrival time) and nothing they don't (no financials, no PII
@@ -203,6 +206,9 @@ A PWA designed for a phone in a stairwell, in the cleaner's language.
   severity, category, photos.
 - Triage on the coordinator's board: assign to `maintenance_tech` or vendor, block
   availability if needed (`UnitBlock`, pushed to channels), track cost.
+- Blocks are entered as first and last night (the block is stored half-open, ending the morning
+  after) on the unit picked, whose property and room type travel with the choice; removing a
+  block asks first.
 - Closing an issue with a cost prompts: **rebill to owner?** → creates an
   `OwnerExpense` with the receipt attached, flowing to the next statement.
 - Recurring preventive tasks (boiler service, filter change) on a schedule. v1.1.

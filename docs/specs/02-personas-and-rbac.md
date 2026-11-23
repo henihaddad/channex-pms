@@ -283,7 +283,7 @@ operators to authorise.
 - Credentials: API key (`otab_` + at least 32 URL-safe random characters, shown once,
   stored as its SHA-256, the first twelve characters kept visible to tell keys apart) or
   OAuth2 client-credentials for partner integrations (not built yet).
-- **One service account per key**, created with the key on Settings → API & AI
+- **One service account per key**, created with the key on Settings → Connect Claude & API
   (`api_key:create`). The host picks an access level, each an explicit permission list
   (core `apiKeyPermissions`), narrowed to what the creating person holds at organization
   scope (no escalation by authoring, as for custom roles §2.5):

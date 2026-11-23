@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { dueEscalations, Id, suggestRoute, type TaskState } from "@pms/core";
 import {
   DrizzleOperationsRepository,
@@ -15,6 +16,7 @@ import { withPermission } from "@/server/with-permission";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
 import { myDay, updateTask, type MyDay, type TaskUpdate } from "@/server/ops";
+import { checklistItemsFrom, parseUnitChoice } from "@/lib/checklist";
 
 export interface Board {
   date: string;
@@ -155,8 +157,10 @@ export const suggestRouteAction = withPermission<[FormData], void>(
         capacityMinutes: 480,
       })),
     );
-    if (workers.length === 0)
-      throw new HttpProblem(422, "no_crews", "Add a crew with members before routing");
+    if (workers.length === 0) {
+      const t = await getTranslations("operations.errors");
+      throw new HttpProblem(422, "no_crews", t("noCrews"), t("noCrews"));
+    }
     const points = tasks.map((t) => ({
       id: t.id,
       lat: Number(t.lat ?? 38.72),
@@ -217,12 +221,10 @@ export const addCrewMemberAction = withPermission<[FormData], void>(
       ctx.tx,
       sql`select u.id from "user" u join org_membership m on m.user_id = u.id where lower(u.email) = ${email} and m.org_id = ${ctx.orgId}`,
     );
-    if (!u)
-      throw new HttpProblem(
-        404,
-        "not_member",
-        "Invite this person to the organization first (cleaner role)",
-      );
+    if (!u) {
+      const t = await getTranslations("operations.errors");
+      throw new HttpProblem(404, "not_member", t("notMember"), t("notMember"));
+    }
     await new DrizzleOperationsRepository(ctx.tx, ctx.orgId).addCrewMember(
       String(fd.get("crewId")),
       u.id,
@@ -239,18 +241,7 @@ export const createChecklistAction = withPermission<[FormData], void>(
     subject: (fd) => ({ kind: "checklist", id: String(fd.get("checklistName")) }),
   },
   async (ctx, fd) => {
-    const items = String(fd.get("items") || "")
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((l) => ({
-        key: l
-          .replace(/\*$/, "")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "_"),
-        label: l.replace(/\*$/, ""),
-        requiresPhoto: l.endsWith("*"),
-      }));
+    const items = checklistItemsFrom(String(fd.get("items") || ""));
     await new DrizzleOperationsRepository(ctx.tx, ctx.orgId).insertChecklist({
       id: Id.next(),
       name: String(fd.get("checklistName")),
@@ -285,6 +276,7 @@ export const loadBlocks = withPermission<
       propertyTitle: string;
       roomTypeId: string;
       status: string;
+      currency: string;
     }>;
   }
 >("block:manage", { scope: "organization", audit: false }, async (ctx) => {
@@ -295,32 +287,58 @@ export const loadBlocks = withPermission<
     propertyTitle: string;
     roomTypeId: string;
     status: string;
+    currency: string;
   }>(
     ctx.tx,
-    sql`select u.id, u.name, u.property_id as "propertyId", p.title as "propertyTitle", u.room_type_id as "roomTypeId", u.status from unit u join property p on p.id = u.property_id where u.archived_at is null order by p.title, u.name`,
+    sql`select u.id, u.name, u.property_id as "propertyId", p.title as "propertyTitle", u.room_type_id as "roomTypeId", u.status, p.currency from unit u join property p on p.id = u.property_id where u.archived_at is null order by p.title, u.name`,
   );
   return { blocks: await new DrizzleOperationsRepository(ctx.tx, ctx.orgId).listBlocks(), units };
 });
+
+/**
+ * The unit picker's value carries the unit's property and room type ("property:roomType:unit"), so
+ * the block lands on the unit chosen, not on the first one listed, and the property scope is checked
+ * against that unit's property. The handler re-reads the unit to make sure the three belong together.
+ */
+const pickedUnit = (fd: FormData) => {
+  const [propertyId = "", roomTypeId = "", unitId = ""] = parseUnitChoice(
+    String(fd.get("unit") ?? ""),
+    3,
+  );
+  return { propertyId, roomTypeId, unitId };
+};
 
 export const createBlockAction = withPermission<[FormData], void>(
   "block:manage",
   {
     scope: "property",
-    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
-    subject: (fd) => ({ kind: "unit_block", id: String(fd.get("unitId")) }),
+    resolveScope: (fd) => ({ kind: "property", id: pickedUnit(fd).propertyId }),
+    subject: (fd) => ({ kind: "unit_block", id: pickedUnit(fd).unitId }),
   },
   async (ctx, fd) => {
     const ops = new DrizzleOperationsRepository(ctx.tx, ctx.orgId);
-    const propertyId = String(fd.get("propertyId"));
-    const roomTypeId = String(fd.get("roomTypeId"));
+    const { propertyId, roomTypeId, unitId } = pickedUnit(fd);
+    const [unit] = await rawRows<{ id: string }>(
+      ctx.tx,
+      sql`select id from unit where id = ${unitId} and property_id = ${propertyId} and room_type_id = ${roomTypeId}`,
+    );
+    const t = await getTranslations("operations.errors");
+    if (!unit) throw new HttpProblem(422, "unit_mismatch", t("unit"), t("unit"));
+    // the form asks for the last night blocked; a block, like a stay, ends the morning after
+    const dateFrom = String(fd.get("dateFrom"));
+    const lastNight = String(fd.get("lastNight"));
+    const iso = /^\d{4}-\d{2}-\d{2}$/;
+    if (!iso.test(dateFrom) || !iso.test(lastNight) || lastNight < dateFrom)
+      throw new HttpProblem(422, "invalid_range", t("lastNight"), t("lastNight"));
+    const dateTo = plusDays(lastNight, 1);
     const reduces = fd.get("reducesAvailability") !== "off";
     await ops.insertBlock({
       id: Id.next(),
       propertyId,
       roomTypeId,
-      unitId: String(fd.get("unitId") || "") || null,
-      dateFrom: String(fd.get("dateFrom")),
-      dateTo: String(fd.get("dateTo")),
+      unitId,
+      dateFrom,
+      dateTo,
       reason: String(fd.get("reason") || "maintenance"),
       reducesAvailability: reduces,
       note: String(fd.get("note") || "") || undefined,
@@ -332,8 +350,8 @@ export const createBlockAction = withPermission<[FormData], void>(
         ctx.orgId,
         propertyId,
         roomTypeId,
-        String(fd.get("dateFrom")),
-        String(fd.get("dateTo")),
+        dateFrom,
+        dateTo,
         Date.now(),
         "block",
       );
@@ -411,18 +429,33 @@ export const loadIssues = withPermission<
   new DrizzleOperationsRepository(ctx.tx, ctx.orgId).listIssues(),
 );
 
+/** The issue form's unit picker sends "property:unit", so the issue lands on the unit chosen. */
+const issueTarget = (fd: FormData) => {
+  const [propertyId = "", unitId = ""] = parseUnitChoice(String(fd.get("unit") ?? ""), 2);
+  return { propertyId, unitId: unitId || null };
+};
+
 export const createIssueAction = withPermission<[FormData], void>(
   "maintenance:create",
   {
     scope: "property",
-    resolveScope: (fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
-    subject: (fd) => ({ kind: "maintenance_issue", id: String(fd.get("unitId") || "property") }),
+    resolveScope: (fd) => ({ kind: "property", id: issueTarget(fd).propertyId }),
+    subject: (fd) => ({ kind: "maintenance_issue", id: issueTarget(fd).unitId ?? "property" }),
   },
   async (ctx, fd) => {
     const ops = new DrizzleOperationsRepository(ctx.tx, ctx.orgId);
     const id = Id.next();
-    const propertyId = String(fd.get("propertyId"));
-    const unitId = String(fd.get("unitId") || "") || null;
+    const { propertyId, unitId } = issueTarget(fd);
+    if (unitId) {
+      const [unit] = await rawRows<{ id: string }>(
+        ctx.tx,
+        sql`select id from unit where id = ${unitId} and property_id = ${propertyId}`,
+      );
+      if (!unit) {
+        const t = await getTranslations("operations.errors");
+        throw new HttpProblem(422, "unit_mismatch", t("unit"), t("unit"));
+      }
+    }
     const blocks = fd.get("blocksAvailability") === "on";
     await ops.insertIssue({
       id,
@@ -518,7 +551,10 @@ export const reportIssueFromTaskAction = withPermission<
   async (ctx, input) => {
     const ops = new DrizzleOperationsRepository(ctx.tx, ctx.orgId);
     const task = await ops.task(input.taskId);
-    if (!task) throw new HttpProblem(404, "not_found", "Task not found");
+    if (!task) {
+      const t = await getTranslations("operations.errors");
+      throw new HttpProblem(404, "not_found", t("taskGone"), t("taskGone"));
+    }
     const id = Id.next();
     await ops.insertIssue({
       id,

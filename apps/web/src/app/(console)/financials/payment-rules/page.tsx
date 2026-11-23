@@ -7,6 +7,11 @@ import { guard } from "@/server/guard";
 import { loadPaymentRules } from "../../booking-engine/payments/payments.actions";
 import { RulesTable } from "../../booking-engine/payments/rules-editor";
 
+export async function generateMetadata() {
+  const t = await getTranslations("payments");
+  return { title: t("title") };
+}
+
 /**
  * Payment rules (spec 10 §10.4, design board "Payment rules"), under Financials where the
  * design puts them: what the rules collected, failed, hold and refunded; the rules in the

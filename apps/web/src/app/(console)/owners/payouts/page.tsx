@@ -1,23 +1,42 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { Button, Card, PageHeader } from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Card, EmptyState, LinkButton, PageHeader, SubmitButton } from "@/components/ui";
 import { guard } from "@/server/guard";
-import { money } from "@/server/owners";
+import { money } from "@/lib/format";
 import { approvePayoutAction, listPayouts } from "../owners.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("owners");
+  return { title: t("payouts") };
+}
 
 /** Payouts (PAY-1..3): state per statement, four-eyes queue, provider reasons on failure. */
 export default async function PayoutsPage() {
   const t = await getTranslations("owners");
+  const tf = await getTranslations("financials");
+  const locale = await getLocale();
   const rows = await guard(() => listPayouts());
+  const state = (k: string) => (t.has(`payoutStates.${k}`) ? t(`payoutStates.${k}`) : k);
+  const method = (k: string) => (tf.has(`method.${k}`) ? tf(`method.${k}`) : k);
   return (
     <div className="space-y-4">
       <PageHeader title={t("payouts")} />
       <Card>
-        {rows.length === 0 ? <p className="text-sm text-muted">{t("noPayouts")}</p> : null}
+        {rows.length === 0 ? (
+          <EmptyState
+            title={t("noPayouts")}
+            description={t("noPayoutsHint")}
+            action={
+              <LinkButton href="/owners/statements" size="sm">
+                {t("openStatements")}
+              </LinkButton>
+            }
+          />
+        ) : null}
         {rows.map((p) => (
           <div
             key={p.id}
-            className="flex items-center justify-between border-t border-border py-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 border-t border-border py-2 text-sm first:border-t-0"
             data-testid="payout-row"
             data-state={p.state}
           >
@@ -25,8 +44,8 @@ export default async function PayoutsPage() {
               <Link className="underline" href={`/owners/statements/${p.statementId}`}>
                 {p.ownerName}
               </Link>{" "}
-              · {money(p.amountMinor, p.currency)} · {p.method} ·{" "}
-              <span className="rounded bg-background px-1 text-xs">{p.state}</span>
+              · {money(p.amountMinor, p.currency, locale)} · {method(p.method)} ·{" "}
+              <span className="rounded bg-background px-1 text-xs">{state(p.state)}</span>
               {p.failureReason ? (
                 <span className="ms-1 text-xs text-danger">{p.failureReason}</span>
               ) : null}
@@ -35,9 +54,9 @@ export default async function PayoutsPage() {
             {p.state === "awaiting_approval" ? (
               <form action={approvePayoutAction}>
                 <input type="hidden" name="id" value={p.id} />
-                <Button type="submit" variant="secondary" size="sm">
+                <SubmitButton variant="secondary" size="sm">
                   {t("approvePayout")}
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
           </div>

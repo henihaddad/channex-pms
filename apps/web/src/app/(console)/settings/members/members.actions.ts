@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { SYSTEM_ROLES } from "@pms/authz";
 import { Id } from "@pms/core";
@@ -62,8 +63,14 @@ export const inviteMember = withPermission<[InviteState, FormData], InviteState>
     auditInput: (_prev, fd) => ({ email: fd.get("email"), roleKey: fd.get("roleKey") }),
   },
   async (ctx, _prev, fd) => {
+    const t = await getTranslations("members");
     const parsed = inviteSchema.safeParse({ email: fd.get("email"), roleKey: fd.get("roleKey") });
-    if (!parsed.success) return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+    if (!parsed.success)
+      return {
+        error: parsed.error.issues.some((i) => i.path[0] === "email")
+          ? t("errors.email")
+          : t("errors.role"),
+      };
     const org = await rawRows<{ name: string }>(
       ctx.tx,
       sql`select name from organization where id = ${ctx.orgId}`,
@@ -85,11 +92,11 @@ export const inviteMember = withPermission<[InviteState, FormData], InviteState>
         },
       });
     } catch (e) {
-      if (e instanceof HttpProblem) return { error: e.message };
+      if (e instanceof HttpProblem) return { error: t("errors.invite") };
       throw e;
     }
     revalidatePath("/settings/members");
-    return { sent: parsed.data.email };
+    return { sent: t("sent", { email: parsed.data.email }) };
   },
 );
 
@@ -105,13 +112,22 @@ export const revokeMember = withPermission<[FormData], void>(
       subject_type: "user";
     }>(ctx.tx, sql`select subject_id, role_key, subject_type from "grant" where id = ${grantId}`);
     const g = rows[0];
-    if (!g) throw new HttpProblem(404, "not_found", "Grant not found");
+    const t = await getTranslations("members");
+    if (!g) throw new HttpProblem(404, "not_found", t("errors.notFound"));
     const grant = (await repo.listGrantsForSubject("user", g.subject_id as Id)).find(
       (x) => x.id === grantId,
     );
-    if (!grant) throw new HttpProblem(404, "not_found", "Grant not found");
+    if (!grant) throw new HttpProblem(404, "not_found", t("errors.notFound"));
     const r = await (await identity(ctx.tx)).revokeGrant(grant, ctx.userId);
-    if (!r.ok) throw new HttpProblem(409, r.error.code, r.error.message);
+    if (!r.ok) {
+      const why =
+        r.error.code === "identity.last_org_owner"
+          ? t("errors.lastOwner")
+          : r.error.code === "identity.self_lockout"
+            ? t("errors.selfLockout")
+            : t("errors.remove");
+      throw new HttpProblem(409, r.error.code, why, why);
+    }
     revalidatePath("/settings/members");
   },
 );

@@ -1,8 +1,13 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, PageHeader, Select } from "@/components/ui";
+import { Card, Field, Label, PageHeader, Select, SubmitButton } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { EXPENSE_CATEGORIES, money } from "@/server/owners";
 import { approveExpenseAction, createExpenseAction, listExpenses } from "../owners.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("owners");
+  return { title: t("expenses") };
+}
 
 /** Expenses (spec 17 §17.3): capture, rebillable suggestion with override reason, approval before a statement (EXP-1). */
 export default async function ExpensesPage({
@@ -25,9 +30,9 @@ export default async function ExpensesPage({
               <option value="approved">approved</option>
               <option value="rejected">rejected</option>
             </Select>
-            <Button type="submit" variant="secondary" size="sm">
+            <SubmitButton variant="secondary" size="sm">
               {t("filter")}
-            </Button>
+            </SubmitButton>
           </form>
           {v.rows.map((e) => (
             <div
@@ -54,17 +59,17 @@ export default async function ExpensesPage({
                   <form action={approveExpenseAction}>
                     <input type="hidden" name="id" value={e.id} />
                     <input type="hidden" name="propertyId" value={e.propertyId} />
-                    <Button type="submit" data-testid="approve-expense" size="sm">
+                    <SubmitButton testId="approve-expense" size="sm">
                       {t("approve")}
-                    </Button>
+                    </SubmitButton>
                   </form>
                   <form action={approveExpenseAction}>
                     <input type="hidden" name="id" value={e.id} />
                     <input type="hidden" name="propertyId" value={e.propertyId} />
                     <input type="hidden" name="decision" value="reject" />
-                    <Button type="submit" variant="secondary" size="sm">
+                    <SubmitButton variant="secondary" size="sm">
                       {t("reject")}
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </div>
               ) : null}
@@ -115,9 +120,7 @@ export default async function ExpensesPage({
                 className="block"
               />
             </div>
-            <Button type="submit" data-testid="create-expense">
-              {t("submitExpense")}
-            </Button>
+            <SubmitButton testId="create-expense">{t("submitExpense")}</SubmitButton>
             {v.fourEyes ? <p className="text-xs text-muted">{t("fourEyesOn")}</p> : null}
           </form>
         </Card>

@@ -185,5 +185,5 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await expect(page.getByTestId("payout-row")).toHaveAttribute("data-state", "paid");
   await expect(page.getByTestId("statement-detail")).toHaveAttribute("data-state", "paid");
   await page.goto("/operations/blocks");
-  await expect(page.getByText("owner_stay").first()).toBeVisible();
+  await expect(page.getByTestId("blocks").getByText("Owner stay").first()).toBeVisible();
 });

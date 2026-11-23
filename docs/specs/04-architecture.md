@@ -328,11 +328,13 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
   (`PATCH /api/v1/ari/rates`, `/restrictions`, `POST /api/v1/ari/bulk`, `GET
   /api/v1/ari/grid`, `GET|POST /api/v1/properties`) stay as they were. The OpenAPI document
   lists the operations from the same table; `@channex-pms/sdk` has a method for each.
-- **Settings → API & AI** (`/settings/api`): create a key (name, access level), shown once
+- **Settings → Connect Claude & API** (`/settings/api`): create a key (name, access level,
+  Read only preselected so a new key can change nothing until someone chooses more), shown once
   with a copy button; the list shows name, access, visible prefix, created, last used and
-  creator, with Revoke; and how to connect Claude Code, Claude Desktop, claude.ai and curl,
-  with copy buttons, built on `NEXT_PUBLIC_APP_URL` and filled with the new key right after
-  creation.
+  creator, with Revoke, which asks first and names the key and its prefix; and how to connect
+  Claude Code, Claude Desktop, claude.ai and curl, with copy buttons, built on
+  `NEXT_PUBLIC_APP_URL` and filled with the new key right after creation. Until a key exists the
+  snippets that need one show `YOUR_KEY` and their Copy button is disabled ("Create a key first").
 - **Decision (2026-11-10): writes execute directly while the product is in test.** No preview
   or confirm step between the assistant and the calendar, the inbox or a booking: what
   Claude calls happens, permission-checked and audited, as if the host had clicked it. The
@@ -418,8 +420,8 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
     travel in a URL).
   - *Revocation* `POST /oauth/revoke` (RFC 7009): a refresh token ends the whole connection, an
     access token ends itself; unknown tokens and another client's tokens get the same 200.
-  - *Settings → API & AI › Connected apps*: name, access, connected on, last used, approved
-    by, and Disconnect (`withPermission("api_key:revoke")`), which revokes the consent, the
+  - *Settings → Connect Claude & API › Connected apps*: name, access, connected on, last used,
+    approved by, and Disconnect (`withPermission("api_key:revoke")`, confirmed first), which revokes the consent, the
     service account and its grant, every access token and every refresh token at once. The
     connections' access tokens are not listed as keys. The activity log reads "via Claude
     (claude.ai)" (the audit actor carries `via: "app"`); a refused tool tells the model to

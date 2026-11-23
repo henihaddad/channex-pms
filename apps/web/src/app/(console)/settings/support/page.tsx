@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, Label, SectionTitle } from "@/components/ui";
+import { Card, Field, Label, SectionTitle, SubmitButton } from "@/components/ui";
 import { guard } from "@/server/guard";
 import {
   decideImpersonationAction,
@@ -7,6 +7,11 @@ import {
   loadSupport,
   revokeSupportAccessAction,
 } from "./support.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("support");
+  return { title: t("title") };
+}
 
 /** Support (spec 12 §12.6, spec 02 §2.7): pre-granted access, impersonation approvals, the diagnostics bundle. */
 export default async function SupportPage() {
@@ -23,14 +28,9 @@ export default async function SupportPage() {
               {t("active", { time: v.access.expiresAt.slice(0, 16).replace("T", " ") })}
             </span>
             <form action={revokeSupportAccessAction}>
-              <Button
-                type="submit"
-                variant="secondary"
-                data-testid="revoke-support-access"
-                size="sm"
-              >
+              <SubmitButton variant="secondary" testId="revoke-support-access" size="sm">
                 {t("revoke")}
-              </Button>
+              </SubmitButton>
             </form>
           </div>
         ) : (
@@ -39,9 +39,7 @@ export default async function SupportPage() {
             <Label>
               <input type="checkbox" name="writeAllowed" /> {t("writeAllowed")}
             </Label>
-            <Button type="submit" data-testid="grant-support-access">
-              {t("grant")}
-            </Button>
+            <SubmitButton testId="grant-support-access">{t("grant")}</SubmitButton>
           </form>
         )}
       </Card>
@@ -66,18 +64,13 @@ export default async function SupportPage() {
                     <form key={d} action={decideImpersonationAction}>
                       <input type="hidden" name="id" value={r.id} />
                       <input type="hidden" name="decision" value={d} />
-                      <Button
-                        type="submit"
-                        variant="secondary"
-                        data-testid={`impersonation-${d}`}
-                        size="sm"
-                      >
+                      <SubmitButton variant="secondary" testId={`impersonation-${d}`} size="sm">
                         {d === "approve"
                           ? t("approve")
                           : d === "approve_write"
                             ? t("approveWrite")
                             : t("deny")}
-                      </Button>
+                      </SubmitButton>
                     </form>
                   ))}
                 </div>

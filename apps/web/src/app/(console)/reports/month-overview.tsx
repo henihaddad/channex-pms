@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import { Button, Card, Chip, DataTable } from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Card, Chip, DataTable, SubmitButton } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { loadDashboard, refreshRollupsAction } from "./reports.actions";
-import { Kpi, money, pct } from "./kpi";
+import { money as fmtMoney } from "@/lib/format";
+import { Kpi, pct } from "./kpi";
 
 /**
  * This month's KPIs and the property league table (spec 11 §11.2). They lived on Today; the
@@ -11,7 +12,14 @@ import { Kpi, money, pct } from "./kpi";
  */
 export async function MonthOverview({ propertyId }: { propertyId: string | null }) {
   const t = await getTranslations("dashboard");
+  const tr = await getTranslations("reports");
+  const locale = await getLocale();
   const d = await guard(() => loadDashboard({ propertyId }));
+  const money = (minor: number | null, currency: string) => fmtMoney(minor, currency, locale);
+  // plain words on the tile, the formula in the tooltip; the acronym stays in the formula
+  const name = (k: string) => tr(`metric.${k}`);
+  const how = (k: string) => tr(`metricHint.${k}`);
+  const vs = (change: string) => tr("vsPrevious", { pct: change });
   const m = d.month.current;
   const cur = d.month.currency;
   const fresh = d.month.freshness
@@ -25,9 +33,9 @@ export async function MonthOverview({ propertyId }: { propertyId: string | null 
         description={t("freshness", { at: fresh })}
         actions={
           <form action={refreshRollupsAction}>
-            <Button type="submit" variant="ghost" size="sm" data-testid="refresh-rollups">
+            <SubmitButton variant="ghost" size="sm" testId="refresh-rollups">
               {t("refresh")}
-            </Button>
+            </SubmitButton>
           </form>
         }
       >
@@ -36,35 +44,39 @@ export async function MonthOverview({ propertyId }: { propertyId: string | null 
         </span>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="month-kpis">
           <Kpi
-            label={d.dictionary.occupancy.name}
+            vs={vs}
+            label={name("occupancy")}
             value={pct(m.occupancyBps)}
             delta={d.month.previous.occupancyBps}
             current={m.occupancyBps}
-            hint={d.dictionary.occupancy.formula}
+            hint={how("occupancy")}
             testId="occupancy-mtd"
           />
           <Kpi
-            label={d.dictionary.adr.name}
+            vs={vs}
+            label={name("adr")}
             value={money(m.adrMinor, cur)}
             delta={d.month.previous.adrMinor}
             current={m.adrMinor}
-            hint={d.dictionary.adr.formula}
+            hint={how("adr")}
             testId="adr-mtd"
           />
           <Kpi
-            label={d.dictionary.revpar.name}
+            vs={vs}
+            label={name("revpar")}
             value={money(m.revparMinor, cur)}
             delta={d.month.previous.revparMinor}
             current={m.revparMinor}
-            hint={d.dictionary.revpar.formula}
+            hint={how("revpar")}
             testId="revpar-mtd"
           />
           <Kpi
-            label={t("revenueMtd")}
+            vs={vs}
+            label={name("revenueMtd")}
             value={money(m.roomRevenueMinor, cur)}
             delta={d.month.previous.roomRevenueMinor}
             current={m.roomRevenueMinor}
-            hint={d.dictionary.rooms_sold.formula}
+            hint={how("revenueMtd")}
           />
         </div>
         <details className="group mt-3">
@@ -73,48 +85,56 @@ export async function MonthOverview({ propertyId }: { propertyId: string | null 
           </summary>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <Kpi
-              label={d.dictionary.direct_share.name}
+              vs={vs}
+              label={name("direct_share")}
               value={pct(m.directShareBps)}
-              hint={d.dictionary.direct_share.formula}
+              hint={how("direct_share")}
             />
             <Kpi
-              label={d.dictionary.pickup.name}
+              vs={vs}
+              label={name("pickup")}
               value={`${String(d.month.pickup7.nights)} ${t("nights")}`}
-              hint={d.dictionary.pickup.formula}
+              hint={how("pickup")}
             />
             {showFinance ? (
               <>
                 <Kpi
-                  label={d.dictionary.net_adr.name}
+                  vs={vs}
+                  label={name("net_adr")}
                   value={money(m.netAdrMinor, cur)}
-                  hint={d.dictionary.net_adr.formula}
+                  hint={how("net_adr")}
                 />
                 <Kpi
-                  label={d.dictionary.commission_cost.name}
+                  vs={vs}
+                  label={name("commission_cost")}
                   value={money(m.commissionMinor, cur)}
-                  hint={d.dictionary.commission_cost.formula}
+                  hint={how("commission_cost")}
                 />
                 <Kpi
-                  label={d.dictionary.trevpar.name}
+                  vs={vs}
+                  label={name("trevpar")}
                   value={money(m.trevparMinor, cur)}
-                  hint={d.dictionary.trevpar.formula}
+                  hint={how("trevpar")}
                 />
               </>
             ) : null}
             <Kpi
-              label={d.dictionary.cancellation_rate.name}
+              vs={vs}
+              label={name("cancellation_rate")}
               value={pct(m.cancellationRateBps)}
-              hint={d.dictionary.cancellation_rate.formula}
+              hint={how("cancellation_rate")}
             />
             <Kpi
-              label={d.dictionary.alos.name}
+              vs={vs}
+              label={name("alos")}
               value={d.month.alos === null ? "—" : `${String(d.month.alos)} ${t("nights")}`}
-              hint={d.dictionary.alos.formula}
+              hint={how("alos")}
             />
             <Kpi
-              label={d.dictionary.pace.name}
+              vs={vs}
+              label={name("pace")}
               value={d.month.pace.available ? pct(d.month.pace.deltaBps) : t("paceUnavailable")}
-              hint={`${d.dictionary.pace.formula}${d.month.pace.available ? "" : ` · ${d.month.pace.reason ?? ""}`}`}
+              hint={how("pace")}
               testId="pace"
             />
           </div>
@@ -138,10 +158,10 @@ export async function MonthOverview({ propertyId }: { propertyId: string | null 
             rowTestId="league-row"
             columns={[
               t("property"),
-              { label: d.dictionary.occupancy.name, align: "end" },
-              { label: d.dictionary.adr.name, align: "end" },
-              { label: d.dictionary.revpar.name, align: "end" },
-              { label: t("revenueMtd"), align: "end" },
+              { label: name("occupancy"), align: "end" },
+              { label: name("adr"), align: "end" },
+              { label: name("revpar"), align: "end" },
+              { label: name("revenueMtd"), align: "end" },
               { label: t("budget"), align: "end" },
             ]}
             rowKey={(_, i) => d.league[i]!.propertyId}

@@ -268,14 +268,15 @@ test("an MCP client connects by OAuth: discover, register, consent, PKCE, refres
   expect(t2.access_token).not.toBe(t1.access_token);
   expect((await callTool(request, t2.access_token, "list_properties", {})).isError).toBe(false);
 
-  // ---- Settings → API & AI lists the connection; Disconnect ends it ------------------------------
+  // ---- Settings → Connect Claude & API lists the connection; Disconnect ends it ------------------------------
   await page.goto("/settings/api");
   await expect(page.getByTestId("connect-claude-ai-oauth")).toHaveText(/\/api\/mcp$/);
   const apps = page.getByTestId("connected-apps");
   const row = apps.locator("tr", { hasText: "E2E Claude (localhost)" });
   await expect(row).toContainText("Read only");
   await expect(page.getByTestId("api-keys")).not.toContainText("otab_oat_");
-  await row.getByRole("button", { name: "Disconnect" }).click();
+  await row.getByRole("button", { name: /^Disconnect/ }).click();
+  await row.getByTestId("disconnect-app-confirm").click();
   await expect(apps).not.toContainText("E2E Claude (localhost)");
   expect((await mcp(request, t2.access_token, "tools/list")).status()).toBe(401);
   expect(

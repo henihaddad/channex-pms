@@ -2,10 +2,6 @@ import Link from "next/link";
 
 export const pct = (bps: number | null): string =>
   bps === null ? "—" : `${(bps / 100).toFixed(1)}%`;
-export const money = (minor: number | null, currency: string): string =>
-  minor === null
-    ? "—"
-    : `${(minor / 100).toLocaleString("en", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
 
 /** A KPI tile: the value, its formula as a tooltip (spec 11 §11.1) and the change against the previous period. */
 export function Kpi({
@@ -16,7 +12,10 @@ export function Kpi({
   current,
   href,
   testId,
+  vs,
 }: {
+  /** "▲ 12% vs previous" in the reader's language, given the change as text. */
+  vs: (change: string) => string;
   label: string;
   value: string;
   hint?: string;
@@ -47,7 +46,8 @@ export function Kpi({
         <span
           className={`text-xs tabular-nums ${change >= 0 ? "text-success-soft-foreground" : "text-danger"}`}
         >
-          {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs previous
+          <span aria-hidden="true">{change >= 0 ? "▲" : "▼"}</span>{" "}
+          {vs(`${change >= 0 ? "+" : "−"}${String(Math.abs(change))}%`)}
         </span>
       ) : null}
     </div>

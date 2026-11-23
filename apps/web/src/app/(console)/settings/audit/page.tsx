@@ -3,6 +3,11 @@ import { Card, SectionTitle, TBody, THead, Table, Td, Th, Tr } from "@/component
 import { guard } from "@/server/guard";
 import { listAudit, verifyAudit } from "./audit.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("audit");
+  return { title: t("title") };
+}
+
 export default async function AuditPage() {
   const t = await getTranslations("audit");
   const [rows, verification] = await guard(() =>
