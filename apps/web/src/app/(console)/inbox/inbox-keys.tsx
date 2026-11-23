@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { shortcutsEnabled } from "@/components/ui/palette-event";
 
 const typing = (el: Element | null) =>
   !!el &&
@@ -29,6 +30,7 @@ export function InboxKeys() {
         e.ctrlKey ||
         e.altKey ||
         typing(active) ||
+        !shortcutsEnabled() ||
         !active?.closest("[data-inbox-region]")
       )
         return;
