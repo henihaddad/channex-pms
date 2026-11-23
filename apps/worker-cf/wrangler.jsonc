@@ -6,6 +6,10 @@
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // run next to the database (Neon, AWS us-east-2): placement moves fetch invocations only, so the
+  // queue and cron handlers forward their work to this Worker's own fetch through SELF (ADR-0012)
+  "placement": { "region": "aws:us-east-2" },
+  "services": [{ "binding": "SELF", "service": "otabridge-jobs" }],
   "triggers": { "crons": ["* * * * *"] },
   "durable_objects": { "bindings": [{ "name": "LEASE", "class_name": "PropertyLease" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PropertyLease"] }],

@@ -71,6 +71,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The jobs Worker on Cloudflare runs next to the database (ADR-0012). It is pinned to AWS
+  us-east-2, where Neon is, and the cron and queue handlers hand each job to its own placed fetch
+  handler, because placement moves only fetch invocations. A job now takes 0.12 to 0.4 s instead of
+  running in San Jose or Seattle at 2.4 to 4 s per invocation. Persona: every host, whose rate
+  pushes, booking imports and messages go through these jobs (spec 02).
+
 - The console was checked against the project's new and existing skills (Vercel React and
   Next.js practices, composition patterns, Core Web Vitals, web interface guidelines, UX
   heuristics, WCAG 2.2, writing guidelines, information architecture) and fixed where it fell
