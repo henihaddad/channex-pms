@@ -20,6 +20,7 @@ import {
 } from "@pms/db";
 import type { ActorCtx } from "./with-permission";
 import { HttpProblem } from "./errors";
+import { planRanges } from "./ari-ranges";
 
 export interface EditResult {
   outcomes: CellEditOutcome[];
@@ -45,15 +46,15 @@ export async function applyCellEdits(
   const conflicts = outcomes.filter((o) => !o.ok);
   if (conflicts.length > 0) return { outcomes, undoId: null };
   const repo = new DrizzlePropertyRepository(ctx.tx, ctx.orgId);
-  const inverse: RateCell[] = [];
-  for (const e of edits) {
-    const [cur] = await repo.rateCells(e.ratePlanId, e.date, e.date);
-    inverse.push({
-      ratePlanId: e.ratePlanId,
-      date: e.date,
-      values: pick(cur?.values ?? {}, Object.keys(e.values) as (keyof RestrictionValues)[]),
-    });
-  }
+  const current = await currentValues(repo, edits);
+  const inverse: RateCell[] = edits.map((e) => ({
+    ratePlanId: e.ratePlanId,
+    date: e.date,
+    values: pick(
+      current.get(`${e.ratePlanId}|${e.date}`) ?? {},
+      Object.keys(e.values) as (keyof RestrictionValues)[],
+    ),
+  }));
   await repo.applyRateCells(
     propertyId,
     edits.map((e) => ({ ratePlanId: e.ratePlanId, date: e.date, values: e.values })),
@@ -191,15 +192,15 @@ export async function undoOperation(
     throw new HttpProblem(404, "not_found", "Operation not found");
   if (op.state === "undone")
     throw new HttpProblem(409, "already_undone", "Operation already undone");
-  const before: RateCell[] = [];
-  for (const c of op.inverse) {
-    const [cur] = await repo.rateCells(c.ratePlanId, c.date, c.date);
-    before.push({
-      ratePlanId: c.ratePlanId,
-      date: c.date,
-      values: pick(cur?.values ?? {}, Object.keys(c.values) as (keyof RestrictionValues)[]),
-    });
-  }
+  const current = await currentValues(repo, op.inverse);
+  const before: RateCell[] = op.inverse.map((c) => ({
+    ratePlanId: c.ratePlanId,
+    date: c.date,
+    values: pick(
+      current.get(`${c.ratePlanId}|${c.date}`) ?? {},
+      Object.keys(c.values) as (keyof RestrictionValues)[],
+    ),
+  }));
   await repo.applyRateCells(op.propertyId, op.inverse, "undo", ctx.userId);
   await repo.markBulkUndone(operationId);
   const redoId = Id.next();
@@ -213,6 +214,21 @@ export async function undoOperation(
   });
   await queueAriPush(ctx.tx, ctx.orgId, op.propertyId, Date.now(), "undo");
   return { cellCount: op.inverse.length, redoId };
+}
+
+/**
+ * The stored values of the given cells, keyed `plan|date`: one read per rate plan over the nights
+ * the cells span, instead of one per cell (a 200-night drag was 200 round trips).
+ */
+async function currentValues(
+  repo: DrizzlePropertyRepository,
+  cells: ReadonlyArray<{ ratePlanId: string; date: string }>,
+): Promise<Map<string, RestrictionValues>> {
+  const out = new Map<string, RestrictionValues>();
+  for (const [planId, r] of planRanges(cells))
+    for (const c of await repo.rateCells(planId, r.from, r.to))
+      out.set(`${planId}|${c.date}`, c.values);
+  return out;
 }
 
 async function assertPlansInProperty(
