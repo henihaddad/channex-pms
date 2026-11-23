@@ -19,7 +19,12 @@ const SYMBOLIC = new Set(["EUR", "USD", "GBP", "JPY", "INR"]);
 
 export function money(minor: number | null | undefined, currency: string, locale: string): string {
   if (minor === null || minor === undefined) return "—";
-  const code = currency.toUpperCase();
+  const code = (currency ?? "").toUpperCase();
+  // a record without a currency yet (a draft, an empty statement): the number alone, never a crash
+  if (!/^[A-Z]{3}$/.test(code))
+    return new Intl.NumberFormat(dateLocale(locale), { maximumFractionDigits: 2 }).format(
+      minor / 100,
+    );
   const exp = Money.exponent(code);
   const unit = 10 ** exp;
   const whole = minor % unit === 0;

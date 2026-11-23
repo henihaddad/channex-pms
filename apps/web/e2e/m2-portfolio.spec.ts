@@ -96,11 +96,24 @@ test("20 listings from a template connect Airbnb and Booking.com, map, and sync 
     const testId = (await airbnbRows.nth(i).getAttribute("data-testid"))!;
     await pickOption(page, { testId }, { index: 1 });
   }
+  // the import linked both listings to their new properties: linking them again to Listing 02 is
+  // refused by name (Channex rejects a listing mapped twice; such drafts used to stay stuck)
   await page.getByTestId("save-mappings").click();
-  await expect(page.getByText(/^Saved:/)).toBeVisible();
+  await expect(page.getByText(/is already linked to "Fake Loft by the River"/)).toBeVisible();
+  // the imported property's own connection is the one that goes live, once the worker has set the
+  // new property up on the channel manager
+  await request.post("/api/v1/test/drain", { data: { orgId } });
+  await page.goto("/channels");
+  await page
+    .getByTestId("health-board")
+    .getByRole("link", { name: "Fake Loft by the River" })
+    .click();
   await page.getByTestId("activate-connection").click();
-  // the success alert is transient: the page refreshes and the Activate card leaves once the state is active
-  await expect(page.getByTestId("connection-state")).toHaveAttribute("data-state", "active");
+  // the success alert is transient: the page refreshes and the Activate card leaves once the state is
+  // active; activation waits up to 45 s for Airbnb to confirm a new listing link (CH-5)
+  await expect(page.getByTestId("connection-state")).toHaveAttribute("data-state", "active", {
+    timeout: 70_000,
+  });
   await page.goto("/channels");
   await expect(page.getByTestId("health-board").locator('[data-state="active"]')).toHaveCount(1);
   void airbnbPropertyId;

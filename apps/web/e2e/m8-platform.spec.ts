@@ -82,7 +82,7 @@ test("onboarding → billing → plugins → operator console → impersonation 
   expect(sinkSecretProbe.status()).toBe(200);
   await page.goto("/settings/plugins");
   await page
-    .getByLabel("Endpoint URL")
+    .getByLabel("Endpoint URL", { exact: true })
     .fill(new URL("/api/v1/test/plugin-sink", baseURL ?? "http://localhost:3100").toString());
   await page.locator("#manifest").fill(
     JSON.stringify({

@@ -1411,7 +1411,8 @@
       "saveLive": "Save and update {channel}",
       "saving": "Saving…",
       "saved": "Saved: {start} started, {stop} stopped, {changed} changed.",
-      "savedLive": "{channel} gets the new prices and availability now."
+      "savedLive": "{channel} gets the new prices and availability now.",
+      "listingTaken": "Airbnb listing {listing} is already linked to \"{property}\". One listing can be linked to one property only: pause or remove that link first, or pick another listing."
     },
     "connectScreenCard": "Connect a site",
     "connectScreenScope": "This screen only shows the property you picked; nothing else in the account is visible here."

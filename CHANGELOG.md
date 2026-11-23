@@ -84,7 +84,7 @@ All notable changes to this project are documented here. The format follows
   - Accessible: control borders and focus outlines meet WCAG contrast, fields link their hints and
     errors, alerts only interrupt for errors, a skip link, a focus-managed phone menu, menus that
     close on Escape, 44px touch targets, page titles, and a switch for single-key shortcuts.
-  - Recoverable: localized error, not-found, permission and loading screens; submit buttons that
+  - Recoverable: localized error, not-found and permission screens; submit buttons that
     show progress and block double submits; destructive actions confirm first.
   - Spanish and Portuguese are no longer offered until they are translated (about 6% today).
 

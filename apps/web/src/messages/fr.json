@@ -1411,7 +1411,8 @@
       "saveLive": "Enregistrer et mettre à jour {channel}",
       "saving": "Enregistrement…",
       "saved": "Enregistré : {start} ajoutées, {stop} retirées, {changed} modifiées.",
-      "savedLive": "{channel} reçoit maintenant les nouveaux prix et disponibilités."
+      "savedLive": "{channel} reçoit maintenant les nouveaux prix et disponibilités.",
+      "listingTaken": "L'annonce Airbnb {listing} est déjà liée à « {property} ». Une annonce ne peut être liée qu'à un seul logement : mettez d'abord ce lien en pause ou supprimez-le, ou choisissez une autre annonce."
     },
     "connectScreenCard": "Connecter un site",
     "connectScreenScope": "Cet écran ne montre que le logement choisi ; rien d’autre du compte n’y est visible."

@@ -52,6 +52,10 @@ export function ConnectionMapping({
       setError("");
       try {
         const r = await saveMappingsAction({ connectionId: view.connection.id, mappings: rows });
+        if (r.error !== undefined) {
+          setError(r.error);
+          return;
+        }
         const counts = {
           start: r.diff.startsSelling.length,
           stop: r.diff.stopsSelling.length,

@@ -6,7 +6,6 @@ import { z } from "zod";
 import {
   coverageWarnings,
   Id,
-  listingConflictMessage,
   listingConflicts,
   mappingDiff,
   nameSimilarity,
@@ -497,7 +496,8 @@ export const loadConnection = withPermission<[string], ConnectionView>(
 /** MAP-4/MAP-6: diff on a live connection, audit before/after, targeted re-push of the affected plans. */
 export const saveMappingsAction = withPermission<
   [{ connectionId: string; mappings: MappingRow[] }],
-  { diff: ReturnType<typeof mappingDiff>; warnings: CoverageWarning[] }
+  | { diff: ReturnType<typeof mappingDiff>; warnings: CoverageWarning[]; error?: undefined }
+  | { error: string; diff?: undefined; warnings?: undefined }
 >(
   "channel:update_mapping",
   {
@@ -526,8 +526,15 @@ export const saveMappingsAction = withPermission<
         connectionId,
         "save",
       );
-      if (taken.length > 0)
-        throw new HttpProblem(409, "listing_already_linked", listingConflictMessage(taken));
+      // returned, not thrown: production hides a thrown message, and the host needs the property's name
+      if (taken.length > 0) {
+        const t = await getTranslations({ locale: ctx.locale, namespace: "channels.mapping" });
+        return {
+          error: taken
+            .map((x) => t("listingTaken", { listing: x.listingId, property: x.propertyTitle }))
+            .join(" "),
+        };
+      }
     }
     const before = await ch.listMappings(connectionId);
     const diff = mappingDiff(before, mappings);

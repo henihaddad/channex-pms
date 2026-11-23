@@ -105,11 +105,24 @@ export function CleanerApp({ today }: { today: string }) {
   const [status, setStatus] = useState("");
   const [issueFor, setIssueFor] = useState<string | null>(null);
 
+  // the day on screen: an answer for a day the cleaner has already moved away from is dropped,
+  // so a slow reply for today can never overwrite tomorrow's tasks
+  // a day picked before the page became interactive (a slow phone) is in the field, not in state
+  const dayInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const typed = dayInput.current?.value;
+    if (typed && typed !== today) setDate(typed);
+  }, [today]);
+  const shownDate = useRef(date);
+  useEffect(() => {
+    shownDate.current = date;
+  }, [date]);
   const refresh = useCallback(async () => {
     try {
       const res = await fetch(`/api/v1/cleaner/day?date=${date}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const body = (await res.json()) as { tasks: Task[] };
+      if (shownDate.current !== date) return;
       // OPS-6: local updates stay authoritative until they are synced, whatever the server says meanwhile
       setTasks(withPending(body.tasks));
       save(KEY_DAY, { date, tasks: body.tasks });
@@ -269,6 +282,7 @@ export function CleanerApp({ today }: { today: string }) {
         <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
           <input
+            ref={dayInput}
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}

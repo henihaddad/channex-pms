@@ -234,7 +234,7 @@ test("an MCP client connects by OAuth: discover, register, consent, PKCE, refres
   const listed = (await (await mcp(request, t1.access_token, "tools/list")).json()) as {
     result: { tools: Array<{ name: string }> };
   };
-  expect(listed.result.tools).toHaveLength(18);
+  expect(listed.result.tools).toHaveLength(24);
   const today = await callTool(request, t1.access_token, "get_today", {});
   expect(today.isError, today.text).toBe(false);
   expect(JSON.parse(today.text)).toHaveProperty("needsYou");

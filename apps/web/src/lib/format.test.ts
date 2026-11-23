@@ -42,3 +42,9 @@ describe("format", () => {
     expect(elapsed("2026-11-05T12:00:00Z", now)).toBe("3 days");
   });
 });
+
+describe("money without a currency", () => {
+  it("shows the number instead of throwing", () => {
+    expect(money(8050, "", "en")).toBe("80.5");
+  });
+});

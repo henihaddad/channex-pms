@@ -345,6 +345,10 @@ export function ConnectionWizard({
                       connectionId: created.connectionId,
                       mappings,
                     });
+                    if (r.error !== undefined) {
+                      setError(r.error);
+                      return;
+                    }
                     setCreated({ ...created, warnings: r.warnings });
                     setStep(7);
                     return;

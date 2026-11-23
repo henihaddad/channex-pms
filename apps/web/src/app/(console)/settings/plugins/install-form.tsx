@@ -24,12 +24,7 @@ export function InstallForm({ labels }: { labels: Record<string, string> }) {
       />
       <div>
         <Label htmlFor="manifest">{labels.manifest!}</Label>
-        <Textarea
-          id="manifest"
-          name="manifest"
-          rows={4}
-          className="w-full rounded border border-border-secondary p-2 font-mono text-xs"
-        />
+        <Textarea id="manifest" name="manifest" rows={4} className="w-full font-mono text-xs" />
       </div>
       <Button type="submit" disabled={pending} data-testid="install-plugin">
         {labels.install}

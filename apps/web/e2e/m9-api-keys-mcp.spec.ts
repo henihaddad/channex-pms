@@ -138,7 +138,7 @@ test("API keys, the public API and the MCP server, permission-checked and audite
   const names = (listed.body.result.tools ?? []).map((t) => t.name);
   for (const n of ["get_today", "set_prices", "get_calendar", "send_message", "cancel_reservation"])
     expect(names).toContain(n);
-  expect(names).toHaveLength(18);
+  expect(names).toHaveLength(24);
 
   const firstNight = isoIn(40);
   const lastNight = isoIn(42);
