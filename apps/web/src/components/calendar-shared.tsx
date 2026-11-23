@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { createTranslator } from "next-intl";
 
 /** The wire shapes of `/api/v1/ari/grid` and the stays action, shared by every calendar view. */
 export type Values = {
@@ -59,6 +60,105 @@ export interface Block {
 
 export const fmt = (s: string, vars: Record<string, string | number>): string =>
   s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
+
+type Translate = (key: string, vars: Record<string, string | number>) => string;
+const translators = new Map<string, Translate>();
+/**
+ * An ICU message the page handed over raw (`{n, plural, one {# night} other {# nights}}`),
+ * formatted with the locale's plural rules; Arabic has six forms. One compiled translator
+ * per message and locale, reused on every render.
+ */
+export function plural(message: string, vars: Record<string, string | number>, locale: string) {
+  const id = `${locale}\u0000${message}`;
+  let t = translators.get(id);
+  if (!t) {
+    let failed = false;
+    const tr = createTranslator({
+      locale,
+      messages: { m: message },
+      onError: () => {
+        failed = true;
+      },
+    }) as unknown as Translate;
+    t = (key, v) => {
+      failed = false;
+      const out = tr(key, v);
+      return failed ? fmt(message, v) : out;
+    };
+    translators.set(id, t);
+  }
+  return t("m", vars);
+}
+
+/** One cell lookup per night: each cells array is indexed once and kept while it lives. */
+const byDate = new WeakMap<readonly unknown[], Map<string, unknown>>();
+export function cellOn<C extends readonly [string, ...unknown[]]>(
+  cells: readonly C[],
+  date: string,
+): C | undefined {
+  let m = byDate.get(cells) as Map<string, C> | undefined;
+  if (!m) {
+    m = new Map(cells.map((c) => [c[0], c]));
+    byDate.set(cells, m);
+  }
+  return m.get(date);
+}
+
+/** The words for a night's sync state, from the calendar's labels. */
+export function syncWord(
+  state: SyncState,
+  L: {
+    syncSynced: string;
+    legendPending: string;
+    legendSending: string;
+    legendFailed: string;
+    legendConflicted: string;
+  },
+): string {
+  return {
+    synced: L.syncSynced,
+    pending: L.legendPending,
+    in_flight: L.legendSending,
+    failed: L.legendFailed,
+    conflicted: L.legendConflicted,
+  }[state];
+}
+
+/**
+ * A night's sync state as a shape as well as a colour (WCAG 1.4.1): a filled dot once sent,
+ * a ring while waiting, an arrow while sending, "!" when it failed, "?" when it needs a look.
+ */
+export function SyncMark({ state, className }: { state: SyncState; className?: string }) {
+  const base = `inline-grid size-2.5 shrink-0 place-items-center text-[10px] leading-none font-bold ${className ?? ""}`;
+  if (state === "synced")
+    return (
+      <span aria-hidden="true" className={base}>
+        <span className="size-1.5 rounded-full bg-success" />
+      </span>
+    );
+  if (state === "pending")
+    return (
+      <span aria-hidden="true" className={base}>
+        <span className="size-1.5 rounded-full border border-muted" />
+      </span>
+    );
+  const [glyph, tone] =
+    state === "in_flight"
+      ? ["↑", "text-info"]
+      : state === "failed"
+        ? ["!", "text-danger"]
+        : ["?", "text-warning-soft-foreground"];
+  return (
+    <span aria-hidden="true" className={`${base} ${tone}`}>
+      {glyph}
+    </span>
+  );
+}
+
+/** A private note on a night: a small square, unlike the round sync marks. */
+export function NoteMark() {
+  return <span aria-hidden="true" className="size-1.5 shrink-0 rounded-[1px] bg-warning" />;
+}
 
 export function addDays(iso: string, n: number): string {
   const d = new Date(`${iso}T00:00:00Z`);

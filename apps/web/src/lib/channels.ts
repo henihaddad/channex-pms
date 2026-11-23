@@ -20,8 +20,15 @@ const COLOUR: Record<ChannelKey, string> = {
   direct: "#0f766e",
   other: "#4b5553",
 };
-/** Text on the channel colour: dark on Expedia's yellow, white elsewhere. */
-const INK: Record<ChannelKey, string> = { ...mapAll("#ffffff"), expedia: "#141716" };
+/**
+ * Text on the channel colour, at 4.5:1 or more on an 11px bar (WCAG 1.4.3): dark on Airbnb's
+ * coral (5.2:1; white was 3.5:1) and Expedia's yellow, white elsewhere.
+ */
+const INK: Record<ChannelKey, string> = {
+  ...mapAll("#ffffff"),
+  airbnb: "#141716",
+  expedia: "#141716",
+};
 function mapAll(v: string): Record<ChannelKey, string> {
   return { airbnb: v, booking_com: v, vrbo: v, expedia: v, direct: v, other: v };
 }

@@ -69,7 +69,7 @@ grouped by `PropertyGroup`, filterable, and virtualised.
 | Availability (room type row) | units left, derived; red when overbooked | computed; only `count_of_rooms`, blocks and keep-back are editable |
 | Rate (rate plan row) | price in property currency | `ari:update_rate` |
 | Restrictions | compact badges: `MIN3` `CTA` `CTD` `STOP` `MAX7` | `ari:update_restriction` |
-| Sync state | dot: grey pending · blue in-flight · green synced · red failed · amber drift | — |
+| Sync state | a shape as well as a colour: green dot sent · grey ring pending · blue `↑` in-flight · red `!` failed · amber `?` drift | — |
 
 **Interaction requirements**
 
@@ -90,7 +90,13 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   verbs as a menu (set price, block, open, minimum stay, private note, new reservation on
   these dates, copy price, paste to selection), and one key each does the same: `P`, `B`, `O`,
   `M`, `N`, `R`, `⌘C`, `⌘V`; `T` jumps to tonight; with no night focused `←`/`→` move the
-  strip a week, `1`–`4` pick 14/30/60/90 nights and `Y` opens the year. Hovering a night shows
+  strip a week, `1`–`4` pick 14/30/60/90 nights and `Y` opens the year. These keys act only
+  while the strip has focus, never from the window (WCAG 2.1.4); `↓` enters the strip on
+  tonight, `Shift+F10` or the menu key opens the menu with its first verb focused, and a click
+  on a day header selects that night on every listing. The strip is an ARIA grid: each night is
+  named in full ("Sea View · Standard · Tue 24 Dec · €120 · Sent · Note: …") and its sync state
+  is a shape as well as a colour. The night card also shows beside the night the keyboard is
+  on, and stays while the pointer is over it (WCAG 1.4.13). Hovering a night shows
   a card: your price, what the guest sees on each connected OTA (markup and rounding from
   §6.6), the direct price, the minimum stay, any closure, the sync state and the private
   note. The toolbar carries Strip/Month/Year, the range, a property and group filter, Today,
@@ -126,7 +132,11 @@ grouped by `PropertyGroup`, filterable, and virtualised.
   and a note and saves them in one press through the same ARI path, undo and push. A booked
   night opens its reservation. The single-day close-out list (every listing's price, rooms
   left, minimum stay and sync state for one night, and "close this night" through the bulk
-  path) stays one link away, and on a desktop the month is the "Month" view.
+  path, confirmed in a dialog that names the night) stays one link away, and on a desktop the
+  month is the "Month" view. Enter or Space on a night does what a tap does. With no view in
+  the link the page shows a placeholder shaped by the device's user agent until the browser
+  reports its width, and only then mounts the strip or the month, so no view loads nights it
+  will not show.
 - **CAL-10** Year view: twelve months of one listing from the current month, each night
   booked, part-booked, open or closed, each month with its occupancy on the books and its
   average price; nights in a season carry the season's colour. Tiles for occupancy over the

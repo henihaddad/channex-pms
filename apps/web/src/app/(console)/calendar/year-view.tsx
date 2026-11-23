@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale } from "next-intl/server";
 import { Money, seasonOn, seasonPrices, summariseMonths, type YearNight } from "@pms/core";
 import { DrizzleSeasonRepository, loadYearNights, rawRows, sql, type SeasonRow } from "@pms/db";
-import { Card, Stat, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
+import { Card, Stat, SubmitButton, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { withPermission } from "@/server/with-permission";
 import { CalendarViewSwitch } from "@/components/calendar-view";
@@ -244,12 +244,13 @@ export async function YearView({
                         <form action={removeSeasonAction}>
                           <input type="hidden" name="propertyId" value={propertyId} />
                           <input type="hidden" name="seasonId" value={s.id} />
-                          <button
-                            type="submit"
-                            className="text-xs font-semibold text-muted hover:text-danger"
+                          <SubmitButton
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`${L.remove} · ${s.name}`}
                           >
                             {L.remove}
-                          </button>
+                          </SubmitButton>
                         </form>
                       ) : (
                         <span className="text-xs text-muted">{L.orgWide}</span>

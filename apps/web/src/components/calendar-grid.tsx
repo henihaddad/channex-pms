@@ -17,6 +17,7 @@ import { guestPrice, Money } from "@pms/core";
 import { type CalendarLabels } from "@/components/calendar-labels";
 import {
   addDays,
+  cellOn,
   covers,
   fmt,
   heroPlan,
@@ -24,7 +25,11 @@ import {
   Kbd,
   ListingThumb,
   mondayIndex,
+  NoteMark,
+  plural,
   rich,
+  SyncMark,
+  syncWord,
   type Block,
   type GridProperty,
   type GridRatePlan,
@@ -34,8 +39,9 @@ import {
   type SyncState,
   type Values,
 } from "@/components/calendar-shared";
+import { parsePrice, priceFigure, priceInput, priceText } from "@/components/calendar-price";
 import { channelColour, channelInk, channelName, channelNameOf } from "@/lib/channels";
-import { money as moneyText } from "@/lib/format";
+import { day as dayLabel, money as moneyText } from "@/lib/format";
 import { loadStaysAction, saveNightNotesAction } from "@/app/(console)/calendar/calendar.actions";
 
 type Row =
@@ -61,13 +67,8 @@ const MIN_COL_W = 64;
 const ROW_H: Record<Row["kind"], number> = { property: 52, room_type: 34, rate_plan: 44 };
 const rowHeight = (row: Row | undefined): number =>
   row?.kind === "rate_plan" && row.hero ? 54 : ROW_H[row?.kind ?? "rate_plan"];
-const DOT: Record<SyncState, string> = {
-  pending: "bg-muted",
-  in_flight: "bg-sky-500",
-  synced: "bg-success",
-  failed: "bg-danger",
-  conflicted: "bg-warning",
-};
+/** The id a focused cell answers to, for `aria-activedescendant` (only rendered cells have one). */
+const cellId = (r: number, c: number): string => `c-${String(r)}-${String(c)}`;
 const isWeekend = (iso: string): boolean => mondayIndex(iso) >= 4 && mondayIndex(iso) <= 5;
 
 /** A field has the keyboard: the calendar's letter keys stay out of its way. */
@@ -118,7 +119,11 @@ export function CalendarGrid({
   const [extra, setExtra] = useState<Rect[]>([]);
   const [editing, setEditing] = useState<string>("");
   const [isEditing, setIsEditing] = useState(false);
-  const [message, setMessage] = useState<string>("");
+  const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null);
+  /** The toast; a screen reader hears it too, errors at once (role="alert"), the rest politely. */
+  const setMessage = useCallback((text: string, error = false) => {
+    setToast(text ? { text, error } : null);
+  }, []);
   const [conflict, setConflict] = useState<{
     ratePlanId: string;
     date: string;
@@ -133,7 +138,14 @@ export function CalendarGrid({
     ops?: unknown[];
   }>({});
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [hover, setHover] = useState<{ r: number; c: number; x: number; y: number } | null>(null);
+  /** The night card: under the pointer after a pause, or beside the cell the keyboard is on. */
+  const [hover, setHover] = useState<{
+    r: number;
+    c: number;
+    x: number;
+    y: number;
+    keyboard?: boolean;
+  } | null>(null);
   const [tipsOpen, setTipsOpen] = useState(tips.length > 0);
   const [clip, setClip] = useState<number | null>(null);
   const [width, setWidth] = useState(1100);
@@ -147,6 +159,8 @@ export function CalendarGrid({
     () => Array.from({ length: days }, (_, i) => addDays(start, i)),
     [start, days],
   );
+  /** "Tue 24 Dec" per column, for the header's and the cells' accessible names. */
+  const dayNames = useMemo(() => dates.map((d) => dayLabel(d, locale)), [dates, locale]);
   const end = dates[dates.length - 1] ?? start;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const colW = Math.max(MIN_COL_W, Math.floor((width - LABEL_W - 2) / days));
@@ -170,9 +184,11 @@ export function CalendarGrid({
     const q = new URLSearchParams({ from: start, to: end });
     if (propertyId) q.set("propertyId", propertyId);
     if (groupId) q.set("groupId", groupId);
-    const res = await fetch(`/api/v1/ari/grid?${q.toString()}`, { cache: "no-store" });
-    if (!res.ok) {
-      setMessage(fmt(L.loadFailed, { status: res.status }));
+    const res = await fetch(`/api/v1/ari/grid?${q.toString()}`, { cache: "no-store" }).catch(
+      () => null,
+    );
+    if (!res?.ok) {
+      setMessage(L.loadFailed, true);
       return;
     }
     const body = (await res.json()) as { properties: GridProperty[] };
@@ -182,7 +198,7 @@ export function CalendarGrid({
     loadStaysAction({ from: start, to: end, propertyIds: body.properties.map((p) => p.id) })
       .then(setStays)
       .catch(() => setStays({ stays: [], blocks: [] }));
-  }, [start, end, propertyId, groupId, L.loadFailed]);
+  }, [start, end, propertyId, groupId, L.loadFailed, setMessage]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -220,11 +236,13 @@ export function CalendarGrid({
     };
   }, [menu]);
 
-  // realtime: cell states resolve over SSE (CAL-3)
+  // realtime: cell states resolve over SSE (CAL-3). One stream per set of listings: it
+  // reconnects when the listings change, not when a price does.
+  const streamIds = data.map((p) => p.id).join(",");
   useEffect(() => {
-    if (data.length === 0) return;
+    if (streamIds === "") return;
     const q = new URLSearchParams();
-    for (const p of data) q.append("propertyId", p.id);
+    for (const id of streamIds.split(",")) q.append("propertyId", id);
     const es = new EventSource(`/api/v1/ari/events?${q.toString()}`);
     es.addEventListener("cells", (ev) => {
       const changes = JSON.parse((ev as MessageEvent<string>).data) as Array<{
@@ -235,32 +253,44 @@ export function CalendarGrid({
         version: number;
         value: unknown;
       }>;
+      // by row id, then night: one lookup per cell, and untouched rows keep their identity
+      const byRow = new Map<string, Map<string, (typeof changes)[number]>>();
+      for (const ch of changes) {
+        const k = `${ch.kind}|${ch.id}`;
+        const m = byRow.get(k) ?? new Map<string, (typeof changes)[number]>();
+        m.set(ch.date, ch);
+        byRow.set(k, m);
+      }
+      const patch = <C extends [string, unknown, SyncState, number]>(
+        cells: C[],
+        m: Map<string, (typeof changes)[number]> | undefined,
+        value: (v: unknown) => C[1],
+      ): C[] =>
+        !m
+          ? cells
+          : cells.map((c) => {
+              const ch = m.get(c[0]);
+              return ch ? ([c[0], value(ch.value), ch.state, ch.version] as C) : c;
+            });
       setData((prev) =>
-        prev.map((p) => ({
-          ...p,
-          roomTypes: p.roomTypes.map((rt) => ({
-            ...rt,
-            cells: rt.cells.map((c) => {
-              const ch = changes.find(
-                (x) => x.kind === "availability" && x.id === rt.id && x.date === c[0],
-              );
-              return ch ? [c[0], Number(ch.value), ch.state, ch.version] : c;
-            }),
-            ratePlans: rt.ratePlans.map((rp) => ({
-              ...rp,
-              cells: rp.cells.map((c) => {
-                const ch = changes.find(
-                  (x) => x.kind === "rate" && x.id === rp.id && x.date === c[0],
-                );
-                return ch ? [c[0], ch.value as Values, ch.state, ch.version] : c;
-              }),
-            })),
-          })),
-        })),
+        prev.map((p) => {
+          let changed = false;
+          const roomTypes = p.roomTypes.map((rt) => {
+            const av = byRow.get(`availability|${rt.id}`);
+            const plans = rt.ratePlans.map((rp) => {
+              const m = byRow.get(`rate|${rp.id}`);
+              return m ? { ...rp, cells: patch(rp.cells, m, (v) => v as Values) } : rp;
+            });
+            if (!av && plans.every((rp, i) => rp === rt.ratePlans[i])) return rt;
+            changed = true;
+            return { ...rt, cells: patch(rt.cells, av, Number), ratePlans: plans };
+          });
+          return changed ? { ...p, roomTypes } : p;
+        }),
       );
     });
     return () => es.close();
-  }, [data.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [streamIds]);
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
@@ -329,7 +359,7 @@ export function CalendarGrid({
   }, [colW, colVirtualizer]);
 
   const cellAt = (row: Row, c: number): RateCell | undefined =>
-    row.kind === "rate_plan" ? row.ratePlan.cells.find((x) => x[0] === dates[c]) : undefined;
+    row.kind === "rate_plan" && dates[c] ? cellOn(row.ratePlan.cells, dates[c]) : undefined;
   const current = useMemo<Rect | null>(() => {
     if (!focus) return null;
     const a = anchor ?? focus;
@@ -351,7 +381,7 @@ export function CalendarGrid({
         const row = rows[r];
         if (!row || row.kind !== "rate_plan" || row.derived) continue;
         for (let c = sel.c1; c <= sel.c2; c++) {
-          const cell = row.ratePlan.cells.find((x) => x[0] === dates[c]);
+          const cell = cellOn(row.ratePlan.cells, dates[c]!);
           const k = `${row.ratePlan.id}|${String(c)}`;
           if (cell && !seen.has(k)) {
             seen.add(k);
@@ -429,7 +459,7 @@ export function CalendarGrid({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ propertyId: pid, edits }),
     });
-    const body = (await res.json()) as {
+    const body = (await res.json().catch(() => ({}))) as {
       outcomes?: Array<{
         ok: boolean;
         ratePlanId: string;
@@ -439,7 +469,6 @@ export function CalendarGrid({
         current?: { values: Values; version: number };
       }>;
       undoId?: string | null;
-      detail?: string;
     };
     if (res.status === 409 && body.outcomes) {
       const c = body.outcomes.find((o) => !o.ok && o.current);
@@ -457,7 +486,7 @@ export function CalendarGrid({
       return false;
     }
     if (!res.ok) {
-      setMessage(body.detail ?? fmt(L.editFailed, { status: res.status }));
+      setMessage(L.editFailed, true);
       await load();
       return false;
     }
@@ -474,7 +503,7 @@ export function CalendarGrid({
   const joinList = (xs: string[]): string =>
     xs.length <= 1 ? (xs[0] ?? "") : `${xs.slice(0, -1).join(", ")}${L.and}${xs.at(-1)!}`;
   const savedMessage = (nights: number, props: GridProperty[]): string => {
-    const head = nights === 1 ? L.savedNight : fmt(L.savedNights, { n: nights });
+    const head = plural(L.savedNights, { n: nights }, locale);
     const chans = channelsOf(props);
     return chans.length > 0 ? `${head} · ${fmt(L.sentTo, { channels: joinList(chans) })}` : head;
   };
@@ -540,8 +569,12 @@ export function CalendarGrid({
     const cell = row ? cellAt(row, focus.c) : undefined;
     setIsEditing(false);
     if (!row || row.kind !== "rate_plan" || !cell) return;
-    const n = Math.round(Number(editing) * 100);
-    if (!Number.isFinite(n) || n < 0) return;
+    // "120,50" is a price too: read in either decimal mark, with the currency's exponent
+    const n = parsePrice(editing, row.property.currency);
+    if (n === null) {
+      if (editing.trim() !== "") setMessage(L.priceUnreadable, true);
+      return;
+    }
     if (selected.length > 1) await writeSelection("rates", { rate: n });
     else {
       const ok = await writeTargets([
@@ -564,7 +597,7 @@ export function CalendarGrid({
         { method: "POST" },
       );
       if (!res.ok) {
-        setMessage(fmt(L.editFailed, { status: res.status }));
+        setMessage(L.editFailed, true);
         return;
       }
     }
@@ -591,23 +624,22 @@ export function CalendarGrid({
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
-    const r = (await res.json()) as {
+    const r = (await res.json().catch(() => ({}))) as {
       cellCount: number;
       warnings: string[];
       blocked: string[];
       applied: boolean;
       id: string | null;
-      detail?: string;
     };
     if (!res.ok && !r.blocked) {
-      setMessage(r.detail ?? fmt(L.editFailed, { status: res.status }));
+      setMessage(L.editFailed, true);
       return;
     }
     if (dryRun || !r.applied) setBulk({ preview: r, ops });
     else {
       setBulk({});
       if (r.id) setUndoStack((s) => [...s, [{ id: r.id!, propertyId: pid }]]);
-      setMessage(fmt(L.applied, { n: r.cellCount }));
+      setMessage(plural(L.applied, { n: r.cellCount }, locale));
       await load();
     }
   };
@@ -665,7 +697,9 @@ export function CalendarGrid({
     const rate = row && focus ? cellAt(row, focus.c)?.[1].rate : undefined;
     if (rate === undefined) return;
     setClip(rate);
-    void navigator.clipboard?.writeText(String(rate / 100)).catch(() => undefined);
+    void navigator.clipboard
+      ?.writeText(priceText(rate, row!.property.currency))
+      .catch(() => undefined);
     setMessage(fmt(L.copied, { price: moneyText(rate, row!.property.currency, locale) }));
   };
   const pastePrice = () => {
@@ -681,7 +715,69 @@ export function CalendarGrid({
     setIsEditing(false);
     setHover(null);
     setMenu({ x: e.clientX, y: e.clientY });
-    parentRef.current?.focus({ preventScroll: true });
+  };
+  /** Shift+F10 or the menu key: the same menu, beside the night the keyboard is on. */
+  const openMenuAtFocus = () => {
+    if (!focus) return;
+    const rect = document.getElementById(cellId(focus.r, focus.c))?.getBoundingClientRect();
+    const box = parentRef.current?.getBoundingClientRect();
+    setIsEditing(false);
+    setHover(null);
+    setMenu({
+      x: rect ? rect.left + rect.width / 2 : (box?.left ?? 0) + LABEL_W,
+      y: rect ? rect.bottom : (box?.top ?? 0) + HEADER_H,
+    });
+  };
+  const closeMenu = (refocus: boolean) => {
+    setMenu(null);
+    if (refocus) parentRef.current?.focus({ preventScroll: true });
+  };
+  // an open menu takes the keyboard: its first action has focus
+  useEffect(() => {
+    if (!menu) return;
+    requestAnimationFrame(() =>
+      menuRef.current?.querySelector<HTMLButtonElement>("[role=menuitem]:not(:disabled)")?.focus(),
+    );
+  }, [menu]);
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    const items = [
+      ...(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]:not(:disabled)") ??
+        []),
+    ];
+    const i = items.indexOf(document.activeElement as HTMLButtonElement);
+    const go = (n: number) => {
+      e.preventDefault();
+      items[(n + items.length) % items.length]?.focus();
+    };
+    if (e.key === "ArrowDown") go(i + 1);
+    else if (e.key === "ArrowUp") go(i - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(items.length - 1);
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeMenu(true);
+    } else if (e.key === "Tab") closeMenu(true);
+  };
+  /** The night card for the cell the keyboard moved to, beside it, so a keyboard sees it too. */
+  const showCardFor = (r: number, c: number) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    if (rows[r]?.kind !== "rate_plan") {
+      setHover(null);
+      return;
+    }
+    requestAnimationFrame(() => {
+      const rect = document.getElementById(cellId(r, c))?.getBoundingClientRect();
+      if (rect) setHover({ r, c, x: rect.right, y: rect.top, keyboard: true });
+    });
+  };
+  /** The card stays while the pointer is on it (WCAG 1.4.13); leaving both closes it. */
+  const holdCard = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+  };
+  const dropCardSoon = () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHover((h) => (h?.keyboard ? h : null)), 200);
   };
   const selectRow = (r: number) => {
     setExtra([]);
@@ -696,32 +792,8 @@ export function CalendarGrid({
     parentRef.current?.focus({ preventScroll: true });
   };
 
-  // keys that work with no night focused: ← → a week, T today, 1–4 the range, Y the year
-  const winKeys = useRef<(e: KeyboardEvent) => void>(() => undefined);
-  winKeys.current = (e: KeyboardEvent) => {
-    if (e.defaultPrevented || typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (focus && parentRef.current?.contains(document.activeElement)) return;
-    const k = e.key.toLowerCase();
-    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-      e.preventDefault();
-      shiftWeek(e.key === "ArrowLeft" ? -1 : 1);
-    } else if (k === "t") {
-      e.preventDefault();
-      goToday();
-    } else if (/^[1-4]$/.test(e.key)) {
-      e.preventDefault();
-      setDays([14, 30, 60, 90][Number(e.key) - 1]!);
-    } else if (k === "y") {
-      e.preventDefault();
-      goYear();
-    }
-  };
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => winKeys.current(e);
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, []);
-
+  // The calendar's letter and arrow keys live on the grid, not the window (WCAG 2.1.4): they
+  // act only while the grid has focus, so they never fire under a screen reader's own keys.
   const onKeyDown = async (e: React.KeyboardEvent) => {
     if (typing(e) && !isEditing) return;
     const handled = () => {
@@ -729,6 +801,16 @@ export function CalendarGrid({
       e.stopPropagation();
     };
     const plain = !e.metaKey && !e.ctrlKey && !e.altKey;
+    if (!isEditing && (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10"))) {
+      handled();
+      openMenuAtFocus();
+      return;
+    }
+    if (!isEditing && plain && e.key === "?") {
+      handled();
+      focusPanel("shortcuts");
+      return;
+    }
     if (!isEditing && plain && e.key.toLowerCase() === "t") {
       handled();
       goToday();
@@ -746,6 +828,18 @@ export function CalendarGrid({
       } else if (plain && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
         handled();
         shiftWeek(e.key === "ArrowLeft" ? -1 : 1);
+      } else if (plain && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home")) {
+        // the keyboard's way in: the first listing's night, tonight when it is in view
+        const r = rows.findIndex((x) => x.kind === "rate_plan");
+        if (r >= 0) {
+          handled();
+          const c = Math.max(0, todayIndex);
+          setFocus({ r, c });
+          setAnchor(null);
+          rowVirtualizer.scrollToIndex(r);
+          colVirtualizer.scrollToIndex(c);
+          showCardFor(r, c);
+        }
       }
       return;
     }
@@ -759,6 +853,7 @@ export function CalendarGrid({
       } else setAnchor((a) => a ?? focus);
       rowVirtualizer.scrollToIndex(r);
       colVirtualizer.scrollToIndex(c);
+      showCardFor(r, c);
     };
     if (isEditing) {
       if (e.key === "Enter" || e.key === "Tab") {
@@ -812,8 +907,13 @@ export function CalendarGrid({
       if (row?.kind === "rate_plan" && !row.derived) {
         handled();
         const cell = cellAt(row, focus.c);
-        setEditing(e.key === "Enter" ? String((cell?.[1].rate ?? 0) / 100) : e.key);
+        setEditing(
+          e.key === "Enter"
+            ? priceInput(cell?.[1].rate ?? 0, row.property.currency, locale)
+            : e.key,
+        );
         setIsEditing(true);
+        setHover(null);
       }
     }
   };
@@ -839,6 +939,16 @@ export function CalendarGrid({
   };
   const gridHeight = Math.min(rowVirtualizer.getTotalSize() + HEADER_H + 2, maxH);
   const hoverRow = hover ? rows[hover.r] : undefined;
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const virtualCols = colVirtualizer.getVirtualItems();
+  // the focused night is named to assistive tech only while it is rendered
+  const activeId =
+    focus &&
+    virtualRows.some((v) => v.index === focus.r) &&
+    virtualCols.some((v) => v.index === focus.c)
+      ? cellId(focus.r, focus.c)
+      : undefined;
+  const cardId = hover?.keyboard ? "night-card" : undefined;
   const filterValue = propertyId ? `p:${propertyId}` : groupId ? `g:${groupId}` : "";
   const settingsHref = `/calendar/settings${focusProperty() ? `?propertyId=${focusProperty()!}` : ""}`;
 
@@ -922,7 +1032,7 @@ export function CalendarGrid({
           data-testid="price-tips"
         >
           <span aria-hidden="true">✦</span>
-          {tips.length > 0 ? fmt(L.priceTipsCount, { n: tips.length }) : L.priceTips}
+          {tips.length > 0 ? plural(L.priceTipsCount, { n: tips.length }, locale) : L.priceTips}
         </button>
         <Link
           href={settingsHref}
@@ -939,10 +1049,11 @@ export function CalendarGrid({
         >
           ?
         </a>
-        <span className="sr-only" data-testid="grid-stats">
+        {/* for the load-time check (CAL-7), not for people: hidden from sight and from AT */}
+        <span hidden data-testid="grid-stats">
           {loadMs === null
             ? ""
-            : fmt(L.loadedIn, { rows: rows.length, days: dates.length, ms: loadMs })}
+            : `${String(rows.length)} rows · ${String(dates.length)} days · loaded in ${String(loadMs)} ms`}
         </span>
       </div>
 
@@ -1024,52 +1135,78 @@ export function CalendarGrid({
         </div>
       ) : null}
 
+      {/* the ARIA grid pattern: one tab stop, arrows move, the focused night is the active
+          descendant; rows and columns not rendered (virtualised) still count in rowcount/colcount */}
       <div
         ref={parentRef}
-        className="relative select-none overflow-auto rounded-card border border-border bg-surface text-xs outline-none"
+        role="grid"
+        aria-label={fmt(L.gridLabel, { from: dayNames[0] ?? "", to: dayNames.at(-1) ?? "" })}
+        aria-rowcount={rows.length + 1}
+        aria-colcount={dates.length + 1}
+        aria-multiselectable="true"
+        aria-activedescendant={activeId}
+        className="relative overflow-auto rounded-card border border-border bg-surface text-xs outline-none select-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
         style={{ height: gridHeight }}
         tabIndex={0}
         onKeyDown={(e) => void onKeyDown(e)}
-        onMouseLeave={() => {
-          if (hoverTimer.current) clearTimeout(hoverTimer.current);
-          setHover(null);
+        onMouseLeave={dropCardSoon}
+        onBlur={(e) => {
+          // the keyboard's card goes with the keyboard
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+            setHover((h) => (h?.keyboard ? null : h));
         }}
         data-testid="grid-scroller"
       >
         <div
+          role="presentation"
           style={{
             height: rowVirtualizer.getTotalSize() + HEADER_H,
             width: colVirtualizer.getTotalSize() + LABEL_W,
             position: "relative",
           }}
         >
-          <div className="sticky top-0 z-20 flex bg-surface-secondary" style={{ height: HEADER_H }}>
+          <div
+            role="row"
+            aria-rowindex={1}
+            className="sticky top-0 z-20 flex bg-surface-secondary"
+            style={{ height: HEADER_H }}
+          >
             <div
+              role="columnheader"
+              aria-colindex={1}
               className="sticky start-0 z-30 flex items-center border-b border-border bg-surface-secondary px-3.5 text-xs font-semibold text-muted"
               style={{ width: LABEL_W }}
             >
               {monthLabel}
             </div>
-            {colVirtualizer.getVirtualItems().map((col) => {
+            {virtualCols.map((col) => {
               const d = dates[col.index]!;
               const isToday = d === today;
               return (
-                <button
-                  type="button"
+                <div
                   key={col.key}
-                  tabIndex={-1}
-                  onDoubleClick={() => selectColumn(col.index)}
-                  title={L.selectNightEverywhere}
-                  className={`absolute top-0 flex flex-col items-center justify-center border-b leading-tight ${isToday ? "border-b-2 border-accent font-bold text-accent" : "border-border font-medium text-muted"} ${isWeekend(d) && !isToday ? "bg-default" : ""}`}
+                  role="columnheader"
+                  aria-colindex={col.index + 2}
+                  className="absolute top-0"
                   style={{ left: LABEL_W + col.start, width: colW, height: HEADER_H }}
                 >
-                  <span className="text-[10px]">{L.weekdayNames.split(",")[mondayIndex(d)]}</span>
-                  <span className="text-xs">{Number(d.slice(8))}</span>
-                </button>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => selectColumn(col.index)}
+                    title={L.selectNightEverywhere}
+                    aria-label={dayNames[col.index]}
+                    aria-current={isToday ? "date" : undefined}
+                    className={`flex size-full flex-col items-center justify-center border-b leading-tight hover:bg-default ${isToday ? "border-b-2 border-accent font-bold text-accent" : "border-border font-medium text-muted"} ${isWeekend(d) && !isToday ? "bg-default" : ""}`}
+                  >
+                    <span className="text-[10px]">{L.weekdayNames.split(",")[mondayIndex(d)]}</span>
+                    <span className="text-xs">{Number(d.slice(8))}</span>
+                  </button>
+                </div>
               );
             })}
           </div>
-          {rowVirtualizer.getVirtualItems().map((vr) => {
+          {virtualRows.map((vr) => {
             const row = rows[vr.index]!;
             const h = rowHeight(row);
             const r = vr.index;
@@ -1080,14 +1217,65 @@ export function CalendarGrid({
               (row.kind === "room_type" || (row.kind === "rate_plan" && row.hero));
             const rowStays = single ? (staysByRoomType.get(rt.id) ?? []) : [];
             const rowBlocks = rt ? (blocksByRoomType.get(rt.id) ?? []) : [];
+            /** Which row this is, for every cell's name: listing, then room type and plan. */
+            const rowName =
+              row.kind === "property"
+                ? row.property.title
+                : row.kind === "room_type"
+                  ? `${row.property.title} · ${row.roomType.title}`
+                  : row.hero
+                    ? `${row.property.title} · ${row.ratePlan.title}`
+                    : `${row.property.title} · ${row.roomType.title} · ${row.ratePlan.title}`;
+            // a booking bar sits in the first rendered night it covers, so it is in a cell
+            const firstCol = virtualCols[0]?.index ?? 0;
+            const barsAt = new Map<number, Stay[]>();
+            for (const s of rowStays) {
+              const a = Math.max(0, dates.indexOf(s.from < start ? start : s.from));
+              const lastNight = addDays(s.to, -1);
+              const bEnd = lastNight > end ? dates.length - 1 : dates.indexOf(lastNight);
+              if (bEnd < 0 || s.from > end || bEnd < firstCol) continue;
+              const at = Math.max(a, firstCol);
+              barsAt.set(at, [...(barsAt.get(at) ?? []), s]);
+            }
+            const bars = (c: number): ReactNode =>
+              (barsAt.get(c) ?? []).map((s) => {
+                const a = Math.max(0, dates.indexOf(s.from < start ? start : s.from));
+                const lastNight = addDays(s.to, -1);
+                const bEnd = lastNight > end ? dates.length - 1 : dates.indexOf(lastNight);
+                const ch = channelName(s.otaName);
+                return (
+                  <Link
+                    key={s.bookingId}
+                    href={`/reservations/${s.bookingId}`}
+                    className="absolute top-1/2 z-[5] -translate-y-1/2 truncate rounded-full px-2.5 py-[5px] text-start text-[11px] font-semibold whitespace-nowrap shadow-sm hover:brightness-110"
+                    style={{
+                      left: (a - c) * colW + 4,
+                      width: (bEnd - a + 1) * colW - 8,
+                      background: channelColour(s.otaName),
+                      color: channelInk(s.otaName),
+                    }}
+                    title={`${s.guest || L.guest} · ${ch}`}
+                    data-testid="booking-bar"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.stopPropagation()}
+                    onMouseEnter={() => setHover(null)}
+                  >
+                    {s.guest || L.guest} · {ch}
+                  </Link>
+                );
+              });
             return (
               <div
                 key={vr.key}
+                role="row"
+                aria-rowindex={r + 2}
                 className="absolute left-0 flex"
                 style={{ top: vr.start + HEADER_H, height: h, width: "100%" }}
                 data-row-kind={row.kind}
               >
                 <div
+                  role="rowheader"
+                  aria-colindex={1}
                   className={`sticky start-0 z-10 flex items-center gap-2.5 border-b border-default bg-surface px-3.5 ${row.kind === "room_type" ? "ps-6" : row.kind === "rate_plan" && !row.hero ? "ps-10 text-muted" : ""}`}
                   style={{ width: LABEL_W }}
                 >
@@ -1109,7 +1297,7 @@ export function CalendarGrid({
                         property={row.property}
                         subtitle={[
                           row.property.city,
-                          fmt(L.roomTypes, { n: row.property.roomTypes.length }),
+                          plural(L.roomTypes, { n: row.property.roomTypes.length }, locale),
                         ]}
                       />
                     </button>
@@ -1129,7 +1317,7 @@ export function CalendarGrid({
                     >
                       <span className="truncate font-semibold">{row.roomType.title}</span>
                       <span className="text-[11px] text-muted">
-                        · {fmt(L.rooms, { n: row.roomType.countOfRooms })}
+                        · {plural(L.rooms, { n: row.roomType.countOfRooms }, locale)}
                       </span>
                     </button>
                   ) : row.hero ? (
@@ -1146,7 +1334,7 @@ export function CalendarGrid({
                             row.property.city,
                             row.ratePlan.title,
                             row.roomType.countOfRooms > 1
-                              ? fmt(L.rooms, { n: row.roomType.countOfRooms })
+                              ? plural(L.rooms, { n: row.roomType.countOfRooms }, locale)
                               : null,
                           ]}
                         />
@@ -1154,7 +1342,7 @@ export function CalendarGrid({
                       {row.roomType.ratePlans.length > 1 ? (
                         <button
                           type="button"
-                          className="shrink-0 rounded-full border border-border px-1.5 text-[10px] font-semibold text-muted hover:text-foreground"
+                          className="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-border-control px-1.5 text-[10px] font-semibold text-muted hover:text-foreground"
                           aria-expanded={expanded.has(row.property.id)}
                           onClick={() =>
                             setExpanded((s) => {
@@ -1164,7 +1352,16 @@ export function CalendarGrid({
                               return n;
                             })
                           }
-                          title={fmt(L.showDerived, { n: row.roomType.ratePlans.length - 1 })}
+                          aria-label={plural(
+                            L.showDerived,
+                            { n: row.roomType.ratePlans.length - 1 },
+                            locale,
+                          )}
+                          title={plural(
+                            L.showDerived,
+                            { n: row.roomType.ratePlans.length - 1 },
+                            locale,
+                          )}
                         >
                           +{row.roomType.ratePlans.length - 1}
                         </button>
@@ -1181,7 +1378,7 @@ export function CalendarGrid({
                     </>
                   )}
                 </div>
-                {colVirtualizer.getVirtualItems().map((col) => {
+                {virtualCols.map((col) => {
                   const date = dates[col.index]!;
                   const c = col.index;
                   const inSelection = inRects(r, c);
@@ -1189,6 +1386,12 @@ export function CalendarGrid({
                   const block = rowBlocks.find((b) => covers(b, date));
                   const common = `absolute border-b border-default text-center ${isWeekend(date) ? "bg-default/70" : ""} ${inSelection ? "!bg-accent-soft/60 outline-2 -outline-offset-2 outline-accent" : ""} ${focused ? "ring-2 ring-inset ring-accent" : ""}`;
                   const style = { left: LABEL_W + col.start, width: colW, height: h };
+                  const aria = {
+                    role: "gridcell",
+                    id: cellId(r, c),
+                    "aria-colindex": c + 2,
+                    "aria-selected": inSelection,
+                  } as const;
                   const down = (e: React.MouseEvent) => {
                     if (e.button !== 0) return;
                     e.preventDefault();
@@ -1215,10 +1418,16 @@ export function CalendarGrid({
                       450,
                     );
                   };
+                  const stayHere = rowStays.find((st) => covers(st, date));
+                  const stayName = stayHere
+                    ? `${stayHere.guest || L.guest} · ${channelName(stayHere.otaName)}`
+                    : null;
                   if (row.kind === "property") {
                     return (
                       <div
                         key={col.key}
+                        {...aria}
+                        aria-label={`${rowName} · ${dayNames[c]!}`}
                         className={common}
                         style={style}
                         onMouseDown={down}
@@ -1228,10 +1437,22 @@ export function CalendarGrid({
                     );
                   }
                   if (row.kind === "room_type") {
-                    const av = row.roomType.cells.find((x) => x[0] === date);
+                    const av = cellOn(row.roomType.cells, date);
+                    const label = [
+                      rowName,
+                      dayNames[c],
+                      av ? fmt(L.left, { n: av[1] }) : null,
+                      block
+                        ? (L[`block_${block.reason}` as keyof CalendarLabels] ?? L.blocked)
+                        : null,
+                      stayName,
+                      inSelection ? L.selected : null,
+                    ];
                     return (
                       <div
                         key={col.key}
+                        {...aria}
+                        aria-label={label.filter(Boolean).join(" · ")}
                         className={`${common} flex flex-col items-center justify-center text-[11px] ${av && av[1] < 0 ? "bg-danger-soft text-danger" : ""}`}
                         style={{ ...style, ...(block ? { backgroundImage: HATCH } : {}) }}
                         onMouseDown={down}
@@ -1243,22 +1464,45 @@ export function CalendarGrid({
                             {fmt(L.left, { n: av[1] })}
                           </span>
                         ) : null}
+                        {bars(c)}
                       </div>
                     );
                   }
-                  const cell = row.ratePlan.cells.find((x) => x[0] === date);
+                  const cell = cellOn(row.ratePlan.cells, date);
                   const ed = focused && isEditing;
                   const v = cell?.[1];
-                  const av = row.hero ? row.roomType.cells.find((x) => x[0] === date) : undefined;
+                  const av = row.hero ? cellOn(row.roomType.cells, date) : undefined;
                   const multi = row.hero && row.roomType.countOfRooms > 1;
                   const blocked = v?.stopSell === true;
                   const hatched = !multi && (blocked || block !== undefined);
                   const note = row.property.notes[`${row.ratePlan.id}|${date}`];
                   const booked = !multi && av !== undefined && av[1] <= 0 && !block;
-                  const underBar = rowStays.some((st) => covers(st, date));
+                  const underBar = stayHere !== undefined;
+                  const blockWord = block
+                    ? (L[`block_${block.reason}` as keyof CalendarLabels] ?? L.blocked)
+                    : L.blocked;
+                  // "Sea View · Standard · Tue 24 Dec · €120 · Sent · Note: owner's cousin"
+                  const label = [
+                    rowName,
+                    dayNames[c],
+                    hatched
+                      ? blockWord
+                      : v?.rate === undefined
+                        ? null
+                        : moneyText(v.rate, row.property.currency, locale),
+                    multi && av ? fmt(L.left, { n: av[1] }) : booked ? L.booked : null,
+                    stayName,
+                    cell ? syncWord(cell[2], L) : null,
+                    note ? fmt(L.noteLabel, { note }) : null,
+                    inSelection ? L.selected : null,
+                  ];
                   return (
                     <div
                       key={col.key}
+                      {...aria}
+                      aria-label={label.filter(Boolean).join(" · ")}
+                      aria-readonly={row.derived || undefined}
+                      aria-describedby={focused && cardId ? cardId : undefined}
                       className={`${common} flex flex-col items-center justify-center gap-0.5 px-1 ${row.derived ? "text-muted" : ""}`}
                       style={{ ...style, ...(hatched ? { backgroundImage: HATCH } : {}) }}
                       onMouseDown={down}
@@ -1266,7 +1510,9 @@ export function CalendarGrid({
                       onContextMenu={(e) => openMenu(e, r, c)}
                       onDoubleClick={() => {
                         if (!row.derived) {
-                          setEditing(String((cell?.[1].rate ?? 0) / 100));
+                          setEditing(
+                            priceInput(cell?.[1].rate ?? 0, row.property.currency, locale),
+                          );
                           setIsEditing(true);
                         }
                       }}
@@ -1278,6 +1524,8 @@ export function CalendarGrid({
                       {ed ? (
                         <input
                           autoFocus
+                          aria-label={`${L.pricePerNight} · ${rowName} · ${dayNames[c]!}`}
+                          inputMode="decimal"
                           className="w-full border-0 bg-surface p-0 text-center text-[13px] font-semibold outline-none"
                           value={editing}
                           onChange={(e) => setEditing(e.target.value)}
@@ -1287,11 +1535,7 @@ export function CalendarGrid({
                       ) : underBar ? null : hatched ? (
                         <>
                           <span className="font-semibold text-muted">—</span>
-                          <span className="text-[10px] text-muted">
-                            {block
-                              ? (L[`block_${block.reason}` as keyof CalendarLabels] ?? L.blocked)
-                              : L.blocked}
-                          </span>
+                          <span className="text-[10px] text-muted">{blockWord}</span>
                         </>
                       ) : (
                         <>
@@ -1300,7 +1544,7 @@ export function CalendarGrid({
                           >
                             {v?.rate === undefined
                               ? "—"
-                              : new Intl.NumberFormat(dateLocale).format(v.rate / 100)}
+                              : priceFigure(v.rate, row.property.currency, locale)}
                           </span>
                           {multi && av ? (
                             <span
@@ -1312,43 +1556,14 @@ export function CalendarGrid({
                             <span className="text-[10px] text-muted">{L.booked}</span>
                           ) : cell ? (
                             <span className="flex items-center gap-1">
-                              <span className={`h-1.5 w-1.5 rounded-full ${DOT[cell[2]]}`} />
-                              {note ? (
-                                <span
-                                  className="h-1.5 w-1.5 rounded-full bg-warning"
-                                  aria-label={L.privateNote}
-                                />
-                              ) : null}
+                              <SyncMark state={cell[2]} />
+                              {note ? <NoteMark /> : null}
                             </span>
                           ) : null}
                         </>
                       )}
+                      {bars(c)}
                     </div>
-                  );
-                })}
-                {rowStays.map((s) => {
-                  const a = Math.max(0, dates.indexOf(s.from < start ? start : s.from));
-                  const lastNight = addDays(s.to, -1);
-                  const bEnd = lastNight > end ? dates.length - 1 : dates.indexOf(lastNight);
-                  if (bEnd < 0 || s.from > end) return null;
-                  const ch = channelName(s.otaName);
-                  return (
-                    <Link
-                      key={s.bookingId}
-                      href={`/reservations/${s.bookingId}`}
-                      className="absolute top-1/2 z-[5] -translate-y-1/2 truncate rounded-full px-2.5 py-[5px] text-[11px] font-semibold whitespace-nowrap shadow-sm hover:brightness-110"
-                      style={{
-                        left: LABEL_W + a * colW + 4,
-                        width: (bEnd - a + 1) * colW - 8,
-                        background: channelColour(s.otaName),
-                        color: channelInk(s.otaName),
-                      }}
-                      title={`${s.guest || L.guest} · ${ch}`}
-                      data-testid="booking-bar"
-                      onMouseEnter={() => setHover(null)}
-                    >
-                      {s.guest || L.guest} · {ch}
-                    </Link>
                   );
                 })}
               </div>
@@ -1357,22 +1572,38 @@ export function CalendarGrid({
         </div>
       </div>
 
-      {hover && hoverRow?.kind === "rate_plan" && !menu ? (
-        <HoverCard L={L} row={hoverRow} date={dates[hover.c]!} x={hover.x} y={hover.y} />
+      {hover && hoverRow?.kind === "rate_plan" && !menu && !isEditing ? (
+        <HoverCard
+          L={L}
+          row={hoverRow}
+          date={dates[hover.c]!}
+          x={hover.x}
+          y={hover.y}
+          id={cardId}
+          onPointerEnter={holdCard}
+          onPointerLeave={() => setHover(null)}
+        />
       ) : null}
 
       {menu && current ? (
         <div
           ref={menuRef}
           role="menu"
+          aria-label={fmt(L.actionsFor, {
+            what: `${(selectedPlans[0]?.property ?? rows[current.r1]?.property)?.title ?? ""} · ${rangeLabel(dates[current.c1]!, dates[current.c2]!)}`,
+          })}
           className="fixed z-50 w-[230px] overflow-hidden rounded-card border border-border bg-surface p-1.5 text-[13px] shadow-float"
           style={{
             left: Math.min(menu.x, (typeof window === "undefined" ? 0 : window.innerWidth) - 240),
             top: Math.min(menu.y, (typeof window === "undefined" ? 0 : window.innerHeight) - 330),
           }}
+          onKeyDown={onMenuKeyDown}
           data-testid="context-menu"
         >
-          <p className="truncate px-2.5 pt-1.5 pb-2 text-[11px] font-bold tracking-wider text-muted uppercase">
+          <p
+            aria-hidden="true"
+            className="truncate px-2.5 pt-1.5 pb-2 text-[11px] font-bold tracking-wider text-muted uppercase"
+          >
             {(selectedPlans[0]?.property ?? rows[current.r1]?.property)?.title} ·{" "}
             {rangeLabel(dates[current.c1]!, dates[current.c2]!)}
           </p>
@@ -1394,10 +1625,14 @@ export function CalendarGrid({
                 key={id}
                 type="button"
                 role="menuitem"
+                tabIndex={-1}
                 disabled={id === "paste" && clip === null}
-                className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-start hover:bg-default disabled:opacity-50 disabled:hover:bg-transparent"
+                aria-keyshortcuts={key.replace("⌘", "Meta+")}
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-start outline-none hover:bg-default focus-visible:bg-default focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:hover:bg-transparent"
                 onClick={() => {
-                  setMenu(null);
+                  const keepsFocus =
+                    id === "price" || id === "min" || id === "note" || id === "new";
+                  closeMenu(!keepsFocus);
                   if (id === "price") focusPanel("panel-price");
                   else if (id === "min") focusPanel("panel-min-stay");
                   else if (id === "note") focusPanel("panel-note");
@@ -1420,18 +1655,12 @@ export function CalendarGrid({
       >
         <div className="flex min-w-0 flex-col gap-3">
           <ul className="flex flex-wrap gap-4 px-0.5 py-1 text-xs text-muted" aria-label={L.legend}>
-            <li className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
-              {L.legendSynced}
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden="true" />
-              {L.legendSending}
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-danger" aria-hidden="true" />
-              {L.legendFailed}
-            </li>
+            {(["synced", "pending", "in_flight", "failed", "conflicted"] as const).map((s) => (
+              <li key={s} className="flex items-center gap-1.5">
+                <SyncMark state={s} />
+                {s === "synced" ? L.legendSynced : syncWord(s, L)}
+              </li>
+            ))}
             <li className="flex items-center gap-1.5">
               <span
                 className="h-2.5 w-3.5 rounded-sm text-foreground/60"
@@ -1441,12 +1670,15 @@ export function CalendarGrid({
               {L.blocked}
             </li>
             <li className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" />
+              <NoteMark />
               {L.privateNote}
             </li>
           </ul>
           <section
-            className="rounded-card border border-border bg-surface px-[18px] py-3.5"
+            id="shortcuts"
+            tabIndex={-1}
+            aria-label={L.shortcuts}
+            className="rounded-card border border-border bg-surface px-[18px] py-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent"
             data-testid="calendar-tips-sheet"
           >
             <h2 className="font-sans text-sm font-bold">{L.tipsTitle}</h2>
@@ -1493,7 +1725,7 @@ export function CalendarGrid({
                 for (const p of props)
                   for (const rp of plansFor(p))
                     for (const d of selectedDates) {
-                      const cell = rp.cells.find((x) => x[0] === d);
+                      const cell = cellOn(rp.cells, d);
                       if (cell) targets.push({ property: p, ratePlan: rp, cell });
                     }
               }
@@ -1537,34 +1769,46 @@ export function CalendarGrid({
         ) : null}
       </div>
 
-      {message ? (
+      {/* both live regions stay mounted and only their text changes, so a screen reader
+          hears every toast; an error interrupts (alert), the rest waits its turn (status) */}
+      {(["status", "alert"] as const).map((role) => (
         <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-40 inline-flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-3 rounded-xl bg-foreground px-3.5 py-2.5 text-[13px] text-background shadow-float lg:left-[268px] lg:translate-x-0"
-          data-testid="calendar-toast"
+          key={role}
+          role={role}
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-40 max-w-[calc(100vw-32px)] -translate-x-1/2 lg:bottom-6 lg:left-[268px] lg:translate-x-0"
         >
-          <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400" aria-hidden="true" />
-          <span>{message}</span>
-          {undoStack.length > 0 ? (
-            <button
-              type="button"
-              className="font-bold text-teal-300 hover:underline"
-              onClick={() => void undo()}
+          {toast && toast.error === (role === "alert") ? (
+            <div
+              className="inline-flex items-center gap-3 rounded-xl bg-foreground px-3.5 py-2.5 text-[13px] text-background shadow-float"
+              data-testid="calendar-toast"
             >
-              {L.undo}
-            </button>
+              <span
+                className={`size-2 shrink-0 rounded-full ${toast.error ? "bg-red-400" : "bg-emerald-400"}`}
+                aria-hidden="true"
+              />
+              <span>{toast.text}</span>
+              {undoStack.length > 0 && !toast.error ? (
+                <button
+                  type="button"
+                  className="inline-flex min-h-6 items-center font-bold text-teal-300 hover:underline pointer-coarse:min-h-11"
+                  onClick={() => void undo()}
+                >
+                  {L.undo}
+                </button>
+              ) : null}
+              {undoStack.length > 0 && !toast.error ? <Kbd>⌘Z</Kbd> : null}
+              <button
+                type="button"
+                aria-label={L.dismiss}
+                className="ms-1 inline-grid size-6 shrink-0 place-items-center rounded-full text-background/70 hover:text-background pointer-coarse:size-11"
+                onClick={() => setMessage("")}
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
           ) : null}
-          {undoStack.length > 0 ? <Kbd>⌘Z</Kbd> : null}
-          <button
-            type="button"
-            aria-label={L.dismiss}
-            className="ms-1 text-background/60 hover:text-background"
-            onClick={() => setMessage("")}
-          >
-            ✕
-          </button>
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }
@@ -1575,7 +1819,7 @@ function describe(v: Values, data: GridProperty[], L: CalendarLabels, locale: st
   return [
     v.rate !== undefined ? moneyText(v.rate, cur, locale) : "",
     v.stopSell ? L.blocked : "",
-    v.minStay ? `${L.minNights} ${String(v.minStay)}` : "",
+    v.minStay ? `${L.minStay}: ${plural(L.nights, { n: v.minStay }, locale)}` : "",
   ]
     .filter(Boolean)
     .join(", ");
@@ -1608,37 +1852,43 @@ function HoverCard({
   date,
   x,
   y,
+  id,
+  onPointerEnter,
+  onPointerLeave,
 }: {
   L: CalendarLabels;
   row: PlanRow;
   date: string;
   x: number;
   y: number;
+  /** Set when the card describes the focused night (it is then the cell's description). */
+  id?: string;
+  onPointerEnter: () => void;
+  onPointerLeave: () => void;
 }) {
   const locale = useLocale();
-  const cell = row.ratePlan.cells.find((c) => c[0] === date);
+  const cell = cellOn(row.ratePlan.cells, date);
   const v = cell?.[1];
   const cur = row.property.currency;
-  const label = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${date}T00:00:00Z`));
+  const label = dayLabel(date, locale);
   const note = row.property.notes[`${row.ratePlan.id}|${date}`];
   const otas = row.property.channels.filter((c) => c !== "direct" && c !== "other");
-  const sync: Record<SyncState, [string, string]> = {
-    synced: [L.syncSynced, "text-success-soft-foreground"],
-    pending: [L.syncPending, "text-muted"],
-    in_flight: [L.legendSending, "text-sky-700"],
-    failed: [L.legendFailed, "text-danger"],
-    conflicted: [L.syncConflicted, "text-warning"],
+  const tone: Record<SyncState, string> = {
+    synced: "text-success-soft-foreground",
+    pending: "text-muted",
+    in_flight: "text-info",
+    failed: "text-danger",
+    conflicted: "text-warning-soft-foreground",
   };
   const left = Math.min(x + 8, (typeof window === "undefined" ? 1440 : window.innerWidth) - 262);
   return (
     <div
-      className="pointer-events-none fixed z-40 w-[250px] rounded-card border border-border bg-surface px-3.5 py-3 text-xs shadow-float"
+      id={id}
+      role={id ? "tooltip" : undefined}
+      className="fixed z-40 w-[250px] rounded-card border border-border bg-surface px-3.5 py-3 text-xs shadow-float"
       style={{ left, top: Math.max(8, y - 8) }}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
       data-testid="night-card"
     >
       <div className="flex items-baseline justify-between gap-2">
@@ -1684,7 +1934,7 @@ function HoverCard({
           <tr className="text-muted">
             <td className="py-[3px]">{L.minStayShort}</td>
             <td className="py-[3px] text-end">
-              {v?.minStay && v.minStay > 1 ? fmt(L.nights, { n: v.minStay }) : L.night}
+              {plural(L.nights, { n: v?.minStay ?? 1 }, locale)}
             </td>
           </tr>
           {v?.stopSell || v?.closedToArrival ? (
@@ -1696,7 +1946,12 @@ function HoverCard({
           {cell ? (
             <tr>
               <td className="py-[3px] text-muted">{L.sync}</td>
-              <td className={`py-[3px] text-end ${sync[cell[2]][1]}`}>{sync[cell[2]][0]}</td>
+              <td className={`py-[3px] text-end ${tone[cell[2]]}`}>
+                <span className="inline-flex items-center gap-1">
+                  <SyncMark state={cell[2]} />
+                  {syncWord(cell[2], L)}
+                </span>
+              </td>
             </tr>
           ) : null}
         </tbody>
@@ -1774,7 +2029,7 @@ function SelectionPanel({
   const notes = cells.map((c) => c.row.property.notes[`${c.row.ratePlan.id}|${c.cell[0]}`] ?? "");
   const initialNote = notes.every((n) => n === notes[0]) ? (notes[0] ?? "") : "";
 
-  const [price, setPrice] = useState(initialRate !== undefined ? String(initialRate / 100) : "");
+  const [price, setPrice] = useState(priceInput(initialRate, currency, locale));
   const [blocked, setBlocked] = useState(initialBlocked);
   const initialMinText =
     initialMin !== undefined ? String(initialMin) : cells.length > 1 ? "" : "1";
@@ -1790,7 +2045,8 @@ function SelectionPanel({
   const [more, setMore] = useState(false);
   const ctd = uniform("closedToDeparture") === true;
 
-  const priceMinor = price.trim() === "" ? undefined : Math.round(Number(price) * 100);
+  // null: typed but not a price; undefined: left empty
+  const priceMinor = price.trim() === "" ? undefined : parsePrice(price, currency);
   const otas = [...new Set(props.flatMap((p) => p.channels))].filter(
     (c) => c !== "direct" && c !== "other",
   );
@@ -1801,11 +2057,11 @@ function SelectionPanel({
     ? `${listing.property.title} · ${rangeLabel}`
     : props.length === 1
       ? `${props[0]!.title} · ${rangeLabel}`
-      : `${fmt(L.listingsCount, { n: props.length })} · ${rangeLabel}`;
+      : `${plural(L.listingsCount, { n: props.length }, locale)} · ${rangeLabel}`;
 
   const save = async () => {
-    if (priceMinor !== undefined && (!Number.isFinite(priceMinor) || priceMinor < 0)) {
-      setError(L.invalidPrice);
+    if (priceMinor === null) {
+      setError(L.priceUnreadable);
       return;
     }
     const min = Number(minStay);
@@ -1821,7 +2077,7 @@ function SelectionPanel({
     setBusy(true);
     await onSave({
       scope,
-      rate: priceMinor !== undefined && priceMinor !== initialRate ? priceMinor : undefined,
+      rate: typeof priceMinor === "number" && priceMinor !== initialRate ? priceMinor : undefined,
       // only what the manager touched is written; a field left alone keeps each night's own value
       restrictions: (date, cur) => {
         const out: Values = {};
@@ -1853,17 +2109,22 @@ function SelectionPanel({
         <div className="min-w-0">
           <h2 className="truncate font-sans text-[15px] font-bold">{title}</h2>
           <p className="mt-0.5 text-xs text-muted">
-            {nights === 1 ? L.night : fmt(L.nights, { n: nights })}
+            {plural(L.nights, { n: nights }, locale)}
             {weekdayList ? ` · ${weekdayList}` : ""}
           </p>
         </div>
+        {/* the name is the visible word; the key is a hint beside it (WCAG 2.5.3) */}
         <button
           type="button"
-          className="text-xs text-muted hover:text-foreground"
+          className="inline-flex min-h-6 shrink-0 items-center gap-1.5 rounded-full px-1.5 text-xs font-semibold text-muted hover:bg-default hover:text-foreground pointer-coarse:min-h-11"
           onClick={onClose}
-          aria-label={L.cancel}
+          aria-keyshortcuts="Escape"
+          data-testid="panel-close"
         >
-          Esc
+          {L.close}
+          <span aria-hidden="true" className="hidden lg:inline-flex">
+            <Kbd>Esc</Kbd>
+          </span>
         </button>
       </div>
 
@@ -1900,12 +2161,14 @@ function SelectionPanel({
             </span>
           </label>
           <div className="flex flex-wrap gap-1.5">
-            {initialRate !== undefined && priceMinor !== undefined && priceMinor !== initialRate ? (
+            {initialRate !== undefined &&
+            typeof priceMinor === "number" &&
+            priceMinor !== initialRate ? (
               <span className="rounded-full bg-default px-2.5 py-[3px] font-semibold text-muted">
                 {fmt(L.was, { price: moneyText(initialRate, currency, locale) })}
               </span>
             ) : null}
-            {priceMinor !== undefined && Number.isFinite(priceMinor) && priceMinor >= 0
+            {typeof priceMinor === "number"
               ? otas.slice(0, 2).map((ch) => {
                   const p0 = props[0]!;
                   const shown = guestPrice(
@@ -2038,7 +2301,7 @@ function SelectionPanel({
             disabled={busy}
             data-testid="panel-save-price"
           >
-            {nights === 1 ? L.saveNight : fmt(L.saveNights, { n: nights })}
+            {plural(L.saveNights, { n: nights }, locale)}
             <Kbd>↵</Kbd>
           </button>
           <p className="text-[11px] text-muted">
@@ -2100,7 +2363,8 @@ function SelectionPanel({
               {bulk.preview ? (
                 <div className="space-y-2 rounded-xl bg-default p-3" data-testid="bulk-preview">
                   <p className="font-medium">
-                    {fmt(L.wouldChange, { n: bulk.preview.cellCount })} {L.nothingChanged}
+                    {plural(L.wouldChange, { n: bulk.preview.cellCount }, locale)}{" "}
+                    {L.nothingChanged}
                   </p>
                   {bulk.preview.warnings.map((w) => (
                     <p key={w} className="text-warning-soft-foreground">
@@ -2120,7 +2384,7 @@ function SelectionPanel({
                       disabled={bulk.preview.blocked.length > 0 || !bulk.ops}
                       onClick={onApply}
                     >
-                      {fmt(L.apply, { n: bulk.preview.cellCount })}
+                      {plural(L.apply, { n: bulk.preview.cellCount }, locale)}
                     </button>
                     <button
                       type="button"

@@ -1,65 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
-import { Alert, Button, Card, Chip, Select } from "@/components/ui";
+import { Alert, announce, Button, buttonClasses, Card, Chip, Select } from "@/components/ui";
 import type { CalendarLabels } from "@/components/calendar-labels";
-import { money as moneyText } from "@/lib/format";
+import {
+  addDays,
+  fmt,
+  plural,
+  SyncMark,
+  syncWord,
+  type GridProperty,
+  type SyncState,
+} from "@/components/calendar-shared";
+import { day, money as moneyText } from "@/lib/format";
 
-type Values = {
-  rate?: number;
-  minStay?: number;
-  maxStay?: number;
-  closedToArrival?: boolean;
-  closedToDeparture?: boolean;
-  stopSell?: boolean;
-};
-type SyncState = "pending" | "in_flight" | "synced" | "failed" | "conflicted";
-interface GridRatePlan {
-  id: string;
-  title: string;
-  parentRatePlanId: string | null;
-  cells: Array<[string, Values, SyncState, number]>;
-}
-interface GridRoomType {
-  id: string;
-  title: string;
-  countOfRooms: number;
-  isSystemManaged: boolean;
-  cells: Array<[string, number, SyncState, number]>;
-  ratePlans: GridRatePlan[];
-}
-interface GridProperty {
-  id: string;
-  title: string;
-  kind: string;
-  currency: string;
-  state: string;
-  roomTypes: GridRoomType[];
-}
+type DayProperty = Pick<GridProperty, "id" | "title" | "kind" | "currency" | "state" | "roomTypes">;
 
-const DOT: Record<SyncState, string> = {
-  pending: "bg-muted",
-  in_flight: "bg-accent",
-  synced: "bg-success",
-  failed: "bg-danger",
-  conflicted: "bg-warning",
-};
-const addDays = (iso: string, n: number): string => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const money = (minor: number | undefined, currency: string, locale: string): string =>
-  moneyText(minor, currency, locale);
-const fmt = (s: string, vars: Record<string, string | number>): string =>
-  s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
+/** A night's sync state as a mark and, for a screen reader, in words. */
+function SyncLabel({ state, L }: { state: SyncState; L: CalendarLabels }) {
+  return (
+    <span className="inline-flex items-center" title={syncWord(state, L)}>
+      <SyncMark state={state} />
+      <span className="sr-only">{syncWord(state, L)}</span>
+    </span>
+  );
+}
 
 /**
  * CAL-9: one day, read first. A 400-cell grid does not work on a phone and we do not
  * pretend otherwise — this is the night a manager is standing in, every listing's price,
  * availability and minimum stay in a list, and the one action that matters away from a
- * desk: close a night out, or open it again.
+ * desk: block a night, or open it again.
  */
 export function CalendarDayView({
   date,
@@ -76,11 +48,19 @@ export function CalendarDayView({
 }) {
   const locale = useLocale();
   const [groupId, setGroupId] = useState("");
-  const [data, setData] = useState<GridProperty[] | null>(null);
-  const [message, setMessage] = useState("");
+  const [data, setData] = useState<DayProperty[] | null>(null);
+  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [busy, setBusy] = useState("");
   const [undo, setUndo] = useState<{ id: string; propertyId: string } | null>(null);
+  const [confirming, setConfirming] = useState<DayProperty | null>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const say = useCallback((text: string, error = false) => {
+    setMessage({ text, error });
+    // the visible note is not a live region; errors are, through role="alert"
+    if (!error) announce(text);
+  }, []);
 
   // The state lands in the fetch's own callback, never synchronously in the effect body.
   const load = useCallback(() => {
@@ -90,25 +70,27 @@ export function CalendarDayView({
     return fetch(`/api/v1/ari/grid?${q.toString()}`, { cache: "no-store" })
       .then(async (res) => {
         if (!res.ok) {
-          setMessage(fmt(L.loadFailed, { status: res.status }));
+          say(L.loadFailed, true);
           return;
         }
-        setData(((await res.json()) as { properties: GridProperty[] }).properties);
+        setData(((await res.json()) as { properties: DayProperty[] }).properties);
       })
-      .catch(() => {
-        setMessage(fmt(L.loadFailed, { status: 0 }));
-      });
-  }, [date, propertyId, groupId, L.loadFailed]);
+      .catch(() => say(L.loadFailed, true));
+  }, [date, propertyId, groupId, L.loadFailed, say]);
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (confirming) dialog.current?.showModal();
+  }, [confirming]);
+
   /** Stop-sell every plan of one property for this night, through the ordinary bulk path. */
-  const setStopSell = async (p: GridProperty, stop: boolean) => {
+  const setStopSell = async (p: DayProperty, stop: boolean) => {
     const ratePlanIds = p.roomTypes.flatMap((rt) => rt.ratePlans.map((rp) => rp.id));
     if (ratePlanIds.length === 0) return;
     setBusy(p.id);
-    setMessage("");
+    setMessage(null);
     const res = await fetch("/api/v1/ari/bulk", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -123,12 +105,12 @@ export function CalendarDayView({
     });
     setBusy("");
     if (!res.ok) {
-      setMessage(fmt(L.editFailed, { status: res.status }));
+      say(L.editFailed, true);
       return;
     }
     const body = (await res.json()) as { id: string | null };
     if (body.id) setUndo({ id: body.id, propertyId: p.id });
-    setMessage(stop ? L.closedOut : L.reopened);
+    say(stop ? L.closedOut : L.reopened);
     await load();
   };
 
@@ -140,7 +122,7 @@ export function CalendarDayView({
       body: JSON.stringify({ propertyId: undo.propertyId }),
     });
     setUndo(null);
-    setMessage(L.undone);
+    say(L.undone);
     await load();
   };
 
@@ -161,7 +143,7 @@ export function CalendarDayView({
           type="date"
           value={date}
           onChange={(e) => onDateChange(e.target.value)}
-          className="h-9 rounded-xl border border-border bg-surface px-3 text-sm"
+          className="h-9 rounded-xl border border-border-control bg-surface px-3 text-sm"
           data-testid="day-date"
           aria-label={L.dayView}
         />
@@ -199,9 +181,13 @@ export function CalendarDayView({
       </div>
 
       {message ? (
-        <Alert tone="info" data-testid="day-message">
-          {message}
-          {undo ? (
+        <Alert
+          tone={message.error ? "error" : "info"}
+          live={message.error}
+          data-testid="day-message"
+        >
+          {message.text}
+          {undo && !message.error ? (
             <Button
               type="button"
               variant="ghost"
@@ -248,9 +234,10 @@ export function CalendarDayView({
                     variant={allStopped ? "secondary" : "primary"}
                     size="sm"
                     disabled={busy === p.id}
+                    aria-haspopup={allStopped ? undefined : "dialog"}
                     onClick={() => {
-                      if (allStopped || window.confirm(L.closeOutConfirm))
-                        void setStopSell(p, !allStopped);
+                      if (allStopped) void setStopSell(p, false);
+                      else setConfirming(p);
                     }}
                     data-testid="day-close-out"
                   >
@@ -274,13 +261,7 @@ export function CalendarDayView({
                             of: rt.countOfRooms,
                           })}
                         </span>
-                        {avail ? (
-                          <span
-                            className={`inline-block h-1.5 w-1.5 rounded-full ${DOT[avail[2]]}`}
-                            title={avail[2]}
-                            aria-label={avail[2]}
-                          />
-                        ) : null}
+                        {avail ? <SyncLabel state={avail[2]} L={L} /> : null}
                       </p>
                       <ul className="mt-1 space-y-1">
                         {rt.ratePlans.map((rp) => {
@@ -299,11 +280,11 @@ export function CalendarDayView({
                                 ) : null}
                               </span>
                               <span className="tabular-nums font-medium" data-testid="day-rate">
-                                {money(v.rate, p.currency, locale)}
+                                {moneyText(v.rate, p.currency, locale)}
                               </span>
                               {v.minStay ? (
                                 <span className="text-xs text-muted">
-                                  {L.minStay} {v.minStay}
+                                  {L.minStay}: {plural(L.nights, { n: v.minStay }, locale)}
                                 </span>
                               ) : null}
                               {v.closedToArrival ? (
@@ -313,13 +294,7 @@ export function CalendarDayView({
                                 <Chip color="default">{L.closedToDeparture}</Chip>
                               ) : null}
                               {v.stopSell ? <Chip color="warning">{L.stopSold}</Chip> : null}
-                              {cell ? (
-                                <span
-                                  className={`inline-block h-1.5 w-1.5 rounded-full ${DOT[cell[2]]}`}
-                                  title={cell[2]}
-                                  aria-label={cell[2]}
-                                />
-                              ) : null}
+                              {cell ? <SyncLabel state={cell[2]} L={L} /> : null}
                             </li>
                           );
                         })}
@@ -332,6 +307,43 @@ export function CalendarDayView({
           );
         })
       )}
+
+      {/* blocking a night reaches every channel: say so and ask, with specific answers */}
+      <dialog
+        ref={dialog}
+        aria-labelledby="close-out-title"
+        onClose={() => setConfirming(null)}
+        className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-card border border-border bg-surface p-5 text-foreground shadow-float backdrop:bg-foreground/40"
+        data-testid="day-close-out-dialog"
+      >
+        <p id="close-out-title" className="font-display text-lg font-bold">
+          {confirming
+            ? `${confirming.title} · ${fmt(L.closeOutConfirm, { date: day(date, locale) })}`
+            : ""}
+        </p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            autoFocus
+            onClick={() => dialog.current?.close()}
+            className={buttonClasses("secondary", "md")}
+          >
+            {L.closeOutConfirmNo}
+          </button>
+          <button
+            type="button"
+            data-testid="day-close-out-confirm"
+            className={buttonClasses("primary", "md")}
+            onClick={() => {
+              const p = confirming;
+              dialog.current?.close();
+              if (p) void setStopSell(p, true);
+            }}
+          >
+            {L.closeOutConfirmYes}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }

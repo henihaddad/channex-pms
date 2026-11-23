@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { rawRows, sql } from "@pms/db";
 import { Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
@@ -26,6 +27,19 @@ const loadCalendarContext = withPermission<
   ),
 }));
 
+export async function generateMetadata() {
+  const t = await getTranslations("calendar");
+  return { title: t("title") };
+}
+
+/** A phone, as the browser says before any script runs: Client Hints, else the user agent. */
+async function looksLikePhone(): Promise<boolean> {
+  const h = await headers();
+  const hint = h.get("sec-ch-ua-mobile");
+  if (hint) return hint.includes("1");
+  return /Mobi|iPhone|Android.+Mobile/i.test(h.get("user-agent") ?? "");
+}
+
 const VIEWS: readonly CalendarMode[] = ["strip", "month", "year", "day"];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -41,12 +55,16 @@ export default async function CalendarPage({
 }) {
   const sp = await searchParams;
   const t = await getTranslations("calendar");
-  const [groups, ctx] = await Promise.all([
+  const [groups, ctx, phone] = await Promise.all([
     guard(() => listGroups()),
     guard(() => loadCalendarContext()),
+    looksLikePhone(),
   ]);
   const today = new Date().toISOString().slice(0, 10);
-  const labels = Object.fromEntries(CALENDAR_LABEL_KEYS.map((k) => [k, t(k)])) as CalendarLabels;
+  // raw: the views format placeholders and ICU plurals themselves, with the count they know
+  const labels = Object.fromEntries(
+    CALENDAR_LABEL_KEYS.map((k) => [k, t.raw(k) as string]),
+  ) as CalendarLabels;
   const propertyId = sp.propertyId ?? sp.property;
   const fromParam = sp.from ?? sp.date;
   const from = fromParam && ISO.test(fromParam) ? fromParam : today;
@@ -95,6 +113,7 @@ export default async function CalendarPage({
           groups={groups}
           properties={ctx.properties}
           tips={ctx.tips}
+          phone={phone}
           labels={labels}
         />
       )}

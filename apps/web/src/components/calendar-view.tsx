@@ -1,11 +1,45 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { CalendarGrid } from "@/components/calendar-grid";
-import { CalendarMonth } from "@/components/calendar-month";
-import { CalendarDayView } from "@/components/calendar-day-view";
 import type { CalendarLabels } from "@/components/calendar-labels";
+import { plural } from "@/components/calendar-shared";
+import { useLocale } from "next-intl";
+
+/** A placeholder at the view's real height, so nothing below it moves when the view arrives. */
+function StripSkeleton() {
+  return (
+    <div aria-hidden="true" className="space-y-4">
+      <div className="h-[34px] w-full max-w-[640px] animate-pulse rounded-full bg-default" />
+      <div className="h-[max(320px,72vh)] max-h-[640px] animate-pulse rounded-card border border-border bg-surface" />
+    </div>
+  );
+}
+function MonthSkeleton() {
+  return (
+    <div aria-hidden="true" className="flex w-full max-w-[560px] flex-col gap-3">
+      <div className="h-9 animate-pulse rounded-full bg-default" />
+      <div className="aspect-[7/6] w-full animate-pulse rounded-card bg-default" />
+    </div>
+  );
+}
+
+// Each view is its own chunk: a phone never downloads the strip, a desktop never the month.
+const CalendarGrid = dynamic(
+  () => import("@/components/calendar-grid").then((m) => m.CalendarGrid),
+  {
+    loading: StripSkeleton,
+  },
+);
+const CalendarMonth = dynamic(
+  () => import("@/components/calendar-month").then((m) => m.CalendarMonth),
+  { loading: MonthSkeleton },
+);
+const CalendarDayView = dynamic(
+  () => import("@/components/calendar-day-view").then((m) => m.CalendarDayView),
+  { loading: MonthSkeleton },
+);
 
 const QUERY = "(min-width: 1024px)";
 const subscribeToWidth = (onChange: () => void): (() => void) => {
@@ -14,8 +48,8 @@ const subscribeToWidth = (onChange: () => void): (() => void) => {
   return () => mq.removeEventListener("change", onChange);
 };
 const isDesktop = (): boolean => window.matchMedia(QUERY).matches;
-/** The server cannot know the viewport, and a phone is the one that must not get the strip. */
-const serverIsPhone = (): boolean => false;
+/** The server cannot know the viewport: until the browser says, no view loads its nights. */
+const unknownWidth = (): null => null;
 
 export type CalendarMode = "strip" | "month" | "year" | "day";
 
@@ -60,6 +94,9 @@ export function CalendarViewSwitch({
  * Which calendar you get. A desktop opens the strip of every listing; a phone opens one
  * listing's month, because a 400-cell strip does not work in a hand (CAL-9). Any view is
  * one press away on any screen, and the one-night close-out stays reachable from the month.
+ * With no view in the link, the page shows a placeholder shaped like the view the device's
+ * user agent suggests until the browser reports its width; only then does a view mount and
+ * load its nights, so neither a phone nor a desktop fetches a view it will not show.
  */
 export function CalendarView({
   view,
@@ -69,6 +106,7 @@ export function CalendarView({
   groups,
   properties,
   tips,
+  phone = false,
   labels: L,
 }: {
   view?: CalendarMode;
@@ -78,9 +116,13 @@ export function CalendarView({
   groups: Array<{ id: string; name: string }>;
   properties: Array<{ id: string; title: string }>;
   tips: Array<{ propertyId: string | null; title: string; link: string }>;
+  /** What the request's user agent suggests, for the placeholder's shape only. */
+  phone?: boolean;
   labels: CalendarLabels;
 }) {
-  const desktop = useSyncExternalStore(subscribeToWidth, isDesktop, serverIsPhone);
+  const locale = useLocale();
+  const desktop = useSyncExternalStore<boolean | null>(subscribeToWidth, isDesktop, unknownWidth);
+  if (!view && desktop === null) return phone ? <MonthSkeleton /> : <StripSkeleton />;
   const mode: CalendarMode = view ?? (desktop ? "strip" : "month");
   const yearHref = `/calendar?view=year${propertyId ? `&propertyId=${propertyId}` : ""}`;
   const viewSwitch = <CalendarViewSwitch active={mode} propertyId={propertyId} labels={L} />;
@@ -105,7 +147,7 @@ export function CalendarView({
           href="/calendar?view=strip"
           className={`inline-flex h-[34px] items-center rounded-full border px-3 text-[13px] font-semibold ${tips.length > 0 ? "border-amber-300 bg-amber-50 text-warning-soft-foreground" : "border-border bg-surface"}`}
         >
-          {tips.length > 0 ? fmtTips(L.tipsShort, tips.length) : L.priceTips}
+          {tips.length > 0 ? plural(L.tipsShort, { n: tips.length }, locale) : L.priceTips}
         </Link>
         <Link
           href={yearHref}
@@ -128,8 +170,6 @@ export function CalendarView({
     </div>
   );
 }
-
-const fmtTips = (s: string, n: number): string => s.replace("{n}", String(n));
 
 function DayWrapper({
   start,

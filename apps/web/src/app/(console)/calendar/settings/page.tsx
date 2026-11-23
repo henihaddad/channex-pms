@@ -16,6 +16,7 @@ import {
   EmptyState,
   LinkButton,
   PageHeader,
+  SubmitButton,
   Table,
   TBody,
   Td,
@@ -30,6 +31,7 @@ import { money } from "@/lib/format";
 import { savePricingDefaultsAction } from "../calendar.actions";
 import { FutureNights } from "./future-nights";
 import { NavSelect } from "./nav-select";
+import { priceInput } from "@/components/calendar-price";
 
 type Plan = {
   id: string;
@@ -176,6 +178,11 @@ const NAV = [
  * through a dry run and an undo; markup, rounding and discounts are kept with the property;
  * the price-tips mode, floor and ceiling are the rate import's own settings.
  */
+export async function generateMetadata() {
+  const t = await getTranslations("calendar.settings");
+  return { title: t("title") };
+}
+
 export default async function PricingSettingsPage({
   searchParams,
 }: {
@@ -217,7 +224,9 @@ export default async function PricingSettingsPage({
     );
   const cur = plan.currency;
   const symbol = money(0, cur, locale).replace(/[\d.,\s−-]/g, "") || cur;
-  const major = (minor: number | null | undefined) => (minor == null ? "" : String(minor / 100));
+  // a price as its field shows it: the locale's decimal mark, the currency's exponent, no float
+  const major = (minor: number | null | undefined) =>
+    minor == null ? "" : priceInput(minor, cur, locale);
   const pct = (bps: number | null | undefined) => (bps == null ? "" : `${String(bps / 100)}%`);
   const tipsMode = !d.imports.enabled ? "off" : d.imports.autoApply ? "auto" : "suggest";
   const connected = new Set(d.connections.map((c) => channelName(c.adapterCode)));
@@ -226,11 +235,11 @@ export default async function PricingSettingsPage({
   const isoName = (iso: number) => fullDays[iso - 1]!;
   const futureLabels = {
     preview: t("preview"),
-    apply: tc("apply"),
+    apply: tc.raw("apply") as string,
     cancel: tc("cancel"),
     undo: tc("undo"),
-    wouldChange: t("wouldChange"),
-    applied: tc("applied"),
+    wouldChange: t.raw("wouldChange") as string,
+    applied: tc.raw("applied") as string,
     undone: tc("undone"),
     nothing: t("nothing"),
     invalid: t("invalid"),
@@ -288,6 +297,7 @@ export default async function PricingSettingsPage({
         </nav>
         <form action={savePricingDefaultsAction} className="flex min-w-0 flex-col gap-5">
           <input type="hidden" name="propertyId" value={plan.propertyId} />
+          <input type="hidden" name="currency" value={cur} />
           <div className="flex flex-wrap items-center gap-3">
             <NavSelect
               label={t("ratePlan")}
@@ -308,6 +318,7 @@ export default async function PricingSettingsPage({
               from={today}
               to={d.stats.horizonEnd ?? today}
               symbol={symbol}
+              currency={cur}
               labels={futureLabels}
               testId="future-prices"
               fields={[
@@ -626,6 +637,7 @@ export default async function PricingSettingsPage({
               from={today}
               to={d.stats.horizonEnd ?? today}
               symbol={symbol}
+              currency={cur}
               labels={futureLabels}
               testId="future-stay"
               fields={[
@@ -717,13 +729,7 @@ export default async function PricingSettingsPage({
           </Card>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="submit"
-              className="inline-flex h-[38px] items-center rounded-full bg-accent px-4 text-sm font-bold text-accent-foreground"
-              data-testid="save-pricing-settings"
-            >
-              {tc("save")}
-            </button>
+            <SubmitButton testId="save-pricing-settings">{tc("save")}</SubmitButton>
             <LinkButton href={`/calendar?propertyId=${plan.propertyId}`} variant="secondary">
               {t("back")}
             </LinkButton>

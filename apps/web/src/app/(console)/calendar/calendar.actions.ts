@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   Id,
+  Money,
   OTA_CHANNELS,
   parseMinor,
   parsePercentBps,
@@ -75,7 +76,9 @@ function pricingFromForm(fd: FormData) {
     },
   });
 }
-const minorOrNull = (fd: FormData, k: string): number | null => parseMinor(String(fd.get(k) ?? ""));
+/** A price field in the form's currency, with that currency's exponent (yen have none). */
+const minorOrNull = (fd: FormData, k: string): number | null =>
+  parseMinor(String(fd.get(k) ?? ""), Money.exponent(String(fd.get("currency") ?? "EUR")));
 
 /**
  * "Pricing & availability" (spec 06 §6.6): channel markup, rounding and discounts, plus the

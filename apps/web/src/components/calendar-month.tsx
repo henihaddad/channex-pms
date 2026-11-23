@@ -7,16 +7,18 @@ import { useLocale } from "next-intl";
 import type { CalendarLabels } from "@/components/calendar-labels";
 import {
   addDays,
+  cellOn,
   covers,
-  fmt,
   heroPlan,
   HATCH,
   mondayIndex,
+  plural,
   type GridProperty,
   type Stay,
   type Values,
 } from "@/components/calendar-shared";
-import { money } from "@/lib/format";
+import { parsePrice, priceInput } from "@/components/calendar-price";
+import { day, money } from "@/lib/format";
 import { loadStaysAction, saveNightNotesAction } from "@/app/(console)/calendar/calendar.actions";
 
 const monthStart = (iso: string): string => `${iso.slice(0, 7)}-01`;
@@ -59,7 +61,10 @@ export function CalendarMonth({
   const [property, setProperty] = useState<GridProperty | null>(null);
   const [stays, setStays] = useState<Stay[]>([]);
   const [sel, setSel] = useState<{ a: string; b: string; open: boolean } | null>(null);
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null);
+  const setMessage = useCallback((text: string, error = false) => {
+    setToast(text ? { text, error } : null);
+  }, []);
   const [undoIds, setUndoIds] = useState<string[]>([]);
   const dragging = useRef<{ moved: boolean } | null>(null);
   const last = monthEnd(first);
@@ -71,7 +76,7 @@ export function CalendarMonth({
     return fetch(`/api/v1/ari/grid?${q.toString()}`, { cache: "no-store" })
       .then(async (res) => {
         if (!res.ok) {
-          setMessage(fmt(L.loadFailed, { status: res.status }));
+          setMessage(L.loadFailed, true);
           return;
         }
         const body = (await res.json()) as { properties: GridProperty[] };
@@ -80,8 +85,8 @@ export function CalendarMonth({
           .then((r) => setStays(r.stays))
           .catch(() => setStays([]));
       })
-      .catch(() => setMessage(fmt(L.loadFailed, { status: 0 })));
-  }, [pid, first, last, L.loadFailed]);
+      .catch(() => setMessage(L.loadFailed, true));
+  }, [pid, first, last, L.loadFailed, setMessage]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -101,21 +106,25 @@ export function CalendarMonth({
   const lo = sel ? (sel.a < sel.b ? sel.a : sel.b) : null;
   const hi = sel ? (sel.a < sel.b ? sel.b : sel.a) : null;
   const picked = lo && hi ? dates.filter((d) => d >= lo && d <= hi) : [];
-  const cellOf = (d: string) => plan?.cells.find((c) => c[0] === d);
+  const cellOf = (d: string) => (plan ? cellOn(plan.cells, d) : undefined);
   const stayOn = (d: string) => stays.find((s) => (!rt || s.roomTypeId === rt.id) && covers(s, d));
   const soldOut = (d: string) => {
-    const av = rt?.cells.find((c) => c[0] === d);
+    const av = rt ? cellOn(rt.cells, d) : undefined;
     return av !== undefined && av[1] <= 0;
   };
 
   const tileAt = (x: number, y: number): string | null =>
     (document.elementFromPoint(x, y)?.closest("[data-day]") as HTMLElement | null)?.dataset.day ??
     null;
+  /** A tap (or Enter / Space) on a night: the first picks it, the next one closes the range. */
+  const pick = (d: string) => {
+    if (sel?.open && sel.a === sel.b) setSel({ a: sel.a, b: d, open: false });
+    else setSel({ a: d, b: d, open: true });
+  };
   const down = (d: string, e: React.PointerEvent) => {
     if (e.button !== 0) return;
     dragging.current = { moved: false };
-    if (sel?.open && sel.a === sel.b) setSel({ a: sel.a, b: d, open: false });
-    else setSel({ a: d, b: d, open: true });
+    pick(d);
   };
   const move = (e: React.PointerEvent) => {
     if (!dragging.current) return;
@@ -139,9 +148,9 @@ export function CalendarMonth({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ propertyId: pid, edits }),
     });
-    const body = (await res.json()) as { undoId?: string | null; detail?: string };
+    const body = (await res.json().catch(() => ({}))) as { undoId?: string | null };
     if (!res.ok) {
-      setMessage(body.detail ?? fmt(L.editFailed, { status: res.status }));
+      setMessage(L.editFailed, true);
       return false;
     }
     return body.undoId ?? null;
@@ -173,7 +182,7 @@ export function CalendarMonth({
         notes: picked.map((date) => ({ ratePlanId: plan.id, date, body: s.note! })),
       });
     setUndoIds(ids);
-    setMessage(picked.length === 1 ? L.savedNight : fmt(L.savedNights, { n: picked.length }));
+    setMessage(plural(L.savedNights, { n: picked.length }, locale));
     setSel(null);
     await load();
   };
@@ -190,6 +199,11 @@ export function CalendarMonth({
   const monthName = new Intl.DateTimeFormat(dateLocale, { month: "short", timeZone: "UTC" }).format(
     new Date(`${first}T00:00:00Z`),
   );
+  const monthLong = new Intl.DateTimeFormat(dateLocale, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${first}T00:00:00Z`));
   const lead = mondayIndex(first);
   const weekdays = L.weekdayShort.split(",");
   const currency = property?.currency ?? "EUR";
@@ -256,8 +270,8 @@ export function CalendarMonth({
           onPointerUp={up}
           onPointerCancel={up}
           onPointerLeave={up}
-          role="grid"
-          aria-label={monthName}
+          role="group"
+          aria-label={monthLong}
         >
           {Array.from({ length: lead }, (_, i) => (
             <span key={`lead-${String(i)}`} />
@@ -289,7 +303,16 @@ export function CalendarMonth({
                 </span>
               </>
             );
-            const cls = `flex aspect-square flex-col items-center justify-center gap-0.5 rounded-[10px] border ${tone}`;
+            const cls = `flex aspect-square flex-col items-center justify-center gap-0.5 rounded-[10px] border focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:outline-none ${tone}`;
+            // the whole night in words: the tile's figures alone do not say which night or why
+            const name = [
+              day(d, locale),
+              booked
+                ? [L.booked, stay?.guest].filter(Boolean).join(" · ")
+                : blocked
+                  ? L.blocked
+                  : money(cell?.[1].rate, currency, locale),
+            ].join(" · ");
             return booked && stay && !isSel ? (
               <Link
                 key={d}
@@ -297,6 +320,7 @@ export function CalendarMonth({
                 className={cls}
                 data-day={d}
                 title={stay.guest}
+                aria-label={name}
               >
                 {inner}
               </Link>
@@ -308,7 +332,12 @@ export function CalendarMonth({
                 style={blocked && !isSel ? { backgroundImage: HATCH } : undefined}
                 data-day={d}
                 aria-pressed={isSel}
+                aria-label={name}
                 onPointerDown={(e) => down(d, e)}
+                onClick={(e) => {
+                  // a pointer already picked on press; Enter and Space arrive as a click alone
+                  if (e.detail === 0) pick(d);
+                }}
               >
                 {inner}
               </button>
@@ -336,27 +365,41 @@ export function CalendarMonth({
           onSave={save}
         />
       ) : null}
-      {message ? (
+      {/* above the phone's tab bar; both live regions stay mounted and only their text changes,
+          an error interrupting (alert), the rest waiting its turn (status) */}
+      {(["status", "alert"] as const).map((role) => (
         <div
-          role="status"
-          className="fixed bottom-4 left-1/2 z-50 inline-flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-3 rounded-xl bg-foreground px-3.5 py-2.5 text-[13px] text-background shadow-float"
+          key={role}
+          role={role}
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] left-1/2 z-50 max-w-[calc(100vw-32px)] -translate-x-1/2 lg:bottom-6"
         >
-          <span>{message}</span>
-          {undoIds.length > 0 ? (
-            <button type="button" className="font-bold text-teal-300" onClick={() => void undo()}>
-              {L.undo}
-            </button>
+          {toast && toast.error === (role === "alert") ? (
+            <div
+              className="inline-flex items-center gap-3 rounded-xl bg-foreground px-3.5 py-2.5 text-[13px] text-background shadow-float"
+              data-testid="month-toast"
+            >
+              <span>{toast.text}</span>
+              {undoIds.length > 0 && !toast.error ? (
+                <button
+                  type="button"
+                  className="inline-flex min-h-6 items-center font-bold text-teal-300 pointer-coarse:min-h-11"
+                  onClick={() => void undo()}
+                >
+                  {L.undo}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                aria-label={L.dismiss}
+                className="inline-grid size-6 shrink-0 place-items-center rounded-full text-background/70 hover:text-background pointer-coarse:size-11"
+                onClick={() => setMessage("")}
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            </div>
           ) : null}
-          <button
-            type="button"
-            aria-label={L.dismiss}
-            className="text-background/60"
-            onClick={() => setMessage("")}
-          >
-            ✕
-          </button>
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }
@@ -389,7 +432,7 @@ function MonthSheet({
   const min0 = same("minStay");
   const notes = dates.map((d) => property.notes[`${planId}|${d}`] ?? "");
   const note0 = notes.every((n) => n === notes[0]) ? (notes[0] ?? "") : "";
-  const [price, setPrice] = useState(rate0 !== undefined ? String(rate0 / 100) : "");
+  const [price, setPrice] = useState(priceInput(rate0, currency, locale));
   const [blocked, setBlocked] = useState(blocked0);
   const [more, setMore] = useState(false);
   const [min, setMin] = useState(min0 !== undefined ? String(min0) : "");
@@ -410,9 +453,9 @@ function MonthSheet({
   const n = dates.length;
 
   const save = async () => {
-    const r = price.trim() === "" ? undefined : Math.round(Number(price) * 100);
-    if (r !== undefined && (!Number.isFinite(r) || r < 0)) {
-      setError(L.invalidPrice);
+    const r = price.trim() === "" ? undefined : parsePrice(price, currency);
+    if (r === null) {
+      setError(L.priceUnreadable);
       return;
     }
     const m = Number(min);
@@ -441,9 +484,13 @@ function MonthSheet({
       <span className="h-1 w-9 self-center rounded-full bg-border lg:hidden" aria-hidden="true" />
       <div className="flex items-baseline justify-between">
         <strong className="text-[15px]">
-          {range} · {n === 1 ? L.night : fmt(L.nights, { n })}
+          {range} · {plural(L.nights, { n }, locale)}
         </strong>
-        <button type="button" className="text-xs text-muted" onClick={onClose}>
+        <button
+          type="button"
+          className="inline-flex min-h-6 items-center rounded-full px-2 text-[13px] font-semibold text-muted hover:text-foreground pointer-coarse:min-h-11"
+          onClick={onClose}
+        >
           {L.close}
         </button>
       </div>
@@ -515,7 +562,7 @@ function MonthSheet({
         className="h-12 rounded-full bg-accent text-[15px] font-bold text-accent-foreground disabled:opacity-60"
         data-testid="month-save"
       >
-        {n === 1 ? L.saveNight : fmt(L.saveNights, { n })}
+        {plural(L.saveNights, { n }, locale)}
       </button>
     </section>
   );

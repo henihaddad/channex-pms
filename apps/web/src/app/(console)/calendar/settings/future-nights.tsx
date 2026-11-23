@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
+import { parsePrice } from "@/components/calendar-price";
+import { plural } from "@/components/calendar-shared";
 
 type Weekday = "mo" | "tu" | "we" | "th" | "fr" | "sa" | "su";
 type Op =
@@ -32,14 +35,6 @@ export interface FutureLabels {
   failed: string;
 }
 
-const fmt = (s: string, v: Record<string, string | number>) =>
-  s.replace(/\{(\w+)\}/g, (_, k: string) => String(v[k] ?? ""));
-/** "€118", "118", "118.50" → minor units, exactly; null when it is not a price. */
-const toMinor = (text: string): number | null => {
-  const m = /^(\d{1,7})(?:[.,](\d{1,2}))?$/.exec(text.replace(/[^\d.,]/g, ""));
-  return m ? Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0")) : null;
-};
-
 /**
  * A default for every future night (base price, weekend price, stay limits, check-in days),
  * applied through the ordinary bulk path: a dry run says how many nights would change, Apply
@@ -52,6 +47,7 @@ export function FutureNights({
   to,
   fields,
   symbol,
+  currency,
   labels: L,
   testId,
 }: {
@@ -61,9 +57,13 @@ export function FutureNights({
   to: string;
   fields: FutureField[];
   symbol: string;
+  /** "€118", "118", "118,50" become minor units with this currency's exponent. */
+  currency: string;
+  /** Raw messages: `wouldChange`, `apply` and `applied` are ICU plurals. */
   labels: FutureLabels;
   testId?: string;
 }) {
+  const locale = useLocale();
   const [values, setValues] = useState(Object.fromEntries(fields.map((f) => [f.name, f.value])));
   const [preview, setPreview] = useState<{ n: number; blocked: string[] } | null>(null);
   const [message, setMessage] = useState("");
@@ -74,7 +74,7 @@ export function FutureNights({
     const raw = values[f.name] ?? "";
     if (raw.trim() === f.value.trim()) return null;
     if (f.kind === "money") {
-      const v = toMinor(raw);
+      const v = parsePrice(raw, currency);
       return v === null ? "invalid" : [{ op: "set_rate", rateMinor: v }];
     }
     const n = raw.trim() === "" || raw.trim() === "—" ? null : Number(raw);
@@ -114,14 +114,14 @@ export function FutureNights({
           dryRun,
         }),
       });
-      const r = (await res.json()) as {
+      const r = (await res.json().catch(() => ({}))) as {
         cellCount?: number;
         blocked?: string[];
         id?: string | null;
         detail?: string;
       };
       if (!res.ok && !r.blocked) {
-        setMessage(r.detail ?? L.failed);
+        setMessage(L.failed);
         setBusy(false);
         return;
       }
@@ -136,7 +136,7 @@ export function FutureNights({
     } else {
       setPreview(null);
       setUndoIds(ids);
-      setMessage(fmt(L.applied, { n }));
+      setMessage(plural(L.applied, { n }, locale));
     }
   };
   const undo = async () => {
@@ -178,14 +178,14 @@ export function FutureNights({
       <div className="flex flex-wrap items-center gap-2 pt-3 text-sm">
         {preview && preview.n > 0 && preview.blocked.length === 0 ? (
           <>
-            <span className="text-muted">{fmt(L.wouldChange, { n: preview.n })}</span>
+            <span className="text-muted">{plural(L.wouldChange, { n: preview.n }, locale)}</span>
             <button
               type="button"
               disabled={busy}
               className="h-8 rounded-full bg-accent px-3 text-[13px] font-bold text-accent-foreground"
               onClick={() => void run(false)}
             >
-              {fmt(L.apply, { n: preview.n })}
+              {plural(L.apply, { n: preview.n }, locale)}
             </button>
             <button
               type="button"
@@ -210,11 +210,10 @@ export function FutureNights({
             {b}
           </span>
         ))}
-        {message ? (
-          <span role="status" className="text-muted">
-            {message}
-          </span>
-        ) : null}
+        {/* always mounted, so each new message is announced */}
+        <span role="status" className="text-muted empty:hidden">
+          {message}
+        </span>
         {undoIds.length > 0 ? (
           <button type="button" className="font-semibold text-accent" onClick={() => void undo()}>
             {L.undo}
