@@ -1,9 +1,17 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import type { BookingRequestRow } from "@pms/db";
-import { Button, Chip, Input, Select } from "@/components/ui";
+import { Chip, Input, Select, SubmitButton } from "@/components/ui";
+import { clock } from "@/lib/format";
 import { resolveRequestAction } from "./requests.actions";
 
-const fmt = (iso: string | null | undefined) => (iso ? iso.slice(0, 16).replace("T", " ") : "");
+/** "Tue 24 Nov, 14:00" in the given time zone (the property's when known; spec 08). */
+const fmt = (iso: string, timeZone: string, locale: string) =>
+  `${new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone,
+  }).format(new Date(iso))}, ${clock(iso, timeZone, locale)}`;
 const STATE_COLOR: Record<string, "default" | "accent" | "success" | "warning" | "danger"> = {
   open: "warning",
   deciding: "accent",
@@ -23,11 +31,14 @@ const STATE_COLOR: Record<string, "default" | "accent" | "success" | "warning" |
 export async function RequestCard({
   r,
   compact = false,
+  timeZone,
 }: {
   r: BookingRequestRow;
   compact?: boolean;
+  /** The property's time zone; without it the deadline reads in UTC and says so. */
+  timeZone?: string;
 }) {
-  const t = await getTranslations("inbox");
+  const [t, locale] = await Promise.all([getTranslations("inbox"), getLocale()]);
   const d = r.details;
   const hidden = (
     <>
@@ -52,13 +63,18 @@ export async function RequestCard({
       <p>
         {r.guestName ? `${r.guestName} · ` : ""}
         {d.checkIn ?? "?"} → {d.checkOut ?? "?"}
-        {d.nights ? ` · ${d.nights} ${t("nights")}` : ""} · {d.guests ?? "?"} {t("guests")}
+        {d.nights ? ` · ${t("nightsCount", { n: d.nights })}` : ""} ·{" "}
+        {d.guests ? t("guestsCount", { n: d.guests }) : `? ${t("guests")}`}
         {d.payoutText ? ` · ${d.payoutText}` : ""}
         {d.listingName ? ` · ${d.listingName}` : ""}
       </p>
       {r.state === "open" && r.respondBy ? (
         <p className="text-danger">
-          {t("respondBy")} {fmt(r.respondBy)}
+          {t("respondByAt", {
+            when: timeZone
+              ? fmt(r.respondBy, timeZone, locale)
+              : `${fmt(r.respondBy, "UTC", locale)} UTC`,
+          })}
         </p>
       ) : null}
       {r.state === "open" ? (
@@ -68,9 +84,9 @@ export async function RequestCard({
               <form action={resolveRequestAction} className="flex items-center gap-1">
                 {hidden}
                 <input type="hidden" name="decision" value="preapproval" />
-                <Button type="submit" size="sm" data-testid="request-preapprove">
+                <SubmitButton size="sm" testId="request-preapprove">
                   {t("preApprove")}
-                </Button>
+                </SubmitButton>
               </form>
               <form action={resolveRequestAction} className="flex items-center gap-1">
                 {hidden}
@@ -82,16 +98,12 @@ export async function RequestCard({
                   step="1"
                   required
                   placeholder={t("specialOfferTotal", { currency: d.currency ?? "" })}
+                  aria-label={t("specialOfferTotal", { currency: d.currency ?? "" })}
                   className="w-36"
                 />
-                <Button
-                  type="submit"
-                  size="sm"
-                  variant="secondary"
-                  data-testid="request-special-offer"
-                >
+                <SubmitButton size="sm" variant="secondary" testId="request-special-offer">
                   {t("sendSpecialOffer")}
-                </Button>
+                </SubmitButton>
               </form>
             </>
           ) : r.kind === "reservation_request" ? (
@@ -99,14 +111,19 @@ export async function RequestCard({
               <form action={resolveRequestAction}>
                 {hidden}
                 <input type="hidden" name="decision" value="accept" />
-                <Button type="submit" size="sm" data-testid="request-accept">
+                <SubmitButton size="sm" testId="request-accept">
                   {t("acceptRequest")}
-                </Button>
+                </SubmitButton>
               </form>
               <form action={resolveRequestAction} className="flex items-center gap-1">
                 {hidden}
                 <input type="hidden" name="decision" value="decline" />
-                <Select name="reason" size="sm" defaultValue="dates_not_available">
+                <Select
+                  name="reason"
+                  size="sm"
+                  defaultValue="dates_not_available"
+                  aria-label={t("declineReason")}
+                >
                   {[
                     "dates_not_available",
                     "not_a_good_fit",
@@ -118,10 +135,15 @@ export async function RequestCard({
                     </option>
                   ))}
                 </Select>
-                <Input name="messageToGuest" placeholder={t("messageToGuest")} className="w-48" />
-                <Button type="submit" size="sm" variant="danger" data-testid="request-decline">
+                <Input
+                  name="messageToGuest"
+                  placeholder={t("messageToGuest")}
+                  aria-label={t("messageToGuest")}
+                  className="w-48"
+                />
+                <SubmitButton size="sm" variant="danger" testId="request-decline">
                   {t("declineRequest")}
-                </Button>
+                </SubmitButton>
               </form>
             </>
           ) : (
@@ -130,14 +152,13 @@ export async function RequestCard({
                 <form key={k} action={resolveRequestAction}>
                   {hidden}
                   <input type="hidden" name="decision" value={k} />
-                  <Button
-                    type="submit"
+                  <SubmitButton
                     size="sm"
                     variant={k === "accept" ? "primary" : k === "decline" ? "danger" : "ghost"}
-                    data-testid={`request-${k}`}
+                    testId={`request-${k}`}
                   >
                     {t(`alterationAnswers.${k}`)}
-                  </Button>
+                  </SubmitButton>
                 </form>
               ))}
             </>

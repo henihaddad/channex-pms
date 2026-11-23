@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import {
   interpolate,
@@ -15,6 +16,8 @@ import {
 import {
   DrizzleChannelRepository,
   DrizzlePropertyRepository,
+  rawRows,
+  sql,
   type BookingRequestRow,
   type RuleRow,
   type ReviewRow,
@@ -40,6 +43,7 @@ import {
   saveTemplateBody,
   TRIGGERS,
 } from "@/server/inbox";
+import { snoozeUntil } from "./snooze";
 
 const VIEWS: InboxView[] = [
   "needs_reply",
@@ -123,6 +127,8 @@ export interface ThreadView {
   inquiry: ReturnType<typeof parseInquiry> | null;
   /** The Airbnb request this conversation is about, with its decision buttons (spec 09 §9.8). */
   request: BookingRequestRow | null;
+  /** The property's time zone: deadlines and snooze times read in it. */
+  timeZone: string;
 }
 
 /** Opening a thread marks it read; bodies are opened under `message:read` and audited. */
@@ -135,8 +141,13 @@ export const loadThread = withPermission<[{ threadId: string }], ThreadView | nu
     if (!detail) return null;
     if (detail.unreadCount > 0) await repo.markRead(threadId);
     const system = detail.messages.find((m) => m.authorType === "system");
+    const [zone] = await rawRows<{ timezone: string }>(
+      ctx.tx,
+      sql`select timezone from property where id = ${detail.propertyId}`,
+    );
     return {
       detail,
+      timeZone: zone?.timezone ?? "UTC",
       capabilities: capabilitiesFor(detail),
       templates: await repo.listTemplates(),
       users: await repo.users(),
@@ -147,39 +158,73 @@ export const loadThread = withPermission<[{ threadId: string }], ThreadView | nu
   },
 );
 
+/** What the composer's forms get back: the text clears only on `ok`, an error shows above the button. */
+export interface ComposerState {
+  ok?: boolean;
+  error?: string;
+  /** A fresh value per success, so two sends in a row each clear the box. */
+  at?: number;
+}
+
+async function queueReply(ctx: ActorCtx, fd: FormData): Promise<ComposerState> {
+  const t = await getTranslations({ locale: ctx.locale, namespace: "inbox" });
+  const threadId = String(fd.get("threadId"));
+  await assertThreadInProperty(ctx, threadId, String(fd.get("propertyId")));
+  const body = String(fd.get("body") ?? "").trim();
+  if (body === "") return { error: t("errors.emptyMessage") };
+  const repo = await messaging(ctx);
+  const templateId = String(fd.get("templateId") ?? "") || null;
+  const id = await repo.queueGuestMessage(threadId, {
+    authorType: "staff",
+    authorId: ctx.userId,
+    body,
+    sentAt: new Date().toISOString(),
+    templateId,
+  });
+  await queueDelivery(ctx, id);
+  revalidatePath("/inbox");
+  return { ok: true, at: Date.now() };
+}
+
 /** MSG-3/MSG-6: the guest composer. Its only output is a queued guest message; notes have their own action. */
 export const sendReplyAction = withPermission<[FormData], void>(
   "message:send",
   { ...threadScope, redact: ["body"] },
   async (ctx, fd) => {
-    const threadId = String(fd.get("threadId"));
-    await assertThreadInProperty(ctx, threadId, String(fd.get("propertyId")));
-    const body = String(fd.get("body") ?? "").trim();
-    if (body === "") throw new HttpProblem(422, "empty_message", "Write something first");
-    const repo = await messaging(ctx);
-    const templateId = String(fd.get("templateId") ?? "") || null;
-    const id = await repo.queueGuestMessage(threadId, {
-      authorType: "staff",
-      authorId: ctx.userId,
-      body,
-      sentAt: new Date().toISOString(),
-      templateId,
-    });
-    await queueDelivery(ctx, id);
-    revalidatePath("/inbox");
+    await queueReply(ctx, fd);
   },
 );
 
-export const addNoteAction = withPermission<[FormData], void>(
+/** The inbox composer's send, for `useActionState`: an expected failure comes back as text. */
+export const sendReplyFormAction = withPermission<[ComposerState, FormData], ComposerState>(
+  "message:send",
+  {
+    scope: "property",
+    resolveScope: (_p, fd) => threadScope.resolveScope(fd),
+    subject: (_p, fd) => threadScope.subject(fd),
+    auditInput: (_p, fd) => ({ threadId: fd.get("threadId"), templateId: fd.get("templateId") }),
+  },
+  async (ctx, _prev, fd) => queueReply(ctx, fd),
+);
+
+/** MSG-3: an internal note. It cannot produce a guest message. */
+export const addNoteAction = withPermission<[ComposerState, FormData], ComposerState>(
   "message:read",
-  { ...threadScope, redact: ["body"] },
-  async (ctx, fd) => {
+  {
+    scope: "property",
+    resolveScope: (_p, fd) => threadScope.resolveScope(fd),
+    subject: (_p, fd) => threadScope.subject(fd),
+    auditInput: (_p, fd) => ({ threadId: fd.get("threadId") }),
+  },
+  async (ctx, _prev, fd) => {
+    const t = await getTranslations({ locale: ctx.locale, namespace: "inbox" });
     const threadId = String(fd.get("threadId"));
     await assertThreadInProperty(ctx, threadId, String(fd.get("propertyId")));
     const body = String(fd.get("body") ?? "").trim();
-    if (body === "") throw new HttpProblem(422, "empty_note", "Write something first");
+    if (body === "") return { error: t("errors.emptyNote") };
     await (await messaging(ctx)).addNote(threadId, ctx.userId, body, new Date().toISOString());
     revalidatePath("/inbox");
+    return { ok: true, at: Date.now() };
   },
 );
 
@@ -212,11 +257,19 @@ export const snoozeThreadAction = withPermission<[FormData], void>(
   "message:read",
   threadScope,
   async (ctx, fd) => {
-    await assertThreadInProperty(ctx, String(fd.get("threadId")), String(fd.get("propertyId")));
-    const until = String(fd.get("until") ?? "");
-    await (
-      await messaging(ctx)
-    ).snooze(String(fd.get("threadId")), until === "" ? null : new Date(until).toISOString());
+    const propertyId = String(fd.get("propertyId"));
+    await assertThreadInProperty(ctx, String(fd.get("threadId")), propertyId);
+    const [zone] = await rawRows<{ timezone: string }>(
+      ctx.tx,
+      sql`select timezone from property where id = ${propertyId}`,
+    );
+    // a preset or a custom wall time, both read in the property's time zone
+    const until = snoozeUntil(
+      { preset: String(fd.get("preset") ?? ""), until: String(fd.get("until") ?? "") },
+      new Date(),
+      zone?.timezone ?? "UTC",
+    );
+    await (await messaging(ctx)).snooze(String(fd.get("threadId")), until);
     revalidatePath("/inbox");
   },
 );
@@ -550,7 +603,7 @@ export const respondReviewAction = withPermission<[FormData], void>(
     );
     if (!review) throw new HttpProblem(404, "not_found", "Review not found");
     if (!review.canRespond)
-      throw new HttpProblem(422, "unsupported", "This OTA does not accept responses");
+      throw new HttpProblem(422, "unsupported", "This channel does not accept responses");
     const body = String(fd.get("body") ?? "").trim();
     if (body === "") throw new HttpProblem(422, "empty", "Write something first");
     const id = await repo.queueReviewResponse(review.id, body, ctx.userId);

@@ -24,6 +24,11 @@ import {
   toggleRuleAction,
 } from "../inbox.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("inbox");
+  return { title: t("automation") };
+}
+
 const PHASES: Array<{
   key: "booking" | "before" | "during" | "after";
   triggers: AutomationTrigger[];
@@ -161,7 +166,7 @@ export default async function AutomationPage({
                           className={cn(
                             "grid grid-cols-[150px_minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-default py-3 text-sm last:border-b-0",
                             selected?.id === r.id && !creating
-                              ? "-mx-2 rounded-lg bg-[#f0faf8] px-2"
+                              ? "-mx-2 rounded-lg bg-selected px-2"
                               : "",
                           )}
                           data-testid="rule-row"
@@ -440,7 +445,7 @@ export default async function AutomationPage({
             </form>
             {preview ? (
               <div
-                className="mt-4 rounded-xl border border-[#c6e8e3] bg-[#f0faf8] p-3 text-xs"
+                className="mt-4 rounded-xl border border-accent/30 bg-selected p-3 text-xs"
                 data-testid="test-preview"
               >
                 <p className="font-semibold">

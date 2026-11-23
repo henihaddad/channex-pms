@@ -1,5 +1,16 @@
 import type { FolioView } from "@pms/db";
-import { Button, Checkbox, DateInput, Input, Select, TBody, Table, Td, Tr } from "@/components/ui";
+import {
+  Checkbox,
+  ConfirmSubmit,
+  DateInput,
+  Input,
+  Select,
+  SubmitButton,
+  TBody,
+  Table,
+  Td,
+  Tr,
+} from "@/components/ui";
 import { day, money } from "@/lib/format";
 import {
   addChargeAction,
@@ -86,7 +97,7 @@ export function FolioOperations({
                       −{money(p.amountMinor, f.currency, locale)}
                     </Td>
                     <Td className="text-end">
-                      {p.state === "held" || p.state === "captured" ? (
+                      {p.state === "held" ? (
                         <form
                           action={settlePaymentAction}
                           className="inline-flex items-center gap-1"
@@ -95,42 +106,60 @@ export function FolioOperations({
                           <input type="hidden" name="paymentId" value={p.id} />
                           <Input
                             name="reason"
+                            required
                             placeholder={t("folio.reason")}
                             aria-label={t("folio.reason")}
                             className="h-8 w-28 text-xs"
                           />
-                          {p.state === "held" ? (
-                            <>
-                              <Button
-                                type="submit"
-                                name="state"
-                                value="captured"
-                                size="sm"
-                                variant="ghost"
-                              >
-                                {t("folio.capture")}
-                              </Button>
-                              <Button
-                                type="submit"
-                                name="state"
-                                value="released"
-                                size="sm"
-                                variant="ghost"
-                              >
-                                {t("folio.release")}
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              type="submit"
-                              name="state"
-                              value="refunded"
-                              size="sm"
-                              variant="danger"
-                            >
-                              {t("folio.refund")}
-                            </Button>
-                          )}
+                          <SubmitButton name="state" value="captured" size="sm" variant="ghost">
+                            {t("folio.capture")}
+                          </SubmitButton>
+                          <SubmitButton name="state" value="released" size="sm" variant="ghost">
+                            {t("folio.release")}
+                          </SubmitButton>
+                        </form>
+                      ) : p.state === "captured" ? (
+                        // a refund sends money back: it asks first, naming the amount and the method,
+                        // and takes its reason inside the dialog
+                        <form action={settlePaymentAction} className="inline-flex">
+                          {ids()}
+                          <input type="hidden" name="paymentId" value={p.id} />
+                          <ConfirmSubmit
+                            name="state"
+                            value="refunded"
+                            title={t("folio.refundTitle", {
+                              amount: money(p.amountMinor, f.currency, locale),
+                            })}
+                            body={
+                              <span className="flex flex-col gap-3">
+                                <span>
+                                  {t("folio.refundBody", {
+                                    amount: money(p.amountMinor, f.currency, locale),
+                                    method: t(`folio.methods.${p.method}`),
+                                  })}
+                                </span>
+                                <span className="flex flex-col gap-1.5 text-foreground">
+                                  <label
+                                    htmlFor={`refund-reason-${p.id}`}
+                                    className="text-sm font-semibold"
+                                  >
+                                    {t("folio.reason")}
+                                  </label>
+                                  <Input id={`refund-reason-${p.id}`} name="reason" required />
+                                </span>
+                              </span>
+                            }
+                            confirmLabel={t("folio.refundConfirm", {
+                              amount: money(p.amountMinor, f.currency, locale),
+                            })}
+                            cancelLabel={t("folio.keepPayment")}
+                            aria-label={t("folio.refundNamed", {
+                              amount: money(p.amountMinor, f.currency, locale),
+                            })}
+                            testId={`refund-${p.id}`}
+                          >
+                            {t("folio.refund")}
+                          </ConfirmSubmit>
                         </form>
                       ) : null}
                     </Td>
@@ -157,22 +186,29 @@ export function FolioOperations({
             </Select>
             <Input
               name="description"
+              required
               placeholder={t("folio.description")}
               aria-label={t("folio.description")}
               className="w-44"
             />
-            <DateInput name="date" defaultValue={arrivalDate} className="w-40" />
+            <DateInput
+              name="date"
+              defaultValue={arrivalDate}
+              aria-label={t("folio.date")}
+              className="w-40"
+            />
             <Input
               name="amount"
-              type="number"
-              step="0.01"
+              required
+              inputMode="decimal"
+              pattern="[0-9]+([.,][0-9]{1,3})?"
               placeholder="0.00"
-              aria-label={t("folio.amount")}
+              aria-label={t("folio.amountIn", { currency: f.currency })}
               className="w-28"
             />
-            <Button type="submit" variant="secondary" size="sm">
+            <SubmitButton variant="secondary" size="sm">
               {t("addCharge")}
-            </Button>
+            </SubmitButton>
           </form>
           <form action={addPaymentAction} className="flex flex-wrap items-end gap-2">
             {ids(f.id)}
@@ -185,24 +221,25 @@ export function FolioOperations({
             </Select>
             <Input
               name="amount"
-              type="number"
-              step="0.01"
+              required
+              inputMode="decimal"
+              pattern="[0-9]+([.,][0-9]{1,3})?"
               placeholder="0.00"
-              aria-label={t("folio.amount")}
+              aria-label={t("folio.amountIn", { currency: f.currency })}
               className="w-28"
               data-testid="payment-amount"
             />
             <Checkbox name="hold">{t("folio.depositHold")}</Checkbox>
-            <Button type="submit" variant="primary" size="sm">
+            <SubmitButton variant="primary" size="sm">
               {t("addPayment")}
-            </Button>
+            </SubmitButton>
           </form>
           <div className="flex flex-wrap items-end gap-2">
             <form action={issueInvoiceAction}>
               {ids(f.id)}
-              <Button type="submit" variant="secondary" data-testid="issue-invoice" size="sm">
+              <SubmitButton variant="secondary" testId="issue-invoice" size="sm">
                 {t("issueInvoice")}
-              </Button>
+              </SubmitButton>
             </form>
             {f.lines.some((l) => !l.invoiceId) ? (
               <form action={splitFolioAction} className="flex flex-wrap items-center gap-2">
@@ -220,9 +257,9 @@ export function FolioOperations({
                       {l.description.slice(0, 16)}
                     </Checkbox>
                   ))}
-                <Button type="submit" variant="ghost" size="sm">
+                <SubmitButton variant="ghost" size="sm">
                   {t("split")}
-                </Button>
+                </SubmitButton>
               </form>
             ) : null}
           </div>

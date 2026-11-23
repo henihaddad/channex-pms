@@ -15,15 +15,19 @@ expire within hours. So the inbox is not a nice-to-have — it is revenue.
 ## 9.1 Inbox layout
 
 Two panes (design canvas, November 2026): the **thread list** with four views in
-front as chips (Needs reply · n, Past target · n, Arriving, All; the other views,
-the property filter and the search behind "⋯"), and the **conversation** beside it.
-A row shows the guest, how long they have waited (amber past the target), property ·
+front as chips (Needs reply · n, Past target · n, Arriving, All; the other views
+behind "⋯"), a search box and the property filter above the list, and the
+**conversation** beside it. A row shows the guest, how long they have waited (a chip in
+words, "Overdue" or "20 min left", amber past the target), property ·
 channel · where they are in the stay, and the last line ("You: …" when we wrote
 last). The conversation header carries the booking in one line (property, dates,
 nights, channel) with Reservation and Assign; close, no-reply-needed, snooze and
 tags sit behind "⋯". Messages read as a chat, and a pill says how long ago the guest
 wrote against the reply target. Keys: J / K next and previous conversation, R reply,
-S suggest a reply, E close, A assign, ⌘↵ send. On a phone the list and the
+S suggest a reply, E close, A assign, ⌘↵ send; the single letters work only while focus is in
+the list or the conversation and never while typing, and a closed conversation shows Reopen
+right under its header. The composer clears its text only once the send succeeded and is
+disabled while it runs; a failed send keeps the text and says why. On a phone the list and the
 conversation are two screens.
 
 Thread list rows show: guest name, channel badge, last message preview, unread
@@ -140,7 +144,9 @@ internal note to a guest.** Therefore:
   a breach report.
 - **"No reply needed"** on Booking.com threads is a first-class action, because it
   protects the response-time score without a fake reply.
-- **Snooze**, **tag**, **close** and **reopen**, with reasons recorded.
+- **Snooze**, **tag**, **close** and **reopen**, with reasons recorded. Snooze offers
+  "Tomorrow, 09:00" and the coming Monday at 09:00, or a typed time, all in the property's
+  time zone (as is an Airbnb request's respond-by deadline).
 
 ## 9.5 Automation
 

@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button, Card, EmptyState, PageTitle, Select } from "@/components/ui";
+import { Button, Card, EmptyState, LinkButton, PageHeader, Select } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { RequestCard } from "./request-card";
 import { listRequests } from "./requests.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("inbox");
+  return { title: t("requests") };
+}
 
 /** Airbnb requests waiting on the host (spec 09 §9.8): inquiries, reservation requests, alterations, oldest deadline first. */
 export default async function RequestsPage({
@@ -17,10 +22,15 @@ export default async function RequestsPage({
     listRequests({ state: sp.state === "all" ? "all" : "open", propertyId: sp.property ?? null }),
   );
   return (
-    <div className="space-y-4">
-      <PageTitle>{t("requests")}</PageTitle>
-      <form className="flex flex-wrap gap-2 text-xs">
-        <Select name="property" defaultValue={sp.property ?? ""} size="sm">
+    <div className="flex flex-col gap-5">
+      <PageHeader title={t("requests")} description={t("noRequestsHint")} />
+      <form className="flex flex-wrap items-end gap-2 text-xs">
+        <Select
+          name="property"
+          defaultValue={sp.property ?? ""}
+          size="sm"
+          aria-label={t("propertyFilter")}
+        >
           <option value="">{t("allProperties")}</option>
           {properties.map((p) => (
             <option key={p.id} value={p.id}>
@@ -28,7 +38,12 @@ export default async function RequestsPage({
             </option>
           ))}
         </Select>
-        <Select name="state" defaultValue={sp.state ?? "open"} size="sm">
+        <Select
+          name="state"
+          defaultValue={sp.state ?? "open"}
+          size="sm"
+          aria-label={t("requestStateFilter")}
+        >
           <option value="open">{t("requestStates.open")}</option>
           <option value="all">{t("anyState")}</option>
         </Select>
@@ -37,7 +52,17 @@ export default async function RequestsPage({
         </Button>
       </form>
       {rows.length === 0 ? (
-        <EmptyState title={t("noRequests")} description={t("noRequestsHint")} />
+        <EmptyState
+          title={t("noRequests")}
+          description={sp.state === "all" ? undefined : t("noRequestsOpenHint")}
+          action={
+            sp.state === "all" ? null : (
+              <LinkButton href="/reservations/requests?state=all" variant="secondary" size="sm">
+                {t("showAllRequests")}
+              </LinkButton>
+            )
+          }
+        />
       ) : (
         <Card contentClassName="flex flex-col gap-3">
           {rows.map((r) => (

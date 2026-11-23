@@ -307,7 +307,8 @@
     "export": "addNoteAction",
     "kind": "action",
     "wrapper": "withPermission",
-    "permission": "message:read"
+    "permission": "message:read",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
@@ -449,6 +450,14 @@
     "kind": "action",
     "wrapper": "withPermission",
     "permission": "message:send"
+  },
+  {
+    "file": "src/app/(console)/inbox/inbox.actions.ts",
+    "export": "sendReplyFormAction",
+    "kind": "action",
+    "wrapper": "withPermission",
+    "permission": "message:send",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/inbox/inbox.actions.ts",
@@ -1231,7 +1240,8 @@
     "export": "changeDatesAction",
     "kind": "action",
     "wrapper": "withPermission",
-    "permission": "booking:modify"
+    "permission": "booking:modify",
+    "scope": "property"
   },
   {
     "file": "src/app/(console)/reservations/reservations.actions.ts",

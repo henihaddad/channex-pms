@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import {
   autoAssign,
@@ -8,6 +9,7 @@ import {
   checkSellable,
   directBookingChange,
   Id,
+  Money,
   planPayments,
   splitFullName,
   spreadTotal,
@@ -42,6 +44,8 @@ import {
 } from "@/server/reservations";
 import { container } from "@/server/container";
 import { HttpProblem } from "@/server/errors";
+import { dayMonth } from "@/lib/format";
+import { groupSellReasons } from "./sell-reasons";
 
 /** Property scope comes from the form (no database round trip before the transaction); the handler verifies the booking belongs to it. */
 const bookingScope = {
@@ -61,6 +65,39 @@ async function assertBookingInProperty(ctx: ActorCtx, fd: FormData): Promise<str
 const reservations = (ctx: ActorCtx, c: Awaited<ReturnType<typeof container>>) =>
   new DrizzleReservationRepository(ctx.tx, ctx.orgId, c.crypto);
 
+/** The sellability check's reasons in the host's language, one sentence per kind. */
+async function sellReasonWords(ctx: ActorCtx, reasons: readonly string[]): Promise<string[]> {
+  if (reasons.length === 0) return [];
+  const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.sellReasons" });
+  return groupSellReasons(reasons).map((r) =>
+    r.kind === "other"
+      ? r.raw
+      : t(r.kind, {
+          dates: r.dates.map((d) => dayMonth(d, ctx.locale)).join(", "),
+          n: r.n ?? 0,
+        }),
+  );
+}
+
+/** "375", "375.5", "375,50" in the currency's own decimals → minor units, exactly; null if not an amount. */
+function parseAmount(text: string, currency: string): number | null {
+  const clean = text.trim().replace(/\s/g, "").replace(",", ".");
+  if (!/^\d+(\.\d+)?$/.test(clean)) return null;
+  try {
+    return Money.parse(clean, currency).minor;
+  } catch {
+    return null;
+  }
+}
+
+async function bookingCurrency(ctx: ActorCtx, bookingId: string): Promise<string> {
+  const [b] = await rawRows<{ currency: string }>(
+    ctx.tx,
+    sql`select currency from booking where id = ${bookingId}`,
+  );
+  return b?.currency ?? "EUR";
+}
+
 export const listReservations = withPermission<
   [ReservationFilters],
   {
@@ -71,6 +108,8 @@ export const listReservations = withPermission<
     /** Property-local today, for "arrives in 11 days". */
     today: string;
     views: Array<{ id: string; name: string; filters: Record<string, unknown> }>;
+    /** The channels this organization has reservations from, for the channel filter. */
+    channels: string[];
   }
 >("booking:read", { scope: "organization", audit: false }, async (ctx, filters) => {
   const c = await container();
@@ -81,6 +120,12 @@ export const listReservations = withPermission<
     pills: await repo.pillCounts(today),
     today,
     views: await repo.savedViews(ctx.userId, "reservations"),
+    channels: (
+      await rawRows<{ ota_name: string }>(
+        ctx.tx,
+        sql`select distinct ota_name from booking where ota_name is not null and ota_name <> '' order by ota_name`,
+      )
+    ).map((r) => r.ota_name),
   };
 });
 
@@ -490,9 +535,15 @@ export const addChargeAction = withPermission<[FormData], void>(
   "charge:create",
   { ...bookingScope, subject: (fd) => ({ kind: "folio", id: String(fd.get("folioId")) }) },
   async (ctx, fd) => {
-    await assertBookingInProperty(ctx, fd);
-    const amount = Math.round(Number(fd.get("amount")) * 100);
-    if (!Number.isFinite(amount)) throw new HttpProblem(422, "invalid", "amount must be a number");
+    const bookingId = await assertBookingInProperty(ctx, fd);
+    const amount = parseAmount(
+      String(fd.get("amount") ?? ""),
+      await bookingCurrency(ctx, bookingId),
+    );
+    if (amount === null) {
+      const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.errors" });
+      throw new HttpProblem(422, "invalid", t("amount"));
+    }
     await new DrizzleBillingRepository(ctx.tx, ctx.orgId).addLine(
       String(fd.get("folioId")),
       {
@@ -511,8 +562,15 @@ export const addPaymentAction = withPermission<[FormData], void>(
   "payment:capture",
   { ...bookingScope, subject: (fd) => ({ kind: "folio", id: String(fd.get("folioId")) }) },
   async (ctx, fd) => {
-    await assertBookingInProperty(ctx, fd);
-    const amount = Math.round(Number(fd.get("amount")) * 100);
+    const bookingId = await assertBookingInProperty(ctx, fd);
+    const amount = parseAmount(
+      String(fd.get("amount") ?? ""),
+      await bookingCurrency(ctx, bookingId),
+    );
+    if (amount === null) {
+      const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.errors" });
+      throw new HttpProblem(422, "invalid", t("amount"));
+    }
     await new DrizzleBillingRepository(ctx.tx, ctx.orgId).addPayment(
       String(fd.get("folioId")),
       {
@@ -537,7 +595,10 @@ export const settlePaymentAction = withPermission<[FormData], void>(
   async (ctx, fd) => {
     await assertBookingInProperty(ctx, fd);
     const reason = String(fd.get("reason") || "").trim();
-    if (!reason) throw new HttpProblem(422, "reason_required", "a reason is required");
+    if (!reason) {
+      const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.errors" });
+      throw new HttpProblem(422, "reason_required", t("reason"));
+    }
     await new DrizzleBillingRepository(ctx.tx, ctx.orgId).setPaymentState(
       String(fd.get("paymentId")),
       String(fd.get("state")) as never,
@@ -594,8 +655,11 @@ export const resolveUnmappedAction = withPermission<[FormData], void>(
     await assertBookingInProperty(ctx, fd);
     const c = await container();
     const bookingId = String(fd.get("bookingId"));
-    const roomTypeId = String(fd.get("roomTypeId"));
-    await reservations(ctx, c).resolveMapping(bookingId, roomTypeId, String(fd.get("ratePlanId")));
+    // the room and rate the host picked in the list ("roomTypeId|ratePlanId"), else the top suggestion
+    const [pickedRoom, pickedRate] = String(fd.get("pick") ?? "").split("|");
+    const roomTypeId = pickedRoom || String(fd.get("roomTypeId"));
+    const ratePlanId = (pickedRoom && pickedRate) || String(fd.get("ratePlanId"));
+    await reservations(ctx, c).resolveMapping(bookingId, roomTypeId, ratePlanId);
     const d = (await reservations(ctx, c).detail(bookingId))!;
     await recomputeAvailability(
       ctx.tx,
@@ -641,6 +705,8 @@ export interface StaffBookingState {
   error?: string;
   bookingId?: string;
   reasons?: string[];
+  /** Per field, in the host's language, for the field's own error line. */
+  fieldErrors?: Partial<Record<string, string>>;
 }
 
 export interface StaffQuote {
@@ -695,7 +761,7 @@ export const quoteStaffBookingAction = withPermission<
     }).filter((x) => x.dueOn <= today);
     return {
       ok: check.ok,
-      reasons: check.reasons,
+      reasons: await sellReasonWords(ctx, check.reasons),
       currency,
       nights: Object.keys(nightly).length,
       totalMinor,
@@ -726,25 +792,44 @@ export const createStaffBookingAction = withPermission<
     redact: ["email", "phone", "fullName", "name", "surname", "note"],
   },
   async (ctx, _prev, fd) => {
+    const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.errors" });
     const p = staffSchema.safeParse(Object.fromEntries(fd.entries()));
-    if (!p.success)
-      return { error: p.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") };
+    if (!p.success) {
+      // never "adults: Number must be greater than or equal to 1": say it per field, in words
+      const fieldErrors: Record<string, string> = {};
+      for (const i of p.error.issues) {
+        const field = String(i.path[0] ?? "");
+        fieldErrors[field] ??= t.has(`fields.${field}`) ? t(`fields.${field}`) : t("fields.other");
+      }
+      return { error: t("checkFields"), fieldErrors };
+    }
     const input = p.data;
+    if (input.arrivalDate >= input.departureDate)
+      return { error: t("checkFields"), fieldErrors: { departureDate: t("fields.departureDate") } };
     const who = input.fullName
       ? splitFullName(input.fullName)
       : input.name && input.surname
         ? { name: input.name, surname: input.surname }
         : null;
-    if (!who) return { error: "Write the guest's full name: first name and surname." };
-    const totalMinor = input.total?.trim() ? Math.round(Number(input.total) * 100) : null;
-    if (totalMinor !== null && (!Number.isFinite(totalMinor) || totalMinor < 0))
-      return { error: "The total must be an amount, like 375.00." };
+    if (!who) return { error: t("checkFields"), fieldErrors: { fullName: t("fields.fullName") } };
+    const [prop] = await rawRows<{ currency: string }>(
+      ctx.tx,
+      sql`select currency from property where id = ${input.propertyId}`,
+    );
+    const totalMinor = input.total?.trim()
+      ? parseAmount(input.total, prop?.currency ?? "EUR")
+      : null;
+    if (input.total?.trim() && totalMinor === null)
+      return { error: t("checkFields"), fieldErrors: { total: t("fields.total") } };
     const r = await createStaffBooking(ctx, {
       ...input,
       guest: who,
       totalMinor,
     });
-    if (!r.ok) return { error: r.error, reasons: r.reasons };
+    if (!r.ok)
+      return r.reasons.length > 0
+        ? { error: t("notAvailable"), reasons: await sellReasonWords(ctx, r.reasons) }
+        : { error: t("notCreated") };
     const id = r.bookingId;
     revalidatePath("/reservations");
     return { bookingId: id };
@@ -777,20 +862,37 @@ export const findReturningGuestsAction = withPermission<[{ q: string }], Returni
  * as free for itself, new nights are priced from the rate plan, kept nights keep their price.
  * OTA bookings are modified at the OTA.
  */
-export const changeDatesAction = withPermission<[FormData], void>(
+export interface ChangeDatesState {
+  ok?: boolean;
+  error?: string;
+  reasons?: string[];
+}
+
+export const changeDatesAction = withPermission<[ChangeDatesState, FormData], ChangeDatesState>(
   "booking:modify",
-  { ...bookingScope, subject: (fd) => ({ kind: "booking", id: String(fd.get("bookingId")) }) },
-  async (ctx, fd) => {
+  {
+    scope: "property",
+    resolveScope: (_p, fd) => bookingScope.resolveScope(fd),
+    subject: (_p, fd) => ({ kind: "booking", id: String(fd.get("bookingId")) }),
+    auditInput: (_p, fd) => ({
+      bookingId: fd.get("bookingId"),
+      arrivalDate: fd.get("arrivalDate"),
+      departureDate: fd.get("departureDate"),
+    }),
+  },
+  async (ctx, _prev, fd) => {
+    const t = await getTranslations({ locale: ctx.locale, namespace: "reservations.errors" });
     const bookingId = await assertBookingInProperty(ctx, fd);
     const c = await container();
     const d = (await reservations(ctx, c).detail(bookingId))!;
-    if (!DIRECT_SOURCES.includes(d.otaName ?? ""))
-      throw new HttpProblem(409, "ota_booking", "OTA bookings are modified at the OTA");
+    if (!DIRECT_SOURCES.includes(d.otaName ?? "")) return { error: t("channelBooking") };
     const arrivalDate = String(fd.get("arrivalDate"));
     const departureDate = String(fd.get("departureDate"));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(arrivalDate) || !/^\d{4}-\d{2}-\d{2}$/.test(departureDate))
+      return { error: t("fields.arrivalDate") };
+    if (arrivalDate >= departureDate) return { error: t("fields.departureDate") };
     const room = d.rooms[0];
-    if (!room?.roomTypeId || !room.ratePlanId)
-      throw new HttpProblem(409, "unmapped", "Give the booking a room first");
+    if (!room?.roomTypeId || !room.ratePlanId) return { error: t("needsRoom") };
     const held = new Set(room.days.map((x) => x.date));
     const avail = await new DrizzleAriStore(ctx.tx).loadDesired(
       d.propertyId,
@@ -811,7 +913,8 @@ export const changeDatesAction = withPermission<[FormData], void>(
           .map((a) => [a.date, a.availability + (held.has(a.date) ? 1 : 0)]),
       ),
     });
-    if (!check.ok) throw new HttpProblem(422, "not_sellable", check.reasons.join("; "));
+    if (!check.ok)
+      return { error: t("datesNotAvailable"), reasons: await sellReasonWords(ctx, check.reasons) };
     const kept = Object.fromEntries(
       room.days.filter((x) => x.date in check.nightly).map((x) => [x.date, Number(x.amountMinor)]),
     );
@@ -834,6 +937,7 @@ export const changeDatesAction = withPermission<[FormData], void>(
       ),
     );
     revalidatePath(`/reservations/${bookingId}`);
+    return { ok: true };
   },
 );
 

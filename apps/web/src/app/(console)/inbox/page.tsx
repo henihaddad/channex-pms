@@ -11,10 +11,12 @@ import {
   LinkButton,
   PageHeader,
   Select,
+  SubmitButton,
   cn,
 } from "@/components/ui";
 import { channelLabel, clock, dayMonth, elapsed, nightsBetween } from "@/lib/format";
 import { InboxKeys } from "./inbox-keys";
+import { presetDate, SNOOZE_TIME } from "./snooze";
 import { guard } from "@/server/guard";
 import { providerLabel } from "@/server/inbox";
 import { RequestCard } from "../reservations/requests/request-card";
@@ -29,6 +31,11 @@ import {
   snoozeThreadAction,
   tagThreadAction,
 } from "./inbox.actions";
+
+export async function generateMetadata() {
+  const t = await getTranslations("inbox");
+  return { title: t("title") };
+}
 
 const VIEWS: InboxView[] = [
   "needs_reply",
@@ -60,17 +67,20 @@ export default async function InboxPage({
   const t = await getTranslations("inbox");
   const tg = await getTranslations("guides");
   const locale = await getLocale();
-  const listing = await guard(() =>
-    listInbox({
-      view: sp.view,
-      propertyId: sp.property ?? null,
-      provider: sp.provider ?? null,
-      q: sp.q ?? null,
-    }),
-  );
-  const open = sp.thread ? await guard(() => loadThread({ threadId: sp.thread! })) : null;
-  // CXMSG-1: a property whose channel manager has no Messages app is named here, never a silent empty inbox
-  const gaps = await guard(() => messagingGaps());
+  // three independent reads, three transactions: run them together, not one after the other
+  const [listing, open, gaps] = await Promise.all([
+    guard(() =>
+      listInbox({
+        view: sp.view,
+        propertyId: sp.property ?? null,
+        provider: sp.provider ?? null,
+        q: sp.q ?? null,
+      }),
+    ),
+    sp.thread ? guard(() => loadThread({ threadId: sp.thread! })) : Promise.resolve(null),
+    // CXMSG-1: a property whose channel manager has no Messages app is named here, never a silent empty inbox
+    guard(() => messagingGaps()),
+  ]);
   const keep = `${sp.property ? `&property=${sp.property}` : ""}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ""}`;
   const qs = (view: string) =>
     `/inbox?view=${view}${keep}${sp.thread ? `&thread=${sp.thread}` : ""}`;
@@ -95,7 +105,7 @@ export default async function InboxPage({
   };
   const when = (iso: string | null) => {
     if (!iso) return "";
-    if (iso.slice(0, 10) === today) return elapsed(iso);
+    if (iso.slice(0, 10) === today) return elapsed(iso, new Date(), locale);
     const y = new Date(`${today}T00:00:00Z`);
     y.setUTCDate(y.getUTCDate() - 1);
     return iso.slice(0, 10) === y.toISOString().slice(0, 10)
@@ -109,7 +119,7 @@ export default async function InboxPage({
         ? "bg-foreground text-background"
         : tone === "amber"
           ? "bg-warning-soft text-warning-soft-foreground"
-          : "border border-[#d5d9d7] text-muted hover:text-foreground",
+          : "border border-border-control text-muted hover:text-foreground",
     );
   const openRow = open ? listing.rows.find((r) => r.id === open.detail.id) : undefined;
   const booking = open?.detail.booking ?? null;
@@ -118,6 +128,27 @@ export default async function InboxPage({
         .reverse()
         .find((m) => m.kind === "guest_message" && m.direction === "inbound")
     : undefined;
+  /** "Tue 24 Nov, 09:00" in the property's time zone. */
+  const zoned = (iso: string, timeZone: string) =>
+    `${new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone,
+    }).format(new Date(iso))}, ${clock(iso, timeZone, locale)}`;
+  const slaText = (sla: { breached: boolean; remainingMinutes: number | null }) => {
+    if (sla.breached) return t("slaBreached");
+    const m = sla.remainingMinutes ?? 0;
+    return m >= 60
+      ? t("slaLeftHours", { hours: Math.floor(m / 60) })
+      : t("slaLeft", { minutes: m });
+  };
+  const searching = Boolean(sp.q || sp.property);
+  const weekdayOf = (iso: string) =>
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+      weekday: "long",
+      timeZone: "UTC",
+    }).format(new Date(`${iso}T12:00:00Z`));
 
   if (listing.counts.open === 0 && listing.rows.length === 0 && !sp.q && !sp.property)
     return (
@@ -165,9 +196,13 @@ export default async function InboxPage({
       <div className="grid gap-5 lg:min-h-[720px] lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <section
           className={cn(
-            "flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface",
+            "flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface outline-none",
             open ? "hidden lg:flex" : "",
           )}
+          aria-label={t("listRegion")}
+          // clicking anywhere in the list focuses it, so the single-letter keys apply here only
+          tabIndex={-1}
+          data-inbox-region
         >
           <nav
             className="flex items-center gap-1.5 border-b border-default px-3.5 py-3"
@@ -195,20 +230,21 @@ export default async function InboxPage({
               <summary
                 className={cn(
                   "grid h-8 w-8 cursor-pointer list-none place-items-center rounded-full text-sm [&::-webkit-details-marker]:hidden",
-                  !FRONT.includes(listing.view) || sp.property || sp.q
+                  !FRONT.includes(listing.view)
                     ? "bg-foreground text-background"
-                    : "border border-[#d5d9d7] text-muted hover:text-foreground",
+                    : "border border-border-control text-muted hover:text-foreground",
                 )}
-                aria-label={t("more")}
-                title={t("more")}
+                aria-label={t("moreViews")}
+                title={t("moreViews")}
               >
-                ⋯
+                <span aria-hidden="true">⋯</span>
               </summary>
               <div className="absolute end-0 top-full z-20 mt-1 flex w-64 flex-col gap-1 rounded-xl border border-border bg-surface p-2 shadow-float">
                 {VIEWS.filter((v) => !FRONT.includes(v)).map((v) => (
                   <Link
                     key={v}
                     href={qs(v)}
+                    aria-current={listing.view === v ? "true" : undefined}
                     className={cn(
                       "rounded-lg px-2.5 py-1.5 text-sm hover:bg-default",
                       listing.view === v ? "font-semibold text-foreground" : "text-muted",
@@ -217,43 +253,64 @@ export default async function InboxPage({
                     {t(`views.${v}`)}
                   </Link>
                 ))}
-                <form className="mt-1 flex flex-col gap-2 border-t border-border pt-2">
-                  <input type="hidden" name="view" value={listing.view} />
-                  <Select
-                    name="property"
-                    defaultValue={sp.property ?? ""}
-                    aria-label={t("allProperties")}
-                    size="sm"
-                  >
-                    <option value="">{t("allProperties")}</option>
-                    {listing.properties.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    name="q"
-                    defaultValue={sp.q ?? ""}
-                    placeholder={t("search")}
-                    aria-label={t("search")}
-                    variant="secondary"
-                  />
-                  <Button type="submit" variant="secondary" size="sm" fullWidth>
-                    {t("filter")}
-                  </Button>
-                </form>
               </div>
             </details>
           </nav>
+          <form
+            role="search"
+            className="flex flex-wrap items-center gap-2 border-b border-default px-3.5 py-2.5"
+            data-testid="inbox-search"
+          >
+            <input type="hidden" name="view" value={listing.view} />
+            <Input
+              type="search"
+              name="q"
+              defaultValue={sp.q ?? ""}
+              placeholder={t("search")}
+              aria-label={t("searchLabel")}
+              variant="secondary"
+              className="h-8 min-w-0 flex-1 text-[13px]"
+            />
+            {listing.properties.length > 1 ? (
+              <Select
+                name="property"
+                defaultValue={sp.property ?? ""}
+                aria-label={t("propertyFilter")}
+                size="sm"
+                className="w-40"
+              >
+                <option value="">{t("allProperties")}</option>
+                {listing.properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
+            <Button type="submit" variant="secondary" size="sm">
+              {t("filter")}
+            </Button>
+            {searching ? (
+              <Link
+                href={`/inbox?view=${listing.view}`}
+                className="text-xs font-semibold text-muted hover:text-foreground"
+              >
+                {t("clearSearch")}
+              </Link>
+            ) : null}
+          </form>
           {listing.rows.length === 0 ? (
             <EmptyState
               title={t("viewEmptyTitle")}
               description={t("viewEmpty", { view: t(`views.${listing.view}`) })}
               className="px-4"
               action={
-                <LinkButton href="/inbox?view=all" variant="secondary" size="sm">
-                  {t("showAll")}
+                <LinkButton
+                  href={searching ? `/inbox?view=${listing.view}` : "/inbox?view=all"}
+                  variant="secondary"
+                  size="sm"
+                >
+                  {searching ? t("clearSearch") : t("showAll")}
                 </LinkButton>
               }
             />
@@ -270,8 +327,7 @@ export default async function InboxPage({
                     href={`/inbox?view=${listing.view}&thread=${r.id}${keep}`}
                     className={cn(
                       "block border-b border-default border-s-[3px] px-4 py-3.5 transition-colors hover:bg-surface-secondary",
-                      selected ? "border-s-accent bg-[#f0faf8]" : "border-s-transparent",
-                      !r.sla.needsReply && r.unreadCount === 0 && !selected ? "opacity-75" : "",
+                      selected ? "border-s-accent bg-selected" : "border-s-transparent",
                     )}
                     aria-current={selected ? "true" : undefined}
                     data-testid="thread-row"
@@ -288,29 +344,30 @@ export default async function InboxPage({
                           {r.guestName}
                         </strong>
                         {r.unreadCount > 0 ? (
-                          <span
-                            className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground"
-                            data-testid="unread"
-                          >
-                            {r.unreadCount}
-                          </span>
+                          <>
+                            <span
+                              className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground"
+                              data-testid="unread"
+                              aria-hidden="true"
+                            >
+                              {r.unreadCount}
+                            </span>
+                            <span className="sr-only">
+                              {t("unreadCount", { n: r.unreadCount })}
+                            </span>
+                          </>
                         ) : null}
                       </span>
                       {r.sla.needsReply ? (
                         <span
-                          className={cn(
-                            "shrink-0 text-xs",
-                            r.sla.breached
-                              ? "font-semibold text-warning-soft-foreground"
-                              : "text-muted",
-                          )}
+                          className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted"
                           data-testid="sla-chip"
-                          title={
-                            r.sla.breached
-                              ? t("slaBreached")
-                              : t("slaLeft", { minutes: r.sla.remainingMinutes ?? 0 })
-                          }
+                          data-breached={r.sla.breached ? "1" : "0"}
                         >
+                          {/* the target in words, not only in amber (WCAG 1.4.1) */}
+                          <Chip size="sm" color={r.sla.breached ? "warning" : "default"}>
+                            {slaText(r.sla)}
+                          </Chip>
                           {when(r.lastInboundAt)}
                         </span>
                       ) : (
@@ -353,8 +410,11 @@ export default async function InboxPage({
 
         {open ? (
           <section
-            className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface"
+            className="flex min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface outline-none"
             data-testid="conversation"
+            aria-label={t("threadRegion", { name: open.detail.guestName })}
+            tabIndex={-1}
+            data-inbox-region
           >
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-default px-5 py-4">
               <div className="min-w-0">
@@ -376,7 +436,7 @@ export default async function InboxPage({
                     booking
                       ? `${dayMonth(booking.arrivalDate, locale)}–${dayMonth(booking.departureDate, locale)} · ${t("nightsCount", { n: nightsBetween(booking.arrivalDate, booking.departureDate) })}`
                       : t("inquiry"),
-                    `${t("via")} ${channelLabel(providerLabel(open.detail.provider))}`,
+                    t("viaChannel", { channel: channelLabel(providerLabel(open.detail.provider)) }),
                   ].join(" · ")}
                 </p>
               </div>
@@ -387,7 +447,7 @@ export default async function InboxPage({
                   </LinkButton>
                 ) : null}
                 <details className="relative" data-assign>
-                  <summary className="inline-flex h-8 cursor-pointer list-none items-center rounded-full border border-[#d5d9d7] px-3 text-[13px] font-semibold [&::-webkit-details-marker]:hidden">
+                  <summary className="inline-flex h-8 cursor-pointer list-none items-center rounded-full border border-border-control px-3 text-[13px] font-semibold [&::-webkit-details-marker]:hidden">
                     {open.detail.assigneeId
                       ? (open.users.find((u) => u.id === open.detail.assigneeId)?.name ??
                         t("assign"))
@@ -413,17 +473,18 @@ export default async function InboxPage({
                         </option>
                       ))}
                     </Select>
-                    <Button type="submit" size="sm" variant="primary">
+                    <SubmitButton size="sm" variant="primary">
                       {t("assign")}
-                    </Button>
+                    </SubmitButton>
                   </form>
                 </details>
                 <details className="relative">
                   <summary
-                    className="inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-[#d5d9d7] text-sm [&::-webkit-details-marker]:hidden"
-                    aria-label={t("more")}
+                    className="inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-border-control text-sm [&::-webkit-details-marker]:hidden"
+                    aria-label={t("threadTools")}
+                    title={t("threadTools")}
                   >
-                    ⋯
+                    <span aria-hidden="true">⋯</span>
                   </summary>
                   <div className="absolute end-0 top-full z-20 mt-1 flex w-72 flex-col gap-2 rounded-xl border border-border bg-surface p-3 shadow-float">
                     {open.detail.state === "open" ? (
@@ -432,27 +493,17 @@ export default async function InboxPage({
                           {hidden(open.detail.id, open.detail.propertyId)}
                           <input type="hidden" name="state" value="closed" />
                           <input type="hidden" name="reason" value="resolved" />
-                          <Button
-                            type="submit"
-                            variant="secondary"
-                            size="sm"
-                            data-testid="close-thread"
-                          >
+                          <SubmitButton variant="secondary" size="sm" testId="close-thread">
                             {t("close")}
-                          </Button>
+                          </SubmitButton>
                         </form>
                         {open.capabilities.noReplyNeeded ? (
                           <form action={setThreadStateAction}>
                             {hidden(open.detail.id, open.detail.propertyId)}
                             <input type="hidden" name="state" value="no_reply_needed" />
-                            <Button
-                              type="submit"
-                              variant="secondary"
-                              size="sm"
-                              data-testid="no-reply-needed"
-                            >
+                            <SubmitButton variant="secondary" size="sm" testId="no-reply-needed">
                               {t("noReplyNeeded")}
-                            </Button>
+                            </SubmitButton>
                           </form>
                         ) : null}
                       </div>
@@ -460,23 +511,51 @@ export default async function InboxPage({
                       <form action={setThreadStateAction}>
                         {hidden(open.detail.id, open.detail.propertyId)}
                         <input type="hidden" name="state" value="open" />
-                        <Button type="submit" variant="secondary" size="sm">
+                        <SubmitButton variant="secondary" size="sm" testId="reopen-thread">
                           {t("reopen")}
-                        </Button>
+                        </SubmitButton>
                       </form>
                     )}
-                    <form action={snoozeThreadAction} className="flex items-end gap-2">
+                    <form action={snoozeThreadAction} className="flex flex-col gap-2">
                       {hidden(open.detail.id, open.detail.propertyId)}
-                      <Input
-                        type="datetime-local"
-                        name="until"
-                        aria-label={t("snooze")}
-                        className="min-w-0 flex-1"
-                        variant="secondary"
-                      />
-                      <Button type="submit" variant="secondary" size="sm">
-                        {t("snooze")}
-                      </Button>
+                      <p className="text-xs font-semibold">
+                        {t("snooze")}{" "}
+                        <span className="font-normal text-muted">
+                          · {t("snoozeZone", { zone: open.timeZone })}
+                        </span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(["tomorrow", "next_week"] as const).map((preset) => {
+                          const date = presetDate(preset, new Date(), open.timeZone);
+                          return (
+                            <SubmitButton
+                              key={preset}
+                              name="preset"
+                              value={preset}
+                              variant="secondary"
+                              size="sm"
+                              testId={`snooze-${preset}`}
+                            >
+                              {t(`snoozePresets.${preset}`, {
+                                day: weekdayOf(date),
+                                time: SNOOZE_TIME,
+                              })}
+                            </SubmitButton>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <Input
+                          type="datetime-local"
+                          name="until"
+                          aria-label={t("snoozeCustom", { zone: open.timeZone })}
+                          className="h-8 min-w-0 flex-1 text-xs"
+                          variant="secondary"
+                        />
+                        <SubmitButton variant="secondary" size="sm">
+                          {t("snooze")}
+                        </SubmitButton>
+                      </div>
                     </form>
                     <form action={tagThreadAction} className="flex items-end gap-2">
                       {hidden(open.detail.id, open.detail.propertyId)}
@@ -488,20 +567,36 @@ export default async function InboxPage({
                         className="min-w-0 flex-1"
                         variant="secondary"
                       />
-                      <Button type="submit" variant="secondary" size="sm">
+                      <SubmitButton variant="secondary" size="sm">
                         {t("tag")}
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </details>
               </div>
             </header>
+            {open.detail.state !== "open" ? (
+              // closing (E) is one click to undo, right where it happened
+              <div
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-default bg-surface-secondary px-5 py-2.5 text-[13px]"
+                data-testid="thread-closed"
+              >
+                <span>{t("closedBanner", { state: t(`states.${open.detail.state}`) })}</span>
+                <form action={setThreadStateAction}>
+                  {hidden(open.detail.id, open.detail.propertyId)}
+                  <input type="hidden" name="state" value="open" />
+                  <SubmitButton variant="secondary" size="sm" testId="undo-close">
+                    {t("reopen")}
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : null}
             <div
               className="scrollbar flex flex-1 flex-col gap-3.5 overflow-y-auto p-5 lg:max-h-[52vh]"
               data-testid="messages"
             >
               {open.request ? (
-                <RequestCard r={open.request} compact />
+                <RequestCard r={open.request} compact timeZone={open.timeZone} />
               ) : open.inquiry ? (
                 <div
                   className="rounded-2xl bg-accent-soft px-3 py-2 text-xs text-accent-soft-foreground"
@@ -511,13 +606,12 @@ export default async function InboxPage({
                   <p>
                     {open.inquiry.checkIn ? dayMonth(open.inquiry.checkIn, locale) : "?"} →{" "}
                     {open.inquiry.checkOut ? dayMonth(open.inquiry.checkOut, locale) : "?"} ·{" "}
-                    {open.inquiry.guests ?? "?"} {t("guests")}
+                    {t("guestsCount", { n: open.inquiry.guests ?? 0 })}
                     {open.inquiry.priceText ? ` · ${open.inquiry.priceText}` : ""}
                   </p>
                   {open.inquiry.deadline ? (
                     <p className="text-danger">
-                      {t("respondBy")} {dayMonth(open.inquiry.deadline, locale)}{" "}
-                      {clock(open.inquiry.deadline)}
+                      {t("respondByAt", { when: zoned(open.inquiry.deadline, open.timeZone) })}
                     </p>
                   ) : null}
                 </div>
@@ -558,7 +652,7 @@ export default async function InboxPage({
                     <span
                       className={cn(
                         "mt-1 block text-[11px]",
-                        out && !note ? "text-[#c6e8e3]" : "text-muted",
+                        out && !note ? "text-white/80" : "text-muted",
                       )}
                     >
                       {author} · {when(m.sentAt)}
@@ -570,9 +664,9 @@ export default async function InboxPage({
                       <form action={retryMessageAction} className="mt-1.5 flex items-center gap-2">
                         {hidden(open.detail.id, open.detail.propertyId)}
                         <input type="hidden" name="messageId" value={m.id} />
-                        <Button type="submit" variant="secondary" size="sm">
+                        <SubmitButton variant="secondary" size="sm">
                           {t("retry")}
-                        </Button>
+                        </SubmitButton>
                         {m.deliveryError ? (
                           <span className="text-xs">{m.deliveryError}</span>
                         ) : null}
@@ -591,7 +685,7 @@ export default async function InboxPage({
                   )}
                 >
                   {t("repliedAgo", {
-                    ago: elapsed(lastInbound.sentAt),
+                    ago: elapsed(lastInbound.sentAt, new Date(), locale),
                     target: DEFAULT_SLA.firstResponseMinutes,
                   })}
                 </span>
@@ -607,6 +701,7 @@ export default async function InboxPage({
             </div>
             <div className="border-t border-default px-5 pt-3.5 pb-4.5">
               <Composer
+                key={open.detail.id}
                 threadId={open.detail.id}
                 propertyId={open.detail.propertyId}
                 bookingId={open.detail.bookingId}
@@ -633,8 +728,14 @@ export default async function InboxPage({
                 labels={{
                   replyMode: t("replyMode"),
                   noteMode: t("noteMode"),
-                  sendTo: t("sendTo"),
+                  sendButton: t("sendToVia", {
+                    name: open.detail.guestName.split(" ")[0] ?? "",
+                    channel: providerLabel(open.detail.provider),
+                  }),
+                  sending: t("sending"),
+                  placeholder: t("writeTo", { name: open.detail.guestName.split(" ")[0] ?? "" }),
                   saveNote: t("saveNote"),
+                  savingNote: t("savingNote"),
                   template: t("template"),
                   preview: t("previewing"),
                   noteHint: t("noteHint"),
@@ -644,6 +745,7 @@ export default async function InboxPage({
                   suggesting: t("suggesting"),
                   draftedFromGuide: t("draftedFromGuide"),
                   draftedByModel: t("draftedByModel"),
+                  draftReady: t("draftReady"),
                   warnSensitive: t("warnSensitive"),
                   warnUnanswered: t("warnUnanswered"),
                   warnUnrecognised: t("warnUnrecognised"),

@@ -27,6 +27,11 @@ import { loadCheckinBoard, sendCheckinRemindersAction } from "./check-in.actions
  * reminders and the registration export one click away. Rows that still need something are
  * amber. Persona: `reservations_agent`.
  */
+export async function generateMetadata() {
+  const t = await getTranslations("reservations.checkin");
+  return { title: t("title") };
+}
+
 export default async function CheckInPage() {
   const t = await getTranslations("reservations.checkin");
   const tr = await getTranslations("reservations");

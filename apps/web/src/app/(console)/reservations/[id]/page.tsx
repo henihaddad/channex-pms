@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import {
@@ -12,10 +13,12 @@ import {
   Card,
   Checkbox,
   Chip,
-  DateInput,
+  ConfirmSubmit,
+  Description,
   Input,
   PageHeader,
   Select,
+  SubmitButton,
   cn,
   buttonClasses,
 } from "@/components/ui";
@@ -29,7 +32,6 @@ import {
   assignUnitAction,
   autoAssignAction,
   cancelDirectBookingAction,
-  changeDatesAction,
   loadBookingConversation,
   loadReservation,
   revokeCredentialAction,
@@ -39,6 +41,7 @@ import {
 import { BalanceChip, StatusChip, partyWords } from "../words";
 import { FolioOperations } from "./folio";
 import {
+  ChangeDatesForm,
   DoorCodeTile,
   GuestContact,
   InstrumentPanel,
@@ -48,6 +51,18 @@ import {
 } from "./panels";
 
 const DIRECT = ["direct", "staff", "phone", "walk_in"];
+
+/** One load per request: the title and the page read the same reservation (and one audit row). */
+const reservation = cache((id: string) => guard(() => loadReservation(id)));
+
+/** "Ana Silva · Reservation". */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const [t, v] = await Promise.all([getTranslations("reservations"), reservation(id)]);
+  const lead = v.detail.rooms[0]?.guestNames[0];
+  const name = lead ? `${lead.name} ${lead.surname}`.trim() : v.detail.otaReservationCode;
+  return { title: name ? `${name} · ${t("reservation")}` : t("reservation") };
+}
 
 /** "14–17 Nov", "30 Nov–2 Dec". */
 function range(a: string, d: string, locale: string): string {
@@ -64,14 +79,17 @@ function range(a: string, d: string, locale: string): string {
  */
 export default async function ReservationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await getTranslations("reservations");
-  const locale = await getLocale();
-  const v = await guard(() => loadReservation(id));
+  // the reservation and its conversation are separate reads: fetch them together
+  const [t, locale, v, convo] = await Promise.all([
+    getTranslations("reservations"),
+    getLocale(),
+    reservation(id),
+    // no `message:read` (or an impersonating operator): the card is left out, the page still works
+    loadBookingConversation(id).catch(() => undefined) as Promise<
+      BookingConversation | null | undefined
+    >,
+  ]);
   const d = v.detail;
-  // no `message:read` (or an impersonating operator): the card is left out, the page still works
-  const convo: BookingConversation | null | undefined = await loadBookingConversation(id).catch(
-    () => undefined,
-  );
   const ch = channelLook(d.otaName);
   const direct = DIRECT.includes(d.otaName ?? "");
   const lead = d.rooms[0]?.guestNames[0];
@@ -264,9 +282,9 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 {d.unacknowledged && d.lastRevisionId ? (
                   <form action={acknowledgeAction}>
                     {hidden({ revisionId: d.lastRevisionId })}
-                    <Button type="submit" variant="soft" size="sm" data-testid="acknowledge">
+                    <SubmitButton variant="soft" size="sm" testId="acknowledge">
                       {t("acknowledgeChange")}
-                    </Button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </div>
@@ -310,7 +328,15 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                     reveal: t("reveal"),
                     notIssued: t("tiles.notIssued"),
                     validity: t("tiles.validity", { from: "{from}", to: "{to}" }),
+                    kind: t("tiles.accessKind"),
+                    kinds: {
+                      door_code: t("rooms.credential.door_code"),
+                      smart_lock: t("rooms.credential.smart_lock"),
+                      lockbox: t("rooms.credential.lockbox"),
+                      key_handover: t("rooms.credential.key_handover"),
+                    },
                   }}
+                  locale={locale}
                 />
               </div>
             </div>
@@ -360,7 +386,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
               ) : null}
               {d.financials.withheldTaxesMinor > 0 ? (
                 <div className="flex justify-between border-b border-border/70 py-2.5 text-muted">
-                  <dt>{t("withheldTaxes")}</dt>
+                  <dt>{t("withheldTaxes", { channel: ch.label })}</dt>
                   <dd className="tabular-nums">−{cur(d.financials.withheldTaxesMinor)}</dd>
                 </div>
               ) : null}
@@ -418,6 +444,12 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 bookingId={d.id}
                 count={d.instruments.length}
                 label={t("revealInstrument")}
+                currency={d.currency}
+                locale={locale}
+                words={{
+                  expires: t("instrument.expires", { expiry: "{expiry}" }),
+                  vcc: t("instrument.vcc", { amount: "{amount}", date: "{date}" }),
+                }}
               />
             </div>
             <details id="folio" className="group mt-1 border-t border-border pt-3">
@@ -494,10 +526,12 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                     name="body"
                     required
                     placeholder={t("conversation.replyTo", { name: firstName, channel: ch.label })}
-                    aria-label={t("conversation.reply")}
+                    aria-label={t("conversation.replyNamed", { name: firstName })}
                     className="flex-1"
                   />
-                  <Button type="submit">{t("conversation.send")}</Button>
+                  <SubmitButton pendingLabel={t("conversation.sending")}>
+                    {t("conversation.send")}
+                  </SubmitButton>
                 </form>
               ) : null}
             </Card>
@@ -510,9 +544,9 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
               !isSingle && d.status !== "cancelled" ? (
                 <form action={autoAssignAction}>
                   {hidden()}
-                  <Button type="submit" variant="secondary" size="sm">
+                  <SubmitButton variant="secondary" size="sm">
                     {t("autoAssign")}
-                  </Button>
+                  </SubmitButton>
                 </form>
               ) : null
             }
@@ -563,9 +597,9 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                             </option>
                           ))}
                       </Select>
-                      <Button type="submit" variant="secondary" size="sm" data-testid="move-room">
+                      <SubmitButton variant="secondary" size="sm" testId="move-room">
                         {r.assignedUnitId ? t("rooms.move") : t("assign")}
-                      </Button>
+                      </SubmitButton>
                     </form>
                   ) : (
                     <p className="text-xs text-muted">{t("singleUnitNoAssign")}</p>
@@ -579,9 +613,17 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                           state: "no_show",
                           reason: "did not arrive",
                         })}
-                        <Button type="submit" variant="ghost" size="sm" className="text-danger">
+                        <ConfirmSubmit
+                          variant="ghost"
+                          className="text-danger"
+                          title={t("noShowTitle", { name: guestName })}
+                          body={t("noShowBody")}
+                          confirmLabel={t("noShowConfirm")}
+                          cancelLabel={t("keepReservation")}
+                          testId={`no-show-${r.id}`}
+                        >
                           {t("noShow")}
-                        </Button>
+                        </ConfirmSubmit>
                       </form>
                     ) : null}
                   </div>
@@ -603,7 +645,17 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                       · {t(`rooms.delivery.${c.deliveryState}`)}
                       <form action={revokeCredentialAction}>
                         {hidden({ credentialId: c.id })}
-                        <button className="text-danger underline">{t("revoke")}</button>
+                        <ConfirmSubmit
+                          variant="ghost"
+                          className="h-auto px-0 text-danger underline"
+                          title={t("revokeTitle", { code: c.valueMasked })}
+                          body={t("revokeBody")}
+                          confirmLabel={t("revokeConfirm")}
+                          cancelLabel={t("revokeKeep")}
+                          aria-label={t("revokeNamed", { code: c.valueMasked })}
+                        >
+                          {t("revoke")}
+                        </ConfirmSubmit>
                       </form>
                     </li>
                   ))}
@@ -638,9 +690,7 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 className="min-w-48 flex-1"
               />
               <Checkbox name="pinned">{t("pin")}</Checkbox>
-              <Button type="submit" variant="secondary">
-                {t("save")}
-              </Button>
+              <SubmitButton variant="secondary">{t("saveNote")}</SubmitButton>
             </form>
           </Card>
         </div>
@@ -735,9 +785,17 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                 </form>
               ) : null}
               {isSingle || d.status === "cancelled" ? (
-                <span className={disabledBtn} aria-disabled="true" title={t("singleUnitNoAssign")}>
-                  {t("actions.move")}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className={disabledBtn} aria-disabled="true" aria-describedby="move-why">
+                    {t("actions.move")}
+                  </span>
+                  {/* why it is off, in words on the page, not only in a hover title */}
+                  <Description id="move-why">
+                    {d.status === "cancelled"
+                      ? t("actions.cancelledNote")
+                      : t("singleUnitNoAssign")}
+                  </Description>
+                </div>
               ) : (
                 <a href="#rooms" className={buttonClasses("secondary", "md", undefined, true)}>
                   {t("actions.move")}
@@ -753,57 +811,69 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
                     {t("actions.changeDates")}
                     <Kbd>D</Kbd>
                   </summary>
-                  <form action={changeDatesAction} className="mt-3 flex flex-col gap-2">
-                    {hidden()}
-                    <div className="grid grid-cols-2 gap-2">
-                      <DateInput
-                        name="arrivalDate"
-                        defaultValue={d.arrivalDate}
-                        label={t("tiles.checkIn")}
-                      />
-                      <DateInput
-                        name="departureDate"
-                        defaultValue={d.departureDate}
-                        label={t("tiles.checkOut")}
-                      />
-                    </div>
-                    <p className="text-xs text-muted">{t("actions.changeDatesHint")}</p>
-                    <Button type="submit" size="sm">
-                      {t("actions.saveDates")}
-                    </Button>
-                  </form>
+                  <ChangeDatesForm
+                    bookingId={d.id}
+                    propertyId={d.propertyId}
+                    arrivalDate={d.arrivalDate}
+                    departureDate={d.departureDate}
+                    labels={{
+                      checkIn: t("tiles.checkIn"),
+                      checkOut: t("tiles.checkOut"),
+                      hint: t("actions.changeDatesHint"),
+                      save: t("actions.saveDates"),
+                      saving: t("actions.savingDates"),
+                    }}
+                  />
                 </details>
               ) : (
-                <span
-                  className={disabledBtn}
-                  aria-disabled="true"
-                  data-hotkey="d"
-                  title={t("actions.otaNote", { channel: ch.label })}
-                >
-                  {t("actions.changeDates")}
-                  <Kbd>D</Kbd>
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span
+                    className={disabledBtn}
+                    aria-disabled="true"
+                    data-hotkey="d"
+                    aria-describedby="dates-why"
+                  >
+                    {t("actions.changeDates")}
+                    <Kbd>D</Kbd>
+                  </span>
+                  <Description id="dates-why">
+                    {d.status === "cancelled"
+                      ? t("actions.cancelledNote")
+                      : t("actions.otaNote", { channel: ch.label })}
+                  </Description>
+                </div>
               )}
               {direct && d.status !== "cancelled" ? (
                 <form action={cancelDirectBookingAction}>
                   {hidden()}
-                  <Button
-                    type="submit"
-                    variant="danger"
-                    fullWidth
-                    aria-describedby="cancel-effects"
+                  <ConfirmSubmit
+                    size="md"
+                    className="w-full"
+                    title={t("cancelConfirmTitle")}
+                    body={t("cancelConfirmBody")}
+                    confirmLabel={t("actions.cancel")}
+                    cancelLabel={t("keepReservation")}
+                    pendingLabel={t("cancelling")}
+                    aria-label={t("cancelNamed", { name: guestName })}
+                    testId="cancel-reservation"
                   >
                     {t("actions.cancel")}
-                  </Button>
+                  </ConfirmSubmit>
                 </form>
               ) : d.status !== "cancelled" ? (
-                <span className={cn(disabledBtn, "text-danger")} aria-disabled="true">
+                <span
+                  className={cn(disabledBtn, "text-danger")}
+                  aria-disabled="true"
+                  aria-describedby="cancel-effects"
+                >
                   {t("actions.cancel")}
                 </span>
               ) : null}
-              <p className="text-xs text-muted" id="cancel-effects">
-                {direct ? t("cancelSideEffects") : t("actions.otaNote", { channel: ch.label })}
-              </p>
+              {d.status !== "cancelled" ? (
+                <Description id="cancel-effects">
+                  {direct ? t("cancelSideEffects") : t("actions.otaNote", { channel: ch.label })}
+                </Description>
+              ) : null}
             </div>
           </Card>
 

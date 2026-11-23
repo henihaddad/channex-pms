@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import {
+  changeDatesAction,
   issueCredentialAction,
   openGuestPortalAction,
   revealCredential,
   revealGuestPii,
   revealInstrument,
+  type ChangeDatesState,
 } from "../reservations.actions";
-import { Button, Select } from "@/components/ui";
+import { Alert, Button, DateInput, Select, SubmitButton } from "@/components/ui";
+import { money } from "@/lib/format";
 
 /** A small key hint next to a button ("C"). */
 export function Kbd({ children }: { children: string }) {
@@ -57,29 +60,36 @@ export function ReservationHotkeys() {
   return null;
 }
 
-/** The door code tile: masked until revealed (audited per view), or issued here. */
-const KIND: Record<string, string> = {
-  door_code: "Door code",
-  smart_lock: "Smart lock",
-  lockbox: "Lockbox",
-  key_handover: "Key handover",
-};
+const KINDS = ["door_code", "smart_lock", "lockbox", "key_handover"] as const;
 /** "14 Nov 15:00": the same reading as the server-rendered validity (UTC clock time). */
-const whenUtc = (iso: string) =>
-  `${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso))} ${iso.slice(11, 16)}`;
+const whenUtc = (iso: string, locale: string) =>
+  `${new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(iso))} ${iso.slice(11, 16)}`;
 
+/** The door code tile: masked until revealed (audited per view), or issued here. */
 export function DoorCodeTile({
   bookingId,
   propertyId,
   credential,
   status,
   labels,
+  locale,
 }: {
   bookingId: string;
   propertyId: string;
   credential: { id: string; valueMasked: string; validity: string } | null;
   status: string;
-  labels: { title: string; issue: string; reveal: string; notIssued: string; validity: string };
+  labels: {
+    title: string;
+    issue: string;
+    reveal: string;
+    notIssued: string;
+    validity: string;
+    /** What the select is for ("Kind of access"). */
+    kind: string;
+    /** One word per kind of access, keyed door_code, smart_lock, lockbox, key_handover. */
+    kinds: Record<string, string>;
+  };
+  locale: string;
 }) {
   const [shown, setShown] = useState<string>("");
   const [issued, setIssued] = useState<{ value: string; validity: string } | null>(null);
@@ -146,8 +156,8 @@ export function DoorCodeTile({
                     setIssued({
                       value: r.value,
                       validity: labels.validity
-                        .replace("{from}", whenUtc(r.validFrom))
-                        .replace("{to}", whenUtc(r.validTo)),
+                        .replace("{from}", whenUtc(r.validFrom, locale))
+                        .replace("{to}", whenUtc(r.validTo, locale)),
                     });
                   })
                 }
@@ -156,18 +166,20 @@ export function DoorCodeTile({
               </Button>
               <details className="text-xs text-muted">
                 <summary className="cursor-pointer hover:text-foreground">
-                  {KIND[type] ?? type} ▾
+                  {labels.kinds[type] ?? type} <span aria-hidden="true">▾</span>
                 </summary>
                 <Select
                   value={type}
                   onChange={(v) => setType(v)}
-                  className="h-8 w-full text-xs"
-                  aria-label={labels.issue}
+                  size="sm"
+                  className="w-full"
+                  label={labels.kind}
                 >
-                  <option value="door_code">Door code</option>
-                  <option value="smart_lock">Smart lock</option>
-                  <option value="lockbox">Lockbox</option>
-                  <option value="key_handover">Key handover</option>
+                  {KINDS.map((k) => (
+                    <option key={k} value={k}>
+                      {labels.kinds[k] ?? k}
+                    </option>
+                  ))}
                 </Select>
               </details>
             </div>
@@ -280,10 +292,17 @@ export function InstrumentPanel({
   bookingId,
   count,
   label,
+  currency,
+  locale,
+  words,
 }: {
   bookingId: string;
   count: number;
   label: string;
+  currency: string;
+  locale: string;
+  /** "expires {expiry}", "Virtual card balance {amount} until {date}". */
+  words: { expires: string; vcc: string };
 }) {
   const [rows, setRows] = useState<Array<{
     id: string;
@@ -301,9 +320,11 @@ export function InstrumentPanel({
       {rows ? (
         rows.map((i) => (
           <p key={i.id} className="font-mono text-xs">
-            {i.cardType} {i.maskedNumber} exp {i.expiry}
+            {i.cardType} {i.maskedNumber} · {words.expires.replace("{expiry}", i.expiry ?? "?")}
             {i.vccBalanceMinor !== null
-              ? ` · VCC balance ${(i.vccBalanceMinor / 100).toFixed(2)} until ${i.vccEffectiveTo ?? "?"}`
+              ? ` · ${words.vcc
+                  .replace("{amount}", money(i.vccBalanceMinor, currency, locale))
+                  .replace("{date}", i.vccEffectiveTo ?? "?")}`
               : ""}
           </p>
         ))
@@ -327,5 +348,71 @@ export function InstrumentPanel({
       )}
       {error ? <p className="text-xs text-danger">{error}</p> : null}
     </div>
+  );
+}
+
+/**
+ * Change the dates of a direct booking. The answer comes back on the form: a stay that cannot
+ * be sold says why, in words, next to the button (no error page), and the dates the host typed
+ * stay where they are.
+ */
+export function ChangeDatesForm({
+  bookingId,
+  propertyId,
+  arrivalDate,
+  departureDate,
+  labels,
+}: {
+  bookingId: string;
+  propertyId: string;
+  arrivalDate: string;
+  departureDate: string;
+  labels: { checkIn: string; checkOut: string; hint: string; save: string; saving: string };
+}) {
+  const [state, action] = useActionState<ChangeDatesState, FormData>(changeDatesAction, {});
+  const [arrival, setArrival] = useState(arrivalDate);
+  const nextDay = (iso: string) => {
+    const d = new Date(`${iso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  };
+  return (
+    <form
+      action={action}
+      className="mt-3 flex flex-col gap-2"
+      onChange={(e) => {
+        const el = e.target as unknown as HTMLInputElement;
+        if (el.name === "arrivalDate" && el.value) setArrival(el.value);
+      }}
+    >
+      <input type="hidden" name="bookingId" value={bookingId} />
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div className="grid grid-cols-2 gap-2">
+        <DateInput name="arrivalDate" defaultValue={arrivalDate} label={labels.checkIn} required />
+        <DateInput
+          name="departureDate"
+          defaultValue={departureDate}
+          min={nextDay(arrival)}
+          label={labels.checkOut}
+          required
+        />
+      </div>
+      <p className="text-xs text-muted">{labels.hint}</p>
+      {state.error ? (
+        <Alert data-testid="change-dates-error">
+          {state.error}
+          {state.reasons?.length ? (
+            <ul className="mt-1 list-disc ps-4">
+              {state.reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          ) : null}
+        </Alert>
+      ) : null}
+      <SubmitButton size="sm" pendingLabel={labels.saving} testId="save-dates">
+        {labels.save}
+      </SubmitButton>
+    </form>
   );
 }

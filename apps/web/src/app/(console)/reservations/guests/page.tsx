@@ -29,6 +29,11 @@ const PILLS: GuestPill[] = ["all", "returning", "emailable", "flagged"];
  * how they booked, with the win-back audience for direct bookings. Names as on the reservation
  * list; email and phone stay sealed here and leave only through the audited export.
  */
+export async function generateMetadata() {
+  const t = await getTranslations("reservations.guestsPage");
+  return { title: t("title") };
+}
+
 export default async function GuestsPage({
   searchParams,
 }: {

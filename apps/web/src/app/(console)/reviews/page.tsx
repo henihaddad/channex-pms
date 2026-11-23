@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   Button,
   Card,
@@ -9,6 +9,7 @@ import {
   PageHeader,
   Select,
   Stat,
+  SubmitButton,
   Textarea,
   cn,
 } from "@/components/ui";
@@ -22,13 +23,18 @@ import {
   reviewGuestAction,
 } from "../inbox/inbox.actions";
 
+export async function generateMetadata() {
+  const t = await getTranslations("inbox");
+  return { title: t("reviews") };
+}
+
 const isoDaysAgo = (n: number): string => new Date(Date.now() - n * 86_400_000).toISOString();
 
 /** Five stars from a rating out of ten (channels send 0–10; Airbnb's 1–5 arrive doubled). */
 function Stars({ rating }: { rating: number }) {
   const n = Math.round(rating / 2);
   return (
-    <span className="text-[#f59e0b]" aria-hidden="true">
+    <span className="text-warning" aria-hidden="true">
       {"★".repeat(n)}
       <span className="text-border">{"★".repeat(5 - n)}</span>
     </span>
@@ -49,8 +55,11 @@ export default async function ReviewsPage({
   const t = await getTranslations("inbox");
   const tr = await getTranslations("inbox.rev");
   const ta = await getTranslations("inbox.auto");
-  const { rows: all, properties } = await guard(() => listReviews({}));
-  const automation = await loadAutomation().catch(() => null);
+  const [{ rows: all, properties }, automation, locale] = await Promise.all([
+    guard(() => listReviews({})),
+    loadAutomation().catch(() => null),
+    getLocale(),
+  ]);
   const today = isoDaysAgo(0).slice(0, 10);
   const yearAgo = isoDaysAgo(365);
 
@@ -78,21 +87,23 @@ export default async function ReviewsPage({
       "inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold whitespace-nowrap",
       active
         ? "bg-foreground text-background"
-        : "border border-[#d5d9d7] text-muted hover:text-foreground",
+        : "border border-border-control text-muted hover:text-foreground",
     );
   const keep = sp.property ? `&property=${sp.property}` : "";
+  const deliveryWord = (state: string) =>
+    t.has(`delivery.${state}`) ? t(`delivery.${state}`) : state;
   const ago = (iso: string) => {
     const d = iso.slice(0, 10);
     const days = Math.round(
       (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${d}T00:00:00Z`)) / 86_400_000,
     );
     return days <= 0
-      ? dayMonth(iso)
+      ? dayMonth(iso, locale)
       : days === 1
         ? tr("yesterday")
         : days < 7
           ? tr("daysAgo", { n: days })
-          : dayMonth(iso);
+          : dayMonth(iso, locale);
   };
   const byProperty = properties
     .map((p) => {
@@ -158,7 +169,7 @@ export default async function ReviewsPage({
             <Select
               name="property"
               defaultValue={sp.property ?? ""}
-              aria-label={t("allProperties")}
+              aria-label={t("propertyFilter")}
               size="sm"
               className="w-48"
             >
@@ -218,21 +229,27 @@ export default async function ReviewsPage({
                 </div>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{r.body}</p>
                 {r.response ? (
-                  <p className="rounded-xl bg-[#f0faf8] p-3 text-sm" data-testid="review-response">
-                    <strong className="block text-xs text-accent">
-                      {t("ourResponse")} ({r.response.deliveryState})
+                  <p className="rounded-xl bg-selected p-3 text-sm" data-testid="review-response">
+                    <strong className="block text-xs text-accent-soft-foreground">
+                      {t("ourResponse")} ({deliveryWord(r.response.deliveryState)})
                     </strong>
                     {r.response.body}
                   </p>
                 ) : r.canRespond && r.responseState !== "expired" ? (
                   <form
                     action={respondReviewAction}
-                    className="flex flex-col gap-2 rounded-xl border border-[#c6e8e3] bg-[#f0faf8] p-3"
+                    className="flex flex-col gap-2 rounded-xl border border-accent/30 bg-selected p-3"
                   >
                     <input type="hidden" name="reviewId" value={r.id} />
                     <input type="hidden" name="propertyId" value={r.propertyId} />
-                    <span className="text-xs font-semibold text-accent">{tr("draftTitle")}</span>
+                    <label
+                      htmlFor={`review-reply-${r.id}`}
+                      className="text-xs font-semibold text-accent-soft-foreground"
+                    >
+                      {tr("draftTitle")}
+                    </label>
                     <Textarea
+                      id={`review-reply-${r.id}`}
                       name="body"
                       required
                       rows={3}
@@ -242,18 +259,13 @@ export default async function ReviewsPage({
                       })}
                     />
                     <div>
-                      <Button
-                        type="submit"
-                        size="sm"
-                        variant="primary"
-                        data-testid="respond-review"
-                      >
+                      <SubmitButton size="sm" variant="primary" testId="respond-review">
                         {tr("post", { channel })}
-                      </Button>
+                      </SubmitButton>
                     </div>
                   </form>
                 ) : r.responseState !== "expired" ? (
-                  <p className="text-xs text-muted">{t("noResponseSupport")}</p>
+                  <p className="text-xs text-muted">{t("noResponseSupport", { channel })}</p>
                 ) : null}
                 {r.provider.toLowerCase().includes("airbnb") ? (
                   r.guestReview ? (
@@ -263,7 +275,7 @@ export default async function ReviewsPage({
                       data-state={r.guestReview.deliveryState}
                     >
                       <strong>
-                        {t("yourGuestReview")} ({r.guestReview.deliveryState}):
+                        {t("yourGuestReview")} ({deliveryWord(r.guestReview.deliveryState)}):
                       </strong>{" "}
                       {r.guestReview.publicReview} ·{" "}
                       {r.guestReview.scores
@@ -312,22 +324,19 @@ export default async function ReviewsPage({
                           required
                           rows={2}
                           placeholder={t("publicReviewPlaceholder")}
+                          aria-label={t("yourGuestReview")}
                           className="w-full"
                           data-testid="guest-review-public"
                         />
                         <Input
                           name="privateReview"
                           placeholder={t("privateReviewPlaceholder")}
+                          aria-label={t("privateReviewPlaceholder")}
                           className="w-full"
                         />
-                        <Button
-                          type="submit"
-                          size="sm"
-                          variant="secondary"
-                          data-testid="submit-guest-review"
-                        >
+                        <SubmitButton size="sm" variant="secondary" testId="submit-guest-review">
                           {t("sendGuestReview")}
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   )

@@ -12,6 +12,7 @@ import {
   LinkButton,
   PageHeader,
   Select,
+  SubmitButton,
   TBody,
   THead,
   Table,
@@ -23,9 +24,23 @@ import {
 import { money, nightsBetween, stay } from "@/lib/format";
 import { guard } from "@/server/guard";
 import { listReservations, saveViewAction } from "./reservations.actions";
+import { channelLook } from "@/lib/channel";
 import { BalanceWords, ChannelDot, StatusChip, partyWords, phaseWords } from "./words";
 
 const PAGE = 50;
+
+export async function generateMetadata() {
+  const t = await getTranslations("reservations");
+  return { title: t("title") };
+}
+
+/** The channel filter's words: "Airbnb", "Direct · phone". */
+const DIRECT_WORDS: Record<string, string> = {
+  phone: "new.sourcePhone",
+  walk_in: "new.sourceWalkIn",
+  direct: "new.sourceDirect",
+  staff: "new.sourceStaff",
+};
 
 /**
  * Reservations (spec 08 §8.1, design canvas November 2026): four filters with their counts,
@@ -56,9 +71,10 @@ export default async function ReservationsPage({
   };
   for (const k of Object.keys(filters) as (keyof ReservationFilters)[])
     if (filters[k] === undefined || filters[k] === "" || filters[k] === false) delete filters[k];
-  const { rows, total, views, pills, today } = await guard(() =>
+  const { rows, total, views, pills, today, channels } = await guard(() =>
     listReservations({ ...filters, limit }),
   );
+  const filtered = Object.keys(filters).length > 0;
   const params = (over: Record<string, string | undefined>) => {
     const next = new URLSearchParams(
       Object.entries({ ...sp, ...over }).filter(([, v]) => v) as [string, string][],
@@ -85,7 +101,7 @@ export default async function ReservationsPage({
         title={t("title")}
         actions={
           <LinkButton href="/reservations/new" variant="primary" data-testid="new-booking">
-            + {t("newReservation")}
+            <span aria-hidden="true">+</span> {t("newReservation")}
           </LinkButton>
         }
       >
@@ -105,13 +121,21 @@ export default async function ReservationsPage({
             </Link>
           ))}
           {sp.view && !(LIST_PILLS as readonly string[]).includes(sp.view) ? (
-            <Link href="/reservations" className={pill(true)}>
-              {t(`views.${sp.view}`)} ✕
+            <Link
+              href="/reservations"
+              className={pill(true)}
+              aria-label={t("removeFilter", { name: t(`views.${sp.view}`) })}
+            >
+              {t(`views.${sp.view}`)} <span aria-hidden="true">✕</span>
             </Link>
           ) : null}
           {sp.q ? (
-            <Link href={params({ q: undefined })} className={pill(true)}>
-              “{sp.q}” ✕
+            <Link
+              href={params({ q: undefined })}
+              className={pill(true)}
+              aria-label={t("removeFilter", { name: `“${sp.q}”` })}
+            >
+              “{sp.q}” <span aria-hidden="true">✕</span>
             </Link>
           ) : null}
           <span className="flex-1" />
@@ -162,14 +186,28 @@ export default async function ReservationsPage({
                 defaultValue={sp.from}
                 className="w-44"
               />
-              <DateInput name="to" aria-label={t("to")} defaultValue={sp.to} className="w-44" />
-              <Input
-                name="channel"
-                placeholder={t("channel")}
-                aria-label={t("channel")}
-                defaultValue={sp.channel}
-                className="w-40"
+              <DateInput
+                name="to"
+                aria-label={t("to")}
+                defaultValue={sp.to}
+                min={sp.from}
+                className="w-44"
               />
+              <Select
+                name="channel"
+                aria-label={t("channel")}
+                defaultValue={sp.channel ?? ""}
+                className="w-48"
+              >
+                <option value="">{t("anyChannel")}</option>
+                {channels.map((c) => (
+                  <option key={c} value={c}>
+                    {DIRECT_WORDS[c.toLowerCase()]
+                      ? t(DIRECT_WORDS[c.toLowerCase()]!)
+                      : channelLook(c).label}
+                  </option>
+                ))}
+              </Select>
               <Button type="submit" variant="secondary">
                 {t("filter")}
               </Button>
@@ -215,125 +253,206 @@ export default async function ReservationsPage({
               />
               <Input
                 name="name"
+                required
                 placeholder={t("saveViewAs")}
                 aria-label={t("saveViewAs")}
                 className="w-64"
               />
-              <Button type="submit" variant="ghost" size="sm">
+              <SubmitButton variant="ghost" size="sm">
                 {t("saveView")}
-              </Button>
+              </SubmitButton>
             </form>
           ) : null}
         </Card>
       ) : null}
 
-      <Table data-testid="reservations-table" className="min-w-[980px]">
-        <THead>
-          <Tr className="hover:bg-transparent">
-            <Th>{t("guest")}</Th>
-            <Th>{t("property")}</Th>
-            <Th>{t("stayColumn")}</Th>
-            <Th>{t("channel")}</Th>
-            <Th>{t("status")}</Th>
-            <Th className="text-end">{t("total")}</Th>
-            <Th className="text-end">{t("balance")}</Th>
-          </Tr>
-        </THead>
-        <TBody>
-          {rows.length === 0 ? (
-            <Tr>
-              <Td colSpan={7} className="text-muted">
-                <p className="font-semibold text-foreground">{t("noResults")}</p>
-                <p>{t("noResultsHint")}</p>
-              </Td>
-            </Tr>
-          ) : null}
-          {rows.map((r) => {
-            const status = stayStatus({
-              status: r.status,
-              mappingState: r.mappingState,
-              unassignedRooms: r.unassignedRooms,
-              unacknowledged: r.unacknowledged,
-              stayStates: r.stayStates,
-            });
-            const balance = bookingBalance({
-              status: r.status,
-              paymentCollect: r.paymentCollect,
-              totalMinor: Number(r.totalAmountMinor),
-              roomChargesMinor: r.roomChargesMinor,
-              otherChargesMinor: r.otherChargesMinor,
-              paidMinor: r.paidMinor,
-            });
-            const nights = nightsBetween(r.arrivalDate, r.departureDate);
-            return (
-              <Tr
-                key={r.id}
-                data-row-status={status}
-                className={cn(status === "needs_room" && "bg-warning-soft/40")}
+      {/* below md a card per reservation; the table from md up (e2e reads the table) */}
+      <ul className="flex flex-col gap-2 md:hidden" data-testid="reservations-cards">
+        {rows.length === 0 ? (
+          <li className="rounded-card border border-border bg-surface p-4 text-sm text-muted">
+            <p className="font-semibold text-foreground">{t("noResults")}</p>
+            <p>{t("noResultsHint")}</p>
+            {filtered ? (
+              <LinkButton href="/reservations" size="sm" className="mt-3">
+                {t("clearFilters")}
+              </LinkButton>
+            ) : null}
+          </li>
+        ) : null}
+        {rows.map((r) => {
+          const status = stayStatus({
+            status: r.status,
+            mappingState: r.mappingState,
+            unassignedRooms: r.unassignedRooms,
+            unacknowledged: r.unacknowledged,
+            stayStates: r.stayStates,
+          });
+          const balance = bookingBalance({
+            status: r.status,
+            paymentCollect: r.paymentCollect,
+            totalMinor: Number(r.totalAmountMinor),
+            roomChargesMinor: r.roomChargesMinor,
+            otherChargesMinor: r.otherChargesMinor,
+            paidMinor: r.paidMinor,
+          });
+          return (
+            <li key={r.id}>
+              <Link
+                href={`/reservations/${r.id}`}
+                className={cn(
+                  "flex flex-col gap-1.5 rounded-card border border-border bg-surface p-4 text-sm hover:bg-surface-secondary",
+                  status === "needs_room" && "border-warning/40",
+                )}
               >
-                <Td>
-                  <span data-booking={r.id} className="block">
-                    <Link
-                      href={`/reservations/${r.id}`}
-                      className="font-semibold text-foreground hover:underline"
-                    >
-                      {r.guestFullName}
-                    </Link>
-                  </span>
-                  <span className="block text-xs text-muted">
-                    {partyWords(r.adults, r.children, t)}
-                    {r.otaReservationCode ? ` · ${r.otaReservationCode}` : ""}
-                  </span>
-                </Td>
-                <Td>
-                  {status === "needs_room" ? (
-                    <>
-                      <span className="block font-semibold text-warning-soft-foreground">
-                        {t("stayStatus.needs_room_short")}
-                      </span>
-                      <span className="block text-xs text-muted">{r.propertyTitle}</span>
-                    </>
-                  ) : (
-                    <>
+                <span className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <strong className="block truncate font-semibold">{r.guestFullName}</strong>
+                    <span className="block truncate text-xs text-muted">
                       {r.propertyTitle}
                       {r.unitNames ? ` · ${r.unitNames}` : ""}
-                    </>
-                  )}
-                </Td>
-                <Td className="whitespace-nowrap">
-                  {stay(r.arrivalDate, r.departureDate, locale)}
-                  <span className="block text-xs text-muted">
-                    {t("nights", { n: nights })}
-                    {status === "cancelled"
-                      ? ""
-                      : status === "checked_in"
-                        ? ` · ${t("phase.inHouse")}`
-                        : ` · ${phaseWords(stayPhase(today, r.arrivalDate, r.departureDate), t)}`}
+                    </span>
                   </span>
-                </Td>
-                <Td>
-                  <ChannelDot otaName={r.otaName} />
-                </Td>
-                <Td>
                   <StatusChip status={status} t={t} />
-                </Td>
-                <Td className="text-end tabular-nums">
-                  {money(Number(r.totalAmountMinor), r.currency, locale)}
-                </Td>
-                <Td className="text-end tabular-nums">
-                  <BalanceWords
-                    balance={balance}
-                    currency={r.currency}
-                    otaName={r.otaName}
-                    t={t}
-                    locale={locale}
-                  />
+                </span>
+                <span className="flex items-baseline justify-between gap-2 text-[13px]">
+                  <span className="text-muted">
+                    {stay(r.arrivalDate, r.departureDate, locale)} ·{" "}
+                    {t("nights", { n: nightsBetween(r.arrivalDate, r.departureDate) })}
+                  </span>
+                  <span className="text-end tabular-nums">
+                    <BalanceWords
+                      balance={balance}
+                      currency={r.currency}
+                      otaName={r.otaName}
+                      t={t}
+                      locale={locale}
+                    />
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden md:block">
+        <Table data-testid="reservations-table" className="min-w-[980px]">
+          <THead>
+            <Tr className="hover:bg-transparent">
+              <Th>{t("guest")}</Th>
+              <Th>{t("property")}</Th>
+              <Th>{t("stayColumn")}</Th>
+              <Th>{t("channel")}</Th>
+              <Th>{t("status")}</Th>
+              <Th className="text-end">{t("total")}</Th>
+              <Th className="text-end">{t("balance")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
+            {rows.length === 0 ? (
+              <Tr>
+                <Td colSpan={7} className="text-muted">
+                  <p className="font-semibold text-foreground">{t("noResults")}</p>
+                  <p>{t("noResultsHint")}</p>
+                  {filtered ? (
+                    <LinkButton
+                      href="/reservations"
+                      size="sm"
+                      className="mt-3"
+                      data-testid="clear-filters"
+                    >
+                      {t("clearFilters")}
+                    </LinkButton>
+                  ) : null}
                 </Td>
               </Tr>
-            );
-          })}
-        </TBody>
-      </Table>
+            ) : null}
+            {rows.map((r) => {
+              const status = stayStatus({
+                status: r.status,
+                mappingState: r.mappingState,
+                unassignedRooms: r.unassignedRooms,
+                unacknowledged: r.unacknowledged,
+                stayStates: r.stayStates,
+              });
+              const balance = bookingBalance({
+                status: r.status,
+                paymentCollect: r.paymentCollect,
+                totalMinor: Number(r.totalAmountMinor),
+                roomChargesMinor: r.roomChargesMinor,
+                otherChargesMinor: r.otherChargesMinor,
+                paidMinor: r.paidMinor,
+              });
+              const nights = nightsBetween(r.arrivalDate, r.departureDate);
+              return (
+                <Tr
+                  key={r.id}
+                  data-row-status={status}
+                  className={cn(status === "needs_room" && "bg-warning-soft/40")}
+                >
+                  <Td>
+                    <span data-booking={r.id} className="block">
+                      <Link
+                        href={`/reservations/${r.id}`}
+                        className="font-semibold text-foreground hover:underline"
+                      >
+                        {r.guestFullName}
+                      </Link>
+                    </span>
+                    <span className="block text-xs text-muted">
+                      {partyWords(r.adults, r.children, t)}
+                      {r.otaReservationCode ? ` · ${r.otaReservationCode}` : ""}
+                    </span>
+                  </Td>
+                  <Td>
+                    {status === "needs_room" ? (
+                      <>
+                        <span className="block font-semibold text-warning-soft-foreground">
+                          {t("stayStatus.needs_room_short")}
+                        </span>
+                        <span className="block text-xs text-muted">{r.propertyTitle}</span>
+                      </>
+                    ) : (
+                      <>
+                        {r.propertyTitle}
+                        {r.unitNames ? ` · ${r.unitNames}` : ""}
+                      </>
+                    )}
+                  </Td>
+                  <Td className="whitespace-nowrap">
+                    {stay(r.arrivalDate, r.departureDate, locale)}
+                    <span className="block text-xs text-muted">
+                      {t("nights", { n: nights })}
+                      {status === "cancelled"
+                        ? ""
+                        : status === "checked_in"
+                          ? ` · ${t("phase.inHouse")}`
+                          : ` · ${phaseWords(stayPhase(today, r.arrivalDate, r.departureDate), t)}`}
+                    </span>
+                  </Td>
+                  <Td>
+                    <ChannelDot otaName={r.otaName} />
+                  </Td>
+                  <Td>
+                    <StatusChip status={status} t={t} />
+                  </Td>
+                  <Td className="text-end tabular-nums">
+                    {money(Number(r.totalAmountMinor), r.currency, locale)}
+                  </Td>
+                  <Td className="text-end tabular-nums">
+                    <BalanceWords
+                      balance={balance}
+                      currency={r.currency}
+                      otaName={r.otaName}
+                      t={t}
+                      locale={locale}
+                    />
+                  </Td>
+                </Tr>
+              );
+            })}
+          </TBody>
+        </Table>
+      </div>
       {total > 0 ? (
         <p className="-mt-2 text-[13px] text-muted" data-testid="list-footer">
           {t("showing", { shown: rows.length, total })}

@@ -36,7 +36,9 @@ in words (**Paid by Airbnb** when the channel collected, **Paid**, **€450 due*
 owed from the moment of booking, not from the daily close that posts it; a channel-collected
 booking owes only what was charged locally; a cancelled one only its fees (core
 `bookingBalance`, `stayStatus`, `stayPhase`). The list shows 50 rows and loads 50 more on
-request. Persona: `reservations_agent`, `property_manager`.
+request. On a phone each reservation is a card (guest, property, stay, status, balance); the
+table starts at tablet width. The channel filter lists the organization's own channels, and an
+empty result offers **Clear filters**. Persona: `reservations_agent`, `property_manager`.
 
 The Reservations section's tabs are **All · Check-in · Guests · Requests · n · Needs a room ·
 n** (the counts are open Airbnb requests and unmapped bookings). The hotel front desk (§8.10)
@@ -94,7 +96,10 @@ timestamps or staff ids) and **Turnover**. Single keys work when focus is not in
 **C** check in (or out), **D** change dates, **$** record a payment, **O** open the portal; each
 presses the button that shows it. Direct bookings change dates here: the nights the booking holds
 count as free for itself, new nights are priced from the rate plan, kept nights keep their price
-(`booking:modify`, one booking path).
+(`booking:modify`, one booking path); dates that cannot be sold come back on the form with the
+reasons in words, not as an error page. Cancel reservation, a refund (amount and method named,
+reason typed in the dialog), a no-show and revoking a door code each ask first in a dialog that
+names the consequence; an action that is off says why under it, not only in a hover title.
 
 ## 8.3 Revision timeline
 
@@ -253,7 +258,9 @@ stays in view: nightly lines, total, what the payment rules ask for now, **Creat
 reservation** and **Cancel**. The availability check under section 1 is the same check the
 create runs ("Available. 3 nights · minimum stay 2 · …" or the reasons it is not). Typing a
 name looks up returning guests (sealed names, so `booking:read_pii`, audited) and picking one
-fills the contact and language. The form is prefilled from `propertyId`, `arrivalDate`,
+fills the contact and language (an ARIA combobox: Up/Down, Enter, Esc). Create is off while
+the check says the stay cannot be sold; a failed create says why next to the button, field by
+field, in the host's language. The form is prefilled from `propertyId`, `arrivalDate`,
 `departureDate` and `guest` in the URL (the calendar and the command palette), and a `guest`
 that matches exactly one returning guest selects them. Persona: `reservations_agent`.
 

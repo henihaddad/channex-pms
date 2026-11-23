@@ -14,17 +14,22 @@ const typing = (el: Element | null) =>
  * The inbox's keys (shortcuts page): J / K next and previous conversation, R reply, S suggest a
  * reply from the guide, E close the conversation, A assign. ⌘↵ sends from the composer itself.
  * Each one presses a button that is on the screen, so a key never does something a click cannot.
+ * They apply only while focus is inside the list or the open conversation (WCAG 2.1.4: a
+ * single-letter key elsewhere on the page, or while typing, does nothing), and E is undone by the
+ * Reopen button the closed conversation shows.
  */
 export function InboxKeys() {
   const router = useRouter();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const active = document.activeElement;
       if (
         e.defaultPrevented ||
         e.metaKey ||
         e.ctrlKey ||
         e.altKey ||
-        typing(document.activeElement)
+        typing(active) ||
+        !active?.closest("[data-inbox-region]")
       )
         return;
       const k = e.key.toLowerCase();
@@ -37,6 +42,8 @@ export function InboxKeys() {
         const next =
           k === "j" ? Math.min(rows.length - 1, at + 1) : Math.max(0, at === -1 ? 0 : at - 1);
         e.preventDefault();
+        // focus stays in the list, so the next J keeps working after the navigation
+        rows[next]!.focus();
         router.push(rows[next]!.getAttribute("href")!);
         return;
       }

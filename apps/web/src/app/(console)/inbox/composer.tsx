@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useEffect, useId, useState, useTransition } from "react";
 import type { MessageTemplate, ReplyDraft, ReplyPhrases } from "@pms/core";
-import { Button, Select, Textarea, cn } from "@/components/ui";
+import { Alert, Select, SubmitButton, Textarea, announce, cn } from "@/components/ui";
 import {
   addNoteAction,
   previewTemplateAction,
-  sendReplyAction,
+  sendReplyFormAction,
   suggestReplyAction,
+  type ComposerState,
 } from "./inbox.actions";
 
 interface Props {
@@ -27,8 +28,12 @@ interface Props {
   labels: {
     replyMode: string;
     noteMode: string;
-    sendTo: string;
+    /** "Send to Ana via Booking.com", already filled in. */
+    sendButton: string;
+    sending: string;
+    placeholder: string;
     saveNote: string;
+    savingNote: string;
     template: string;
     preview: string;
     noteHint: string;
@@ -38,6 +43,7 @@ interface Props {
     suggesting: string;
     draftedFromGuide: string;
     draftedByModel: string;
+    draftReady: string;
     warnSensitive: string;
     warnUnanswered: string;
     warnUnrecognised: string;
@@ -46,11 +52,22 @@ interface Props {
   };
 }
 
+const initial: ComposerState = {};
+
+/** ⌘↵ / Ctrl+↵ submits the composer, as the shortcuts page says. */
+const submitOnModEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    e.currentTarget.form?.requestSubmit();
+  }
+};
+
 /**
  * MSG-3: two composers that share nothing but the thread id. The note form posts
  * to addNoteAction, which cannot produce a guest message; the guest form posts to
- * sendReplyAction. MSG-4: the send button names recipient and channel. MSG-5:
- * switching with text present asks first and keeps the text.
+ * sendReplyFormAction. MSG-4: the send button names recipient and channel. MSG-5:
+ * switching with text present asks first and keeps the text. The text clears only once
+ * the send succeeded, and the button is disabled while it runs (no double send).
  */
 export function Composer(p: Props) {
   const [mode, setMode] = useState<"guest" | "note">(p.canSend ? "guest" : "note");
@@ -60,6 +77,27 @@ export function Composer(p: Props) {
   const [draft, setDraft] = useState<ReplyDraft | null>(null);
   const [pending, start] = useTransition();
   const [suggesting, startSuggest] = useTransition();
+  const [sent, sendAction] = useActionState(sendReplyFormAction, initial);
+  const [noted, noteAction] = useActionState(addNoteAction, initial);
+  const noteHintId = useId();
+
+  // clear the box only after the server said yes; a failed send keeps the text
+  useEffect(() => {
+    if (!sent.ok) return;
+    const h = setTimeout(() => {
+      setText("");
+      setTemplateId("");
+      setMissing([]);
+      setDraft(null);
+    }, 0);
+    return () => clearTimeout(h);
+  }, [sent]);
+  useEffect(() => {
+    if (!noted.ok) return;
+    const h = setTimeout(() => setText(""), 0);
+    return () => clearTimeout(h);
+  }, [noted]);
+
   const switchTo = (m: "guest" | "note") => {
     if (m === mode) return;
     if (text.trim() !== "" && !window.confirm(p.labels.switchConfirm)) return;
@@ -93,6 +131,10 @@ export function Composer(p: Props) {
       setTemplateId("");
       setMissing([]);
       if (r.body.trim()) setText(r.body);
+      // the draft lands without moving focus; say so (WCAG 4.1.3)
+      announce(
+        `${r.origin === "llm" ? p.labels.draftedByModel : p.labels.draftedFromGuide} ${p.labels.draftReady}`,
+      );
     });
   };
   const warningLabel: Record<string, string> = {
@@ -105,7 +147,7 @@ export function Composer(p: Props) {
       "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-semibold transition-colors",
       active
         ? "bg-accent text-accent-foreground"
-        : "border border-[#d5d9d7] text-muted hover:text-foreground",
+        : "border border-border-control text-muted hover:text-foreground",
     );
   return (
     <div className="flex flex-col gap-2.5" data-testid="composer" data-mode={mode}>
@@ -115,6 +157,7 @@ export function Composer(p: Props) {
             type="button"
             className={chip(mode === "guest")}
             onClick={() => switchTo("guest")}
+            aria-pressed={mode === "guest"}
             data-testid="mode-guest"
           >
             {p.labels.replyMode}
@@ -124,6 +167,7 @@ export function Composer(p: Props) {
           type="button"
           className={chip(mode === "note")}
           onClick={() => switchTo("note")}
+          aria-pressed={mode === "note"}
           data-testid="mode-note"
         >
           {p.labels.noteMode}
@@ -134,6 +178,7 @@ export function Composer(p: Props) {
             type="button"
             onClick={suggest}
             disabled={suggesting}
+            aria-busy={suggesting || undefined}
             className="inline-flex h-7 items-center gap-1.5 rounded-full border border-accent px-2.5 text-xs font-semibold text-accent hover:bg-accent-soft/50 disabled:opacity-60"
             data-testid="suggest-reply"
           >
@@ -171,16 +216,15 @@ export function Composer(p: Props) {
         ) : null}
       </div>
       {mode === "guest" ? (
-        <form
-          action={sendReplyAction}
-          className="flex flex-col gap-2.5"
-          data-testid="guest-composer"
-          onSubmit={() => setText("")}
-        >
+        <form action={sendAction} className="flex flex-col gap-2.5" data-testid="guest-composer">
           <input type="hidden" name="threadId" value={p.threadId} />
           <input type="hidden" name="propertyId" value={p.propertyId} />
           <input type="hidden" name="templateId" value={templateId} />
-          {pending ? <p className="text-xs text-muted">{p.labels.preview}</p> : null}
+          {pending ? (
+            <p className="text-xs text-muted" role="status">
+              {p.labels.preview}
+            </p>
+          ) : null}
           {missing.length ? (
             <p className="text-xs text-danger" data-testid="missing-vars">
               {p.labels.missing}: {missing.join(", ")}
@@ -188,14 +232,14 @@ export function Composer(p: Props) {
           ) : null}
           {draft ? (
             <div
-              className="rounded-xl border border-[#c6e8e3] bg-[#f0faf8] px-3 py-2.5 text-xs text-accent"
+              className="rounded-xl border border-accent/30 bg-selected px-3 py-2.5 text-xs text-accent-soft-foreground"
               data-testid="reply-draft"
               data-origin={draft.origin}
             >
               <p>
                 <strong>
                   {draft.origin === "llm" ? p.labels.draftedByModel : p.labels.draftedFromGuide}
-                  {draft.sources.length > 0 ? ` · ${draft.sources.join(", ")}.` : "."}
+                  {draft.sources.length > 0 ? ` · ${draft.sources.join(", ")}.` : ""}
                 </strong>{" "}
                 {p.labels.draftNote}
               </p>
@@ -226,53 +270,47 @@ export function Composer(p: Props) {
             name="body"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              // ⌘↵ / Ctrl+↵ sends, as the shortcuts page says
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
+            onKeyDown={submitOnModEnter}
             rows={4}
             required
             aria-label={p.labels.replyMode}
             data-testid="guest-body"
-            placeholder={`${p.labels.sendTo} ${p.guestFirstName}…`}
+            placeholder={p.labels.placeholder}
           />
+          {sent.error ? <Alert data-testid="send-error">{sent.error}</Alert> : null}
           <div className="flex justify-end">
-            <Button type="submit" size="lg" data-testid="send-guest">
-              {p.labels.sendTo} {p.guestFirstName} via {p.providerLabel}
-            </Button>
+            <SubmitButton size="lg" pendingLabel={p.labels.sending} testId="send-guest">
+              {p.labels.sendButton}
+            </SubmitButton>
           </div>
         </form>
       ) : (
         <form
-          action={addNoteAction}
+          action={noteAction}
           className="flex flex-col gap-2.5 rounded-xl bg-warning-soft p-3"
           data-testid="note-composer"
-          onSubmit={() => setText("")}
         >
           <input type="hidden" name="threadId" value={p.threadId} />
           <input type="hidden" name="propertyId" value={p.propertyId} />
-          <p className="text-xs text-warning-soft-foreground">{p.labels.noteHint}</p>
+          <p id={noteHintId} className="text-xs text-warning-soft-foreground">
+            {p.labels.noteHint}
+          </p>
           <Textarea
             name="body"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.form?.requestSubmit();
-              }
-            }}
+            onKeyDown={submitOnModEnter}
             rows={3}
             required
+            aria-label={p.labels.noteMode}
+            aria-describedby={noteHintId}
             data-testid="note-body"
           />
+          {noted.error ? <Alert>{noted.error}</Alert> : null}
           <div className="flex justify-end">
-            <Button type="submit" variant="secondary" data-testid="save-note">
+            <SubmitButton variant="secondary" pendingLabel={p.labels.savingNote} testId="save-note">
               {p.labels.saveNote}
-            </Button>
+            </SubmitButton>
           </div>
         </form>
       )}
