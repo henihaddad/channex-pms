@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import type { PaletteItem, PaletteLabels } from "./command-palette";
-import { OPEN_PALETTE_EVENT } from "./palette-event";
+import { OPEN_PALETTE_EVENT, shortcutsEnabled } from "./palette-event";
 
 // cmdk and the palette (about 20 KB gzipped) load on first use, not with every console page
 const loadPalette = () => import("./command-palette");
@@ -63,6 +63,7 @@ export function ConsoleHotkeys({
         return;
       }
       if (e.defaultPrevented || typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!shortcutsEnabled()) return;
       if (e.key === "/") {
         e.preventDefault();
         setUsed(true);

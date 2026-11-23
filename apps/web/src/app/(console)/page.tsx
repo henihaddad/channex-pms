@@ -28,6 +28,11 @@ const channelName = (c: string | null | undefined): string => channelLabel(c);
  * and what is still open for them, what happened, and the week ahead. Before the first property
  * is live the page is the first-run checklist instead. The month's KPIs live on Reports.
  */
+export async function generateMetadata() {
+  const t = await getTranslations("nav");
+  return { title: t("dashboard") };
+}
+
 export default async function TodayPage({
   searchParams,
 }: {

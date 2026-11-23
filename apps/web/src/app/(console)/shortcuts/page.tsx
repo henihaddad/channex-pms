@@ -1,9 +1,15 @@
+import { ShortcutsToggle } from "./shortcuts-toggle";
 import { getTranslations } from "next-intl/server";
 import { Card, PageHeader } from "@/components/ui";
 
 type Item = { keys: string[]; label: string };
 
 /** Keyboard shortcuts (design canvas board): every key that works, by where it works. "?" opens it. */
+export async function generateMetadata() {
+  const t = await getTranslations("nav");
+  return { title: t("shortcuts.title") };
+}
+
 export default async function ShortcutsPage() {
   const t = await getTranslations("nav.shortcuts");
   const then = t("then");
@@ -93,8 +99,9 @@ export default async function ShortcutsPage() {
           </Card>
         ))}
       </div>
-      <Card title={t("whyTitle")}>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted">{t("whyBody")}</p>
+      <Card title={t("toggleTitle")}>
+        <p className="mb-3 max-w-3xl text-sm leading-relaxed text-muted">{t("toggleBody")}</p>
+        <ShortcutsToggle label={t("toggleLabel")} on={t("toggleOn")} off={t("toggleOff")} />
       </Card>
     </div>
   );
