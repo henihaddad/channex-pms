@@ -34,7 +34,7 @@ export const listApiKeys = withPermission<[], ApiKeyRow[]>(
   async (ctx) => new DrizzleApiKeyRepository(ctx.tx, ctx.orgId).list(),
 );
 
-/** Settings → API & AI: a key for Claude (or any script), with one of four access levels. */
+/** Settings → Connect Claude & API: a key for Claude (or any script), with one of four access levels. */
 export const createApiKeyAction = withPermission<[CreateKeyState, FormData], CreateKeyState>(
   "api_key:create",
   {

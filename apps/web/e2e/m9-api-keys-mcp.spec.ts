@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { pickOption } from "./ui";
 
 /**
- * The AI layer (spec 04 §4.7a/b): a host creates API keys on Settings → API & AI, calls the
+ * The AI layer (spec 04 §4.7a/b): a host creates API keys on Settings → Connect Claude & API, calls the
  * public API with one, then drives the MCP server as Claude would: initialize, list the tools,
  * read and write. A read-only key is refused on a write, by REST and by MCP; a revoked key is a
  * 401; and the activity log reads "via API key ‘Claude’".

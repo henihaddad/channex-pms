@@ -15,7 +15,7 @@ Money is always an integer in minor units of the property's currency (12000 = 12
 Airbnb: list_airbnb_listings shows every listing on the host's Airbnb account and which property links it; import_airbnb_listing links an unlinked one, then activate_channel switches it on. If no Airbnb account is connected, connect_airbnb gives the host a link to approve on airbnb.com: that approval is theirs to give, not yours.
 Write tools act immediately and are recorded in the host's activity log under this API key. Before sending a guest message, replying to a review or cancelling, be sure the host asked for it.`;
 
-/** Which access level would allow a permission this key lacks, in the words of Settings → API & AI. */
+/** Which access level would allow a permission this key lacks, in the words of Settings → Connect Claude & API. */
 function accessFor(permission: string): string {
   if (/^(ari|rate_plan|room_type):/.test(permission)) return "Prices & availability or Full access";
   if (/^(message|review|template):/.test(permission)) return "Messages or Full access";
@@ -37,8 +37,8 @@ export function toolError(e: unknown, principal: ApiKeyPrincipal): CallToolResul
       const missing = String(e.extras.missing ?? "");
       const level = ACCESS_LABEL[principal.scopes[0] ?? ""] ?? "this access level";
       text = principal.oauth
-        ? `Not allowed: this connection ("${principal.name}", ${level}) does not include ${missing}. The host can disconnect it on Settings → API & AI and connect again with ${accessFor(missing)}.`
-        : `Not allowed: this API key ("${principal.name}", ${level}) does not include ${missing}. The host can create a key with ${accessFor(missing)} on Settings → API & AI.`;
+        ? `Not allowed: this connection ("${principal.name}", ${level}) does not include ${missing}. The host can disconnect it on Settings → Connect Claude & API and connect again with ${accessFor(missing)}.`
+        : `Not allowed: this API key ("${principal.name}", ${level}) does not include ${missing}. The host can create a key with ${accessFor(missing)} on Settings → Connect Claude & API.`;
     } else {
       text = [e.title, e.detail, e.extras.issues ? JSON.stringify(e.extras.issues) : ""]
         .filter(Boolean)

@@ -1756,13 +1756,13 @@
       "types": {
         "changeover": "Rotation le jour même",
         "departure": "Ménage de départ",
-        "mid_stay": "Ménage en séjour",
-        "deep": "Grand ménage",
+        "mid_stay": "Ménage en cours de séjour",
+        "deep": "Ménage approfondi",
         "inspection": "Inspection",
-        "linen": "Linge"
+        "linen": "Changement du linge"
       },
       "states": {
-        "planned": "Prévu",
+        "planned": "Ménage à attribuer",
         "assigned": "Planifié",
         "accepted": "Accepté",
         "on_site": "Sur place",
@@ -4397,7 +4397,7 @@
     "org": "Organisation",
     "orgOne": "Organisation :",
     "access": "Accès",
-    "never": "Quel que soit votre choix, elle ne pourra jamais gérer les versements, remboursements, données de carte, personnes, clés ou suppressions. Ses actions figurent au journal d'activité sous son nom, et vous pouvez la déconnecter dans Réglages → API et IA.",
+    "never": "Quel que soit votre choix, elle ne pourra jamais gérer les versements, remboursements, données de carte, personnes, clés ou suppressions. Ses actions figurent au journal d'activité sous son nom, et vous pouvez la déconnecter dans Réglages → Connecter Claude et l'API.",
     "approve": "Approuver",
     "deny": "Refuser",
     "footnote": "N'approuvez qu'une application que vous venez d'ajouter vous-même.",

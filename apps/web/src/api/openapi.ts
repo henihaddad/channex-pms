@@ -79,7 +79,7 @@ export function openApiDocument(baseUrl: string) {
       title: "OTAbridge API",
       version: "0.2.0",
       description:
-        "Public API v1. Authenticate with an API key (`Authorization: Bearer otab_…`, created on Settings → API & AI; the key carries its organization), or with the session cookie or `Authorization: Bearer <access token>` from POST /api/v1/auth/login and `x-pms-org`. The same operations are served to Claude as an MCP server at /api/mcp.",
+        "Public API v1. Authenticate with an API key (`Authorization: Bearer otab_…`, created on Settings → Connect Claude & API; the key carries its organization), or with the session cookie or `Authorization: Bearer <access token>` from POST /api/v1/auth/login and `x-pms-org`. The same operations are served to Claude as an MCP server at /api/mcp.",
       license: {
         name: "Sustainable Use License",
         url: "https://github.com/henihaddad/channex-pms/blob/main/LICENSE.md",
@@ -92,7 +92,7 @@ export function openApiDocument(baseUrl: string) {
         bearer: {
           type: "http",
           scheme: "bearer",
-          description: "An API key `otab_…` (Settings → API & AI) or an access token",
+          description: "An API key `otab_…` (Settings → Connect Claude & API) or an access token",
         },
         cookie: { type: "apiKey", in: "cookie", name: "pms_at" },
       },

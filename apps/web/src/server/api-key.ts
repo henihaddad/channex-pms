@@ -20,7 +20,7 @@ export const invalidApiKey = () =>
     401,
     "invalid_api_key",
     "Invalid or revoked API key",
-    "Create a key on Settings → API & AI and send it as Authorization: Bearer otab_…",
+    "Create a key on Settings → Connect Claude & API and send it as Authorization: Bearer otab_…",
   );
 
 /**

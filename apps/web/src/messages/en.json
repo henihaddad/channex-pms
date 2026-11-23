@@ -1754,15 +1754,15 @@
       "after": "Clean after departure",
       "nobody": "nobody yet",
       "types": {
-        "changeover": "Same-day changeover",
-        "departure": "Departure clean",
+        "changeover": "Same-day turnover",
+        "departure": "Check-out clean",
         "mid_stay": "Mid-stay clean",
         "deep": "Deep clean",
         "inspection": "Inspection",
-        "linen": "Linen"
+        "linen": "Linen change"
       },
       "states": {
-        "planned": "Planned",
+        "planned": "Needs a cleaner",
         "assigned": "Scheduled",
         "accepted": "Accepted",
         "on_site": "On site",
@@ -4397,7 +4397,7 @@
     "org": "Organization",
     "orgOne": "Organization:",
     "access": "Access",
-    "never": "Whatever you choose, it can never handle payouts, refunds, card details, people, keys or deletions. Its actions appear in the activity log under its name, and you can disconnect it on Settings → API & AI.",
+    "never": "Whatever you choose, it can never handle payouts, refunds, card details, people, keys or deletions. Its actions appear in the activity log under its name, and you can disconnect it on Settings → Connect Claude & API.",
     "approve": "Approve",
     "deny": "Deny",
     "footnote": "Approve only an app you have just added yourself.",
