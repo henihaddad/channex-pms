@@ -1,9 +1,15 @@
-import { getTranslations } from "next-intl/server";
-import { Button, Card, Field, PageTitle, Select } from "@/components/ui";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Card, PageTitle } from "@/components/ui";
 import { guard } from "@/server/guard";
-import { loadPortalCalendar, ownerStayAction } from "../portal.actions";
+import { channelLabel, dayMonth } from "@/lib/format";
+import { loadPortalCalendar } from "../portal.actions";
+import { OwnerStayForm } from "../owner-stay-form";
 
-/** Calendar (PORT-1): bookings with first name, dates and channel only; owner stays through the ARI pipeline (PORT-3). */
+export async function generateMetadata() {
+  const t = await getTranslations("owner");
+  return { title: t("nav.calendar") };
+}
+
 /** The next 90 days; computed outside render so the component stays pure. */
 const window90 = (): { from: string; to: string } => {
   const start = new Date();
@@ -11,10 +17,16 @@ const window90 = (): { from: string; to: string } => {
   return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
 };
 
+/**
+ * Calendar (PORT-1; persona: the owner): bookings with first name, dates and channel only;
+ * owner stays go through the ARI pipeline (PORT-3). The stay form asks for the first and the
+ * last night, the way an owner thinks of a stay; the block ends the morning after.
+ */
 export default async function OwnerCalendar() {
-  const t = await getTranslations("owner");
+  const [t, locale] = await Promise.all([getTranslations("owner"), getLocale()]);
   const { from, to } = window90();
   const v = await guard(() => loadPortalCalendar({ from, to }));
+  const range = (a: string, b: string) => `${dayMonth(a, locale)} → ${dayMonth(b, locale)}`;
   return (
     <div className="space-y-4">
       <PageTitle>{t("nav.calendar")}</PageTitle>
@@ -23,8 +35,9 @@ export default async function OwnerCalendar() {
         {v.bookings.length === 0 ? <p className="text-xs text-muted">{t("noBookings")}</p> : null}
         {v.bookings.map((b) => (
           <p key={b.id} className="border-t border-border py-1 text-xs" data-testid="owner-booking">
-            {b.arrivalDate} → {b.departureDate} · {b.guestFirstName} · {b.channel} ·{" "}
-            {b.propertyTitle} {b.unit ? `· ${b.unit}` : ""} · {b.status}
+            {range(b.arrivalDate, b.departureDate)} · {b.guestFirstName} ·{" "}
+            {channelLabel(b.channel, t("direct"))} · {b.propertyTitle} {b.unit ? `· ${b.unit}` : ""}
+            {b.status === "cancelled" ? ` · ${t("cancelled")}` : ""}
           </p>
         ))}
         <p className="mt-2 font-medium">{t("blocks")}</p>
@@ -35,37 +48,27 @@ export default async function OwnerCalendar() {
             data-testid="owner-block"
             data-reason={b.reason}
           >
-            {b.dateFrom} → {b.dateTo} · {b.reason.replace("_", " ")} · {b.propertyTitle}
+            {range(b.dateFrom, b.dateTo)} ·{" "}
+            {b.reason === "owner_stay" ? t("ownerStayReason") : b.reason.replace(/_/g, " ")} ·{" "}
+            {b.propertyTitle}
           </p>
         ))}
       </Card>
       <Card>
-        <form
-          action={ownerStayAction}
-          className="grid grid-cols-2 gap-2 text-sm"
-          data-testid="owner-stay-form"
-        >
-          <p className="col-span-2 font-medium">{t("ownerStay")}</p>
-          <div className="col-span-2">
-            <Select label={t("property")} name="propertyId">
-              {v.properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Field label={t("from")} name="dateFrom" type="date" />
-          <Field label={t("to")} name="dateTo" type="date" />
-          <div className="col-span-2">
-            <Field label={t("note")} name="note" required={false} />
-          </div>
-          <div className="col-span-2">
-            <Button type="submit" data-testid="block-owner-stay">
-              {t("block")}
-            </Button>
-          </div>
-        </form>
+        <OwnerStayForm
+          withNote
+          properties={v.properties}
+          min={from}
+          labels={{
+            title: t("ownerStay"),
+            property: t("property"),
+            firstNight: t("firstNight"),
+            lastNight: t("lastNight"),
+            note: t("note"),
+            block: t("block"),
+            blocking: t("blocking"),
+          }}
+        />
       </Card>
     </div>
   );

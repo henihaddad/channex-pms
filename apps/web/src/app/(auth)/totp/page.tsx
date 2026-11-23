@@ -2,6 +2,11 @@ import { getTranslations } from "next-intl/server";
 import { AuthCard } from "../auth-card";
 import { TotpForm } from "./totp-form";
 
+export async function generateMetadata() {
+  const t = await getTranslations("auth");
+  return { title: t("totpTitle") };
+}
+
 export default async function TotpPage({
   searchParams,
 }: {

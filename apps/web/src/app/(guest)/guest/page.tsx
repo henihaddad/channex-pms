@@ -9,7 +9,7 @@ import { orgBrand } from "@/server/booking-engine";
 import { currentGuest } from "@/server/guest-session";
 import { clock, day, daysFrom, money } from "@/lib/format";
 import { Brand, SiteFooter, SiteHeader, SiteMain } from "@/components/site";
-import { Button, cn, Input } from "@/components/ui";
+import { cn, Input, SubmitButton, Textarea } from "@/components/ui";
 import { money2 } from "../../(book)/book/labels";
 import {
   addExtraAction,
@@ -42,9 +42,9 @@ function Tile({
   );
 }
 
-/** "Thu 13 Nov, 15:00" in the property's own time zone, from an instant. */
-function localWhen(iso: string, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
+/** "Thu 13 Nov, 15:00" in the property's own time zone and the guest's language, from an instant. */
+function localWhen(iso: string, timeZone: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -56,6 +56,11 @@ function localWhen(iso: string, timeZone: string): string {
 
 const pill =
   "inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-semibold transition-colors";
+
+export async function generateMetadata() {
+  const t = await getTranslations("guest");
+  return { title: t("title") };
+}
 
 /**
  * The guest portal (spec 10 §10.6; persona: the guest before and during the stay): a
@@ -90,11 +95,11 @@ export default async function GuestPortalPage({
       </>
     );
   const c = await container();
-  const p = await asSystem(c.db.db, guest.orgId, (tx) =>
-    guestPortal(c, tx, guest.orgId, guest.bookingId),
-  );
+  const [p, org] = await Promise.all([
+    asSystem(c.db.db, guest.orgId, (tx) => guestPortal(c, tx, guest.orgId, guest.bookingId)),
+    orgBrand(guest.orgId),
+  ]);
   if (!p) redirect("/guest?error=invalid");
-  const org = await orgBrand(guest.orgId);
   const cur = p.currency;
   const today = c.clock.today(p.property.timezone).toString();
   const until = daysFrom(today, p.arrivalDate);
@@ -110,7 +115,7 @@ export default async function GuestPortalPage({
         : until === 0
           ? t("greetToday", { name: first })
           : today < p.departureDate
-            ? t("greetStaying", { name: first, date: day(p.departureDate) })
+            ? t("greetStaying", { name: first, date: day(p.departureDate, locale) })
             : t("greetAfter", { name: first });
   const address = Object.values(p.property.address).filter(Boolean).join(", ");
   const ics = icsFor({
@@ -142,17 +147,17 @@ export default async function GuestPortalPage({
           <section className="relative flex flex-wrap items-start justify-between gap-6 overflow-hidden rounded-[20px] bg-foreground p-5 text-white sm:p-8">
             <div className="bridge-rail absolute inset-x-0 top-0 h-[3px]" aria-hidden="true" />
             <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-2">
-              <p className="text-xs font-semibold tracking-[0.08em] text-[#5eead4] uppercase">
+              <p className="text-xs font-semibold tracking-[0.08em] text-accent-soft uppercase">
                 {[p.property.title, city].filter(Boolean).join(" · ")}
               </p>
               <h1 className="font-display text-[26px] leading-tight font-extrabold tracking-[-0.025em] sm:text-[34px]">
                 {greeting}
               </h1>
-              <p className="text-sm text-[#b6c0bd] sm:text-[15px]">
+              <p className="text-sm text-rail-foreground sm:text-[15px]">
                 {t("stayLine", {
-                  arrival: day(p.arrivalDate),
+                  arrival: day(p.arrivalDate, locale),
                   in: clock(p.property.checkInTime),
-                  departure: day(p.departureDate),
+                  departure: day(p.departureDate, locale),
                   out: clock(p.property.checkOutTime),
                   nights: p.nights,
                 })}
@@ -188,31 +193,34 @@ export default async function GuestPortalPage({
               data-testid="guest-access"
               data-state={p.access.state}
             >
-              <span className="text-[13px] text-[#b6c0bd]">{t("accessCode")}</span>
+              <span className="text-[13px] text-rail-foreground">{t("accessCode")}</span>
               {p.access.state === "revealed" ? (
                 <>
                   <code
-                    className="font-display text-[28px] font-bold tracking-[0.2em] text-[#5eead4]"
+                    className="font-display text-[28px] font-bold tracking-[0.2em] text-accent-soft"
                     data-testid="door-code"
                   >
                     {p.access.code}
                   </code>
-                  <span className="text-xs text-[#b6c0bd]">
-                    {t("accessValid", { from: day(p.access.validFrom), to: day(p.access.validTo) })}
+                  <span className="text-xs text-rail-foreground">
+                    {t("accessValid", {
+                      from: day(p.access.validFrom, locale),
+                      to: day(p.access.validTo, locale),
+                    })}
                   </span>
                 </>
               ) : (
                 <>
                   <span
-                    className="font-display text-[26px] tracking-[0.35em] text-[#5eead4]"
+                    className="font-display text-[26px] tracking-[0.35em] text-accent-soft"
                     aria-hidden="true"
                   >
                     ••••#
                   </span>
-                  <span className="text-xs leading-relaxed text-[#b6c0bd]">
+                  <span className="text-xs leading-relaxed text-rail-foreground">
                     {p.access.state === "hidden"
                       ? t("accessHidden", {
-                          when: localWhen(p.access.opensAt, p.property.timezone),
+                          when: localWhen(p.access.opensAt, p.property.timezone, locale),
                         })
                       : t("accessNone")}
                   </span>
@@ -243,7 +251,7 @@ export default async function GuestPortalPage({
                     className="text-[13px] text-success-soft-foreground"
                     data-testid="precheckin-done"
                   >
-                    {t("preCheckinDone", { time: day(p.preCheckin.completedAt) })}
+                    {t("preCheckinDone", { time: day(p.preCheckin.completedAt, locale) })}
                   </p>
                 ) : (
                   <p className="text-[13px] text-muted">{t("preCheckinHint")}</p>
@@ -272,24 +280,24 @@ export default async function GuestPortalPage({
                   </div>
                   <label className="flex flex-col gap-1 text-xs font-semibold">
                     {t("guests")}
-                    <textarea
+                    <Textarea
                       id="guests"
                       name="guests"
                       rows={2}
-                      className="rounded-control border border-border bg-surface px-3 py-2 text-sm font-normal"
+                      className="font-normal"
                       defaultValue={p.preCheckin.guests
                         .map((g) => `${g.name} ${g.surname}`)
                         .join("\n")}
                     />
                   </label>
-                  <Button
-                    type="submit"
+                  <SubmitButton
                     size="sm"
                     className="self-start"
-                    data-testid="save-precheckin"
+                    testId="save-precheckin"
+                    pendingLabel={t("saving")}
                   >
                     {t("savePreCheckin")}
-                  </Button>
+                  </SubmitButton>
                 </form>
               </Tile>
             ) : null}
@@ -322,7 +330,7 @@ export default async function GuestPortalPage({
             <Tile title={t("checkOutTitle")}>
               <p className="text-[13px] leading-relaxed text-muted">
                 {t("checkOutLine", {
-                  date: day(p.departureDate),
+                  date: day(p.departureDate, locale),
                   time: clock(p.property.checkOutTime),
                 })}
               </p>
@@ -375,19 +383,20 @@ export default async function GuestPortalPage({
                     {p.extras.map((e) => (
                       <li key={e.id} className="flex items-center justify-between gap-3">
                         <span>
-                          {e.name} · {money(e.priceMinor, cur, locale)}/{e.per}
+                          {e.name} ·{" "}
+                          {t("extraPrice", { price: money(e.priceMinor, cur, locale), per: e.per })}
                         </span>
                         <form action={addExtraAction}>
                           <input type="hidden" name="propertyId" value={p.property.id} />
                           <input type="hidden" name="extraId" value={e.id} />
-                          <Button
-                            type="submit"
+                          <SubmitButton
                             variant="secondary"
                             size="sm"
-                            data-testid="add-extra"
+                            testId="add-extra"
+                            aria-label={t("addExtraNamed", { extra: e.name })}
                           >
                             {t("addExtra")}
-                          </Button>
+                          </SubmitButton>
                         </form>
                       </li>
                     ))}
@@ -421,15 +430,15 @@ export default async function GuestPortalPage({
                               })
                             : t("cancelFree")}
                         </p>
-                        <Button
-                          type="submit"
+                        <SubmitButton
                           variant="danger"
                           size="sm"
                           className="self-start"
-                          data-testid="cancel-booking"
+                          testId="cancel-booking"
+                          pendingLabel={t("cancelling")}
                         >
                           {t("cancelConfirm")}
-                        </Button>
+                        </SubmitButton>
                       </form>
                     </details>
                   ) : (
@@ -456,7 +465,7 @@ export default async function GuestPortalPage({
                   >
                     <p className="whitespace-pre-wrap">{m.body}</p>
                     <span className="mt-0.5 block text-[11px] text-muted">
-                      {m.direction === "inbound" ? t("you") : host} · {day(m.sentAt)}
+                      {m.direction === "inbound" ? t("you") : host} · {day(m.sentAt, locale)}
                     </span>
                   </li>
                 ))}
@@ -469,9 +478,9 @@ export default async function GuestPortalPage({
                   aria-label={t("messages")}
                   className="rounded-full"
                 />
-                <Button type="submit" data-testid="send-guest-message">
+                <SubmitButton testId="send-guest-message" pendingLabel={t("sending")}>
                   {t("send")}
-                </Button>
+                </SubmitButton>
               </form>
             </Tile>
           </div>

@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { Id } from "@pms/core";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Id, LocalDate } from "@pms/core";
 import {
   DrizzleOperationsRepository,
   rawRows,
@@ -15,6 +16,7 @@ import {
 import { queueAriPush, recomputeAvailability } from "@pms/jobs";
 import { withPermission, type ActorCtx } from "@/server/with-permission";
 import { HttpProblem } from "@/server/errors";
+import { dayMonth } from "@/lib/format";
 import { OWNER_SCOPE_COOKIE } from "@/server/auth-flows";
 import { notifyManager, openDisputeThread, owners, portalOwner } from "@/server/owners";
 
@@ -99,27 +101,54 @@ export const loadPortalCalendar = withPermission<
   };
 });
 
-/** PORT-3: an owner stay is inventory; it goes through unit_block, availability and the push pipeline like any block. */
-export const ownerStayAction = withPermission<[FormData], void>(
+export interface OwnerStayState {
+  /** What went wrong, in the owner's language; the dates they picked come back in `values`. */
+  error?: string;
+  /** "Blocked 14 Nov → 16 Nov" once the nights have left every channel. */
+  done?: string;
+  values?: Record<string, string>;
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * PORT-3: an owner stay is inventory; it goes through unit_block, availability and the push
+ * pipeline like any block. The form names the first and the last night; the block, like a
+ * stay, ends the morning after the last night. Expected refusals (dates the wrong way round,
+ * nights already booked) come back as a sentence, not an error page.
+ */
+export const ownerStayAction = withPermission<[OwnerStayState, FormData], OwnerStayState>(
   "block:manage",
-  { ...propertyScope, subject: (fd) => ({ kind: "unit_block", id: "owner_stay" }) },
-  async (ctx, fd) => {
+  {
+    scope: "property",
+    resolveScope: (_prev, fd) => ({ kind: "property", id: String(fd.get("propertyId")) }),
+    subject: () => ({ kind: "unit_block", id: "owner_stay" }),
+  },
+  async (ctx, _prev, fd) => {
+    const t = await getTranslations("owner");
     const propertyId = String(fd.get("propertyId"));
+    const values = {
+      propertyId,
+      dateFrom: String(fd.get("dateFrom") ?? ""),
+      lastNight: String(fd.get("lastNight") ?? ""),
+      note: String(fd.get("note") ?? ""),
+    };
     const { ownerId, ownerName } = await assertOwnerProperty(ctx, propertyId);
-    const from = String(fd.get("dateFrom"));
-    const to = String(fd.get("dateTo"));
-    if (!(from < to)) throw new HttpProblem(422, "dates", "The stay must end after it starts");
+    const from = values.dateFrom;
+    const lastNight = values.lastNight;
+    if (!ISO_DATE.test(from) || !ISO_DATE.test(lastNight) || lastNight < from)
+      return { error: t("stayDates"), values };
+    const to = LocalDate.parse(lastNight).plusDays(1).toString();
     const [rt] = await rawRows<{ id: string; unit_id: string | null }>(
       ctx.tx,
       sql`select rt.id, (select u.id from unit u where u.room_type_id = rt.id order by u.name limit 1) as unit_id from room_type rt where rt.property_id = ${propertyId} order by rt.created_at limit 1`,
     );
-    if (!rt) throw new HttpProblem(422, "no_room_type", "This property has no room type yet");
+    if (!rt) return { error: t("stayNoRoom"), values };
     const [clash] = await rawRows<{ n: number }>(
       ctx.tx,
       sql`select count(*)::int as n from booking b where b.property_id = ${propertyId} and b.status <> 'cancelled' and b.arrival_date < ${to} and b.departure_date > ${from}`,
     );
-    if ((clash?.n ?? 0) > 0)
-      throw new HttpProblem(409, "occupied", "Those nights already have a reservation");
+    if ((clash?.n ?? 0) > 0) return { error: t("stayOccupied"), values };
     const ops = new DrizzleOperationsRepository(ctx.tx, ctx.orgId);
     await ops.insertBlock({
       id: Id.next(),
@@ -130,7 +159,7 @@ export const ownerStayAction = withPermission<[FormData], void>(
       dateTo: to,
       reason: "owner_stay",
       reducesAvailability: true,
-      note: String(fd.get("note") ?? "") || `Owner stay: ${ownerName}`,
+      note: values.note || `Owner stay: ${ownerName}`,
       ownerId,
       createdBy: ctx.userId,
     });
@@ -152,6 +181,13 @@ export const ownerStayAction = withPermission<[FormData], void>(
     });
     revalidatePath("/owner/calendar");
     revalidatePath("/owner");
+    const locale = await getLocale();
+    return {
+      done: t("stayBlocked", {
+        from: dayMonth(from, locale),
+        to: dayMonth(lastNight, locale),
+      }),
+    };
   },
 );
 

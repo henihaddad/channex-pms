@@ -275,7 +275,10 @@ What v0.6 ships, where it lives, and where it deliberately stops short of the te
   claim the hold under the confirm button's idempotency key, talk to the `PaymentProvider`,
   then apply the booking on the one revision path (`applyDirectRevision`, shared with staff
   bookings). A second confirm with the same key returns the same booking; a decline keeps the
-  hold and hands the guest a new attempt key.
+  hold and hands the guest a new attempt key. Everything the guest typed (names, email, phone,
+  requests, the marketing opt-in) comes back filled in, and the reason shows next to the confirm
+  button in the guest's language (an engine code never reaches the screen; an unknown one reads
+  "We couldn't complete your booking and you haven't been charged").
 - **Payments (§10.4).** `StripePaymentProvider` speaks the PaymentIntents REST API over the
   `HttpTransport` port and is unit-tested with a fake transport; `FakePaymentProvider` drives
   tests and the demo (`tok_decline`, `tok_3ds`). The checkout marks a `data-payment-mount`

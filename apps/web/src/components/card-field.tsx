@@ -109,19 +109,28 @@ export function CardField({
 
   return (
     <div data-testid="card-field">
-      <Label htmlFor={name}>{label}</Label>
+      {/* Stripe mounts its own iframe with its own inputs: there is no control here for a
+          <label for>, so the mount is a named group the iframe's fields sit in (WCAG 1.3.1) */}
+      <p id={`${name}-label`} className="text-sm font-semibold text-foreground">
+        {label}
+      </p>
       <div
         ref={mount}
-        className="rounded-xl border border-border bg-background px-3 py-3"
+        role="group"
+        aria-labelledby={`${name}-label`}
+        aria-describedby={error ? `${name}-err` : hint ? `${name}-hint` : undefined}
+        className="mt-1.5 rounded-xl border border-border-control bg-background px-3 py-3"
         aria-busy={!ready}
       />
       <input ref={hidden} type="hidden" name={name} />
       {error ? (
-        <p className="mt-1 text-xs text-danger" role="alert">
+        <p id={`${name}-err`} className="mt-1 text-xs text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="mt-1 text-xs text-muted">{hint}</p>
+        <p id={`${name}-hint`} className="mt-1 text-xs text-muted">
+          {hint}
+        </p>
       ) : null}
     </div>
   );

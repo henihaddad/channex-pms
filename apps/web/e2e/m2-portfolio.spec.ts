@@ -12,7 +12,7 @@ async function signUp(page: Page, stamp: string): Promise<string> {
   await page.getByLabel("Email").fill(`ana-${stamp}@example.com`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Coastal Stays");
-  await page.getByLabel("URL slug").fill(`coastal-${stamp}`);
+  await page.getByLabel("Web address").fill(`coastal-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

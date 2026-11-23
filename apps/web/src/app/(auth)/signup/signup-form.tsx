@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { signUpAction } from "../auth.actions";
-import { Alert, Button, Field, Select } from "@/components/ui";
+import { Alert, Field, Select, SubmitButton } from "@/components/ui";
 import type { IsoOption } from "@/lib/iso";
 
 type Labels = Record<
@@ -11,16 +11,16 @@ type Labels = Record<
   | "email"
   | "emailPlaceholder"
   | "password"
-  | "passwordPlaceholder"
+  | "passwordHint"
   | "organizationName"
   | "organizationPlaceholder"
-  | "slug"
   | "slugBefore"
   | "slugAfter"
   | "country"
   | "currency"
   | "choose"
-  | "submit",
+  | "submit"
+  | "submitting",
   string
 >;
 
@@ -35,8 +35,9 @@ const slugify = (s: string): string =>
     .slice(0, 40);
 
 /**
- * The organization in one card. The slug follows the organization name until it is
- * edited in the helper line; the currency follows the country until it is picked.
+ * The organization in one card. The web address follows the organization name until it is
+ * edited in the helper line; the currency follows the country until it is picked. A failed
+ * attempt comes back with one message per field and everything typed except the password.
  */
 export function SignupForm({
   labels,
@@ -51,57 +52,73 @@ export function SignupForm({
   defaults: { country: string | null; currency: string | null };
   currencyFor: Record<string, string>;
 }) {
-  const [state, action, pending] = useActionState(signUpAction, {});
+  const [state, action] = useActionState(signUpAction, {});
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [country, setCountry] = useState(defaults.country ?? "");
   const [currency, setCurrency] = useState(defaults.currency ?? "");
   const [currencyPicked, setCurrencyPicked] = useState(false);
+  const v = state.values ?? {};
+  const fe = state.fieldErrors ?? {};
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={action}
+      className="flex flex-col gap-4"
+      // the organization name is a kit Field; its keystrokes reach the slug through the form
+      onChange={(e) => {
+        const target: EventTarget = e.target;
+        if (target instanceof HTMLInputElement && target.name === "organizationName" && !slugEdited)
+          setSlug(slugify(target.value));
+      }}
+    >
       {state.error ? <Alert>{state.error}</Alert> : null}
       <Field
         label={labels.name}
         name="name"
         autoComplete="name"
         placeholder={labels.namePlaceholder}
+        defaultValue={v.name}
+        error={fe.name}
       />
       <Field
         label={labels.email}
         name="email"
         type="email"
         autoComplete="email"
+        spellCheck={false}
         placeholder={labels.emailPlaceholder}
+        defaultValue={v.email}
+        error={fe.email}
       />
       <Field
         label={labels.password}
         name="password"
         type="password"
         autoComplete="new-password"
-        placeholder={labels.passwordPlaceholder}
+        minLength={12}
+        description={labels.passwordHint}
+        error={fe.password}
       />
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="field-organizationName" className="text-sm font-semibold text-foreground">
-          {labels.organizationName}
-        </label>
-        <input
-          id="field-organizationName"
+        <Field
+          label={labels.organizationName}
           name="organizationName"
-          required
           autoComplete="organization"
           placeholder={labels.organizationPlaceholder}
-          onChange={(e) => {
-            if (!slugEdited) setSlug(slugify(e.target.value));
-          }}
-          className="block h-10.5 w-full min-w-0 rounded-control border border-border bg-surface px-3.5 text-sm text-foreground placeholder:text-muted/80 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+          defaultValue={v.organizationName}
+          error={fe.organizationName}
         />
         <p className="text-xs font-medium text-muted">
-          {labels.slugBefore}{" "}
+          <label htmlFor="field-slug">{labels.slugBefore}</label>{" "}
           <input
+            id="field-slug"
             name="slug"
-            aria-label={labels.slug}
+            aria-invalid={fe.slug ? true : undefined}
+            aria-describedby={fe.slug ? "field-slug-err" : "field-slug-hint"}
             required
             pattern="[a-z0-9-]{3,40}"
+            spellCheck={false}
+            autoCapitalize="none"
             value={slug}
             placeholder="coastal-stays"
             size={Math.max(14, slug.length + 1)}
@@ -109,10 +126,15 @@ export function SignupForm({
               setSlugEdited(true);
               setSlug(e.target.value.toLowerCase());
             }}
-            className="rounded-md border border-transparent bg-transparent px-1 font-bold text-foreground hover:border-border focus:border-accent focus:outline-none"
+            className="rounded-md border border-border-control bg-surface px-1.5 py-0.5 font-bold text-foreground focus:border-accent aria-invalid:border-danger"
           />{" "}
-          {labels.slugAfter}
+          <span id="field-slug-hint">{labels.slugAfter}</span>
         </p>
+        {fe.slug ? (
+          <p id="field-slug-err" aria-live="polite" className="text-xs font-medium text-danger">
+            {fe.slug}
+          </p>
+        ) : null}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Select
@@ -122,11 +144,12 @@ export function SignupForm({
           required
           placeholder={labels.choose}
           value={country}
-          onChange={(v) => {
-            setCountry(v);
-            if (!currencyPicked && currencyFor[v]) setCurrency(currencyFor[v]);
+          onChange={(c) => {
+            setCountry(c);
+            if (!currencyPicked && currencyFor[c]) setCurrency(currencyFor[c]);
           }}
           options={countries}
+          error={fe.country}
         />
         <Select
           label={labels.currency}
@@ -135,16 +158,17 @@ export function SignupForm({
           required
           placeholder={labels.choose}
           value={currency}
-          onChange={(v) => {
+          onChange={(c) => {
             setCurrencyPicked(true);
-            setCurrency(v);
+            setCurrency(c);
           }}
           options={currencies}
+          error={fe.currency}
         />
       </div>
-      <Button type="submit" size="lg" disabled={pending} fullWidth className="mt-1">
+      <SubmitButton size="lg" fullWidth className="mt-1" pendingLabel={labels.submitting}>
         {labels.submit}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

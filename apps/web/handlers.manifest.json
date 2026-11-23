@@ -1724,7 +1724,8 @@
     "export": "ownerStayAction",
     "kind": "action",
     "wrapper": "withPermission",
-    "permission": "block:manage"
+    "permission": "block:manage",
+    "scope": "property"
   },
   {
     "file": "src/app/(owner)/owner/portal.actions.ts",

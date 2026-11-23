@@ -78,7 +78,7 @@ test("an MCP client connects by OAuth: discover, register, consent, PKCE, refres
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByLabel("Organization name").fill("Signed In Stays");
-  await page.getByLabel("URL slug").fill(`oauth-${stamp}`);
+  await page.getByLabel("Web address").fill(`oauth-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

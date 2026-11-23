@@ -9,7 +9,7 @@ test("200 listings × 90 days grid loads under 2 s", async ({ page, request }) =
   await page.getByLabel("Email").fill(`perf-${stamp}@example.com`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Perf Org");
-  await page.getByLabel("URL slug").fill(`perf-${stamp}`);
+  await page.getByLabel("Web address").fill(`perf-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

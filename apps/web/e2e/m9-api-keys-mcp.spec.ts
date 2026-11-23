@@ -76,7 +76,7 @@ test("API keys, the public API and the MCP server, permission-checked and audite
   await page.getByLabel("Email").fill(`ana-ai-${stamp}@example.com`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Claude Stays");
-  await page.getByLabel("URL slug").fill(`claude-${stamp}`);
+  await page.getByLabel("Web address").fill(`claude-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

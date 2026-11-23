@@ -237,7 +237,10 @@ access).
   portal, a console link in the console.
 - Sign-up asks for the country and currency from ISO lists named in the visitor's
   language (country guessed from the browser's language region, currency following
-  it), and derives the URL slug from the organization name, editable in place.
+  it), and derives the URL slug (shown as the "web address") from the organization name,
+  editable in place. A refused sign-up or sign-in comes back with one translated message
+  per field (a taken web address under that field) and everything typed except the
+  password; identity error codes never reach the screen.
 - Sessions are short-lived JWT access tokens (≤15 min) with rotating refresh tokens
   bound to a device fingerprint; server-side revocation for "sign out everywhere".
   The refresh token (30 days) keeps a person signed in: an open console tab renews the

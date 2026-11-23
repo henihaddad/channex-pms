@@ -10,6 +10,11 @@ import { BookFooter, BookHeader } from "./chrome";
 import { searchLabels, stayRange } from "./labels";
 import { SearchForm, type SearchParams } from "./search-form";
 
+export async function generateMetadata() {
+  const t = await getTranslations("book");
+  return { title: t("title") };
+}
+
 /**
  * Portfolio storefront (spec 10 §10.3; persona: the guest who found the place on an OTA
  * and came to book direct). The manager's brand, the hero, the search pill, one card per
@@ -47,13 +52,14 @@ export default async function StorefrontPage({
     .concat(sp.attributes ?? [])
     .flatMap((a) => a.split(","))
     .filter(Boolean);
-  const results: StorefrontResult[] = [];
-  for (const o of orgs)
-    results.push(
-      ...(await asSystem(c.db.db, o.org_id, (tx) =>
-        searchPortfolio(c, tx, o.org_id, q, { attributes }),
-      )),
-    );
+  // one search per organization, side by side: the page waits for the slowest, not the sum
+  const results: StorefrontResult[] = (
+    await Promise.all(
+      orgs.map((o) =>
+        asSystem(c.db.db, o.org_id, (tx) => searchPortfolio(c, tx, o.org_id, q, { attributes })),
+      ),
+    )
+  ).flat();
   const allAttributes = [...new Set(results.flatMap((r) => r.property.settings.attributes))].sort();
   const mapped = results.filter((r) => r.property.settings.lat && r.property.settings.lng);
   const query = new URLSearchParams(
@@ -130,6 +136,7 @@ export default async function StorefrontPage({
                     href={`/book/${r.property.id}${query ? `?${query}` : ""}`}
                     t={t}
                     locale={locale}
+                    priority={i === 0}
                   />
                 </li>
               ))}
@@ -137,26 +144,26 @@ export default async function StorefrontPage({
             {mapped.length > 0 ? <Map results={mapped} label={t("map")} /> : null}
           </div>
         </section>
-      </main>
-      {embed ? null : (
-        <section id="why" className="bg-foreground px-4 py-14 text-white sm:px-6">
-          <div className="mx-auto grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-7">
-            <div className="col-span-full max-w-[560px]">
-              <h2 className="mb-2 font-display text-[30px] font-bold tracking-[-0.02em]">
-                {t("whyDirect")}
-              </h2>
-              <p className="text-[15px] leading-normal text-[#b6c0bd]">{t("whyLead")}</p>
-            </div>
-            {(["why1", "why2", "why3"] as const).map((k) => (
-              <div key={k} className="flex flex-col gap-2">
-                <span className="bridge-rail block h-[3px] w-9 rounded-sm" aria-hidden="true" />
-                <h3 className="text-base font-bold">{t(`${k}Title`)}</h3>
-                <p className="text-sm leading-normal text-[#b6c0bd]">{t(`${k}Body`)}</p>
+        {embed ? null : (
+          <section id="why" className="bg-foreground px-4 py-14 text-white sm:px-6">
+            <div className="mx-auto grid max-w-[1200px] grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-7">
+              <div className="col-span-full max-w-[560px]">
+                <h2 className="mb-2 font-display text-[30px] font-bold tracking-[-0.02em]">
+                  {t("whyDirect")}
+                </h2>
+                <p className="text-[15px] leading-normal text-rail-foreground">{t("whyLead")}</p>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+              {(["why1", "why2", "why3"] as const).map((k) => (
+                <div key={k} className="flex flex-col gap-2">
+                  <span className="bridge-rail block h-[3px] w-9 rounded-sm" aria-hidden="true" />
+                  <h3 className="text-base font-bold">{t(`${k}Title`)}</h3>
+                  <p className="text-sm leading-normal text-rail-foreground">{t(`${k}Body`)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
       <BookFooter org={org} embed={embed} />
     </>
   );
@@ -171,12 +178,15 @@ function PlaceCard({
   tone,
   t,
   locale,
+  priority,
 }: {
   r: StorefrontResult;
   href: string;
   tone: string;
   t: T;
   locale: string;
+  /** The first card: its photo is the page's largest paint. */
+  priority?: boolean;
 }) {
   const p = r.property;
   const perNight = r.from ? Math.round(r.from.roomMinor / r.from.nights) : p.minRateMinor;
@@ -203,6 +213,7 @@ function PlaceCard({
         seed={p.id}
         tone={tone}
         alt=""
+        priority={priority}
         className="aspect-[4/3] max-sm:aspect-[16/9]"
       >
         {badge ? (

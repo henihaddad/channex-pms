@@ -5,6 +5,11 @@ import { loadConsent } from "@/server/oauth-consent";
 import { AuthCard, AuthFootnote } from "../../auth-card";
 import { ConsentForm } from "./consent-form";
 
+export async function generateMetadata() {
+  const t = await getTranslations("oauth");
+  return { title: t("pageTitle") };
+}
+
 /**
  * "Sign in with OTAbridge" (spec 04 §4.7b): the consent screen an MCP client (Claude on
  * claude.ai, Claude Desktop, Claude Code) opens in the browser. Persona: the host who runs the

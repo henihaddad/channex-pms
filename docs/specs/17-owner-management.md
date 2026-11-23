@@ -133,7 +133,10 @@ login, in the owner's language.
 - **PORT-2** Owner actions (block dates, raise issue, dispute a statement) notify
   the responsible manager and appear in the audit log like any other actor.
 - **PORT-3** An owner blocking dates pushes availability changes through the normal
-  ARI pipeline — an owner stay is distribution-relevant inventory, not a note.
+  ARI pipeline — an owner stay is distribution-relevant inventory, not a note. The
+  portal asks for the first and the last night (the block ends the morning after the
+  last night, like a stay); nights already booked or dates the wrong way round come
+  back as a sentence on the form, with the dates kept.
 
 ## 17.6 Owner acquisition surface (v1.1)
 

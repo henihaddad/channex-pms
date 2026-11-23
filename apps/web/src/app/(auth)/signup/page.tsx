@@ -10,6 +10,11 @@ import {
 import { AuthCard, AuthFootnote, authLinkClass } from "../auth-card";
 import { SignupForm } from "./signup-form";
 
+export async function generateMetadata() {
+  const t = await getTranslations("auth");
+  return { title: t("signUp") };
+}
+
 /**
  * Create the organization (spec 02 §2.6, persona: the manager starting a trial).
  * Country and currency are ISO lists named in the visitor's language; the country is
@@ -38,16 +43,16 @@ export default async function SignupPage() {
           email: t("email"),
           emailPlaceholder: t("emailPlaceholder"),
           password: t("password"),
-          passwordPlaceholder: t("passwordPlaceholder"),
+          passwordHint: t("passwordHint"),
           organizationName: t("organizationName"),
           organizationPlaceholder: t("organizationPlaceholder"),
-          slug: t("slug"),
           slugBefore: t("slugBefore"),
           slugAfter: t("slugAfter"),
           country: t("country"),
           currency: t("currency"),
           choose: t("choose"),
           submit: t("startFree"),
+          submitting: t("creating"),
         }}
       />
       <AuthFootnote>

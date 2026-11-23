@@ -3,6 +3,15 @@ import { getTranslations } from "next-intl/server";
 import { AuthCard, AuthFootnote, authLinkClass } from "../auth-card";
 import { LoginForm } from "./login-form";
 
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ link?: string }>;
+}) {
+  const [t, sp] = await Promise.all([getTranslations("auth"), searchParams]);
+  return { title: sp.link === "1" ? t("linkTitle") : t("signIn") };
+}
+
 /**
  * Sign in with a password, or have a sign-in link emailed (spec 02 §2.6). "Forgot?"
  * opens the link-only form: the link signs you in, and a second factor still applies.
@@ -27,9 +36,11 @@ export default async function LoginPage({
           email: t("email"),
           password: t("password"),
           submit: t("signIn"),
+          submitting: t("signingIn"),
           forgot: t("forgot"),
           or: t("or"),
           emailLink: t("emailLink"),
+          sending: t("sendingLink"),
         }}
       />
       <AuthFootnote>

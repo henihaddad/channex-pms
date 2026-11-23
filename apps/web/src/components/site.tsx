@@ -66,7 +66,7 @@ export function SiteLink({
       href={href}
       className={cn(
         pill
-          ? "rounded-full border border-[#d5d9d7] px-4 py-2 text-foreground hover:bg-default"
+          ? "rounded-full border border-border-control px-4 py-2 text-foreground hover:bg-default"
           : "text-muted hover:text-foreground",
         className,
       )}
@@ -136,7 +136,11 @@ export function tint(id: string): string {
   return GRADIENTS[h % GRADIENTS.length]!;
 }
 
-/** A photo, or the property's tint when it has none yet. */
+/**
+ * A photo, or the property's tint when it has none yet. Photos load lazily except the one
+ * marked `priority`: the hero or first card a page opens on, which is its largest paint
+ * (Core Web Vitals, LCP), so it is fetched first instead of waiting for layout.
+ */
 export function Photo({
   src,
   seed,
@@ -144,6 +148,7 @@ export function Photo({
   alt,
   className,
   children,
+  priority = false,
 }: {
   src: string | null | undefined;
   seed: string;
@@ -152,6 +157,8 @@ export function Photo({
   alt: string;
   className?: string;
   children?: React.ReactNode;
+  /** The page's first, largest photo: eager, high fetch priority. One per page. */
+  priority?: boolean;
 }) {
   return (
     <div
@@ -163,7 +170,9 @@ export function Photo({
         <img
           src={src}
           alt={alt}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
           className="absolute inset-0 size-full object-cover"
         />
       ) : null}

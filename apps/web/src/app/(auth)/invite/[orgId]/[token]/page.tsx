@@ -2,6 +2,11 @@ import { getTranslations } from "next-intl/server";
 import { AuthCard } from "../../../auth-card";
 import { InviteForm } from "./invite-form";
 
+export async function generateMetadata() {
+  const t = await getTranslations("auth");
+  return { title: t("acceptInvite") };
+}
+
 export default async function InvitePage({
   params,
 }: {
@@ -14,7 +19,12 @@ export default async function InvitePage({
       <InviteForm
         orgId={orgId}
         token={token}
-        labels={{ name: t("name"), password: t("setPassword"), submit: t("acceptInvite") }}
+        labels={{
+          name: t("name"),
+          password: t("setPassword"),
+          passwordHint: t("passwordHint"),
+          submit: t("acceptInvite"),
+        }}
       />
     </AuthCard>
   );

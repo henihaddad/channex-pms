@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { rawRows, sql, withoutTenant } from "@pms/db";
 import type { EngineDeps } from "@pms/jobs";
 import { container } from "./container";
@@ -29,6 +30,30 @@ export async function orgForProperty(propertyId: string): Promise<string | null>
   );
   return r?.org_id ?? null;
 }
+
+/**
+ * A property page's organization, its brand and the property's name in one read, once per
+ * request: the page title and the page share it, and the header no longer waits for the
+ * page's own transaction to finish before asking for the brand.
+ */
+export const propertySite = cache(
+  async (
+    propertyId: string,
+  ): Promise<{ orgId: string; org: { id: string; name: string }; title: string } | null> => {
+    const c = await container();
+    const [r] = await withoutTenant(c.db.db, (tx) =>
+      rawRows<{ org_id: string; org_name: string; title: string }>(
+        tx,
+        sql`select p.org_id, o.name as org_name, p.title
+            from property p
+            join booking_engine_settings s on s.property_id = p.id
+            join organization o on o.id = p.org_id
+            where p.id = ${propertyId} and s.enabled and p.archived_at is null`,
+      ),
+    );
+    return r ? { orgId: r.org_id, org: { id: r.org_id, name: r.org_name }, title: r.title } : null;
+  },
+);
 
 export async function orgForHold(holdId: string): Promise<string | null> {
   const c = await container();

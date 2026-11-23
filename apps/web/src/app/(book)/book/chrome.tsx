@@ -66,7 +66,9 @@ export async function BookFooter({
   const t = await getTranslations("book");
   if (embed)
     return (
-      <p className="mx-auto mt-8 max-w-[1200px] px-4 pb-4 text-xs text-muted">{t("poweredBy")}</p>
+      <footer className="mx-auto mt-8 w-full max-w-[1200px] px-4 pb-4 text-xs text-muted">
+        <p>{t("poweredBy")}</p>
+      </footer>
     );
   return (
     <SiteFooter

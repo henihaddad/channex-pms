@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { asSystem } from "@pms/db";
 import { confirmBooking, createHold, EngineError, saveHoldGuest } from "@pms/jobs";
 import { engineDeps, orgForHold, orgForProperty } from "@/server/booking-engine";
@@ -48,12 +49,28 @@ export const holdAction = publicAction<[FormData], void>("booking_engine", async
 });
 
 export interface ConfirmState {
+  /** A translated sentence; the engine's code never reaches the guest. */
   error?: string;
+  /** The engine's code for `error`, for the page to tell an expired hold from the rest. */
+  errorCode?: string;
   declined?: string;
   requiresAction?: string;
   idempotencyKey?: string;
   /** What the guest typed, so a retry after a decline does not start from an empty form (§10.4). */
-  guest?: { name: string; surname: string; email: string; phone: string | null };
+  guest?: {
+    name: string;
+    surname: string;
+    email: string;
+    phone: string | null;
+    requests: string;
+    consent: boolean;
+  };
+}
+
+/** `book.errors.<code>` when there is one, the "you haven't been charged" sentence otherwise. */
+async function engineMessage(code: string): Promise<string> {
+  const t = await getTranslations("book.errors");
+  return t.has(code) ? t(code) : t("generic");
 }
 
 /** Steps 4 → 6: guest details, payment through the provider, idempotent confirm (BE-6). */
@@ -62,7 +79,7 @@ export const confirmAction = publicAction<[ConfirmState, FormData], ConfirmState
   async (_prev, fd) => {
     const holdId = str(fd, "holdId");
     const orgId = await orgForHold(holdId);
-    if (!orgId) return { error: "hold_gone" };
+    if (!orgId) return { error: await engineMessage("hold_gone"), errorCode: "hold_gone" };
     const deps = await engineDeps();
     const idempotencyKey = str(fd, "idempotencyKey");
     const typed = {
@@ -70,6 +87,8 @@ export const confirmAction = publicAction<[ConfirmState, FormData], ConfirmState
       surname: str(fd, "lastName"),
       email: str(fd, "email"),
       phone: str(fd, "phone") || null,
+      requests: str(fd, "requests"),
+      consent: fd.get("consent") === "on",
     };
     try {
       if (str(fd, "firstName"))
@@ -85,9 +104,9 @@ export const confirmAction = publicAction<[ConfirmState, FormData], ConfirmState
               email: str(fd, "email"),
               phone: str(fd, "phone") || null,
               language: str(fd, "language") || "en",
-              requests: str(fd, "requests") || null,
+              requests: typed.requests || null,
             },
-            fd.get("consent") === "on",
+            typed.consent,
           ),
         );
       const r = await confirmBooking(
@@ -104,7 +123,13 @@ export const confirmAction = publicAction<[ConfirmState, FormData], ConfirmState
         `/book/confirmed/${r.bookingId}?ref=${encodeURIComponent(r.reference)}&email=${encodeURIComponent(str(fd, "email"))}`,
       );
     } catch (e) {
-      if (e instanceof EngineError) return { error: e.code, idempotencyKey, guest: typed };
+      if (e instanceof EngineError)
+        return {
+          error: await engineMessage(e.code),
+          errorCode: e.code,
+          idempotencyKey,
+          guest: typed,
+        };
       throw e;
     }
   },

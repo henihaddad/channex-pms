@@ -14,10 +14,15 @@ import {
   totpFlow,
 } from "@/server/auth-flows";
 import { HttpProblem } from "@/server/errors";
+import { authErrorFor, FIELD_ERROR, type AuthErrorKey, type AuthField } from "./auth-errors";
 
 export interface FormState {
   error?: string | null;
   message?: string;
+  /** One translated message per field, shown under it. */
+  fieldErrors?: Partial<Record<AuthField, string>>;
+  /** What was typed (never a password), so React's reset after the action does not empty the form. */
+  values?: Record<string, string>;
 }
 
 const field = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -37,34 +42,55 @@ const signUpSchema = z.object({
   currency: z.string().length(3),
 });
 
-async function guarded(fn: () => Promise<unknown>): Promise<FormState> {
+/**
+ * Run a flow and turn an expected identity failure into a translated message: under its field
+ * when it is about one, at the top of the form otherwise. Codes never reach the screen.
+ * `overrides` rewords a code for one form ("Invalid password" on step-up is not a wrong email).
+ */
+async function guarded(
+  fn: () => Promise<unknown>,
+  overrides: Partial<Record<string, AuthErrorKey>> = {},
+): Promise<FormState> {
   try {
     await fn();
     return {};
   } catch (e) {
-    if (e instanceof HttpProblem) return { error: e.message };
-    throw e;
+    if (!(e instanceof HttpProblem)) throw e;
+    const t = await getTranslations("auth.errors");
+    const override = overrides[e.code];
+    if (override) return { error: t(override) };
+    const mapped = authErrorFor(e.code);
+    return mapped.field
+      ? { fieldErrors: { [mapped.field]: t(mapped.key) } }
+      : { error: t(mapped.key) };
   }
 }
+
+const failed = (s: FormState) => Boolean(s.error || s.fieldErrors);
 
 export const signUpAction = publicAction<[FormState, FormData], FormState>(
   "auth",
   async (_prev, fd) => {
-    const parsed = signUpSchema.safeParse({
+    const values = {
       email: field(fd, "email"),
-      password: field(fd, "password"),
       name: field(fd, "name"),
       organizationName: field(fd, "organizationName"),
       slug: field(fd, "slug"),
       country: field(fd, "country").toUpperCase(),
       currency: field(fd, "currency").toUpperCase(),
-    });
-    if (!parsed.success)
-      return {
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-      };
+    };
+    const parsed = signUpSchema.safeParse({ ...values, password: field(fd, "password") });
+    if (!parsed.success) {
+      const t = await getTranslations("auth.errors");
+      const fieldErrors: Partial<Record<AuthField, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const f = String(issue.path[0] ?? "") as AuthField;
+        if (f in FIELD_ERROR) fieldErrors[f] ??= t(FIELD_ERROR[f]);
+      }
+      return { fieldErrors, values };
+    }
     const state = await guarded(() => signUpFlow(parsed.data));
-    if (state.error) return state;
+    if (failed(state)) return { ...state, values };
     redirect("/");
   },
 );
@@ -80,7 +106,8 @@ export const loginAction = publicAction<[FormState, FormData], FormState>(
       if (r.kind === "totp_required")
         next = after === "/" ? "/totp" : `/totp?next=${encodeURIComponent(after)}`;
     });
-    if (state.error) return state;
+    // a failed attempt keeps the email: only the password is typed again
+    if (failed(state)) return { ...state, values: { email: field(fd, "email") } };
     redirect(next);
   },
 );
@@ -89,7 +116,7 @@ export const totpAction = publicAction<[FormState, FormData], FormState>(
   "auth",
   async (_prev, fd) => {
     const state = await guarded(() => totpFlow(field(fd, "code")));
-    if (state.error) return state;
+    if (failed(state)) return state;
     redirect(safeNext(field(fd, "next")));
   },
 );
@@ -103,7 +130,7 @@ export const acceptInviteAction = publicAction<[FormState, FormData], FormState>
         ...(field(fd, "password") ? { password: field(fd, "password") } : {}),
       }),
     );
-    if (state.error) return state;
+    if (failed(state)) return { ...state, values: { name: field(fd, "name") } };
     redirect("/");
   },
 );
@@ -113,11 +140,12 @@ export const requestMagicLinkAction = publicAction<[FormState, FormData], FormSt
   "auth",
   async (_prev, fd) => {
     const { requestMagicLinkFlow } = await import("@/server/auth-flows");
-    await requestMagicLinkFlow(field(fd, "email"), "en");
-    return {
-      error: null,
-      message: "If that address belongs to an owner, a sign-in link is on its way.",
-    };
+    const [t, locale] = await Promise.all([getTranslations("owner"), getLocale()]);
+    const email = field(fd, "email");
+    if (!z.string().email().safeParse(email).success)
+      return { error: t("linkEmailInvalid"), values: { email } };
+    await requestMagicLinkFlow(email, locale);
+    return { error: null, message: t("linkSent"), values: { email } };
   },
 );
 
@@ -128,9 +156,10 @@ export const requestSignInLinkAction = publicAction<[FormState, FormData], FormS
     const { requestMagicLinkFlow } = await import("@/server/auth-flows");
     const t = await getTranslations("auth");
     const email = field(fd, "email");
-    if (!z.string().email().safeParse(email).success) return { error: t("linkEmailInvalid") };
+    if (!z.string().email().safeParse(email).success)
+      return { error: t("linkEmailInvalid"), values: { email } };
     await requestMagicLinkFlow(email, await getLocale(), "login");
-    return { error: null, message: t("linkSent") };
+    return { error: null, message: t("linkSent"), values: { email } };
   },
 );
 
@@ -143,8 +172,10 @@ export const logoutAction = publicAction<[], void>("auth", async () => {
 export const stepUpAction = publicAction<[FormState, FormData], FormState>(
   "auth",
   async (_prev, fd) => {
-    const state = await guarded(() => stepUpFlow(field(fd, "password")));
-    if (state.error) return state;
+    const state = await guarded(() => stepUpFlow(field(fd, "password")), {
+      "identity.invalid_credentials": "passwordWrong",
+    });
+    if (failed(state)) return state;
     redirect(safeNext(field(fd, "next")));
   },
 );

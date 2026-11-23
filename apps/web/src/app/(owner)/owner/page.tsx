@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Button, Card, Chip, DateInput, Select, Stat } from "@/components/ui";
+import { Card, Chip, Stat } from "@/components/ui";
 import { Eyebrow } from "@/components/site";
 import { guard } from "@/server/guard";
 import { channelLabel, dayMonth, money, nightsBetween, percent } from "@/lib/format";
@@ -9,8 +9,8 @@ import {
   loadPortalHome,
   loadPortalStatements,
   loadPortalWho,
-  ownerStayAction,
 } from "./portal.actions";
+import { OwnerStayForm } from "./owner-stay-form";
 
 /** Today and the next 60 nights (UTC dates); computed outside render so the component stays pure. */
 const next60 = (): { from: string; to: string; dates: string[] } => {
@@ -25,10 +25,16 @@ const next60 = (): { from: string; to: string; dates: string[] } => {
   };
 };
 
-const monthName = (iso: string, style: "long" | "short") =>
-  new Intl.DateTimeFormat("en-GB", { month: style, timeZone: "UTC" }).format(
+/** "March" / "Mar" in the owner's language (a statement period is a UTC calendar month). */
+const monthName = (iso: string, style: "long" | "short", locale: string) =>
+  new Intl.DateTimeFormat(locale, { month: style, timeZone: "UTC" }).format(
     new Date(`${iso.slice(0, 10)}T00:00:00Z`),
   );
+
+export async function generateMetadata() {
+  const t = await getTranslations("owner");
+  return { title: t("nav.home") };
+}
 
 /**
  * The owner's month at a glance (spec 17 §17.5; persona: the owner): what this month
@@ -47,7 +53,7 @@ export default async function OwnerHome() {
   ]);
   const d = v.dashboard;
   const cur = d.currency;
-  const mon = monthName(v.monthFrom, "short");
+  const mon = monthName(v.monthFrom, "short", locale);
   const nextPayout = statements.find((s) => s.state === "sent");
   const booked = new Set<string>();
   const blocked = new Set<string>();
@@ -73,7 +79,7 @@ export default async function OwnerHome() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
-          label={t("monthSoFar", { month: monthName(v.monthFrom, "long") })}
+          label={t("monthSoFar", { month: monthName(v.monthFrom, "long", locale) })}
           value={money(d.projectedNetMinor ?? d.grossMinor, cur, locale)}
           hint={d.projectedNetMinor === null ? t("grossNoDraft") : t("afterSplit")}
         />
@@ -106,7 +112,7 @@ export default async function OwnerHome() {
           }
           hint={
             nextPayout
-              ? t("statementOf", { month: monthName(nextPayout.periodFrom, "long") })
+              ? t("statementOf", { month: monthName(nextPayout.periodFrom, "long", locale) })
               : t("noPayoutDue")
           }
         />
@@ -137,7 +143,7 @@ export default async function OwnerHome() {
                       <tr key={s.id} className="border-t border-border">
                         <td className="px-4 py-3">
                           <Link href={`/owner/statements/${s.id}`} className="hover:text-accent">
-                            {monthName(s.periodFrom, "long")} {s.periodFrom.slice(0, 4)}
+                            {monthName(s.periodFrom, "long", locale)} {s.periodFrom.slice(0, 4)}
                             {titles.length > 1 ? (
                               <span className="block text-xs text-muted">{s.propertyTitle}</span>
                             ) : null}
@@ -161,7 +167,7 @@ export default async function OwnerHome() {
                           ) : (
                             <Chip color="accent" size="sm">
                               {s.sentAt
-                                ? t("stateSentOn", { date: dayMonth(s.sentAt) })
+                                ? t("stateSentOn", { date: dayMonth(s.sentAt, locale) })
                                 : t("stateReady")}
                             </Chip>
                           )}
@@ -172,6 +178,9 @@ export default async function OwnerHome() {
                               href={s.pdfRef}
                               download={`statement-${s.periodFrom.slice(0, 7)}.pdf`}
                               className="font-semibold text-accent"
+                              aria-label={t("downloadFor", {
+                                month: `${monthName(s.periodFrom, "long", locale)} ${s.periodFrom.slice(0, 4)}`,
+                              })}
                             >
                               PDF
                             </a>
@@ -193,7 +202,7 @@ export default async function OwnerHome() {
               {days.dates.map((date) => (
                 <span
                   key={date}
-                  title={dayMonth(date)}
+                  title={dayMonth(date, locale)}
                   className={
                     booked.has(date)
                       ? "h-[22px] rounded-[5px] bg-accent"
@@ -213,45 +222,20 @@ export default async function OwnerHome() {
             {cal.properties.length === 0 ? (
               <p className="text-sm text-muted">{t("noProperties")}</p>
             ) : (
-              <form action={ownerStayAction} className="flex flex-col gap-3 text-sm">
-                {cal.properties.length > 1 ? (
-                  <Select label={t("property")} name="propertyId">
-                    {cal.properties.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </Select>
-                ) : (
-                  <input type="hidden" name="propertyId" value={cal.properties[0]!.id} />
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                    {t("from")}
-                    <DateInput
-                      name="dateFrom"
-                      aria-label={t("from")}
-                      required
-                      min={days.from}
-                      className="h-10.5"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                    {t("toNight")}
-                    <DateInput
-                      name="dateTo"
-                      aria-label={t("toNight")}
-                      required
-                      min={days.from}
-                      className="h-10.5"
-                    />
-                  </label>
-                </div>
-                <Button type="submit" size="lg" fullWidth>
-                  {t("block")}
-                </Button>
-                <p className="text-xs text-muted">{t("blockHint")}</p>
-              </form>
+              <OwnerStayForm
+                properties={cal.properties}
+                min={days.from}
+                hint={t("blockHint")}
+                labels={{
+                  title: t("blockTitle"),
+                  property: t("property"),
+                  firstNight: t("firstNight"),
+                  lastNight: t("lastNight"),
+                  note: t("note"),
+                  block: t("block"),
+                  blocking: t("blocking"),
+                }}
+              />
             )}
           </Card>
           <Card title={t("upcoming")}>
@@ -262,7 +246,7 @@ export default async function OwnerHome() {
                 {upcoming.map((b) => (
                   <li key={b.id} className="flex justify-between gap-3">
                     <span>
-                      {dayMonth(b.arrivalDate)} → {dayMonth(b.departureDate)} ·{" "}
+                      {dayMonth(b.arrivalDate, locale)} → {dayMonth(b.departureDate, locale)} ·{" "}
                       {t("nightsCount", { count: nightsBetween(b.arrivalDate, b.departureDate) })}
                     </span>
                     <span className="text-muted">{channelLabel(b.channel, t("direct"))}</span>

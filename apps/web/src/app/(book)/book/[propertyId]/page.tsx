@@ -5,7 +5,7 @@ import { channelComparison, LocalDate, Money, nightlyPrices } from "@pms/core";
 import { asSystem, DrizzleBookingEngineRepository } from "@pms/db";
 import { parsePolicy, searchProperty, type PropertySearch } from "@pms/jobs";
 import { container } from "@/server/container";
-import { orgBrand, orgForProperty } from "@/server/booking-engine";
+import { propertySite } from "@/server/booking-engine";
 import { dayMonth, money } from "@/lib/format";
 import { Eyebrow, Photo, SiteMain } from "@/components/site";
 import { cn } from "@/components/ui";
@@ -15,6 +15,12 @@ import { BookingPanel, type PanelOffer } from "./booking-panel";
 import { EmbedResizer } from "./embed-resizer";
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+export async function generateMetadata({ params }: { params: Promise<{ propertyId: string }> }) {
+  const { propertyId } = await params;
+  const [site, t] = await Promise.all([propertySite(propertyId), getTranslations("book")]);
+  return { title: site?.title ?? t("title") };
+}
 
 /**
  * A property on the booking site (spec 10 §10.2 steps 1–3; persona: the guest deciding
@@ -29,12 +35,16 @@ export default async function PropertyBookingPage({
   params: Promise<{ propertyId: string }>;
   searchParams: Promise<SearchParams & { month?: string }>;
 }) {
-  const { propertyId } = await params;
-  const sp = await searchParams;
-  const orgId = await orgForProperty(propertyId);
-  if (!orgId) notFound();
-  const [t, locale] = await Promise.all([getTranslations("book"), getLocale()]);
-  const c = await container();
+  const [{ propertyId }, sp] = await Promise.all([params, searchParams]);
+  // one cached read gives the tenant, the brand and the name (the title asked for it already)
+  const [site, t, locale, c] = await Promise.all([
+    propertySite(propertyId),
+    getTranslations("book"),
+    getLocale(),
+    container(),
+  ]);
+  if (!site) notFound();
+  const { orgId, org } = site;
   const adults = Number(sp.adults ?? 2);
   const children = Number(sp.children ?? 0);
   const data = await asSystem(c.db.db, orgId, async (tx) => {
@@ -65,7 +75,6 @@ export default async function PropertyBookingPage({
   });
   if (!data) notFound();
   const { property: p, extras, search, today, month, dates, nightly } = data;
-  const org = await orgBrand(orgId);
   const embed = Boolean(sp.embed);
   const cur = p.currency;
   const policy = parsePolicy(p.policy?.cancellation ?? null);
@@ -90,6 +99,7 @@ export default async function PropertyBookingPage({
           ? t("termsFreeUntil", {
               date: dayMonth(
                 LocalDate.parse(sp.arrival).plusDays(-policy.freeUntilDaysBefore).toString(),
+                locale,
               ),
             })
           : t("termsFreeDays", { days: policy.freeUntilDaysBefore });
@@ -121,9 +131,10 @@ export default async function PropertyBookingPage({
   const inStay = (d: string) =>
     Boolean(sp.arrival && sp.departure && d >= sp.arrival && d < sp.departure);
   const lead = LocalDate.parse(dates[0]!).dayOfWeek - 1;
-  const monthName = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(
-    new Date(`${dates[0]}T00:00:00Z`),
-  );
+  const monthName = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${dates[0]}T00:00:00Z`));
   const photos = p.photos.slice(0, 5);
   const guestOptions = (
     [
@@ -178,6 +189,7 @@ export default async function PropertyBookingPage({
             src={photos[0]?.storageKey}
             seed={p.id}
             alt={p.title}
+            priority
             className="row-span-2 rounded-[18px]"
           />
           {[1, 2, 3, 4].map((i) => (

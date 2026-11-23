@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { stepUpAction } from "../auth.actions";
-import { Alert, Button, Field } from "@/components/ui";
+import { Field, SubmitButton } from "@/components/ui";
 
 export function StepUpForm({
   next,
@@ -11,20 +11,18 @@ export function StepUpForm({
   next: string;
   labels: { password: string; submit: string };
 }) {
-  const [state, action, pending] = useActionState(stepUpAction, {});
+  const [state, action] = useActionState(stepUpAction, {});
   return (
     <form action={action} className="space-y-4" data-testid="step-up-form">
-      {state.error ? <Alert>{state.error}</Alert> : null}
       <input type="hidden" name="next" value={next} />
       <Field
         label={labels.password}
         name="password"
         type="password"
         autoComplete="current-password"
+        error={state.error}
       />
-      <Button type="submit" disabled={pending} className="w-full">
-        {labels.submit}
-      </Button>
+      <SubmitButton fullWidth>{labels.submit}</SubmitButton>
     </form>
   );
 }

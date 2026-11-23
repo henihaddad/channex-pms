@@ -2,18 +2,29 @@
 
 import { useActionState } from "react";
 import { requestMagicLinkAction } from "../auth.actions";
-import { Alert, Button, Field } from "@/components/ui";
+import { Alert, Field, SubmitButton } from "@/components/ui";
 
-export function OwnerLoginForm({ labels }: { labels: { email: string; submit: string } }) {
-  const [state, action, pending] = useActionState(requestMagicLinkAction, {});
+export function OwnerLoginForm({
+  labels,
+}: {
+  labels: { email: string; submit: string; sending: string };
+}) {
+  const [state, action] = useActionState(requestMagicLinkAction, {});
   return (
     <form action={action} className="space-y-4">
-      {state.error ? <Alert>{state.error}</Alert> : null}
       {state.message ? <Alert tone="success">{state.message}</Alert> : null}
-      <Field label={labels.email} name="email" type="email" autoComplete="email" />
-      <Button type="submit" disabled={pending} className="w-full" data-testid="send-magic-link">
+      <Field
+        label={labels.email}
+        name="email"
+        type="email"
+        autoComplete="email"
+        spellCheck={false}
+        defaultValue={state.values?.email}
+        error={state.error}
+      />
+      <SubmitButton fullWidth pendingLabel={labels.sending} testId="send-magic-link">
         {labels.submit}
-      </Button>
+      </SubmitButton>
     </form>
   );
 }

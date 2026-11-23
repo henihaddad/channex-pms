@@ -1,6 +1,12 @@
 import { getTranslations } from "next-intl/server";
+import { Alert } from "@/components/ui";
 import { AuthCard } from "../auth-card";
 import { OwnerLoginForm } from "./owner-login-form";
+
+export async function generateMetadata() {
+  const t = await getTranslations("owner");
+  return { title: t("loginTitle") };
+}
 
 /** Owner portal sign-in: magic link by default (spec 17 §17.5). */
 export default async function OwnerLoginPage({
@@ -13,8 +19,10 @@ export default async function OwnerLoginPage({
   return (
     <AuthCard title={t("loginTitle")}>
       <p className="-mt-2 text-sm text-muted">{t("loginHint")}</p>
-      {sp.error ? <p className="text-sm text-danger">{t("linkInvalid")}</p> : null}
-      <OwnerLoginForm labels={{ email: t("email"), submit: t("sendLink") }} />
+      {sp.error ? <Alert>{t("linkInvalid")}</Alert> : null}
+      <OwnerLoginForm
+        labels={{ email: t("email"), submit: t("sendLink"), sending: t("sendingLink") }}
+      />
     </AuthCard>
   );
 }

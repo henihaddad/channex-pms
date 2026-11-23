@@ -18,7 +18,7 @@ test("sign up, invite a colleague, accept, and see it audited", async ({
   await page.getByLabel("Email").fill(owner.email);
   await page.getByLabel("Password").fill(owner.password);
   await page.getByLabel("Organization name").fill("Coastal Stays");
-  await page.getByLabel("URL slug").fill(`coastal-${stamp}`);
+  await page.getByLabel("Web address").fill(`coastal-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

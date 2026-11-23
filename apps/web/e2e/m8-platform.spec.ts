@@ -18,7 +18,7 @@ async function signUp(
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill(`${who} Co`);
-  await page.getByLabel("URL slug").fill(`${who.toLowerCase()}-${stamp}`);
+  await page.getByLabel("Web address").fill(`${who.toLowerCase()}-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();

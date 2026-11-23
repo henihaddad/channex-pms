@@ -14,7 +14,7 @@ async function signUp(page: Page, stamp: string): Promise<string> {
   await page.getByLabel("Email").fill(`fin-${stamp}@example.com`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByLabel("Organization name").fill("Owner Co");
-  await page.getByLabel("URL slug").fill(`owner-${stamp}`);
+  await page.getByLabel("Web address").fill(`owner-${stamp}`);
   await page.getByLabel("Country", { exact: true }).selectOption("PT");
   await page.getByLabel("Currency", { exact: true }).selectOption("EUR");
   await page.getByRole("button", { name: "Start free" }).click();
@@ -132,7 +132,11 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await expect(owner.getByTestId("owner-portal")).toBeVisible();
   await owner.goto("/owner/statements");
   await owner.getByTestId("owner-statement").getByRole("link").click();
-  await expect(owner.getByTestId("owner-net-due")).toHaveText(netDue ?? "");
+  // the same amount, each side in its own format ("1,234.00 EUR" in the console, "€1,234" for the owner)
+  const amount = (s: string | null) => Number((s ?? "").replace(/[^\d.]/g, ""));
+  await expect
+    .poll(async () => amount(await owner.getByTestId("owner-net-due").textContent()))
+    .toBe(amount(netDue));
   await expect(owner.locator('[data-testid="owner-lines"] tr')).toHaveCount(
     await page.locator('[data-testid="statement-lines"] tr').count(),
   );
@@ -142,9 +146,9 @@ test("owner agreement → statement → send → owner portal → dispute → pa
   await expect(owner.getByTestId("owner-portal")).not.toContainText("@example.com");
   // PORT-3: an owner stay blocks inventory
   const stayFrom = iso(new Date(Date.now() + 20 * 86_400_000));
-  const stayTo = iso(new Date(Date.now() + 22 * 86_400_000));
+  const stayLastNight = iso(new Date(Date.now() + 21 * 86_400_000));
   await fillDate(owner, "dateFrom", stayFrom);
-  await fillDate(owner, "dateTo", stayTo);
+  await fillDate(owner, "lastNight", stayLastNight);
   await owner.getByTestId("block-owner-stay").click();
   await expect(owner.locator('[data-testid="owner-block"][data-reason="owner_stay"]')).toHaveCount(
     1,

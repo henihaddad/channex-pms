@@ -3,6 +3,11 @@ import { orgBrand, orgForBooking } from "@/server/booking-engine";
 import { SiteMain } from "@/components/site";
 import { BookFooter, BookHeader } from "../../chrome";
 
+export async function generateMetadata() {
+  const t = await getTranslations("book");
+  return { title: t("confirmedTitle") };
+}
+
 /** Step 6 (spec 10 §10.2): reference on screen, mail with .ics and the portal link on its way (BE-7). */
 export default async function ConfirmedPage({
   params,

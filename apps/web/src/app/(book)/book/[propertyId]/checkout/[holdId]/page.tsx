@@ -5,24 +5,24 @@ import { asSystem, DrizzleBookingEngineRepository } from "@pms/db";
 import { parsePolicy } from "@pms/jobs";
 import { container } from "@/server/container";
 import { orgBrand, orgForHold } from "@/server/booking-engine";
-import { day, dayMonth, money } from "@/lib/format";
+import { clock, day, dayMonth, money } from "@/lib/format";
 import { Photo, SiteMain } from "@/components/site";
 import { BookFooter, BookHeader } from "../../../chrome";
 import { money2 } from "../../../labels";
 import { CheckoutForm } from "./checkout-form";
 import { EmbedResizer } from "../../embed-resizer";
 
+export async function generateMetadata() {
+  const t = await getTranslations("book");
+  return { title: t("checkoutTitle") };
+}
+
 /**
  * Steps 4–5 (spec 10 §10.2; persona: the guest paying): who is staying, the payment
  * per the guarantee policy, the terms accepted, and beside it the stay and the itemised
- * quote (BE-1) with what is due now and what booking direct saved.
+ * quote (BE-1) with what is due now and what booking direct saved. The hold's end reads
+ * on the property's own clock: where the guest is going, and what the confirmation shows.
  */
-/** "15:20" on the property's own clock: where the guest is going, and what the confirmation shows. */
-const clockIn = (iso: string, timeZone: string) =>
-  new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone }).format(
-    new Date(iso),
-  );
-
 export default async function CheckoutPage({
   params,
   searchParams,
@@ -36,17 +36,20 @@ export default async function CheckoutPage({
   if (!orgId) notFound();
   const [t, locale] = await Promise.all([getTranslations("book"), getLocale()]);
   const c = await container();
-  const data = await asSystem(c.db.db, orgId, async (tx) => {
-    const repo = new DrizzleBookingEngineRepository(tx, orgId, c.crypto);
-    const hold = await repo.hold(holdId);
-    if (!hold || hold.propertyId !== propertyId) return null;
-    const [property] = await repo.storefront({ propertyId });
-    const labels = await repo.labels(hold.roomTypeId, hold.ratePlanId);
-    return { hold, property, labels };
-  });
+  // the brand is a separate read: alongside the hold, not after it
+  const [data, org] = await Promise.all([
+    asSystem(c.db.db, orgId, async (tx) => {
+      const repo = new DrizzleBookingEngineRepository(tx, orgId, c.crypto);
+      const hold = await repo.hold(holdId);
+      if (!hold || hold.propertyId !== propertyId) return null;
+      const [property] = await repo.storefront({ propertyId });
+      const labels = await repo.labels(hold.roomTypeId, hold.ratePlanId);
+      return { hold, property, labels };
+    }),
+    orgBrand(orgId),
+  ]);
   if (!data) notFound();
   const { hold, property: p, labels } = data;
-  const org = await orgBrand(orgId);
   const embed = Boolean(sp.embed);
   const expired = hold.state !== "held" || hold.expiresAt <= c.clock.now().toString();
   const q = hold.quote;
@@ -61,7 +64,7 @@ export default async function CheckoutPage({
       : policy.type === "first_night"
         ? t("termsFirstNight")
         : t("policyFlexible", {
-            date: dayMonth(freeUntil),
+            date: dayMonth(freeUntil, locale),
             fee:
               policy.lateFeePercent >= 100
                 ? t("feeAll")
@@ -116,14 +119,14 @@ export default async function CheckoutPage({
             <p className="-mt-3 text-sm text-muted" data-testid="hold-until">
               {expired
                 ? t("holdExpired")
-                : t("holdUntil", { time: clockIn(hold.expiresAt, p?.timezone ?? "UTC") })}
+                : t("holdUntil", { time: clock(hold.expiresAt, p?.timezone ?? "UTC", locale) })}
             </p>
             {!expired ? (
               <CheckoutForm
                 holdId={holdId}
                 idempotencyKey={c.crypto.randomToken(8)}
                 needsPayment={q.dueNowMinor > 0}
-                guest={hold.guest}
+                guest={hold.guest ? { ...hold.guest, consent: hold.consentMarketing } : null}
                 publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
                 paymentLine={paymentLine}
                 acceptLine={t("acceptTerms", {
@@ -152,7 +155,6 @@ export default async function CheckoutPage({
                   requiresAction: t("requiresAction"),
                   completeVerification: t("completeVerification"),
                   declined: t("declined", { reason: "{reason}" }),
-                  holdExpired: t("holdExpired"),
                 }}
               />
             ) : null}
@@ -163,6 +165,7 @@ export default async function CheckoutPage({
                 src={p?.photos[0]?.storageKey}
                 seed={propertyId}
                 alt=""
+                priority
                 className="h-14 w-[72px] shrink-0 rounded-xl"
               />
               <div className="min-w-0">
@@ -177,11 +180,11 @@ export default async function CheckoutPage({
             <dl className="flex flex-col gap-2 border-b border-border pb-3.5 text-sm">
               <Fact
                 label={t("checkIn")}
-                value={`${day(hold.arrivalDate)}${p?.policy ? ` · ${t("fromTime", { time: p.policy.checkInTime.slice(0, 5) })}` : ""}`}
+                value={`${day(hold.arrivalDate, locale)}${p?.policy ? ` · ${t("fromTime", { time: p.policy.checkInTime.slice(0, 5) })}` : ""}`}
               />
               <Fact
                 label={t("checkOut")}
-                value={`${day(hold.departureDate)}${p?.policy ? ` · ${t("byTime", { time: p.policy.checkOutTime.slice(0, 5) })}` : ""}`}
+                value={`${day(hold.departureDate, locale)}${p?.policy ? ` · ${t("byTime", { time: p.policy.checkOutTime.slice(0, 5) })}` : ""}`}
               />
               <Fact label={t("guests")} value={guests} />
               {labels.ratePlan ? <Fact label={t("rate")} value={labels.ratePlan} /> : null}
