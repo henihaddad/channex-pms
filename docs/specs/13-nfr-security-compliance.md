@@ -146,7 +146,9 @@ managed Postgres).
   ([06 §6.2](./06-inventory-and-rates.md#62-the-calendar-grid)).
 - i18n from day one: externalised strings, ICU pluralisation, locale-aware dates,
   numbers and currencies, RTL layout support, and per-user locale independent of
-  property locale.
+  property locale. An interface language is offered only once its catalogue is complete:
+  today English, French and Arabic; Spanish and Portuguese stay as drafts (2026-11-23).
+  Single-key shortcuts can be switched off per device (WCAG 2.1.4).
 - Housekeeping and front-desk surfaces are usable one-handed on a phone, with large
   touch targets and offline tolerance.
 - Every error message states what happened, why, and what to do next, and carries a

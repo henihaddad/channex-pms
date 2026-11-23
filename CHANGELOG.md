@@ -71,6 +71,23 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- The console was checked against the project's new and existing skills (Vercel React and
+  Next.js practices, composition patterns, Core Web Vitals, web interface guidelines, UX
+  heuristics, WCAG 2.2, writing guidelines, information architecture) and fixed where it fell
+  short. Persona: every console user, the host first (spec 02). Highlights:
+  - Faster: the console shell loads its context in one parallel round and shares it with the page
+    (React `cache`); only the translations client components use reach the browser; the command
+    palette loads on first use; the channel wizard no longer ships zod; calendar saves and undo
+    read once per rate plan instead of once per night.
+  - Correct for every locale: amounts use the locale's currency format and the currency's
+    decimals (yen has none, French puts the euro after); times name or use their zone.
+  - Accessible: control borders and focus outlines meet WCAG contrast, fields link their hints and
+    errors, alerts only interrupt for errors, a skip link, a focus-managed phone menu, menus that
+    close on Escape, 44px touch targets, page titles, and a switch for single-key shortcuts.
+  - Recoverable: localized error, not-found, permission and loading screens; submit buttons that
+    show progress and block double submits; destructive actions confirm first.
+  - Spanish and Portuguese are no longer offered until they are translated (about 6% today).
+
 - Choosing Airbnb in "Connect a channel" now shows a "Connect Airbnb" button that starts
   Airbnb's own sign-in for that property, instead of a note sending the host to Channex. The
   embedded screen for other sites is called "More channels", says it shows only the chosen
