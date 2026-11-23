@@ -32,6 +32,9 @@
   --color-surface: var(--surface);
   --color-surface-secondary: var(--surface-secondary);
   --color-border: var(--border);
+  --color-border-control: var(--border-control);
+  --color-selected: var(--selected);
+  --color-rail-foreground: var(--rail-foreground);
   --color-default: var(--default);
   --color-snow: #ffffff;
 
@@ -49,6 +52,11 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-soft-foreground: var(--danger-soft-foreground);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-foreground: var(--info-soft-foreground);
+  --color-badge: var(--badge);
+  --color-badge-foreground: var(--badge-foreground);
 }
 
 :root,
@@ -60,8 +68,12 @@
   --muted: #4b5553; /* 7.3:1 on the ground */
   --surface: #ffffff;
   --surface-secondary: #f9faf9;
-  --border: #e3e6e4;
+  --border: #e3e6e4; /* decorative hairlines: cards, dividers */
+  /* the edge of something you type in or press (WCAG 1.4.11): 3.7:1 on white, 3.4:1 on the ground */
+  --border-control: #7d8784;
   --default: #eef0ef;
+  --selected: #f0faf8; /* the open row of a list */
+  --rail-foreground: #b6c0bd;
 
   --accent: #0f766e; /* teal, 5.4:1 on white */
   --accent-foreground: #ffffff;
@@ -77,6 +89,11 @@
   --danger: #b91c1c;
   --danger-soft: #fee2e2;
   --danger-soft-foreground: #991b1b;
+  --info: #0369a1;
+  --info-soft: #e0f2fe;
+  --info-soft-foreground: #075985;
+  --badge: #f59e0b; /* counts on the rail and the bell, dark text on amber */
+  --badge-foreground: #141716;
 }
 
 .dark,
@@ -87,8 +104,11 @@
   --muted: #8a9692;
   --surface: #1d2423;
   --surface-secondary: #171c1b;
-  --border: #1d2423;
+  --border: #2f3a38; /* the dark surface was its own border colour */
+  --border-control: #6b7774;
   --default: #242b2a;
+  --selected: #173d3a;
+  --rail-foreground: #b6c0bd;
 
   --accent: #5eead4;
   --accent-foreground: #0b1020;
@@ -104,9 +124,24 @@
   --danger: #f87171;
   --danger-soft: #7f1d1d;
   --danger-soft-foreground: #fecaca;
+  --info: #38bdf8;
+  --info-soft: #0c4a6e;
+  --info-soft-foreground: #bae6fd;
+  --badge: #f59e0b;
+  --badge-foreground: #141716;
 }
 
 @layer base {
+  /* a focused field never hides under the sticky header or the phone tab bar (WCAG 2.4.11) */
+  html {
+    scroll-padding-top: 4.5rem;
+    scroll-padding-bottom: 5.5rem;
+  }
+  @media (min-width: 64rem) {
+    html {
+      scroll-padding-bottom: 1rem;
+    }
+  }
   body {
     font-family: var(--font-sans);
     font-feature-settings: "tnum", "cv11";

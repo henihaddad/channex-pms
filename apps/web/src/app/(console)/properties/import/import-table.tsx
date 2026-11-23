@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import type { ImportRow, ImportValue } from "@pms/core";
 import { Alert, Button, Chip } from "@/components/ui";
 import { money } from "@/lib/format";
@@ -37,7 +38,12 @@ const tone: Record<ImportRow["result"], "default" | "warning" | "info" | "danger
   later: "default",
 };
 
-function show(v: ImportValue | null, L: ImportTableLabels, side: "airbnb" | "after"): string {
+function show(
+  v: ImportValue | null,
+  L: ImportTableLabels,
+  side: "airbnb" | "after",
+  locale: string,
+): string {
   if (v === null) return "—";
   switch (v.kind) {
     case "text":
@@ -52,9 +58,9 @@ function show(v: ImportValue | null, L: ImportTableLabels, side: "airbnb" | "aft
       return v.title;
     case "prices":
       return [
-        money(v.medianMinor, v.currency),
+        money(v.medianMinor, v.currency, locale),
         v.weekendMinor !== null && v.weekendMinor !== v.medianMinor
-          ? L.weekends.replace("{price}", money(v.weekendMinor, v.currency))
+          ? L.weekends.replace("{price}", money(v.weekendMinor, v.currency, locale))
           : null,
         L.pricedNights.replace("{count}", String(v.nights)),
       ]
@@ -81,6 +87,7 @@ export function ImportTable({
   hidden: Record<string, string>;
   labels: ImportTableLabels;
 }) {
+  const locale = useLocale();
   const router = useRouter();
   const [state, action, pending] = useActionState(runAirbnbImportAction, {});
   useEffect(() => {
@@ -93,8 +100,8 @@ export function ImportTable({
       ...rows.map((r) =>
         [
           L.fields[r.key] ?? r.key,
-          show(r.airbnb, L, "airbnb"),
-          show(r.after, L, "after"),
+          show(r.airbnb, L, "airbnb", locale),
+          show(r.after, L, "after", locale),
           L.results[r.result],
         ]
           .map(esc)
@@ -156,13 +163,13 @@ export function ImportTable({
                     ) : null}
                   </td>
                   <td className="border-b border-border/70 px-4 py-3.5">
-                    {show(r.airbnb, L, "airbnb")}
+                    {show(r.airbnb, L, "airbnb", locale)}
                   </td>
                   <td className="border-b border-border/70 px-4 py-3.5">
-                    {show(r.after, L, "after")}
+                    {show(r.after, L, "after", locale)}
                     {r.result === "change" ? (
                       <span className="block text-xs text-muted">
-                        {L.now.replace("{value}", show(r.local, L, "after"))}
+                        {L.now.replace("{value}", show(r.local, L, "after", locale))}
                       </span>
                     ) : null}
                   </td>

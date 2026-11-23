@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { asSystem, rawRows, sql } from "@pms/db";
 import { container } from "./container";
 
@@ -5,7 +6,7 @@ import { container } from "./container";
  * The counts on the Reservations tabs ("Requests · 2", "Needs a room · 1"): open Airbnb
  * requests and bookings that cannot be prepared until they have a room. Counts only, no PII.
  */
-export async function reservationBadges(
+async function reservationBadgesUncached(
   orgId: string,
 ): Promise<{ requests: number; needsRoom: number }> {
   try {
@@ -23,3 +24,6 @@ export async function reservationBadges(
     return { requests: 0, needsRoom: 0 };
   }
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+export const reservationBadges = cache(reservationBadgesUncached);

@@ -11,7 +11,7 @@ import {
   testConnectionAction,
   type BothSides,
 } from "../channels.actions";
-import { ADAPTERS } from "@/api/schemas";
+import { ADAPTERS } from "@/api/adapters";
 import { MappingEditor } from "../mapping-editor";
 import { Alert, Button, buttonClasses, Input, Label, Select } from "@/components/ui";
 

@@ -26,9 +26,19 @@ export const metadata: Metadata = {
     "Property management and channel manager for people who manage properties for other people.",
 };
 
+/**
+ * The only namespaces client components translate with `useTranslations`; everything else renders on
+ * the server. Sending the whole catalogue (about 45 KB gzipped) on every page, the booking site
+ * included, was the largest part of each payload.
+ */
+const CLIENT_NAMESPACES = ["apiKeys", "oauth", "payments"] as const;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
-  const messages = await getMessages();
+  const all = await getMessages();
+  const messages = Object.fromEntries(
+    CLIENT_NAMESPACES.filter((k) => k in all).map((k) => [k, all[k]]),
+  );
   return (
     <html
       lang={locale}
@@ -40,6 +50,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
         </NextIntlClientProvider>
+        {/* the one polite live region `announce()` writes to (WCAG 4.1.3) */}
+        <div id="pms-announcer" aria-live="polite" aria-atomic="true" className="sr-only" />
       </body>
     </html>
   );

@@ -6,8 +6,10 @@ export function derivedLabel(
   o: DerivedOption,
   currency: string,
   t: (key: "derived", values: { change: string }) => string,
+  locale: string,
 ): string {
   const sign = o.direction === "decrease" ? "−" : "+";
-  const size = o.kind === "percent" ? `${String(o.value / 100)}%` : money(o.value, currency);
+  const size =
+    o.kind === "percent" ? `${String(o.value / 100)}%` : money(o.value, currency, locale);
   return t("derived", { change: `${sign}${size}` });
 }

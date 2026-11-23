@@ -167,6 +167,7 @@ export default async function CheckInPage() {
                       currency={r.currency}
                       otaName={r.otaName}
                       t={tr}
+                      locale={locale}
                     />
                   </Td>
                   <Td>

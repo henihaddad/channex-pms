@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { channelComparison, LocalDate, Money } from "@pms/core";
 import { asSystem, DrizzleBookingEngineRepository } from "@pms/db";
 import { parsePolicy } from "@pms/jobs";
@@ -34,7 +34,7 @@ export default async function CheckoutPage({
   const sp = await searchParams;
   const orgId = await orgForHold(holdId);
   if (!orgId) notFound();
-  const t = await getTranslations("book");
+  const [t, locale] = await Promise.all([getTranslations("book"), getLocale()]);
   const c = await container();
   const data = await asSystem(c.db.db, orgId, async (tx) => {
     const repo = new DrizzleBookingEngineRepository(tx, orgId, c.crypto);
@@ -69,7 +69,10 @@ export default async function CheckoutPage({
           });
   const rows: Array<[string, number]> = [
     [
-      t("nightsTimes", { nights: q.nights, price: money(Math.round(q.roomMinor / q.nights), cur) }),
+      t("nightsTimes", {
+        nights: q.nights,
+        price: money(Math.round(q.roomMinor / q.nights), cur, locale),
+      }),
       q.roomMinor,
     ],
     ...q.extras.map((e): [string, number] => [
@@ -86,11 +89,11 @@ export default async function CheckoutPage({
       ? t("payLineNothing", { label: q.dueNowLabel })
       : restMinor > 0
         ? t("payLinePart", {
-            due: money2(q.dueNowMinor, cur),
+            due: money2(q.dueNowMinor, cur, locale),
             label: q.dueNowLabel,
-            rest: money2(restMinor, cur),
+            rest: money2(restMinor, cur, locale),
           })
-        : t("payLineFull", { due: money2(q.dueNowMinor, cur) });
+        : t("payLineFull", { due: money2(q.dueNowMinor, cur, locale) });
   const savings =
     p && q.roomMinor > 0
       ? channelComparison(Money.of(q.roomMinor, cur), p.pricing, p.listedOn)
@@ -142,7 +145,7 @@ export default async function CheckoutPage({
                   cardError: t("cardError"),
                   confirm:
                     q.dueNowMinor > 0
-                      ? t("payAndConfirm", { amount: money2(q.dueNowMinor, cur) })
+                      ? t("payAndConfirm", { amount: money2(q.dueNowMinor, cur, locale) })
                       : t("confirm"),
                   confirming: t("confirming"),
                   afterConfirm: t("afterConfirm"),
@@ -188,19 +191,19 @@ export default async function CheckoutPage({
                 {rows.map(([label, minor]) => (
                   <tr key={label}>
                     <td className="py-1">{label}</td>
-                    <td className="py-1 text-end tabular-nums">{money2(minor, cur)}</td>
+                    <td className="py-1 text-end tabular-nums">{money2(minor, cur, locale)}</td>
                   </tr>
                 ))}
                 <tr className="border-t border-border font-bold">
                   <td className="pt-2.5 pb-1">{t("total")}</td>
                   <td className="pt-2.5 pb-1 text-end tabular-nums" data-testid="quote-total">
-                    {money2(q.totalMinor, cur)}
+                    {money2(q.totalMinor, cur, locale)}
                   </td>
                 </tr>
                 <tr className="font-semibold text-accent">
                   <td className="py-1">{t("dueNow")}</td>
                   <td className="py-1 text-end tabular-nums" data-testid="quote-due">
-                    {money2(q.dueNowMinor, cur)}
+                    {money2(q.dueNowMinor, cur, locale)}
                   </td>
                 </tr>
               </tbody>
@@ -210,7 +213,7 @@ export default async function CheckoutPage({
               <p>
                 <span className="inline-flex rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-soft-foreground">
                   {t("youSave", {
-                    amount: money(savings.price.minor - q.roomMinor, cur),
+                    amount: money(savings.price.minor - q.roomMinor, cur, locale),
                     channel: t(`channel.${savings.channel}`),
                   })}
                 </span>

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { asSystem, DrizzleOperatorRepository, rawRows, sql, withoutTenant } from "@pms/db";
 import { consoleAccess, type TenantState } from "@pms/core";
 import { container } from "./container";
@@ -31,17 +32,37 @@ export interface OnboardingTrack {
   unlocked: boolean;
 }
 
-/** Everything the console shell shows above the page: state banners, announcements, the checklist. */
-export async function consoleContext(orgId: string): Promise<ConsoleContext> {
+/**
+ * Everything the console shell shows above the page: state banners, announcements, the checklist.
+ * The reads are independent, so they run side by side; `cache` makes the layout and the page share
+ * one load per request.
+ */
+export const consoleContext = cache(async (orgId: string): Promise<ConsoleContext> => {
   const c = await container();
-  const [row] = await withoutTenant(c.db.db, (tx) =>
-    rawRows<{ state: TenantState }>(tx, sql`select state from organization where id = ${orgId}`),
-  );
-  const state = row?.state ?? "trial";
-  const announcements = await withoutTenant(c.db.db, (tx) =>
-    new DrizzleOperatorRepository(tx).activeAnnouncementsFor(orgId),
-  );
-  const [steps] = await asSystem(c.db.db, orgId, (tx) =>
+  const orgRead = withoutTenant(c.db.db, async (tx) => {
+    // one transaction for the global reads: the org's state, its announcements, its plan
+    const [row] = await rawRows<{ state: TenantState }>(
+      tx,
+      sql`select state from organization where id = ${orgId}`,
+    );
+    const announcements = await new DrizzleOperatorRepository(tx).activeAnnouncementsFor(orgId);
+    // the trial ends on the subscription's date, or the starter plan's trial length after sign-up
+    // (the same rule as the expireTrials sweep in @pms/jobs)
+    const [sub] = await rawRows<{
+      key: string | null;
+      name: string | null;
+      days_left: number | null;
+    }>(
+      tx,
+      sql`select p.key, p.name,
+            (coalesce(s.trial_ends_on, (o.created_at::date + (select trial_days from plan where key = 'starter')))
+              - current_date)::int as days_left
+          from organization o left join subscription s on s.org_id = o.id left join plan p on p.id = s.plan_id
+          where o.id = ${orgId}`,
+    );
+    return { state: row?.state ?? ("trial" as TenantState), announcements, sub };
+  });
+  const stepsRead = asSystem(c.db.db, orgId, (tx) =>
     rawRows<{
       properties: number;
       channels: number;
@@ -66,6 +87,12 @@ export async function consoleContext(orgId: string): Promise<ConsoleContext> {
         (select count(*)::int from crew where org_id = ${orgId} and archived_at is null) as crews`,
     ),
   );
+  const [{ state, announcements, sub }, [steps], imp, operator] = await Promise.all([
+    orgRead,
+    stepsRead,
+    currentImpersonation(),
+    currentOperator(),
+  ]);
   const providerConfigured = Boolean(process.env.CHANNEX_API_KEY) || c.fake !== undefined;
   const n = (v: number | undefined) => Number(v ?? 0);
   const tracks: OnboardingTrack[] = [
@@ -114,19 +141,6 @@ export async function consoleContext(orgId: string): Promise<ConsoleContext> {
     t.unlocked = previousDone;
     previousDone = previousDone && t.done;
   }
-  const imp = await currentImpersonation();
-  // the trial ends on the subscription's date, or the starter plan's trial length after sign-up
-  // (the same rule as the expireTrials sweep in @pms/jobs)
-  const [sub] = await withoutTenant(c.db.db, (tx) =>
-    rawRows<{ key: string | null; name: string | null; days_left: number | null }>(
-      tx,
-      sql`select p.key, p.name,
-            (coalesce(s.trial_ends_on, (o.created_at::date + (select trial_days from plan where key = 'starter')))
-              - current_date)::int as days_left
-          from organization o left join subscription s on s.org_id = o.id left join plan p on p.id = s.plan_id
-          where o.id = ${orgId}`,
-    ),
-  );
   return {
     plan:
       state === "trial"
@@ -142,7 +156,7 @@ export async function consoleContext(orgId: string): Promise<ConsoleContext> {
     access: consoleAccess(state),
     announcements,
     impersonation: imp ? { orgName: imp.orgName, expiresAt: imp.expiresAt } : null,
-    isOperator: (await currentOperator()) !== null,
+    isOperator: operator !== null,
     onboarding: tracks.every((t) => t.done) ? null : tracks,
   };
-}
+});

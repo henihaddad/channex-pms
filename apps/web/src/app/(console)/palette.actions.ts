@@ -2,7 +2,7 @@
 
 import { DrizzlePropertyRepository, DrizzleReservationRepository } from "@pms/db";
 import { withPermission } from "@/server/with-permission";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { container } from "@/server/container";
 import { paletteRows, type PaletteResults } from "@/server/palette";
 
@@ -28,17 +28,24 @@ export const paletteSearch = withPermission<[{ q: string }], PaletteResults>(
       ),
       new DrizzlePropertyRepository(ctx.tx, ctx.orgId).list(),
     ]);
-    const t = await getTranslations("nav.palette.rows");
-    return paletteRows(query, list.rows, properties, today, {
-      arrivesIn: (n) => t("arrivesIn", { n }),
-      arrivesToday: t("arrivesToday"),
-      inHouse: t("inHouse"),
-      checkedOut: t("checkedOut"),
-      confirmed: t("confirmed"),
-      cancelled: t("cancelled"),
-      due: (amount) => t("due", { amount }),
-      direct: t("direct"),
-      live: t("live"),
-    });
+    const [t, locale] = await Promise.all([getTranslations("nav.palette.rows"), getLocale()]);
+    return paletteRows(
+      query,
+      list.rows,
+      properties,
+      today,
+      {
+        arrivesIn: (n) => t("arrivesIn", { n }),
+        arrivesToday: t("arrivesToday"),
+        inHouse: t("inHouse"),
+        checkedOut: t("checkedOut"),
+        confirmed: t("confirmed"),
+        cancelled: t("cancelled"),
+        due: (amount) => t("due", { amount }),
+        direct: t("direct"),
+        live: t("live"),
+      },
+      locale,
+    );
   },
 );

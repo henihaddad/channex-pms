@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { guestPrice, Money, OTA_CHANNELS, type PricingDefaults } from "@pms/core";
 import {
   DrizzlePricingDefaultsRepository,
@@ -182,8 +182,11 @@ export default async function PricingSettingsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const t = await getTranslations("calendar.settings");
-  const tc = await getTranslations("calendar");
+  const [t, tc, locale] = await Promise.all([
+    getTranslations("calendar.settings"),
+    getTranslations("calendar"),
+    getLocale(),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
   const {
     plans,
@@ -213,7 +216,7 @@ export default async function PricingSettingsPage({
       </div>
     );
   const cur = plan.currency;
-  const symbol = money(0, cur).replace(/[\d.,\s−-]/g, "") || cur;
+  const symbol = money(0, cur, locale).replace(/[\d.,\s−-]/g, "") || cur;
   const major = (minor: number | null | undefined) => (minor == null ? "" : String(minor / 100));
   const pct = (bps: number | null | undefined) => (bps == null ? "" : `${String(bps / 100)}%`);
   const tipsMode = !d.imports.enabled ? "off" : d.imports.autoApply ? "auto" : "suggest";
@@ -370,7 +373,7 @@ export default async function PricingSettingsPage({
                   : d.derived
                       .map((x) =>
                         x.option
-                          ? `${x.title} = ${plan.title} ${x.option.direction === "decrease" ? "−" : "+"}${x.option.kind === "percent" ? `${String(x.option.value)}%` : money(x.option.value, cur)}`
+                          ? `${x.title} = ${plan.title} ${x.option.direction === "decrease" ? "−" : "+"}${x.option.kind === "percent" ? `${String(x.option.value)}%` : money(x.option.value, cur, locale)}`
                           : x.title,
                       )
                       .join(" · ")}{" "}
@@ -389,7 +392,7 @@ export default async function PricingSettingsPage({
               const bps = d.defaults.markupBps[ch];
               const shown =
                 example != null && bps
-                  ? `${money(example, cur)} → ${money(guestPrice(Money.of(example, cur), bps, d.defaults.rounding).minor, cur)}`
+                  ? `${money(example, cur, locale)} → ${money(guestPrice(Money.of(example, cur), bps, d.defaults.rounding).minor, cur, locale)}`
                   : null;
               return (
                 <div key={ch} className={row}>
@@ -548,7 +551,7 @@ export default async function PricingSettingsPage({
                         <Td>
                           {p.kind === "percent"
                             ? `−${String(p.value)}%`
-                            : `−${money(p.value, cur)}`}{" "}
+                            : `−${money(p.value, cur, locale)}`}{" "}
                           · {t("code", { code: p.code })}
                         </Td>
                         <Td>{channelNameOf("direct")}</Td>
@@ -663,7 +666,7 @@ export default async function PricingSettingsPage({
                     {x.taxes
                       .map(
                         (tx) =>
-                          `${tx.name} ${tx.logic === "percent" ? `${String(tx.rate)}%` : money(tx.rate, cur)}${tx.isInclusive ? ` ${t("included")}` : ""}`,
+                          `${tx.name} ${tx.logic === "percent" ? `${String(tx.rate)}%` : money(tx.rate, cur, locale)}${tx.isInclusive ? ` ${t("included")}` : ""}`,
                       )
                       .join(" · ")}
                   </span>

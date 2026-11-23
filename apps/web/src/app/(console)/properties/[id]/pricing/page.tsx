@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { AUTOMATED_RATE_SOURCES } from "@pms/core";
 import { DrizzleRateImportRepository, rawRows, sql, type RateImportSettings } from "@pms/db";
 import {
@@ -133,8 +133,11 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
   const today = new Date().toISOString().slice(0, 10);
   const d = await loadPricing({ propertyId: id, today });
   if (!d) notFound();
-  const t = await getTranslations("pricing");
-  const tp = await getTranslations("properties");
+  const [t, tp, locale] = await Promise.all([
+    getTranslations("pricing"),
+    getTranslations("properties"),
+    getLocale(),
+  ]);
   const s = d.settings;
   const refs = Object.keys(s.mapping);
   const provider = PROVIDER[s.provider] ?? s.provider;
@@ -248,14 +251,14 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
                         {derived && p.derivedOption ? (
                           <span className="block text-xs text-muted">
                             {t("derivedFrom", {
-                              change: `${p.derivedOption.direction === "decrease" ? "−" : "+"}${p.derivedOption.kind === "percent" ? `${String(p.derivedOption.value)}%` : money(p.derivedOption.value, d.currency)}`,
+                              change: `${p.derivedOption.direction === "decrease" ? "−" : "+"}${p.derivedOption.kind === "percent" ? `${String(p.derivedOption.value)}%` : money(p.derivedOption.value, d.currency, locale)}`,
                             })}
                           </span>
                         ) : null}
                       </Td>
-                      <Td>{derived ? "—" : money(floor, d.currency)}</Td>
-                      <Td>{derived ? "—" : money(ceiling, d.currency)}</Td>
-                      <Td>{money(p.todayRate, d.currency)}</Td>
+                      <Td>{derived ? "—" : money(floor, d.currency, locale)}</Td>
+                      <Td>{derived ? "—" : money(ceiling, d.currency, locale)}</Td>
+                      <Td>{money(p.todayRate, d.currency, locale)}</Td>
                       <Td>{sourceName(p.todaySource)}</Td>
                       <Td>
                         {!derived && p.todaySource === "rate_import" && d.lastImport
@@ -310,8 +313,8 @@ export default async function PricingPage({ params }: { params: Promise<{ id: st
                             <span className="block text-xs text-muted">{o.plan}</span>
                           ) : null}
                         </Td>
-                        <Td>{money(o.rate, d.currency)}</Td>
-                        <Td>{money(low ? floor : ceiling, d.currency)}</Td>
+                        <Td>{money(o.rate, d.currency, locale)}</Td>
+                        <Td>{money(low ? floor : ceiling, d.currency, locale)}</Td>
                         <Td>{low ? t("belowFloor") : t("aboveCeiling")}</Td>
                       </Tr>
                     );

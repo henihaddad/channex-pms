@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { channelComparison, Money } from "@pms/core";
 import { asSystem, rawRows, sql, withoutTenant } from "@pms/db";
 import { searchPortfolio, type StorefrontResult } from "@pms/jobs";
@@ -23,7 +23,7 @@ export default async function StorefrontPage({
   searchParams: Promise<SearchParams & { org?: string }>;
 }) {
   const sp = await searchParams;
-  const t = await getTranslations("book");
+  const [t, locale] = await Promise.all([getTranslations("book"), getLocale()]);
   const c = await container();
   const orgs = await withoutTenant(c.db.db, (tx) =>
     rawRows<{ org_id: string; name: string }>(
@@ -103,7 +103,7 @@ export default async function StorefrontPage({
                 {q
                   ? t("placesFor", {
                       count: results.length,
-                      range: stayRange(q.arrivalDate, q.departureDate),
+                      range: stayRange(q.arrivalDate, q.departureDate, locale),
                     })
                   : t("places", { count: results.length })}
               </h2>
@@ -129,6 +129,7 @@ export default async function StorefrontPage({
                     tone={tint(String(i))}
                     href={`/book/${r.property.id}${query ? `?${query}` : ""}`}
                     t={t}
+                    locale={locale}
                   />
                 </li>
               ))}
@@ -169,11 +170,13 @@ function PlaceCard({
   href,
   tone,
   t,
+  locale,
 }: {
   r: StorefrontResult;
   href: string;
   tone: string;
   t: T;
+  locale: string;
 }) {
   const p = r.property;
   const perNight = r.from ? Math.round(r.from.roomMinor / r.from.nights) : p.minRateMinor;
@@ -227,18 +230,18 @@ function PlaceCard({
             <>
               {r.from ? null : <span className="text-muted">{t("from")} </span>}
               <strong className="text-[19px] font-extrabold tracking-[-0.01em]">
-                {money(perNight, p.currency)}
+                {money(perNight, p.currency, locale)}
               </strong>{" "}
               <span className="text-muted">/ {t("night")}</span>
               {compare ? (
                 <span
                   className="ms-1.5 text-[13px] text-muted line-through"
                   title={t("onChannel", {
-                    price: money(compare.price.minor, p.currency),
+                    price: money(compare.price.minor, p.currency, locale),
                     channel: t(`channel.${compare.channel}`),
                   })}
                 >
-                  {money(compare.price.minor, p.currency)}
+                  {money(compare.price.minor, p.currency, locale)}
                 </span>
               ) : null}
             </>

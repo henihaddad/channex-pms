@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import type { CalendarLabels } from "@/components/calendar-labels";
 import {
   addDays,
@@ -50,6 +51,8 @@ export function CalendarMonth({
   tipsCount?: number;
   labels: CalendarLabels;
 }) {
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : locale;
   const router = useRouter();
   const [pid, setPid] = useState(initialProperty ?? properties[0]?.id ?? "");
   const [first, setFirst] = useState(monthStart(start));
@@ -184,7 +187,7 @@ export function CalendarMonth({
     await load();
   };
 
-  const monthName = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(
+  const monthName = new Intl.DateTimeFormat(dateLocale, { month: "short", timeZone: "UTC" }).format(
     new Date(`${first}T00:00:00Z`),
   );
   const lead = mondayIndex(first);
@@ -278,7 +281,11 @@ export function CalendarMonth({
                   {Number(d.slice(8))}
                 </span>
                 <span className="text-[9px] opacity-80">
-                  {booked && !isSel ? "" : blocked ? L.blocked : money(cell?.[1].rate, currency)}
+                  {booked && !isSel
+                    ? ""
+                    : blocked
+                      ? L.blocked
+                      : money(cell?.[1].rate, currency, locale)}
                 </span>
               </>
             );
@@ -374,6 +381,7 @@ function MonthSheet({
   onClose: () => void;
   onSave: (s: { rate?: number; values: Values; note: string | null }) => Promise<void>;
 }) {
+  const locale = useLocale();
   const same = <K extends keyof Values>(k: K) =>
     cells.every((c) => c[k] === cells[0]?.[k]) ? cells[0]?.[k] : undefined;
   const rate0 = same("rate");
@@ -388,9 +396,9 @@ function MonthSheet({
   const [note, setNote] = useState(note0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const symbol = money(0, currency).replace(/[\d.,\s−-]/g, "") || currency;
+  const symbol = money(0, currency, locale).replace(/[\d.,\s−-]/g, "") || currency;
   const label = (iso: string, withMonth: boolean) =>
-    new Intl.DateTimeFormat("en-GB", {
+    new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
       day: "numeric",
       ...(withMonth ? { month: "short" } : {}),
       timeZone: "UTC",

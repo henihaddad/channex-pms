@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { Id, IdentityService, type Invitation } from "@pms/core";
 import {
@@ -311,7 +312,7 @@ export async function inviteInTx(
 }
 
 /** The signed-in person's name and email, for the account row in the rail. */
-export async function currentUserProfile(
+async function currentUserProfileUncached(
   userId: Id,
 ): Promise<{ name: string; email: string } | null> {
   const c = await container();
@@ -321,8 +322,11 @@ export async function currentUserProfile(
   return u ? { name: u.name, email: u.email } : null;
 }
 
+/** Once per request: the layout and the page share it (React `cache`). */
+export const currentUserProfile = cache(currentUserProfileUncached);
+
 /** The signed-in person's role in an organization, for the account line in the rail ("Owner · Coastal Stays"). */
-export async function currentRoleKey(userId: Id, orgId: Id): Promise<string | null> {
+async function currentRoleKeyUncached(userId: Id, orgId: Id): Promise<string | null> {
   const c = await container();
   const grants = await withoutTenant(c.db.db, (tx) =>
     new DrizzleIdentityRepository(tx).listGrantsForSubject("user", userId),
@@ -346,12 +350,18 @@ export async function currentRoleKey(userId: Id, orgId: Id): Promise<string | nu
   return order.find((r) => mine.includes(r)) ?? mine[0] ?? null;
 }
 
-export async function memberships(
+/** Once per request: the layout and the page share it (React `cache`). */
+export const currentRoleKey = cache(currentRoleKeyUncached);
+
+async function membershipsUncached(
   userId: Id,
 ): Promise<Array<{ orgId: Id; name: string; slug: string }>> {
   const c = await container();
   return withoutTenant(c.db.db, (tx) => new DrizzleIdentityRepository(tx).listMemberships(userId));
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+export const memberships = cache(membershipsUncached);
 
 async function pickOrg(userId: Id): Promise<Id | null> {
   const list = await memberships(userId);

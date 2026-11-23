@@ -1,6 +1,6 @@
 import type React from "react";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { icsFor } from "@pms/core";
 import { asSystem } from "@pms/db";
 import { guestPortal } from "@pms/jobs";
@@ -70,8 +70,11 @@ export default async function GuestPortalPage({
 }) {
   const sp = await searchParams;
   if (sp.token) redirect(`/api/v1/guest/enter?token=${encodeURIComponent(sp.token)}`);
-  const t = await getTranslations("guest");
-  const tg = await getTranslations("guides");
+  const [t, tg, locale] = await Promise.all([
+    getTranslations("guest"),
+    getTranslations("guides"),
+    getLocale(),
+  ]);
   const guest = await currentGuest();
   if (!guest)
     return (
@@ -333,28 +336,34 @@ export default async function GuestPortalPage({
                 <tbody>
                   <tr>
                     <td className="py-1.5">{t("stayNights", { count: p.nights })}</td>
-                    <td className="py-1.5 text-end tabular-nums">{money2(p.totalMinor, cur)}</td>
+                    <td className="py-1.5 text-end tabular-nums">
+                      {money2(p.totalMinor, cur, locale)}
+                    </td>
                   </tr>
                   {extrasLines.map((l, i) => (
                     <tr key={i} data-kind={l.kind}>
                       <td className="py-1.5">{l.description}</td>
-                      <td className="py-1.5 text-end tabular-nums">{money2(l.amountMinor, cur)}</td>
+                      <td className="py-1.5 text-end tabular-nums">
+                        {money2(l.amountMinor, cur, locale)}
+                      </td>
                     </tr>
                   ))}
                   <tr className="border-t border-border font-bold">
                     <td className="pt-2.5 pb-1.5">{t("total")}</td>
-                    <td className="pt-2.5 pb-1.5 text-end tabular-nums">{money2(charges, cur)}</td>
+                    <td className="pt-2.5 pb-1.5 text-end tabular-nums">
+                      {money2(charges, cur, locale)}
+                    </td>
                   </tr>
                   {paid > 0 ? (
                     <tr className="text-success">
                       <td className="py-1.5">{t("paid")}</td>
-                      <td className="py-1.5 text-end tabular-nums">{money2(paid, cur)}</td>
+                      <td className="py-1.5 text-end tabular-nums">{money2(paid, cur, locale)}</td>
                     </tr>
                   ) : null}
                   <tr>
                     <td className="py-1.5">{t("balance")}</td>
                     <td className="py-1.5 text-end tabular-nums" data-testid="guest-balance">
-                      {money2(p.folio.balanceMinor, cur)}
+                      {money2(p.folio.balanceMinor, cur, locale)}
                     </td>
                   </tr>
                 </tbody>
@@ -366,7 +375,7 @@ export default async function GuestPortalPage({
                     {p.extras.map((e) => (
                       <li key={e.id} className="flex items-center justify-between gap-3">
                         <span>
-                          {e.name} · {money(e.priceMinor, cur)}/{e.per}
+                          {e.name} · {money(e.priceMinor, cur, locale)}/{e.per}
                         </span>
                         <form action={addExtraAction}>
                           <input type="hidden" name="propertyId" value={p.property.id} />
@@ -396,7 +405,9 @@ export default async function GuestPortalPage({
                         )}
                       >
                         {p.cancellation.feeNowMinor > 0
-                          ? t("cancelWithFee", { fee: money(p.cancellation.feeNowMinor, cur) })
+                          ? t("cancelWithFee", {
+                              fee: money(p.cancellation.feeNowMinor, cur, locale),
+                            })
                           : t("cancelFreeShort")}
                       </summary>
                       <form
@@ -405,7 +416,9 @@ export default async function GuestPortalPage({
                       >
                         <p>
                           {p.cancellation.feeNowMinor > 0
-                            ? t("cancelFee", { fee: money(p.cancellation.feeNowMinor, cur) })
+                            ? t("cancelFee", {
+                                fee: money(p.cancellation.feeNowMinor, cur, locale),
+                              })
                             : t("cancelFree")}
                         </p>
                         <Button

@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 import { guestPrice, Money } from "@pms/core";
 import { type CalendarLabels } from "@/components/calendar-labels";
 import {
@@ -102,6 +103,8 @@ export function CalendarGrid({
   viewSwitch: ReactNode;
   labels: CalendarLabels;
 }) {
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : locale;
   const [start, setStart] = useState(initialStart);
   const [days, setDays] = useState(initialDays);
   const [groupId, setGroupId] = useState<string>("");
@@ -663,7 +666,7 @@ export function CalendarGrid({
     if (rate === undefined) return;
     setClip(rate);
     void navigator.clipboard?.writeText(String(rate / 100)).catch(() => undefined);
-    setMessage(fmt(L.copied, { price: moneyText(rate, row!.property.currency) }));
+    setMessage(fmt(L.copied, { price: moneyText(rate, row!.property.currency, locale) }));
   };
   const pastePrice = () => {
     if (clip !== null && selected.length > 0) void writeSelection("rates", { rate: clip });
@@ -817,13 +820,13 @@ export function CalendarGrid({
 
   const nightsCount = selectedDates.length;
   const panelOpen = rects.length > 0 && (selected.length > 0 || derivedOnly);
-  const monthLabel = new Intl.DateTimeFormat("en-GB", {
+  const monthLabel = new Intl.DateTimeFormat(dateLocale, {
     month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(`${dates[0] ?? start}T00:00:00Z`));
   const shortDate = (iso: string) =>
-    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Intl.DateTimeFormat(dateLocale, { day: "numeric", month: "short", timeZone: "UTC" }).format(
       new Date(`${iso}T00:00:00Z`),
     );
   const rangeLabel = (from: string, to: string): string => {
@@ -984,8 +987,8 @@ export function CalendarGrid({
         >
           <p className="font-medium">{L.conflictTitle}</p>
           <p className="text-xs">
-            {L.mine}: {describe(conflict.mine, data, L)} · {L.theirs}:{" "}
-            {describe(conflict.theirs, data, L)}
+            {L.mine}: {describe(conflict.mine, data, L, locale)} · {L.theirs}:{" "}
+            {describe(conflict.theirs, data, L, locale)}
           </p>
           <div className="mt-2 flex gap-2">
             <button
@@ -1297,7 +1300,7 @@ export function CalendarGrid({
                           >
                             {v?.rate === undefined
                               ? "—"
-                              : new Intl.NumberFormat("en-GB").format(v.rate / 100)}
+                              : new Intl.NumberFormat(dateLocale).format(v.rate / 100)}
                           </span>
                           {multi && av ? (
                             <span
@@ -1567,10 +1570,10 @@ export function CalendarGrid({
 }
 
 /** Restriction values in words, for the conflict prompt. */
-function describe(v: Values, data: GridProperty[], L: CalendarLabels): string {
+function describe(v: Values, data: GridProperty[], L: CalendarLabels, locale: string): string {
   const cur = data[0]?.currency ?? "EUR";
   return [
-    v.rate !== undefined ? moneyText(v.rate, cur) : "",
+    v.rate !== undefined ? moneyText(v.rate, cur, locale) : "",
     v.stopSell ? L.blocked : "",
     v.minStay ? `${L.minNights} ${String(v.minStay)}` : "",
   ]
@@ -1612,10 +1615,11 @@ function HoverCard({
   x: number;
   y: number;
 }) {
+  const locale = useLocale();
   const cell = row.ratePlan.cells.find((c) => c[0] === date);
   const v = cell?.[1];
   const cur = row.property.currency;
-  const label = new Intl.DateTimeFormat("en-GB", {
+  const label = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -1647,7 +1651,7 @@ function HoverCard({
         <tbody>
           <tr>
             <td className="py-[3px]">{L.yourPrice}</td>
-            <td className="py-[3px] text-end font-bold">{moneyText(v?.rate, cur)}</td>
+            <td className="py-[3px] text-end font-bold">{moneyText(v?.rate, cur, locale)}</td>
           </tr>
           {v?.rate !== undefined
             ? otas.map((ch) => {
@@ -1663,7 +1667,7 @@ function HoverCard({
                       {channelNameOf(ch as "airbnb")} · +{bps / 100}%
                     </td>
                     <td className="py-[3px] text-end">
-                      {fmt(L.guestSees, { price: moneyText(shown.minor, cur) })}
+                      {fmt(L.guestSees, { price: moneyText(shown.minor, cur, locale) })}
                     </td>
                   </tr>
                 );
@@ -1673,7 +1677,7 @@ function HoverCard({
             <tr className="text-muted">
               <td className="py-[3px]">{channelNameOf("direct")}</td>
               <td className="py-[3px] text-end">
-                {fmt(L.bestPrice, { price: moneyText(v.rate, cur) })}
+                {fmt(L.bestPrice, { price: moneyText(v.rate, cur, locale) })}
               </td>
             </tr>
           ) : null}
@@ -1748,9 +1752,10 @@ function SelectionPanel({
   onApply: () => void;
   onCancelPreview: () => void;
 }) {
+  const locale = useLocale();
   const first = cells[0]?.cell[1];
   const currency = plans[0]?.property.currency ?? "EUR";
-  const symbol = moneyText(0, currency).replace(/[\d.,\s−-]/g, "") || currency;
+  const symbol = moneyText(0, currency, locale).replace(/[\d.,\s−-]/g, "") || currency;
   const uniform = <K extends keyof Values>(k: K): Values[K] | undefined => {
     const v = first?.[k];
     return cells.every((c) => c.cell[1][k] === v) ? v : undefined;
@@ -1897,7 +1902,7 @@ function SelectionPanel({
           <div className="flex flex-wrap gap-1.5">
             {initialRate !== undefined && priceMinor !== undefined && priceMinor !== initialRate ? (
               <span className="rounded-full bg-default px-2.5 py-[3px] font-semibold text-muted">
-                {fmt(L.was, { price: moneyText(initialRate, currency) })}
+                {fmt(L.was, { price: moneyText(initialRate, currency, locale) })}
               </span>
             ) : null}
             {priceMinor !== undefined && Number.isFinite(priceMinor) && priceMinor >= 0
@@ -1915,7 +1920,7 @@ function SelectionPanel({
                     >
                       {fmt(L.channelShows, {
                         channel: channelNameOf(ch as "airbnb"),
-                        price: moneyText(shown.minor, currency),
+                        price: moneyText(shown.minor, currency, locale),
                       })}
                     </span>
                   );

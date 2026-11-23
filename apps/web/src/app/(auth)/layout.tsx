@@ -1,5 +1,5 @@
 import type React from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { LAUNCH_PLANS } from "@pms/core";
 import { DrizzlePlatformRepository, withoutTenant } from "@pms/db";
 import { Logo } from "@/components/logo";
@@ -13,7 +13,11 @@ import { AuthAside } from "./auth-aside";
  * steps to a live calendar; the others carry the product claim.
  */
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  const [t, ts] = await Promise.all([getTranslations("app"), getTranslations("signup")]);
+  const [t, ts, locale] = await Promise.all([
+    getTranslations("app"),
+    getTranslations("signup"),
+    getLocale(),
+  ]);
   const plan = await entryPlan();
   return (
     <div className="flex min-h-screen flex-wrap">
@@ -77,7 +81,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             default: <p className="text-xs text-[#8a9692]">{t("footer")}</p>,
             signup: (
               <p className="text-xs text-[#8a9692]">
-                {ts("footer", { price: money(plan.unitMinor, plan.currency) })}
+                {ts("footer", { price: money(plan.unitMinor, plan.currency, locale) })}
               </p>
             ),
           }}

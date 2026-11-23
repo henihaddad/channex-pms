@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import { Alert, Button, Card, Chip, Select } from "@/components/ui";
 import type { CalendarLabels } from "@/components/calendar-labels";
 import { money as moneyText } from "@/lib/format";
@@ -49,7 +50,8 @@ const addDays = (iso: string, n: number): string => {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 };
-const money = (minor: number | undefined, currency: string): string => moneyText(minor, currency);
+const money = (minor: number | undefined, currency: string, locale: string): string =>
+  moneyText(minor, currency, locale);
 const fmt = (s: string, vars: Record<string, string | number>): string =>
   s.replace(/\{(\w+)\}/g, (_, k: string) => String(vars[k] ?? ""));
 
@@ -72,6 +74,7 @@ export function CalendarDayView({
   labels: CalendarLabels;
   onDateChange: (date: string) => void;
 }) {
+  const locale = useLocale();
   const [groupId, setGroupId] = useState("");
   const [data, setData] = useState<GridProperty[] | null>(null);
   const [message, setMessage] = useState("");
@@ -296,7 +299,7 @@ export function CalendarDayView({
                                 ) : null}
                               </span>
                               <span className="tabular-nums font-medium" data-testid="day-rate">
-                                {money(v.rate, p.currency)}
+                                {money(v.rate, p.currency, locale)}
                               </span>
                               {v.minStay ? (
                                 <span className="text-xs text-muted">

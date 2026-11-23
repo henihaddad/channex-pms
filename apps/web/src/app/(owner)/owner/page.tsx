@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Button, Card, Chip, DateInput, Select, Stat } from "@/components/ui";
 import { Eyebrow } from "@/components/site";
 import { guard } from "@/server/guard";
@@ -37,7 +37,7 @@ const monthName = (iso: string, style: "long" | "short") =>
  * the stays coming up. Guest names stay off this page (PORT-1).
  */
 export default async function OwnerHome() {
-  const t = await getTranslations("owner");
+  const [t, locale] = await Promise.all([getTranslations("owner"), getLocale()]);
   const days = next60();
   const [v, statements, cal, who] = await Promise.all([
     guard(() => loadPortalHome()),
@@ -74,12 +74,12 @@ export default async function OwnerHome() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label={t("monthSoFar", { month: monthName(v.monthFrom, "long") })}
-          value={money(d.projectedNetMinor ?? d.grossMinor, cur)}
+          value={money(d.projectedNetMinor ?? d.grossMinor, cur, locale)}
           hint={d.projectedNetMinor === null ? t("grossNoDraft") : t("afterSplit")}
         />
         <Stat
           label={t("occupancyMonth", { month: mon })}
-          value={d.unitNights > 0 ? percent(d.nightsSold / d.unitNights) : "—"}
+          value={d.unitNights > 0 ? percent(d.nightsSold / d.unitNights, { locale }) : "—"}
           hint={
             d.unitNights > 0
               ? t("nightsOf", { sold: d.nightsSold, total: d.unitNights })
@@ -88,7 +88,9 @@ export default async function OwnerHome() {
         />
         <Stat
           label={t("adrMonth", { month: mon })}
-          value={d.nightsSold > 0 ? money(Math.round(d.grossMinor / d.nightsSold), cur) : "—"}
+          value={
+            d.nightsSold > 0 ? money(Math.round(d.grossMinor / d.nightsSold), cur, locale) : "—"
+          }
           hint={t("adrHint")}
         />
         <Stat
@@ -98,6 +100,7 @@ export default async function OwnerHome() {
               ? money(
                   Number(nextPayout.totals.payable ?? nextPayout.totals.netDue ?? 0),
                   nextPayout.currency,
+                  locale,
                 )
               : "—"
           }
@@ -141,10 +144,10 @@ export default async function OwnerHome() {
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-end tabular-nums">
-                          {money(Number(s.totals.revenueBasis ?? 0), s.currency)}
+                          {money(Number(s.totals.revenueBasis ?? 0), s.currency, locale)}
                         </td>
                         <td className="px-4 py-3 text-end tabular-nums">
-                          {money(Number(s.totals.netDue ?? 0), s.currency)}
+                          {money(Number(s.totals.netDue ?? 0), s.currency, locale)}
                         </td>
                         <td className="px-4 py-3">
                           {s.disputeState === "open" ? (

@@ -1,14 +1,9 @@
 import { z } from "zod";
 
 /** Request schemas shared by handlers and the OpenAPI document. Handlers stay thin; this file is not a handler module. */
-export const ADAPTERS = [
-  "BookingCom",
-  "AirBNB",
-  "Expedia",
-  "Agoda",
-  "Vrbo",
-  "GoogleHotelAds",
-] as const;
+import { ADAPTERS } from "./adapters";
+
+export { ADAPTERS };
 
 const roomTypeSchema = z.object({
   title: z.string().min(1),

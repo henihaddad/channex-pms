@@ -34,11 +34,13 @@ export function BalanceWords({
   currency,
   otaName,
   t,
+  locale,
 }: {
   balance: BalanceState;
   currency: string;
   otaName: string | null;
   t: T;
+  locale: string;
 }) {
   if (balance.kind === "ota")
     return (
@@ -51,7 +53,7 @@ export function BalanceWords({
   if (balance.kind === "due")
     return (
       <span className="font-semibold text-warning">
-        {t("balanceWords.due", { amount: money(balance.dueMinor, currency) })}
+        {t("balanceWords.due", { amount: money(balance.dueMinor, currency, locale) })}
       </span>
     );
   return <span className="text-muted">—</span>;
@@ -63,11 +65,13 @@ export function BalanceChip({
   currency,
   otaName,
   t,
+  locale,
 }: {
   balance: BalanceState;
   currency: string;
   otaName: string | null;
   t: T;
+  locale: string;
 }) {
   if (balance.kind === "ota")
     return (
@@ -77,7 +81,7 @@ export function BalanceChip({
   if (balance.kind === "due")
     return (
       <Chip color="warning">
-        {t("balanceWords.due", { amount: money(balance.dueMinor, currency) })}
+        {t("balanceWords.due", { amount: money(balance.dueMinor, currency, locale) })}
       </Chip>
     );
   return <span className="text-muted">—</span>;

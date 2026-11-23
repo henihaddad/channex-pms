@@ -12,7 +12,8 @@ import { currentRoleKey, currentUserProfile, memberships } from "@/server/auth-f
 import { logoutAction } from "../(auth)/auth.actions";
 import { setLocaleAction } from "./shell.actions";
 import { Logo } from "@/components/logo";
-import { Alert, ConsoleHotkeys, LinkButton, type PaletteItem } from "@/components/ui";
+import { Alert, LinkButton, type PaletteItem } from "@/components/ui";
+import { ConsoleHotkeys } from "@/components/ui/hotkeys";
 import { paletteSearch } from "./palette.actions";
 import { ConsoleShell, type NavSectionDef } from "./console-shell";
 import { BellLink, HeaderMenu, MenuButton, MenuLink } from "./header-menus";
@@ -28,30 +29,55 @@ import { navIcons } from "./nav-icons";
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const session = await currentSession();
   if (!session) redirect("/login");
-  const t = await getTranslations("nav");
   const orgId = await currentOrgId();
-  const badge = orgId
-    ? await inboxBadge(orgId, session.userId)
-    : { unread: 0, breaching: 0, reviewsToAnswer: 0 };
-  const resBadges = orgId ? await reservationBadges(orgId) : { requests: 0, needsRoom: 0 };
-  const cx = orgId ? await consoleContext(orgId) : null;
-  const [orgs, me, locale] = await Promise.all([
+  // every read below is independent of the others: one round of parallel transactions
+  const [
+    badge,
+    resBadges,
+    cx,
+    orgs,
+    me,
+    ownRole,
+    locale,
+    t,
+    tb,
+    to,
+    t2,
+    ti,
+    top,
+    to2,
+    tpay,
+    tch,
+    tprop,
+    tfin,
+  ] = await Promise.all([
+    orgId ? inboxBadge(orgId, session.userId) : { unread: 0, breaching: 0, reviewsToAnswer: 0 },
+    orgId ? reservationBadges(orgId) : { requests: 0, needsRoom: 0 },
+    orgId ? consoleContext(orgId) : null,
     memberships(session.userId),
     currentUserProfile(session.userId),
+    orgId ? currentRoleKey(session.userId, orgId) : null,
     getLocale(),
+    getTranslations("nav"),
+    getTranslations("billing"),
+    getTranslations("ops"),
+    getTranslations("reservations"),
+    getTranslations("inbox"),
+    getTranslations("operations"),
+    getTranslations("owners"),
+    getTranslations("payments"),
+    getTranslations("channels"),
+    getTranslations("properties"),
+    getTranslations("financials"),
   ]);
   const org = orgs.find((o) => o.orgId === orgId) ?? orgs[0];
-  const roleKey = org ? await currentRoleKey(session.userId, org.orgId) : null;
-  const tb = await getTranslations("billing");
-  const to = await getTranslations("ops");
-  const t2 = await getTranslations("reservations");
-  const ti = await getTranslations("inbox");
-  const top = await getTranslations("operations");
-  const to2 = await getTranslations("owners");
-  const tpay = await getTranslations("payments");
-  const tch = await getTranslations("channels");
-  const tprop = await getTranslations("properties");
-  const tfin = await getTranslations("financials");
+  // the role in the org from the cookie came with the rest; only a fallback org needs its own read
+  const roleKey =
+    org && org.orgId === orgId
+      ? ownRole
+      : org
+        ? await currentRoleKey(session.userId, org.orgId)
+        : null;
 
   const sections: NavSectionDef[] = [
     { item: { href: "/", label: t("dashboard") }, tabs: [] },

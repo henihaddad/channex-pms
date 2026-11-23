@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { DrizzleOperatorRepository, withoutTenant, type Tx } from "@pms/db";
@@ -31,7 +32,7 @@ export interface OperatorCtx {
   ): Promise<void>;
 }
 
-async function resolveOperator(): Promise<{ userId: string } | null> {
+async function resolveOperatorUncached(): Promise<{ userId: string } | null> {
   const session = await currentSession();
   if (!session) return null;
   const c = await container();
@@ -40,6 +41,9 @@ async function resolveOperator(): Promise<{ userId: string } | null> {
   );
   return ok ? { userId: session.userId } : null;
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+const resolveOperator = cache(resolveOperatorUncached);
 
 /** For pages: null when the signed-in user is not an operator. */
 export async function currentOperator(): Promise<{ userId: string } | null> {

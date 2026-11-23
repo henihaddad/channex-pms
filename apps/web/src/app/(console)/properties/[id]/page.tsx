@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { PROVISION_STEPS } from "@pms/core";
 import {
   Alert,
@@ -53,7 +53,7 @@ type T = Awaited<ReturnType<typeof getTranslations<"properties">>>;
  */
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const t = await getTranslations("properties");
+  const [t, locale] = await Promise.all([getTranslations("properties"), getLocale()]);
   const [d, o] = await guard(() => Promise.all([loadProperty(id), loadPropertyOverview(id)]));
   const stepIndex = d.provisioning ? PROVISION_STEPS.indexOf(d.provisioning.step) : -1;
   const state = d.property.state;
@@ -123,11 +123,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <Card id="photos" className="scroll-mt-24">
             <PhotoMosaic photos={o.extras.photos} t={t} />
             <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-              <Kpis o={o} currency={d.property.currency} t={t} />
+              <Kpis o={o} currency={d.property.currency} t={t} locale={locale} />
             </div>
           </Card>
 
-          <RoomsAndPlans d={d} o={o} t={t} />
+          <RoomsAndPlans d={d} o={o} t={t} locale={locale} />
 
           <Card
             id="rules"
@@ -410,7 +410,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               <div className="text-sm">
                 <p className="font-semibold">{o.extras.owner.name}</p>
                 <p className="text-xs text-muted">
-                  {ownerTerms(o.extras.owner.model, o.extras.owner.payout, d.property.currency, t)}
+                  {ownerTerms(
+                    o.extras.owner.model,
+                    o.extras.owner.payout,
+                    d.property.currency,
+                    t,
+                    locale,
+                  )}
                 </p>
                 <Link
                   href={`/owners/${o.extras.owner.id}`}
@@ -511,6 +517,7 @@ function ownerTerms(
   payout: Record<string, unknown>,
   currency: string,
   t: T,
+  locale: string,
 ): string {
   const kind = String(model.kind ?? "");
   const terms =
@@ -520,9 +527,9 @@ function ownerTerms(
           us: Math.round(model.rateBps / 100),
         })
       : kind === "fixed_fee" && typeof model.amountMinor === "number"
-        ? t("detail.fixedFee", { amount: money(model.amountMinor, currency) })
+        ? t("detail.fixedFee", { amount: money(model.amountMinor, currency, locale) })
         : kind === "guaranteed_rent" && typeof model.amountMinor === "number"
-          ? t("detail.guaranteedRent", { amount: money(model.amountMinor, currency) })
+          ? t("detail.guaranteedRent", { amount: money(model.amountMinor, currency, locale) })
           : t("detail.tiered");
   const freq = payout.frequency === "fortnightly" ? "fortnightly" : "monthly";
   return `${terms} · ${t(`detail.statements.${freq}`)}`;
@@ -562,7 +569,17 @@ function channexAgo(iso: string, t: T): string {
   return ms < 60_000 ? t("detail.channexNow") : t("detail.channexAgo", { ago: elapsed(iso) });
 }
 
-function Kpis({ o, currency, t }: { o: PropertyOverview; currency: string; t: T }) {
+function Kpis({
+  o,
+  currency,
+  t,
+  locale,
+}: {
+  o: PropertyOverview;
+  currency: string;
+  t: T;
+  locale: string;
+}) {
   const base = o.inventory.ratePlans.find((r) => !r.parentTitle && r.rateMinor !== null);
   const next = o.extras.nextArrival;
   const a = o.attention;
@@ -589,7 +606,7 @@ function Kpis({ o, currency, t }: { o: PropertyOverview; currency: string; t: T 
     <>
       <Stat
         label={t("occupancy30")}
-        value={o.occupancyBps === null ? "—" : percent(o.occupancyBps / 10_000)}
+        value={o.occupancyBps === null ? "—" : percent(o.occupancyBps / 10_000, { locale })}
         hint={t("detail.nightsBooked", {
           sold: o.vitals.nightsSold,
           available: o.vitals.nightsAvailable,
@@ -598,9 +615,11 @@ function Kpis({ o, currency, t }: { o: PropertyOverview; currency: string; t: T 
       />
       <Stat
         label={t("detail.adr30")}
-        value={money(o.adrMinor, currency)}
+        value={money(o.adrMinor, currency, locale)}
         hint={
-          base ? t("detail.baseRate", { rate: money(base.rateMinor, base.currency) }) : undefined
+          base
+            ? t("detail.baseRate", { rate: money(base.rateMinor, base.currency, locale) })
+            : undefined
         }
       />
       <Stat
@@ -631,10 +650,12 @@ function RoomsAndPlans({
   d,
   o,
   t,
+  locale,
 }: {
   d: Awaited<ReturnType<typeof loadProperty>>;
   o: PropertyOverview;
   t: T;
+  locale: string;
 }) {
   const single = d.property.kind === "single_unit";
   const rows = d.roomTypes.flatMap((rt) => {
@@ -686,11 +707,11 @@ function RoomsAndPlans({
           {rp.title}
           {rp.derivedOption ? (
             <span className="block text-xs text-muted">
-              {derivedLabel(rp.derivedOption, rp.currency, t)}
+              {derivedLabel(rp.derivedOption, rp.currency, t, locale)}
             </span>
           ) : null}
         </Td>
-        <Td className="tabular-nums">{money(rp.rateMinor, rp.currency)}</Td>
+        <Td className="tabular-nums">{money(rp.rateMinor, rp.currency, locale)}</Td>
         <Td className="tabular-nums">{rp.minStay ?? "—"}</Td>
         <Td>
           {rp.channels.length ? (

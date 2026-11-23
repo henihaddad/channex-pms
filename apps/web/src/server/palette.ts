@@ -40,6 +40,7 @@ export function paletteRows(
   properties: Array<{ id: string; title: string; state: string }>,
   today: string,
   L: PaletteRowLabels,
+  locale: string,
 ): PaletteResults {
   const needle = query.toLowerCase();
   return {
@@ -60,12 +61,12 @@ export function paletteRows(
         channelLabel(r.otaName, L.direct),
         r.otaReservationCode,
         r.status === "cancelled" ? L.cancelled : L.confirmed,
-        r.balanceMinor > 0 ? L.due(money(r.balanceMinor, r.currency)) : when,
+        r.balanceMinor > 0 ? L.due(money(r.balanceMinor, r.currency, locale)) : when,
       ].filter(Boolean);
       return {
         id: r.id,
         title: r.guestName,
-        inline: `${r.propertyTitle} · ${dayMonth(r.arrivalDate)}–${dayMonth(r.departureDate)}`,
+        inline: `${r.propertyTitle} · ${dayMonth(r.arrivalDate, locale)}–${dayMonth(r.departureDate, locale)}`,
         subtitle: bits.join(" · "),
         href: `/reservations/${r.id}`,
         initials: r.guestName

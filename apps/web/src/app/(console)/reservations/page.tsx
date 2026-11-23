@@ -321,7 +321,13 @@ export default async function ReservationsPage({
                   {money(Number(r.totalAmountMinor), r.currency, locale)}
                 </Td>
                 <Td className="text-end tabular-nums">
-                  <BalanceWords balance={balance} currency={r.currency} otaName={r.otaName} t={t} />
+                  <BalanceWords
+                    balance={balance}
+                    currency={r.currency}
+                    otaName={r.otaName}
+                    t={t}
+                    locale={locale}
+                  />
                 </Td>
               </Tr>
             );

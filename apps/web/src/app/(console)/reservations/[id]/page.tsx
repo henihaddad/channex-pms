@@ -319,7 +319,13 @@ export default async function ReservationPage({ params }: { params: Promise<{ id
           <Card
             title={t("money.title")}
             actions={
-              <BalanceChip balance={balance} currency={d.currency} otaName={d.otaName} t={t} />
+              <BalanceChip
+                balance={balance}
+                currency={d.currency}
+                otaName={d.otaName}
+                t={t}
+                locale={locale}
+              />
             }
           >
             <dl className="flex flex-col text-sm" data-testid="money">

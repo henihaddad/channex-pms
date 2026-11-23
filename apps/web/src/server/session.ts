@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { withoutTenant, DrizzleIdentityRepository } from "@pms/db";
@@ -22,7 +23,7 @@ export interface CurrentSession {
 }
 
 /** Access token from the cookie, verified. Null when absent or expired; the client refreshes via /api/v1/auth/refresh. */
-export async function currentSession(): Promise<CurrentSession | null> {
+async function currentSessionUncached(): Promise<CurrentSession | null> {
   const jar = await cookies();
   const bearer = (await headers()).get("authorization");
   const token = bearer?.startsWith("Bearer ") ? bearer.slice(7) : jar.get(COOKIES.access)?.value;
@@ -33,6 +34,9 @@ export async function currentSession(): Promise<CurrentSession | null> {
     ? { userId: claims.sub as Id, sessionId: claims.sid as Id, grantVersion: claims.gv }
     : null;
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+export const currentSession = cache(currentSessionUncached);
 
 export async function loadSessionRow(sessionId: Id): Promise<Session | null> {
   const c = await container();
@@ -92,12 +96,15 @@ export async function clearSessionCookies(): Promise<void> {
   for (const name of [COOKIES.access, COOKIES.refresh, COOKIES.org]) jar.delete(name);
 }
 
-export async function currentOrgId(): Promise<Id | null> {
+async function currentOrgIdUncached(): Promise<Id | null> {
   const fromHeader = (await headers()).get("x-pms-org");
   if (fromHeader) return fromHeader as Id;
   const jar = await cookies();
   return (jar.get(COOKIES.org)?.value as Id | undefined) ?? null;
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+export const currentOrgId = cache(currentOrgIdUncached);
 
 export async function setCurrentOrg(orgId: Id): Promise<void> {
   const jar = await cookies();

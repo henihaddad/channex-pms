@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { channelComparison, LocalDate, Money, nightlyPrices } from "@pms/core";
 import { asSystem, DrizzleBookingEngineRepository } from "@pms/db";
 import { parsePolicy, searchProperty, type PropertySearch } from "@pms/jobs";
@@ -33,7 +33,7 @@ export default async function PropertyBookingPage({
   const sp = await searchParams;
   const orgId = await orgForProperty(propertyId);
   if (!orgId) notFound();
-  const t = await getTranslations("book");
+  const [t, locale] = await Promise.all([getTranslations("book"), getLocale()]);
   const c = await container();
   const adults = Number(sp.adults ?? 2);
   const children = Number(sp.children ?? 0);
@@ -75,7 +75,7 @@ export default async function PropertyBookingPage({
       ? {
           minor: cmp.price.minor,
           label: t("onChannel", {
-            price: money(cmp.price.minor, cur),
+            price: money(cmp.price.minor, cur, locale),
             channel: t(`channel.${cmp.channel}`),
           }),
         }
@@ -151,7 +151,9 @@ export default async function PropertyBookingPage({
         ? t("termsFirstNight")
         : t("termsNonRefundable"),
     p.settings.taxes.cityTaxPerPersonNightMinor > 0
-      ? t("goodCityTax", { amount: money(p.settings.taxes.cityTaxPerPersonNightMinor, cur) })
+      ? t("goodCityTax", {
+          amount: money(p.settings.taxes.cityTaxPerPersonNightMinor, cur, locale),
+        })
       : null,
     p.settings.taxes.vatBps > 0 ? t("goodVat", { percent: p.settings.taxes.vatBps / 100 }) : null,
   ].filter(Boolean);
@@ -270,7 +272,7 @@ export default async function PropertyBookingPage({
                     <>
                       <span className="text-[13px] font-semibold">{n}</span>
                       <span className="text-[10px]">
-                        {price === null ? "—" : money(price, cur)}
+                        {price === null ? "—" : money(price, cur, locale)}
                       </span>
                     </>
                   );

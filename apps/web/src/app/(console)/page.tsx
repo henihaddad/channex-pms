@@ -242,7 +242,11 @@ export default async function TodayPage({
           ? tt("need.payout", { owner: det.failedPayouts.first.ownerName })
           : tt("need.payoutMore", { n: det.failedPayouts.count }),
       sub: tt("need.payoutSub", {
-        amount: money(det.failedPayouts.first.amountMinor, det.failedPayouts.first.currency),
+        amount: money(
+          det.failedPayouts.first.amountMinor,
+          det.failedPayouts.first.currency,
+          locale,
+        ),
         reason: det.failedPayouts.first.reason ?? tt("need.payoutNoReason"),
       }),
       href: "/owners/payouts",
@@ -263,7 +267,7 @@ export default async function TodayPage({
       sub:
         st.netDueMinor === null
           ? ""
-          : tt("need.statementSub", { amount: money(st.netDueMinor, st.currency) }),
+          : tt("need.statementSub", { amount: money(st.netDueMinor, st.currency, locale) }),
       href:
         det.statementsToReview.count === 1
           ? `/owners/statements/${st.statementId}`
@@ -344,7 +348,7 @@ export default async function TodayPage({
           r.status === "cancelled"
             ? `${r.guestName}, ${range}`
             : isNew
-              ? `${r.guestName}, ${range}, ${money(r.totalAmountMinor, r.currency)}`
+              ? `${r.guestName}, ${range}, ${money(r.totalAmountMinor, r.currency, locale)}`
               : tt("act.changed"),
         sub: tags.join(" · "),
         href: `/reservations/${r.id}`,
@@ -433,7 +437,7 @@ export default async function TodayPage({
           <Stat
             className="hidden lg:flex"
             label={t("revenueToday")}
-            value={money(d.board.revenueTodayMinor, cur)}
+            value={money(d.board.revenueTodayMinor, cur, locale)}
             hint={
               revDelta === null
                 ? undefined
@@ -543,7 +547,7 @@ export default async function TodayPage({
                           ) : null}
                           {r.balanceMinor > 0 ? (
                             <Chip color="warning" size="sm">
-                              {tt("due", { amount: money(r.balanceMinor, r.currency) })}
+                              {tt("due", { amount: money(r.balanceMinor, r.currency, locale) })}
                             </Chip>
                           ) : null}
                           {x?.codeSent ? (

@@ -1,8 +1,9 @@
+import { cache } from "react";
 import { asSystem, DrizzleMessagingRepository, rawRows, sql } from "@pms/db";
 import { container } from "./container";
 
 /** MSG-2: unread and SLA counts for the global nav; a read of counts only, no bodies. */
-export async function inboxBadge(
+async function inboxBadgeUncached(
   orgId: string,
   userId: string,
 ): Promise<{ unread: number; breaching: number; reviewsToAnswer: number }> {
@@ -28,3 +29,6 @@ export async function inboxBadge(
     return { unread: 0, breaching: 0, reviewsToAnswer: 0 };
   }
 }
+
+/** Once per request: the layout and the page share it (React `cache`). */
+export const inboxBadge = cache(inboxBadgeUncached);

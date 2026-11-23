@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import {
   quote as buildQuote,
   type Extra,
@@ -72,6 +73,7 @@ export function BookingPanel({
   labels: Record<string, string>;
   guestOptions: Array<{ value: string; label: string }>;
 }) {
+  const locale = useLocale();
   const [picked, setPicked] = useState(0);
   const [chosen, setChosen] = useState<string[]>([]);
   const searchRef = useRef<HTMLFormElement>(null);
@@ -113,7 +115,7 @@ export function BookingPanel({
           <>
             {current ? null : <span className="text-sm text-muted">{labels.from}</span>}
             <strong className="font-display text-[28px] font-bold">
-              {money(perNight, currency)}
+              {money(perNight, currency, locale)}
             </strong>
             <span className="text-sm text-muted">/ {labels.night}</span>
           </>
@@ -251,7 +253,9 @@ export function BookingPanel({
                       ? `${o.offer.roomTypeTitle} · `
                       : ""}
                     {o.offer.ratePlanTitle} ·{" "}
-                    <span data-testid="offer-total">{money(o.offer.roomMinor, currency)}</span>
+                    <span data-testid="offer-total">
+                      {money(o.offer.roomMinor, currency, locale)}
+                    </span>
                   </strong>
                   <span className="block text-xs text-muted">
                     {[
@@ -284,7 +288,8 @@ export function BookingPanel({
                     }
                     className="accent-accent"
                   />
-                  {e.name} ({money(e.priceMinor, currency)}/{labels[`per_${e.per}`] ?? e.per})
+                  {e.name} ({money(e.priceMinor, currency, locale)}/
+                  {labels[`per_${e.per}`] ?? e.per})
                 </label>
               ))}
             </fieldset>
@@ -292,25 +297,29 @@ export function BookingPanel({
           <dl className="flex flex-col gap-1.5 text-sm" data-testid="panel-quote">
             <Line
               label={fill(labels.nightsTimes!, {
-                price: money(Math.round(current.offer.roomMinor / current.offer.nights), currency),
+                price: money(
+                  Math.round(current.offer.roomMinor / current.offer.nights),
+                  currency,
+                  locale,
+                ),
               })}
-              value={money2(q.roomMinor, currency)}
+              value={money2(q.roomMinor, currency, locale)}
             />
             {q.extras.map((e) => (
-              <Line key={e.id} label={e.name} value={money2(e.amountMinor, currency)} />
+              <Line key={e.id} label={e.name} value={money2(e.amountMinor, currency, locale)} />
             ))}
             {q.discountMinor > 0 ? (
-              <Line label={labels.discount!} value={money2(-q.discountMinor, currency)} />
+              <Line label={labels.discount!} value={money2(-q.discountMinor, currency, locale)} />
             ) : null}
             {q.vatMinor > 0 ? (
-              <Line label={labels.vat!} value={money2(q.vatMinor, currency)} />
+              <Line label={labels.vat!} value={money2(q.vatMinor, currency, locale)} />
             ) : null}
             {q.cityTaxMinor > 0 ? (
-              <Line label={labels.cityTax!} value={money2(q.cityTaxMinor, currency)} />
+              <Line label={labels.cityTax!} value={money2(q.cityTaxMinor, currency, locale)} />
             ) : null}
             <div className="mt-1 flex justify-between border-t border-border pt-2 font-bold">
               <dt>{labels.total}</dt>
-              <dd>{money2(q.totalMinor, currency)}</dd>
+              <dd>{money2(q.totalMinor, currency, locale)}</dd>
             </div>
           </dl>
           <button
@@ -318,10 +327,10 @@ export function BookingPanel({
             className="inline-flex h-12 items-center justify-center rounded-full bg-accent text-[15px] font-bold text-accent-foreground hover:bg-accent/90"
             data-testid="book-offer"
           >
-            {fill(labels.book!, { total: money(q.totalMinor, currency) })}
+            {fill(labels.book!, { total: money(q.totalMinor, currency, locale) })}
           </button>
           <p className="text-center text-xs text-muted">
-            {labels.instant} · {dueNowText(guarantee, q.dueNowMinor, currency, labels)} ·{" "}
+            {labels.instant} · {dueNowText(guarantee, q.dueNowMinor, currency, labels, locale)} ·{" "}
             {labels.noFee}
           </p>
         </form>
@@ -349,11 +358,12 @@ function dueNowText(
   dueMinor: number,
   currency: string,
   labels: Record<string, string>,
+  locale: string,
 ): string {
   if (g.kind === "deposit_percent")
     return fill(labels.payPercent!, { percent: Math.round(g.percentBps / 100) });
   if (g.kind === "deposit_fixed" || g.kind === "prepay")
-    return fill(labels.payNow!, { amount: money(dueMinor, currency) });
+    return fill(labels.payNow!, { amount: money(dueMinor, currency, locale) });
   if (g.kind === "card_on_file") return labels.cardHeld!;
   return labels.payAtProperty!;
 }

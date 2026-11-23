@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getLocale } from "next-intl/server";
 import { Money, seasonOn, seasonPrices, summariseMonths, type YearNight } from "@pms/core";
 import { DrizzleSeasonRepository, loadYearNights, rawRows, sql, type SeasonRow } from "@pms/db";
 import { Card, Stat, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
@@ -66,7 +67,11 @@ export async function YearView({
 }) {
   const from = monthFirst(fromParam);
   const to = addDays(monthFirst(from, 12), -1);
-  const d = await guard(() => loadYear({ propertyId, from, to }));
+  const [d, locale] = await Promise.all([
+    guard(() => loadYear({ propertyId, from, to })),
+    getLocale(),
+  ]);
+  const dateLocale = locale === "en" ? "en-GB" : locale;
   const nights = d.year.nights;
   // an average reads in whole units ("avg €112"), never with cents
   const unit = 10 ** Money.exponent(d.currency);
@@ -82,11 +87,11 @@ export async function YearView({
   const nextYear = monthFirst(from, 12);
   const yearOf = (iso: string) => iso.slice(0, 4);
   const monthName = (iso: string) =>
-    new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" }).format(
+    new Intl.DateTimeFormat(dateLocale, { month: "long", timeZone: "UTC" }).format(
       new Date(`${iso}-01T00:00:00Z`),
     );
   const shortDate = (iso: string) =>
-    new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Intl.DateTimeFormat(dateLocale, { day: "numeric", month: "short", timeZone: "UTC" }).format(
       new Date(`${iso}T00:00:00Z`),
     );
   const today = new Date().toISOString().slice(0, 10);
@@ -122,10 +127,10 @@ export async function YearView({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat
           label={L.next12}
-          value={sellable === 0 ? "—" : percent(booked / sellable)}
+          value={sellable === 0 ? "—" : percent(booked / sellable, { locale })}
           hint={L.occupancyOnBooks}
         />
-        <Stat label={L.revenueOnBooks} value={money(d.year.revenueMinor, d.currency)} />
+        <Stat label={L.revenueOnBooks} value={money(d.year.revenueMinor, d.currency, locale)} />
         <Stat
           label={L.nightsBlocked}
           value={String(blockedNights)}
@@ -162,8 +167,8 @@ export async function YearView({
               <div className="mb-2 flex items-baseline justify-between">
                 <strong className="text-[13px]">{monthName(m.month)}</strong>
                 <span className="text-[11px] text-muted">
-                  {m.occupancy === null ? "—" : percent(m.occupancy)} ·{" "}
-                  {fmt(L.avg, { price: money(whole(m.averageRateMinor), d.currency) })}
+                  {m.occupancy === null ? "—" : percent(m.occupancy, { locale })} ·{" "}
+                  {fmt(L.avg, { price: money(whole(m.averageRateMinor), d.currency, locale) })}
                 </span>
               </div>
               <div className="grid grid-cols-7 gap-[3px]">
@@ -231,8 +236,8 @@ export async function YearView({
                     <Td>
                       {s.ranges.map((r) => `${shortDate(r.from)} → ${shortDate(r.to)}`).join(" · ")}
                     </Td>
-                    <Td>{money(p.weekdayMinor, d.currency)}</Td>
-                    <Td>{money(p.weekendMinor, d.currency)}</Td>
+                    <Td>{money(p.weekdayMinor, d.currency, locale)}</Td>
+                    <Td>{money(p.weekendMinor, d.currency, locale)}</Td>
                     <Td>{p.minStay ?? "—"}</Td>
                     <Td className="text-end">
                       {s.propertyId ? (

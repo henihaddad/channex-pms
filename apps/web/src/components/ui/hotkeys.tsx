@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { CommandPalette, type PaletteItem, type PaletteLabels } from "./command-palette";
+import type { PaletteItem, PaletteLabels } from "./command-palette";
+import { OPEN_PALETTE_EVENT } from "./palette-event";
+
+// cmdk and the palette (about 20 KB gzipped) load on first use, not with every console page
+const loadPalette = () => import("./command-palette");
+const CommandPalette = dynamic(() => loadPalette().then((m) => m.CommandPalette), { ssr: false });
 
 type SearchFn = (q: {
   q: string;
 }) => Promise<{ reservations: PaletteItem[]; properties: PaletteItem[] }>;
 
-/** Anything that asks the console to open ⌘K (the phone header's search button) dispatches this. */
-export const OPEN_PALETTE_EVENT = "pms:palette";
+export { OPEN_PALETTE_EVENT };
 
 const typing = (e: KeyboardEvent) => {
   const el = e.target as HTMLElement | null;
@@ -19,7 +24,7 @@ const typing = (e: KeyboardEvent) => {
 };
 
 /**
- * The console's keyboard layer. ⌘K (Ctrl+K) opens the palette, "/" focuses the header search,
+ * The console's keyboard layer. ⌘K (Ctrl+K) opens the palette, "/" opens it too,
  * "?" opens the shortcuts page, "n" starts a reservation and "g" then a letter goes to a section,
  * Gmail-style. Nothing fires while you type in a field. Every shortcut is also a button somewhere,
  * so nobody has to learn them.
@@ -44,6 +49,8 @@ export function ConsoleHotkeys({
 }) {
   const router = useRouter();
   const [palette, setPalette] = useState(false);
+  // mounted from the first open on, so closing keeps its exit animation and its state
+  const [used, setUsed] = useState(false);
 
   useEffect(() => {
     let chord: string | null = null;
@@ -51,17 +58,15 @@ export function ConsoleHotkeys({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        setUsed(true);
         setPalette((v) => !v);
         return;
       }
       if (e.defaultPrevented || typing(e) || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "/") {
-        const box = document.querySelector<HTMLInputElement>('[data-testid="global-search"]');
-        if (box && box.offsetParent !== null) {
-          e.preventDefault();
-          box.focus();
-          box.select();
-        }
+        e.preventDefault();
+        setUsed(true);
+        setPalette(true);
         return;
       }
       if (e.key === "?") {
@@ -93,14 +98,23 @@ export function ConsoleHotkeys({
     const onHash = () => {
       if (window.location.hash === "#shortcuts") router.push(shortcutsHref);
     };
-    const onOpen = () => setPalette(true);
-    // the header search opens the palette on click when JavaScript is here; without it the form still submits
-    const box = document.querySelector<HTMLInputElement>('[data-testid="global-search"]');
-    const onBoxClick = (e: MouseEvent) => {
-      e.preventDefault();
+    const onOpen = () => {
+      setUsed(true);
       setPalette(true);
     };
-    box?.addEventListener("click", onBoxClick);
+    // the header search is the palette's door: click or focus opens it (one behaviour for mouse and
+    // keyboard); without JavaScript the form still submits to the reservations search
+    const box = document.querySelector<HTMLInputElement>('[data-testid="global-search"]');
+    const onBoxOpen = (e: Event) => {
+      e.preventDefault();
+      box?.blur();
+      setUsed(true);
+      setPalette(true);
+    };
+    const preload = () => void loadPalette();
+    box?.addEventListener("click", onBoxOpen);
+    box?.addEventListener("focus", onBoxOpen);
+    box?.addEventListener("pointerenter", preload, { once: true });
     window.addEventListener("keydown", onKey);
     window.addEventListener("hashchange", onHash);
     window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
@@ -109,10 +123,13 @@ export function ConsoleHotkeys({
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("hashchange", onHash);
       window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
-      box?.removeEventListener("click", onBoxClick);
+      box?.removeEventListener("click", onBoxOpen);
+      box?.removeEventListener("focus", onBoxOpen);
+      box?.removeEventListener("pointerenter", preload);
     };
   }, [goTo, router, shortcutsHref]);
 
+  if (!used && !palette) return null;
   return (
     <CommandPalette
       open={palette}

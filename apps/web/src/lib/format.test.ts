@@ -4,17 +4,25 @@ import { day, elapsed, money, nightsBetween, percent, stay } from "./format";
 
 describe("format", () => {
   it("writes money as the design does", () => {
-    expect(money(8000, "EUR")).toBe("€80");
-    expect(money(8050, "EUR")).toBe("€80.50");
-    expect(money(164000, "EUR")).toBe("€1,640");
-    expect(money(45000, "ZAR")).toBe("ZAR 450");
-    expect(money(-2500, "GBP")).toBe("−£25");
-    expect(money(null, "EUR")).toBe("—");
+    expect(money(8000, "EUR", "en")).toBe("€80");
+    expect(money(8050, "EUR", "en")).toBe("€80.50");
+    expect(money(164000, "EUR", "en")).toBe("€1,640");
+    expect(money(45000, "ZAR", "en")).toBe("ZAR\u00a0450");
+    expect(money(-2500, "GBP", "en")).toBe("−£25");
+    expect(money(-8050, "EUR", "fr")).toBe("−80,50\u00a0€");
+    expect(money(null, "EUR", "en")).toBe("—");
+  });
+  it("writes money in the viewer's locale with the currency's own exponent", () => {
+    expect(money(8050, "EUR", "fr")).toBe("80,50\u00a0€");
+    expect(money(8000, "EUR", "fr")).toBe("80\u00a0€");
+    expect(money(12000, "JPY", "en")).toBe("¥12,000");
+    expect(money(12500, "TND", "en")).toBe("TND\u00a012.500");
+    expect(money(12000, "TND", "en")).toBe("TND\u00a012");
   });
   it("never loses the minor units it was given", () => {
     fc.assert(
       fc.property(fc.integer({ min: 0, max: 10_000_000 }), (minor) => {
-        const digits = Number(money(minor, "EUR").replace(/[^0-9]/g, ""));
+        const digits = Number(money(minor, "EUR", "en").replace(/[^0-9]/g, ""));
         expect(digits).toBe(minor % 100 === 0 ? minor / 100 : minor);
       }),
     );
@@ -29,8 +37,8 @@ describe("format", () => {
   });
   it("writes elapsed time", () => {
     const now = new Date("2026-11-08T12:00:00Z");
-    expect(elapsed("2026-11-08T11:48:00Z", now)).toBe("12 min");
-    expect(elapsed("2026-11-08T10:48:00Z", now)).toBe("1 h 12 min");
-    expect(elapsed("2026-11-05T12:00:00Z", now)).toBe("3 d");
+    expect(elapsed("2026-11-08T11:48:00Z", now)).toBe("12 mins");
+    expect(elapsed("2026-11-08T10:48:00Z", now)).toBe("1 hr 12 mins");
+    expect(elapsed("2026-11-05T12:00:00Z", now)).toBe("3 days");
   });
 });

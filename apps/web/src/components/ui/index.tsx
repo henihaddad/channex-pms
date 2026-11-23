@@ -120,15 +120,46 @@ export function Label({
   );
 }
 
-export function Description({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cn("text-xs text-muted", className)}>{children}</p>;
-}
-
-export function FieldError({ children, className }: { children: ReactNode; className?: string }) {
+export function Description({
+  children,
+  className,
+  id,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+}) {
   return (
-    <p role="alert" className={cn("text-xs font-medium text-danger", className)}>
+    <p id={id} className={cn("text-xs text-muted", className)}>
       {children}
     </p>
+  );
+}
+
+/**
+ * The error under a field. A polite live region, not an alert: a server render that shows it
+ * again must not interrupt a screen reader each time (WCAG 4.1.3).
+ */
+export function FieldError({
+  children,
+  className,
+  id,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  return (
+    <p id={id} aria-live="polite" className={cn("text-xs font-medium text-danger", className)}>
+      {children}
+    </p>
+  );
+}
+
+/** The ids a control's `aria-describedby` points at: its hint and its error, when shown. */
+function describedBy(id: string, hint: unknown, error: unknown): string | undefined {
+  return (
+    [hint ? `${id}-hint` : null, error ? `${id}-err` : null].filter(Boolean).join(" ") || undefined
   );
 }
 
@@ -154,9 +185,22 @@ export function Field({
   disabled,
   readOnly,
   testId,
+  inputMode,
+  pattern,
+  spellCheck,
+  maxLength,
+  minLength,
+  id: givenId,
 }: {
   label: string;
   name: string;
+  /** Overrides the default `field-{name}` when two forms on a page share a field name. */
+  id?: string;
+  inputMode?: ComponentProps<"input">["inputMode"];
+  pattern?: string;
+  spellCheck?: boolean;
+  maxLength?: number;
+  minLength?: number;
   type?: string;
   required?: boolean;
   autoComplete?: string;
@@ -186,7 +230,7 @@ export function Field({
         testId={testId}
       />
     );
-  const id = `field-${name}`;
+  const id = givenId ?? `field-${name}`;
   return (
     <div className={cn("flex w-full flex-col gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
@@ -197,7 +241,13 @@ export function Field({
         required={required}
         disabled={disabled}
         readOnly={readOnly}
+        inputMode={inputMode}
+        pattern={pattern}
+        spellCheck={spellCheck}
+        maxLength={maxLength}
+        minLength={minLength}
         aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, description, error)}
         defaultValue={defaultValue == null ? undefined : String(defaultValue)}
         placeholder={placeholder}
         autoComplete={autoComplete}
@@ -206,8 +256,8 @@ export function Field({
         step={step}
         data-testid={testId}
       />
-      {description ? <Description>{description}</Description> : null}
-      {error ? <FieldError>{error}</FieldError> : null}
+      {description ? <Description id={`${id}-hint`}>{description}</Description> : null}
+      {error ? <FieldError id={`${id}-err`}>{error}</FieldError> : null}
     </div>
   );
 }
@@ -222,6 +272,9 @@ export function TextareaField({
   description,
   rows = 4,
   className,
+  error,
+  id: givenId,
+  maxLength,
 }: {
   label: string;
   name: string;
@@ -231,8 +284,11 @@ export function TextareaField({
   description?: ReactNode;
   rows?: number;
   className?: string;
+  error?: ReactNode;
+  id?: string;
+  maxLength?: number;
 }) {
-  const id = `field-${name}`;
+  const id = givenId ?? `field-${name}`;
   return (
     <div className={cn("flex w-full flex-col gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
@@ -243,8 +299,12 @@ export function TextareaField({
         defaultValue={defaultValue ?? undefined}
         placeholder={placeholder}
         rows={rows}
+        maxLength={maxLength}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, description, error)}
       />
-      {description ? <Description>{description}</Description> : null}
+      {description ? <Description id={`${id}-hint`}>{description}</Description> : null}
+      {error ? <FieldError id={`${id}-err`}>{error}</FieldError> : null}
     </div>
   );
 }
@@ -324,6 +384,7 @@ export function Select({
   "data-testid": dataTestId,
   form,
   description,
+  error,
 }: {
   name?: string;
   id?: string;
@@ -345,6 +406,7 @@ export function Select({
   /** Same as `testId`, for call sites written like a native element. */
   "data-testid"?: string;
   form?: string;
+  error?: ReactNode;
 }) {
   const items = options ?? optionsFromChildren(children);
   const autoId = useId();
@@ -362,6 +424,8 @@ export function Select({
         required={required}
         disabled={disabled}
         aria-label={label ? undefined : (ariaLabel ?? name)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={label && selectId ? describedBy(selectId, description, error) : undefined}
         data-testid={testId ?? dataTestId}
         {...(controlled
           ? { value: value ?? "" }
@@ -392,7 +456,12 @@ export function Select({
     <div className={cn("flex w-full flex-col gap-1.5", className)}>
       <Label htmlFor={selectId}>{label}</Label>
       {select}
-      {description ? <Description>{description}</Description> : null}
+      {description ? (
+        <Description id={selectId ? `${selectId}-hint` : undefined}>{description}</Description>
+      ) : null}
+      {error ? (
+        <FieldError id={selectId ? `${selectId}-err` : undefined}>{error}</FieldError>
+      ) : null}
     </div>
   );
 }
@@ -536,7 +605,9 @@ export function PageHeader({
       {crumb ? <Breadcrumbs items={crumb} className="-mb-2 text-[13px]" /> : null}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <PageTitle className={titleOnPhone ? undefined : "hidden lg:block"}>{title}</PageTitle>
+          <PageTitle className={titleOnPhone ? undefined : "sr-only lg:not-sr-only"}>
+            {title}
+          </PageTitle>
           {description ? (
             <p
               className={cn("max-w-[640px] text-sm text-muted", !titleOnPhone && "hidden lg:block")}
@@ -601,20 +672,27 @@ const alertTones = {
   default: "border-border bg-surface-secondary text-foreground",
 } as const;
 
+/**
+ * A message box. Errors interrupt (role="alert"); other tones are a polite status. A banner that
+ * stays on every page (billing, impersonation) passes `live={false}` so it is not re-announced on
+ * each navigation (WCAG 4.1.3).
+ */
 export function Alert({
   children,
   tone = "error",
   title,
   className,
+  live = true,
   ...rest
 }: Omit<ComponentProps<"div">, "title"> & {
   children?: ReactNode;
   tone?: keyof typeof alertTones;
   title?: ReactNode;
+  live?: boolean;
 }) {
   return (
     <div
-      role="alert"
+      role={live ? (tone === "error" ? "alert" : "status") : undefined}
       className={cn("alert rounded-control border px-4 py-3 text-sm", alertTones[tone], className)}
       {...rest}
     >
@@ -632,7 +710,7 @@ const chipSoft: Record<ChipColor, string> = {
   success: "bg-success-soft text-success-soft-foreground",
   warning: "bg-warning-soft text-warning-soft-foreground",
   danger: "bg-danger-soft text-danger-soft-foreground",
-  info: "bg-[#e0f2fe] text-[#075985]",
+  info: "bg-info-soft text-info-soft-foreground",
   dark: "bg-foreground text-background",
 };
 const chipSolid: Record<ChipColor, string> = {
@@ -641,7 +719,7 @@ const chipSolid: Record<ChipColor, string> = {
   success: "bg-success text-white",
   warning: "bg-warning text-white",
   danger: "bg-danger text-white",
-  info: "bg-[#0369a1] text-white",
+  info: "bg-info text-white",
   dark: "bg-foreground text-background",
 };
 
@@ -918,31 +996,46 @@ export function Stat({
   hint,
   className,
   testId,
+  href,
 }: {
   label: ReactNode;
   value: ReactNode;
   hint?: ReactNode;
   className?: string;
   testId?: string;
+  /** A tile that opens its list: one link, with a hover state and a visible focus ring. */
+  href?: string;
 }) {
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col gap-1 rounded-card border border-border bg-surface px-4.5 py-4",
-        className,
-      )}
-      data-testid={testId}
-    >
+  const box = cn(
+    "flex min-w-0 flex-col gap-1 rounded-card border border-border bg-surface px-4.5 py-4",
+    href && "transition-colors hover:border-accent/40",
+    className,
+  );
+  const inner = (
+    <>
       <span className="text-xs font-semibold text-muted">{label}</span>
       <span className="font-display text-[1.625rem] leading-none font-bold tracking-tight text-foreground tabular-nums">
         {value}
       </span>
       {hint ? <span className="text-xs text-muted">{hint}</span> : null}
+    </>
+  );
+  if (href)
+    return (
+      <NextLink href={href} className={box} data-testid={testId}>
+        {inner}
+      </NextLink>
+    );
+  return (
+    <div className={box} data-testid={testId}>
+      {inner}
     </div>
   );
 }
 
 export { SectionTabs, SectionTabsContext, SectionTabsSlot, type SectionTab } from "./section-tabs";
 import { SectionTabsSlot } from "./section-tabs";
-export { ConsoleHotkeys, OPEN_PALETTE_EVENT } from "./hotkeys";
+// ConsoleHotkeys is imported from "./hotkeys" directly: re-exported here, it put cmdk on every page
+export { OPEN_PALETTE_EVENT } from "./palette-event";
+export { announce, ConfirmSubmit, SubmitButton } from "./submit";
 export type { PaletteItem, PaletteLabels } from "./command-palette";

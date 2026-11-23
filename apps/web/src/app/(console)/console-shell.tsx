@@ -3,7 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { OPEN_PALETTE_EVENT, SectionTabs, SectionTabsContext } from "@/components/ui";
+import { SectionTabs, SectionTabsContext } from "@/components/ui";
+import { OPEN_PALETTE_EVENT } from "@/components/ui/palette-event";
 import { NavLink, type NavItem } from "./nav-link";
 
 export interface NavSectionDef {

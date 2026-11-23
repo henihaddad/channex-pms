@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { DataTable, PageHeader } from "@/components/ui";
 import { guard } from "@/server/guard";
 import { money } from "@/lib/format";
@@ -9,7 +9,7 @@ import { derivedLabel } from "../derived-label";
 
 /** Every rate plan across the portfolio with tonight's rate (spec 03 §3.2a, tab "Rate plans"). */
 export default async function RatePlansPage() {
-  const t = await getTranslations("properties");
+  const [t, locale] = await Promise.all([getTranslations("properties"), getLocale()]);
   const inv = await guard(() => loadInventory());
   // a single rental's room type is managed for the manager; it reads as the whole property
   const whole = new Set(
@@ -43,7 +43,7 @@ export default async function RatePlansPage() {
             {rp.title}
             {rp.parentTitle && rp.derivedOption ? (
               <span className="block text-xs text-muted">
-                {derivedLabel(rp.derivedOption, rp.currency, t)} · {rp.parentTitle}
+                {derivedLabel(rp.derivedOption, rp.currency, t, locale)} · {rp.parentTitle}
               </span>
             ) : null}
           </span>,
@@ -54,7 +54,7 @@ export default async function RatePlansPage() {
           ) : (
             rp.roomTypeTitle
           ),
-          money(rp.rateMinor, rp.currency),
+          money(rp.rateMinor, rp.currency, locale),
           rp.minStay ?? "—",
           rp.channels.length === 0 ? (
             <span key="c" className="text-muted">

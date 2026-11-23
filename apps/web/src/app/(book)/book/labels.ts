@@ -1,5 +1,5 @@
 import type { getTranslations } from "next-intl/server";
-import { money } from "@/lib/format";
+import { Money } from "@pms/core";
 
 type BookT = Awaited<ReturnType<typeof getTranslations<"book">>>;
 
@@ -34,8 +34,18 @@ export function stayRange(arrival: string, departure: string, locale = "en"): st
   );
 }
 
-/** Line items read to the cent ("€330.00"), as a receipt does. */
-export function money2(minor: number, currency: string): string {
-  const s = money(minor, currency);
-  return minor % 100 === 0 && /\d$/.test(s) ? `${s}.00` : s;
+/**
+ * Line items read to the minor unit ("€330.00", "330,00 €", "¥12,000"), as a receipt does: the
+ * locale's currency format with every decimal the currency has (ISO 4217 exponent).
+ */
+export function money2(minor: number, currency: string, locale: string): string {
+  const code = currency.toUpperCase();
+  const exp = Money.exponent(code);
+  const n = new Intl.NumberFormat(locale === "en" ? "en-GB" : locale, {
+    style: "currency",
+    currency: code,
+    minimumFractionDigits: exp,
+    maximumFractionDigits: exp,
+  }).format(Math.abs(minor) / 10 ** exp);
+  return minor < 0 ? `−${n}` : n;
 }
