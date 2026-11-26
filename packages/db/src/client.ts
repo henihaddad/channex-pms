@@ -135,6 +135,9 @@ class PerRequestPool extends pg.Pool {
       console.warn("db: request connection held too long; opening a separate one");
       return this.fresh();
     }
+    // the holder before us armed the idle close when it released; this holder keeps the connection
+    if (s.idle) clearTimeout(s.idle);
+    s.idle = undefined;
     let released = false;
     const release = () => {
       if (released) return;
