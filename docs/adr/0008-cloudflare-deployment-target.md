@@ -18,7 +18,8 @@ long-running process, so no poll loop, no `setInterval`, no Redis lease.
 ## Decision
 
 1. **Same code, two adapters.** The web app is the Next.js app built by
-   `@opennextjs/cloudflare` (`apps/web/open-next.config.ts`, `wrangler.jsonc`). The worker is a
+   `@opennextjs/cloudflare` (`apps/web/open-next.config.ts`, `wrangler.jsonc`; since ADR-0013
+   built with vinext instead). The worker is a
    second, thin entry point, `apps/worker-cf`, over the shared job runtime that this port moved
    into `packages/jobs/src/worker`: the processors, the `system` job table and the schedule are
    one implementation; `apps/worker` adapts them to BullMQ, `apps/worker-cf` to Cloudflare

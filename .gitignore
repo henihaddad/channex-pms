@@ -40,3 +40,6 @@ data/
 # agent worktrees (Claude Code)
 .claude/worktrees/
 apps/web/e2e.local.config.ts
+
+# vinext (ADR-0013)
+.vinext/

@@ -4,24 +4,11 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /**
- * ADR-0008: `PMS_TARGET=cloudflare` builds for Workers through OpenNext. Native
- * and process-bound modules are swapped for the shims in @pms/runtime; `pg`
- * stays external so OpenNext bundles it under the `workerd` condition.
+ * `next dev` / `next build`: local development, tests and e2e. Production is the vinext build for
+ * Cloudflare Workers (vite.config.mts, ADR-0013), which reads this file for rewrites and headers.
  */
-const cloudflare = process.env.PMS_TARGET === "cloudflare";
-const workerShims = {
-  "@node-rs/argon2": "@pms/runtime/shims/argon2",
-  pino: "@pms/runtime/shims/pino",
-  "@electric-sql/pglite": "@pms/runtime/shims/pglite",
-  "@electric-sql/pglite/contrib/btree_gist": "@pms/runtime/shims/pglite",
-  ioredis: "@pms/runtime/shims/ioredis",
-};
-
 const nextConfig: NextConfig = {
-  serverExternalPackages: cloudflare
-    ? ["pg", "pg-cloudflare"]
-    : ["@electric-sql/pglite", "@node-rs/argon2", "pino"],
-  ...(cloudflare ? { turbopack: { resolveAlias: workerShims } } : {}),
+  serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pino"],
   experimental: { authInterrupts: true },
   agentRules: false,
   // spec 04 §4.7b: OAuth discovery documents live at well-known paths; the handlers live under /oauth

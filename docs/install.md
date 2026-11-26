@@ -39,9 +39,10 @@ console tracks the five steps to the first pushed rate.
 | `PMS_MODE`                       | `hosted` turns on plans, quotas and billing; unset means self-hosted with everything included       |
 | `PMS_SELLER_COUNTRY`             | Hosted mode: the operator's VAT country                                                             |
 
-## Hosted service: web app on Vercel, jobs on Cloudflare (ADR-0009)
+## Vercel (fallback, ADR-0009)
 
-The web app runs on Vercel as the plain Node build, pinned to the region of the Neon database;
+Until 2026-11-26 the hosted web app ran on Vercel (ADR-0009); it now runs on Cloudflare
+(ADR-0013, next section) and the Vercel project is kept as a fallback. The web app runs on Vercel as the plain Node build, pinned to the region of the Neon database;
 the job worker, its queues and the landing page stay on Cloudflare (next section). Nothing here
 changes self-hosting.
 
@@ -58,14 +59,15 @@ changes self-hosting.
 3. Deploy: `vercel deploy --prod` from the repository root (the project is linked in `.vercel/`,
    which is git-ignored), or connect the GitHub repository in the Vercel dashboard so pushes to
    `main` deploy after CI.
-4. Domain: `app.otabridge.com` is a DNS-only CNAME to `cname.vercel-dns.com` in the Cloudflare
-   zone and is attached to the Vercel project; Vercel issues the certificate.
+4. Domain: to serve `app.otabridge.com` from Vercel again, replace the Worker custom domain with
+   a DNS-only CNAME to `cname.vercel-dns.com` in the Cloudflare zone; the domain stays attached
+   to the Vercel project, which issues the certificate.
 5. Migrations still run from a machine that reaches Neon (`db:migrate:neon`), never on boot.
 
 ## Hosted on Cloudflare (ADR-0008)
 
-The hosted service runs the same code on Cloudflare Workers: `apps/web` through
-`@opennextjs/cloudflare`, the job worker as `apps/worker-cf` on Queues and a Cron Trigger, and
+The hosted service runs the same code on Cloudflare Workers: `apps/web` built with vinext
+(`apps/web/vite.config.mts`, ADR-0013) on the custom domain `app.otabridge.com`, the job worker as `apps/worker-cf` on Queues and a Cron Trigger, and
 Postgres on Neon behind Hyperdrive. Nothing here changes self-hosting.
 
 1. Create the resources once: a Hyperdrive config pointing at the Neon database (caching
@@ -78,15 +80,19 @@ Postgres on Neon behind Hyperdrive. Nothing here changes self-hosting.
    role on first run.
 3. Secrets, per Worker (`wrangler secret put <NAME>` in `apps/web` and `apps/worker-cf`):
    `PMS_MASTER_KEY` and `PMS_SESSION_KEY` (the same values in both; the boot check requires them),
-   `CHANNEX_API_KEY`, `RESEND_API_KEY` (mail), optionally `STRIPE_SECRET_KEY`. Plain settings live
-   in the `vars` block of each `wrangler.jsonc`.
+   `CHANNEX_API_KEY`, `RESEND_API_KEY` (mail), optionally `STRIPE_SECRET_KEY` and
+   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (the web app reads both at request time). Plain settings
+   live in the `vars` block of each `wrangler.jsonc`.
 4. Build and deploy: `pnpm --filter @pms/web build:cf && pnpm --filter @pms/web deploy:cf` and
    `pnpm --filter @pms/worker-cf deploy`. `.github/workflows/deploy-cloudflare.yml` does the same
    from `main` once CI is green, when the `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and
    `NEON_DIRECT_URL` repository secrets exist.
+   `pnpm --filter @pms/web upload:cf` uploads a build as a preview version
+   (`https://next-otabridge-app.<account>.workers.dev`) without sending it traffic.
 5. Local run on the real runtime: start a Postgres on `127.0.0.1:5433` (the Hyperdrive
-   `localConnectionString`), migrate it, put development values in `apps/web/.dev.vars`, then
-   `pnpm --filter @pms/web build:cf && pnpm --filter @pms/web exec wrangler dev --port 8787 --host localhost:8787`.
+   `localConnectionString`), migrate it, put development values in `apps/web/dist/server/.dev.vars`
+   (next to the generated Worker config), then
+   `pnpm --filter @pms/web build:cf && pnpm --filter @pms/web preview:cf --port 8787`.
    The end-to-end suite runs against it with `E2E_BASE_URL=http://localhost:8787`. Start
    `wrangler dev` with `CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false` (wrangler otherwise loads the
    repository `.env`, and a real `CHANNEX_API_KEY` would put the fake-provider suite on staging).

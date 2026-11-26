@@ -129,7 +129,7 @@ a Postgres pool. Therefore:
   product itself runs in containers. We do **not** split the app to fit a serverless
   platform.
 - **Cloudflare (hosted service, ADR-0008):** the one serverless target that met the
-  conditions without a split. The same `apps/web` runs on Workers through OpenNext; the
+  conditions without a split. The same `apps/web` runs on Workers, built with vinext (ADR-0013); the
   worker stays a separate Worker (`apps/worker-cf`) over Cloudflare Queues and a Cron
   Trigger, running the processors shared with `apps/worker` from `packages/jobs`; Postgres
   is Neon behind Hyperdrive with one connection per transaction. Redis is replaced by a

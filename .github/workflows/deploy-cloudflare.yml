@@ -1,7 +1,8 @@
 name: Deploy (Cloudflare)
 
-# ADR-0008. Deploys the web app and the jobs worker to Cloudflare Workers from main once CI is
-# green. Runs only when the repository secrets exist; forks and pull requests never deploy.
+# ADR-0008, ADR-0013. Deploys the web app (vinext, app.otabridge.com) and the jobs worker to
+# Cloudflare Workers from main once CI is green. Runs only when the repository secrets exist;
+# forks and pull requests never deploy.
 on:
   workflow_run:
     workflows: [CI]
@@ -46,22 +47,19 @@ jobs:
           exit 1
       - name: Build packages
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
-        run: pnpm turbo run build --filter=@pms/jobs --filter=@pms/cloudflare
+        run: pnpm turbo run build --filter=@pms/web^... --filter=@pms/worker-cf^...
       - name: Migrate the database (forward-only, spec 14 §14.7)
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
         run: pnpm --filter @pms/db db:migrate:neon
-      - name: Build the web app for Workers
+      - name: Build the web app for Workers (vinext)
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
         run: pnpm --filter @pms/web build:cf
-        env:
-          NEXT_TELEMETRY_DISABLED: "1"
-          PMS_VERSION: ${{ github.sha }}
       - name: Deploy the jobs worker
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
         run: pnpm --filter @pms/worker-cf deploy
       - name: Deploy the web app
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
-        run: pnpm --filter @pms/web deploy:cf
+        run: pnpm --filter @pms/web deploy:cf --var PMS_GIT_SHA:${{ github.sha }}
       - name: Smoke
         if: env.CLOUDFLARE_API_TOKEN != '' && env.NEON_DIRECT_URL != ''
         run: curl --fail --silent --max-time 30 https://app.otabridge.com/api/health

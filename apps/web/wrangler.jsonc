@@ -1,13 +1,19 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  // ADR-0008: the console, portals, booking engine, webhooks and API on Cloudflare Workers.
+  // ADR-0013: production. app.otabridge.com on Cloudflare Workers, built with vinext (vite.config.mts).
   "name": "otabridge-app",
-  "main": ".open-next/worker.js",
+  "main": "./vinext/worker.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "assets": { "binding": "ASSETS", "directory": ".open-next/assets" },
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "none",
+    "run_worker_first": ["/*", "!/_next/static/*", "!/*/_next/static/*"],
+  },
   "observability": { "enabled": true },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "otabridge-app" }],
+  // ADR-0012/0013: run next to Neon in AWS us-east-2
+  "placement": { "region": "aws:us-east-2" },
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
@@ -29,8 +35,8 @@
       { "binding": "Q_SYSTEM", "queue": "otabridge-system" },
     ],
   },
-  // app.otabridge.com is served by Vercel (ADR-0009); this Worker stays reachable on workers.dev as the fallback
   "workers_dev": true,
+  "routes": [{ "pattern": "app.otabridge.com", "custom_domain": true }],
   "vars": {
     "PMS_ENV": "production",
     "PMS_MODE": "hosted",
@@ -40,6 +46,9 @@
     "MAIL_TRANSPORT": "resend",
     "LOG_LEVEL": "info",
     "PMS_SELLER_COUNTRY": "PT",
+    "PMS_STEP_UP": "off",
+    "PMS_VERSION": "1.0.0",
   },
-  // Secrets (wrangler secret put): PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY, RESEND_API_KEY, STRIPE_SECRET_KEY
+  // Secrets (wrangler secret put): PMS_MASTER_KEY, PMS_SESSION_KEY, CHANNEX_API_KEY, RESEND_API_KEY,
+  // STRIPE_SECRET_KEY; NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as a var or secret (read at request time)
 }

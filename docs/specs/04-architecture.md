@@ -439,7 +439,7 @@ Defence in depth, because a cross-tenant leak is the one bug that ends the proje
 | **Docker Compose** (default, self-host) | `web`, `worker`, `migrate`, `postgres`, `redis`, `minio`, `caddy` (ADR-0002: no separate `api` app). One `.env`, one command, seedable demo data. |
 | **Helm chart** (portfolio / SaaS) | Separately scaled `web` and `worker` deployments, HPA, managed Postgres/Redis/S3, external secrets. |
 | **Single-container demo** | For evaluation only; SQLite is explicitly *not* supported — the ARI model needs Postgres. |
-| **Cloudflare Workers** (hosted service, ADR-0008) | `apps/web` via OpenNext, `apps/worker-cf` on Queues + Cron Trigger + a Durable Object lease, Neon Postgres behind Hyperdrive, Resend for mail. Same packages, no Redis; realtime polls. The jobs Worker is pinned next to the database (`placement.region` = `aws:us-east-2`) and runs its cron and queue work through its own placed fetch handler (ADR-0012). |
+| **Cloudflare Workers** (hosted service, ADR-0008, ADR-0013) | `apps/web` built with vinext (Vite) on the custom domain `app.otabridge.com`, placed next to the database (`aws:us-east-2`), `apps/worker-cf` on Queues + Cron Trigger + a Durable Object lease, Neon Postgres behind Hyperdrive, Resend for mail. Same packages, no Redis; realtime polls. The jobs Worker is pinned next to the database (`placement.region` = `aws:us-east-2`) and runs its cron and queue work through its own placed fetch handler (ADR-0012). |
 
 Configuration is environment variables only (12-factor), validated at boot with a
 schema; the process refuses to start on invalid config rather than failing at 3am.

@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The hosted web app runs on Cloudflare Workers again, built with vinext instead of OpenNext
+  (ADR-0013, supersedes ADR-0009; persona: the host, spec 02, who gets one place that runs the
+  whole service). `app.otabridge.com` is a Worker custom domain placed next to the database;
+  `pnpm --filter @pms/web build:cf` is the vinext build (4 MB Worker instead of 34 MB) and the
+  Cloudflare deploy workflow ships it from `main`. `next dev` and `next build` are unchanged for
+  local work and tests. React is 19.3.1.
+
+### Fixed
+
+- A request's queued database transaction on Workers no longer loses its connection after
+  300 ms: the idle close armed by the transaction before it was never cancelled, so the booking
+  storefront failed with "Client was closed and is not queryable" when several organizations
+  were searched at once.
+
 ### Added
 
 - Claude can run the Airbnb account end to end (spec 04 §4.7a, spec 07 CH-5, persona "the host

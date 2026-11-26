@@ -38,7 +38,8 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
-    ".open-next/**",
+    "dist/**",
+    ".vinext/**",
     ".wrangler/**",
     "out/**",
     "build/**",

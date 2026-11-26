@@ -1,6 +1,7 @@
 # ADR-0009: The hosted web app runs on Vercel next to the database; jobs stay on Cloudflare
 
-**Status:** accepted (2026-09-03, supersedes the web-app placement of ADR-0008)
+**Status:** superseded by ADR-0013 (2026-11-26); accepted 2026-09-03, superseded the web-app
+placement of ADR-0008
 
 ## Context
 
