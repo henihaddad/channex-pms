@@ -13,7 +13,7 @@ const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
 describe.skipIf(!url)("per-request connection", () => {
   it("keeps the shared connection open for a queued transaction longer than the idle window", async () => {
     const key = {};
-    const handle = await connectPg(url!, { perRequest: true, scope: () => ({ key }) });
+    const handle = connectPg(url!, { perRequest: true, scope: () => ({ key }) });
     const slow = () =>
       handle.db.transaction(async (tx) => {
         await tx.execute(sql`select pg_sleep(0.5)`);
